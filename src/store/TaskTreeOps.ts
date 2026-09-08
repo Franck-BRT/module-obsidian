@@ -104,6 +104,7 @@ function cloneNode(source: Task, includeSubtasks: boolean, idMap: Map<string, st
     collapsed: false,
     subtasks: includeSubtasks ? source.subtasks.map((s) => cloneNode(s, true, idMap)) : [],
     dependencies: [...source.dependencies],
+    dependencyOptions: source.dependencyOptions ? { ...source.dependencyOptions } : undefined,
     assignees: [...source.assignees],
     tags: [...source.tags],
     customFields: { ...source.customFields },
@@ -114,6 +115,14 @@ function cloneNode(source: Task, includeSubtasks: boolean, idMap: Map<string, st
 
 function remapDeps(task: Task, idMap: Map<string, string>): void {
   task.dependencies = task.dependencies.map((id) => idMap.get(id) ?? id)
+  if (task.dependencyOptions) {
+    // Keyed by predecessor id, so the keys move with the ids they name.
+    const remapped: NonNullable<Task['dependencyOptions']> = {}
+    for (const [id, option] of Object.entries(task.dependencyOptions)) {
+      remapped[idMap.get(id) ?? id] = option
+    }
+    task.dependencyOptions = remapped
+  }
   for (const sub of task.subtasks) remapDeps(sub, idMap)
 }
 

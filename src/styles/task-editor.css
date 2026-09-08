@@ -630,3 +630,19 @@ button.pm-icon-trigger {
   outline: 2px solid var(--interactive-accent);
   outline-offset: -1px;
 }
+
+/* Link type and lag, on an editable dependency row. */
+.pm-dep-type {
+  flex: 0 0 auto;
+  width: 4.5em;
+  padding: 2px 20px 2px 6px;
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-dep-lag {
+  flex: 0 0 auto;
+  width: 4em;
+  padding: 2px 4px;
+  font-size: var(--font-ui-smaller);
+  text-align: center;
+}

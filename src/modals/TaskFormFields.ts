@@ -1,5 +1,6 @@
 import type PMPlugin from '../main'
 import type { Project, Task, TaskType, Recurrence } from '../types'
+import { DEFAULT_DEPENDENCY_OPTION } from '../types'
 import { collectAllAssignees, collectAllTags, flattenTasks } from '../store/TaskTreeOps'
 import { reaches } from '../store/Scheduler'
 import { renderPropRow } from '../ui/FormField'
@@ -17,6 +18,15 @@ import {
   type SelectItem,
   type HiddenProperty
 } from '../ui/composites/properties'
+
+/** A copy of the option map with one predecessor left out. */
+function withoutDependency(options: Task['dependencyOptions'], id: string): NonNullable<Task['dependencyOptions']> {
+  const out: NonNullable<Task['dependencyOptions']> = {}
+  for (const [key, value] of Object.entries(options ?? {})) {
+    if (key !== id) out[key] = value
+  }
+  return out
+}
 
 export interface TaskFormFieldsContext {
   task: Task
@@ -372,11 +382,24 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
             const edges = plugin.index.dependentsMap()
             return allTasks.filter((t) => task.dependencies.includes(t.id) || !reaches(edges, task.id, t.id))
           },
+          optionFor: (id) => ({
+            value: task.dependencyOptions?.[id] ?? DEFAULT_DEPENDENCY_OPTION,
+            onChange: (next) => {
+              // Back to the default means no entry at all, so the note stays clean.
+              const isDefault =
+                next.type === DEFAULT_DEPENDENCY_OPTION.type && next.lag === DEFAULT_DEPENDENCY_OPTION.lag
+              const options = withoutDependency(task.dependencyOptions, id)
+              if (!isDefault) options[id] = next
+              task.dependencyOptions = Object.keys(options).length ? options : undefined
+            }
+          }),
           add: (id) => {
             if (!task.dependencies.includes(id)) task.dependencies.push(id)
           },
           remove: (id) => {
             task.dependencies = task.dependencies.filter((d) => d !== id)
+            const options = withoutDependency(task.dependencyOptions, id)
+            task.dependencyOptions = Object.keys(options).length ? options : undefined
           }
         })
         return cell

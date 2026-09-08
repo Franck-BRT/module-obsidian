@@ -3,7 +3,7 @@ import { safeAsync } from '../../../utils'
 import { Popover } from '../../primitives/Popover'
 import { Chip } from '../../primitives/Chip'
 import { Avatar } from '../../primitives/Avatar'
-import { renderDepRow, type DepLink } from './depRow'
+import { renderDepRow, type DepLink, type DepOptionEditor } from './depRow'
 import { renderOptionRow } from './optionList'
 
 export interface PickerItem {
@@ -43,6 +43,8 @@ export interface MultiSelectOpts {
   depsList?: boolean
   /** The note a deps-list value stands for, turning its title into a link that opens it. */
   linkFor?: (id: string) => DepLink | null
+  /** How a deps-list value schedules, letting the row edit its link type and lag. */
+  optionFor?: (id: string) => DepOptionEditor
 }
 
 /**
@@ -111,6 +113,7 @@ export function renderMultiSelect(opts: MultiSelectOpts): void {
         id,
         title: labelOf(id),
         link: opts.linkFor?.(id),
+        option: opts.optionFor?.(id),
         onRemove: () => {
           opts.remove(id)
           renderValues()

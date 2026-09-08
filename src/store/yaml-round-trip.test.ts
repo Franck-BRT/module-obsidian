@@ -410,3 +410,58 @@ describe('project body preservation', () => {
     expect(projectBodyRemainder(body, icon, 'Test', body)).toBe('')
   })
 })
+
+describe('dependency options round-trip', () => {
+  it('keeps the link type and lag through a save and reload', () => {
+    const original = makeTask({
+      id: 'task-1',
+      title: 'Build',
+      dependencies: ['dep-1', 'dep-2'],
+      dependencyOptions: { 'dep-1': { type: 'SS', lag: 2 }, 'dep-2': { type: 'FF', lag: -1 } }
+    })
+    const { task } = roundTripTask(original)
+    expect(task.dependencyOptions).toEqual({
+      'dep-1': { type: 'SS', lag: 2 },
+      'dep-2': { type: 'FF', lag: -1 }
+    })
+  })
+
+  it('writes nothing for a plain finish-to-start dependency', () => {
+    const original = makeTask({
+      id: 'task-1',
+      title: 'Build',
+      dependencies: ['dep-1'],
+      dependencyOptions: { 'dep-1': { type: 'FS', lag: 0 } }
+    })
+    const md = serializeTask(original, makeProject('Test', 'Projects/Test.md'), null, [], refs)
+    expect(md).not.toContain('dependencyOptions')
+    expect(roundTripTask(original).task.dependencyOptions).toBeUndefined()
+  })
+
+  it('drops options left behind by a removed dependency', () => {
+    const original = makeTask({
+      id: 'task-1',
+      title: 'Build',
+      dependencies: ['dep-1'],
+      dependencyOptions: { 'dep-1': { type: 'SS', lag: 1 }, gone: { type: 'FF', lag: 3 } }
+    })
+    expect(roundTripTask(original).task.dependencyOptions).toEqual({ 'dep-1': { type: 'SS', lag: 1 } })
+  })
+
+  it('drops an entry naming an unknown link type', () => {
+    const md = serializeTask(
+      makeTask({ id: 'task-1', title: 'Build', dependencies: ['dep-1'] }),
+      makeProject('Test', 'Projects/Test.md'),
+      null,
+      [],
+      refs
+    ).replace('---\n\n', '---\n\n')
+    const withJunk = md.replace(
+      'createdAt:',
+      'dependencyOptions:\n  dep-1:\n    type: "nonsense"\n    lag: 2\ncreatedAt:'
+    )
+    const { frontmatter, body } = parseFrontmatter(withJunk)
+    if (!frontmatter) throw new Error('frontmatter missing')
+    expect(hydrateTaskFromFile(frontmatter, body, 'Projects/Test_tasks/t.md').task.dependencyOptions).toBeUndefined()
+  })
+})

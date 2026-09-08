@@ -90,6 +90,7 @@ export function buildNextOccurrence(task: Task, openStatusId: string, completedO
     node.timeLogs = undefined
     node.archived = false
     node.dependencies = node.dependencies.filter((id) => ownIds.has(id))
+    node.dependencyOptions = pickOptions(node.dependencyOptions, node.dependencies)
     if (node !== clone) {
       node.start = node.start ? shiftByDays(node.start, offset) : ''
       node.due = node.due ? shiftByDays(node.due, offset) : ''
@@ -102,4 +103,15 @@ export function buildNextOccurrence(task: Task, openStatusId: string, completedO
 
 function shiftByDays(date: string, days: number): string {
   return days === 0 ? date : Temporal.PlainDate.from(date).add({ days }).toString()
+}
+
+/** Keeps only the options whose predecessor survived the dependency filter. */
+function pickOptions(options: Task['dependencyOptions'], keep: string[]): Task['dependencyOptions'] {
+  if (!options) return undefined
+  const out: NonNullable<Task['dependencyOptions']> = {}
+  for (const id of keep) {
+    const option = options[id]
+    if (option) out[id] = option
+  }
+  return Object.keys(out).length ? out : undefined
 }

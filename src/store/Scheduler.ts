@@ -1,8 +1,15 @@
 import { Temporal } from '../dates'
-import type { StatusConfig, Task } from '../types'
+import { DEFAULT_DEPENDENCY_OPTION, type StatusConfig, type Task } from '../types'
 import { isTerminalStatus } from '../utils'
 import { flattenTasks } from './TaskTreeOps'
-import { addWorkingDays, ALL_DAYS, nextWorkingDay, workingDaysBetween, type WorkCalendar } from './WorkCalendar'
+import {
+  addWorkingDays,
+  ALL_DAYS,
+  alignForward,
+  nextWorkingDay,
+  workingDaysBetween,
+  type WorkCalendar
+} from './WorkCalendar'
 
 export interface SchedulePatch {
   taskId: string
@@ -184,23 +191,47 @@ export function computeSchedule(
     const deps = predecessorsOf.get(id) ?? []
     if (deps.length === 0) continue
 
-    // Latest due among unarchived predecessors; `latestPlannedDue` is the same
-    // date had every one of them finished on plan.
-    let latestDue = ''
-    let latestPlannedDue = ''
+    // The tightest date each link demands, and the same date had every predecessor
+    // finished on plan. Start-anchored links (FS, SS) bound the start; finish-anchored
+    // ones (FF, SF) bound the finish.
+    let earliestStart = ''
+    let plannedStart = ''
+    let earliestDue = ''
+    let plannedDue = ''
     for (const depId of deps) {
       const dep = taskById.get(depId)
       if (dep?.archived) continue
-      const depDue = dueOf.get(depId) ?? ''
-      if (!depDue) continue
-      if (!latestDue || depDue > latestDue) latestDue = depDue
-      const plannedDue = addWorkingDays(calendar, depDue, daysSavedBy.get(depId) ?? 0)
-      if (!latestPlannedDue || plannedDue > latestPlannedDue) latestPlannedDue = plannedDue
+      const option = task.dependencyOptions?.[depId] ?? DEFAULT_DEPENDENCY_OPTION
+      // FS and FF hang off the predecessor's finish, SS and SF off its start. Only a
+      // finish moves when a task is completed early, so only it has a planned variant.
+      const fromFinish = option.type === 'FS' || option.type === 'FF'
+      const anchor = fromFinish ? (dueOf.get(depId) ?? '') : (startOf.get(depId) ?? '')
+      if (!anchor) continue
+      const plannedAnchor = fromFinish ? addWorkingDays(calendar, anchor, daysSavedBy.get(depId) ?? 0) : anchor
+      // FS is the only link that clears the predecessor's last day before starting.
+      const offset = (base: string): string =>
+        addWorkingDays(
+          calendar,
+          option.type === 'FS' ? nextWorkingDay(calendar, base) : alignForward(calendar, base),
+          option.lag
+        )
+      const bound = offset(anchor)
+      const plannedBound = offset(plannedAnchor)
+      // SF and FF bound the finish; FS and SS bound the start.
+      const boundsStart = option.type === 'FS' || option.type === 'SS'
+      if (boundsStart) {
+        if (!earliestStart || bound > earliestStart) earliestStart = bound
+        if (!plannedStart || plannedBound > plannedStart) plannedStart = plannedBound
+      } else {
+        if (!earliestDue || bound > earliestDue) earliestDue = bound
+        if (!plannedDue || plannedBound > plannedDue) plannedDue = plannedBound
+      }
     }
-    if (!latestDue) continue
+    if (!earliestStart && !earliestDue) continue
 
-    const earliestStart = nextWorkingDay(calendar, latestDue)
-    const daysSaved = workingDaysBetween(calendar, latestDue, latestPlannedDue)
+    const daysSaved = earliestStart
+      ? workingDaysBetween(calendar, earliestStart, plannedStart)
+      : workingDaysBetween(calendar, earliestDue, plannedDue)
     const currentStart = startOf.get(id) ?? ''
     const currentDue = dueOf.get(id) ?? ''
 
@@ -213,7 +244,9 @@ export function computeSchedule(
 
     const isMilestone = task.type === 'milestone' || (!currentStart && currentDue)
 
-    if (isMilestone) {
+    if (!earliestStart) {
+      // Only finish-anchored links, handled below: nothing bounds the start.
+    } else if (isMilestone) {
       // A milestone has no span, so its due date moves instead of its start.
       if (!currentDue || currentDue < earliestStart) {
         newDue = earliestStart
@@ -241,6 +274,14 @@ export function computeSchedule(
       }
     } else {
       newStart = earliestStart
+    }
+
+    // A finish-anchored link bounds the finish. The task keeps its length, so the
+    // start travels with it.
+    if (earliestDue && (!newDue || newDue < earliestDue)) {
+      const shift = newDue ? workingDaysBetween(calendar, newDue, earliestDue) : 0
+      newDue = earliestDue
+      if (newStart && shift > 0) newStart = addWorkingDays(calendar, newStart, shift)
     }
 
     if (newStart !== currentStart || newDue !== currentDue) {

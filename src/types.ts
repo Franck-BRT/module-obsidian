@@ -17,6 +17,28 @@ export interface Recurrence {
   endDate?: string // YYYY-MM-DD
 }
 
+/**
+ * How a dependency ties two tasks together. FS is the default and the only one the
+ * plugin wrote before: the successor starts after the predecessor finishes.
+ */
+export const DEPENDENCY_TYPES = ['FS', 'SS', 'FF', 'SF'] as const
+export type DependencyType = (typeof DEPENDENCY_TYPES)[number]
+
+export const DEPENDENCY_TYPE_LABELS: Record<DependencyType, string> = {
+  FS: 'Finish to start',
+  SS: 'Start to start',
+  FF: 'Finish to finish',
+  SF: 'Start to finish'
+}
+
+/** Extra scheduling terms for one predecessor. Lag is in working days and may be negative. */
+export interface DependencyOption {
+  type: DependencyType
+  lag: number
+}
+
+export const DEFAULT_DEPENDENCY_OPTION: DependencyOption = { type: 'FS', lag: 0 }
+
 export interface TimeLog {
   date: string // YYYY-MM-DD
   hours: number
@@ -57,6 +79,11 @@ export interface Task {
   tags: string[]
   subtasks: Task[]
   dependencies: string[] // task IDs
+  /**
+   * Keyed by predecessor task id. A dependency with no entry is finish-to-start with
+   * no lag, so the common case adds nothing to a task's note.
+   */
+  dependencyOptions?: Record<string, DependencyOption>
   recurrence?: Recurrence
   timeEstimate?: number // hours
   timeLogs?: TimeLog[]

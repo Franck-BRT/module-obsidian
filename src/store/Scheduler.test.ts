@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_STATUSES, makeTask, type StatusConfig, type Task } from '../types'
-import { addDays, computeSchedule, daysBetween, wouldCreateCycle } from './Scheduler'
+import { DEFAULT_STATUSES, makeTask, type DependencyOption, type StatusConfig, type Task } from '../types'
+import { addDays, computeSchedule, daysBetween, wouldCreateCycle, type SchedulePatch } from './Scheduler'
 import { makeWorkCalendar } from './WorkCalendar'
 
 function task(overrides: Partial<Task> & { id: string }): Task {
@@ -334,5 +334,76 @@ describe('computeSchedule on a working-day calendar', () => {
     const withDefault = computeSchedule([a, b], undefined, statuses, false)
     const withAllDays = computeSchedule([a, b], undefined, statuses, false, [], makeWorkCalendar([1, 2, 3, 4, 5, 6, 7]))
     expect(withAllDays.patches).toEqual(withDefault.patches)
+  })
+})
+
+describe('computeSchedule with typed dependencies and lag', () => {
+  // Predecessor runs 1 to 3 April; every case below hangs off one of its two ends.
+  const pred = (): Task => task({ id: 'a', start: '2026-04-01', due: '2026-04-03' })
+
+  function place(option: DependencyOption | undefined, succ: Partial<Task> = {}): SchedulePatch | undefined {
+    const b = task({
+      id: 'b',
+      dependencies: ['a'],
+      dependencyOptions: option ? { a: option } : undefined,
+      ...succ
+    })
+    return computeSchedule([pred(), b], undefined, statuses).patches[0]
+  }
+
+  it('treats a dependency with no options as finish-to-start with no lag', () => {
+    expect(place(undefined)?.start).toBe('2026-04-04')
+    expect(place({ type: 'FS', lag: 0 })?.start).toBe('2026-04-04')
+  })
+
+  it('pushes the start out by a positive lag', () => {
+    expect(place({ type: 'FS', lag: 2 })?.start).toBe('2026-04-06')
+  })
+
+  it('lets a negative lag overlap the predecessor', () => {
+    expect(place({ type: 'FS', lag: -2 })?.start).toBe('2026-04-02')
+  })
+
+  it('starts alongside the predecessor on a start-to-start link', () => {
+    expect(place({ type: 'SS', lag: 0 })?.start).toBe('2026-04-01')
+    expect(place({ type: 'SS', lag: 2 })?.start).toBe('2026-04-03')
+  })
+
+  it('bounds the finish, not the start, on a finish-to-finish link', () => {
+    const patch = place({ type: 'FF', lag: 0 })
+    expect(patch?.due).toBe('2026-04-03')
+    expect(patch?.start).toBe('')
+  })
+
+  it('carries the start along so a finish-to-finish link keeps the span', () => {
+    const patch = place({ type: 'FF', lag: 0 }, { start: '2026-04-01', due: '2026-04-02' })
+    expect(patch).toEqual({ taskId: 'b', start: '2026-04-02', due: '2026-04-03' })
+  })
+
+  it('bounds the finish by the predecessor start on a start-to-finish link', () => {
+    expect(place({ type: 'SF', lag: 1 })?.due).toBe('2026-04-02')
+  })
+
+  it('leaves a successor that already satisfies the link alone', () => {
+    expect(place({ type: 'FF', lag: 0 }, { start: '2026-05-01', due: '2026-05-10' })).toBeUndefined()
+  })
+
+  it('takes the tightest of several links', () => {
+    const b = task({
+      id: 'b',
+      dependencies: ['a', 'c'],
+      dependencyOptions: { a: { type: 'FS', lag: 0 }, c: { type: 'FS', lag: 5 } }
+    })
+    const c = task({ id: 'c', start: '2026-04-01', due: '2026-04-02' })
+    const { patches } = computeSchedule([pred(), c, b], undefined, statuses)
+    // c finishes a day earlier but demands five days of lag, so it wins.
+    expect(patches.find((p) => p.taskId === 'b')?.start).toBe('2026-04-08')
+  })
+
+  it('counts lag in working days when the calendar has any', () => {
+    const b = task({ id: 'b', dependencies: ['a'], dependencyOptions: { a: { type: 'FS', lag: 2 } } })
+    // 3 April is a Friday: start the Monday, then two working days on.
+    const { patches } = computeSchedule([pred(), b], undefined, statuses, false, [], makeWorkCalendar([1, 2, 3, 4, 5]))
+    expect(patches[0].start).toBe('2026-04-08')
   })
 })
