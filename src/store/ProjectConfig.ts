@@ -1,5 +1,6 @@
 import type { CustomFieldDef, PMSettings, Project, ResolvedProjectConfig, Task } from '../types'
 import { flattenTasks } from './TaskTreeOps'
+import { ALL_DAYS, makeWorkCalendar } from './WorkCalendar'
 
 const FALLBACK_COLOR = '#8a94a0'
 
@@ -38,6 +39,10 @@ export function resolveProjectConfig(
     defaultView: config?.defaultView ?? settings.defaultView,
     autoSchedule: config?.autoSchedule ?? settings.autoSchedule,
     pullForwardOnEarlyFinish: config?.pullForwardOnEarlyFinish ?? settings.pullForwardOnEarlyFinish,
+    workCalendar:
+      (config?.respectWorkingDays ?? settings.respectWorkingDays)
+        ? makeWorkCalendar(settings.workingWeekdays, settings.holidays)
+        : ALL_DAYS,
     autoArchiveDays: config?.autoArchiveDays ?? settings.autoArchiveDays,
     showSubtreeConnections: config?.showSubtreeConnections ?? settings.showSubtreeConnections,
     lineBorders: config?.lineBorders ?? settings.lineBorders,

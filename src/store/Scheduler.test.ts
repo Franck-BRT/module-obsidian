@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_STATUSES, makeTask, type StatusConfig, type Task } from '../types'
 import { addDays, computeSchedule, daysBetween, wouldCreateCycle } from './Scheduler'
+import { makeWorkCalendar } from './WorkCalendar'
 
 function task(overrides: Partial<Task> & { id: string }): Task {
   return makeTask({
@@ -286,5 +287,52 @@ describe('computeSchedule with predecessors in other projects', () => {
   it('ignores a dependency that resolves nowhere at all', () => {
     const tasks = [task({ id: 'b', start: '2026-07-08', due: '2026-07-10', dependencies: ['gone'] })]
     expect(computeSchedule(tasks, undefined, statuses).patches).toEqual([])
+  })
+})
+
+describe('computeSchedule on a working-day calendar', () => {
+  const MON_FRI = makeWorkCalendar([1, 2, 3, 4, 5])
+  // 2026-04-03 Friday, 2026-04-06 Monday, 2026-04-10 Friday.
+  const FRIDAY = '2026-04-03'
+  const MONDAY = '2026-04-06'
+
+  it('starts a dependent on the Monday, not the Saturday', () => {
+    const a = task({ id: 'a', start: '2026-04-02', due: FRIDAY })
+    const b = task({ id: 'b', dependencies: ['a'] })
+    const { patches } = computeSchedule([a, b], undefined, statuses, false, [], MON_FRI)
+    expect(patches).toEqual([{ taskId: 'b', start: MONDAY, due: '' }])
+  })
+
+  it('keeps a span measured in working days when it slides', () => {
+    const a = task({ id: 'a', start: '2026-04-02', due: FRIDAY })
+    // Three working days, Wednesday to Friday of the previous week.
+    const b = task({ id: 'b', start: '2026-04-01', due: '2026-04-03', dependencies: ['a'] })
+    const { patches } = computeSchedule([a, b], undefined, statuses, false, [], MON_FRI)
+    // Monday plus two more working days is the Wednesday, not the weekend.
+    expect(patches).toEqual([{ taskId: 'b', start: MONDAY, due: '2026-04-08' }])
+  })
+
+  it('steps over a holiday like a weekend', () => {
+    const withHoliday = makeWorkCalendar([1, 2, 3, 4, 5], [MONDAY])
+    const a = task({ id: 'a', start: '2026-04-02', due: FRIDAY })
+    const b = task({ id: 'b', dependencies: ['a'] })
+    const { patches } = computeSchedule([a, b], undefined, statuses, false, [], withHoliday)
+    expect(patches[0].start).toBe('2026-04-07')
+  })
+
+  it('pulls a dependent forward by working days only', () => {
+    // Planned to end Friday, finished the Wednesday: two working days saved.
+    const a = task({ id: 'a', start: '2026-03-30', due: FRIDAY, status: 'done', completed: '2026-04-01' })
+    const b = task({ id: 'b', start: MONDAY, due: '2026-04-10', dependencies: ['a'] })
+    const { patches } = computeSchedule([a, b], undefined, statuses, true, [], MON_FRI)
+    expect(patches).toEqual([{ taskId: 'b', start: '2026-04-02', due: '2026-04-08' }])
+  })
+
+  it('matches the calendar-day result when every day works', () => {
+    const a = task({ id: 'a', start: '2026-04-02', due: FRIDAY })
+    const b = task({ id: 'b', start: '2026-04-01', due: '2026-04-03', dependencies: ['a'] })
+    const withDefault = computeSchedule([a, b], undefined, statuses, false)
+    const withAllDays = computeSchedule([a, b], undefined, statuses, false, [], makeWorkCalendar([1, 2, 3, 4, 5, 6, 7]))
+    expect(withAllDays.patches).toEqual(withDefault.patches)
   })
 })

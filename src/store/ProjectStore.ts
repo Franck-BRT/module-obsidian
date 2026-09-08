@@ -1528,7 +1528,8 @@ export class ProjectStore implements TaskSource {
       seeds,
       config.statuses,
       config.pullForwardOnEarlyFinish,
-      this.externalPredecessors(project, loaded)
+      this.externalPredecessors(project, loaded),
+      config.workCalendar
     )
     // A task in a cycle has no place in the topological order, so it silently stops
     // being scheduled. Collect them rather than let that pass unnoticed.

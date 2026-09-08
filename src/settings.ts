@@ -13,6 +13,7 @@ import {
 import { renderPaletteFields, renderStatusDoneToggle } from './ui/PaletteListEditor'
 import { renderCustomFieldFields, renderCustomFieldOptions } from './ui/CustomFieldListEditor'
 import { renderPersonPicker } from './ui/PersonPicker'
+import { invalidHolidays, renderHolidays, renderWorkingWeekdays } from './ui/WorkCalendarEditor'
 
 export type { PMSettings }
 export { DEFAULT_SETTINGS }
@@ -31,6 +32,13 @@ export class PMSettingTab extends PluginSettingTab {
     this.plugin = plugin
     this.icon = 'chart-gantt'
     this.rebuildIndex = debounce(() => this.plugin.index.build(), 500)
+  }
+
+  /** Names the entries the calendar will ignore, so a typo doesn't fail silently. */
+  private holidayDesc(): string {
+    const bad = invalidHolidays(this.plugin.settings.holidays)
+    const base = 'One date per line, as YYYY-MM-DD.'
+    return bad.length === 0 ? base : `${base} Ignored, not a date: ${bad.join(', ')}.`
   }
 
   getSettingDefinitions(): SettingDefinitionItem[] {
@@ -207,6 +215,35 @@ export class PMSettingTab extends PluginSettingTab {
               type: 'toggle',
               key: 'pullForwardOnEarlyFinish',
               disabled: () => !this.plugin.settings.autoSchedule
+            }
+          },
+          {
+            name: 'Skip weekends and holidays',
+            desc: 'Scheduled dates land on working days only. Dates you set by hand are left alone.',
+            aliases: ['working days', 'weekend', 'holidays', 'business days'],
+            control: {
+              type: 'toggle',
+              key: 'respectWorkingDays',
+              disabled: () => !this.plugin.settings.autoSchedule
+            }
+          },
+          {
+            name: 'Working week',
+            desc: 'The days work can land on.',
+            aliases: ['weekdays', 'working days'],
+            render: (setting: Setting) => {
+              renderWorkingWeekdays(setting.controlEl, this.plugin.settings, () => this.persist())
+            }
+          },
+          {
+            name: 'Holidays',
+            desc: this.holidayDesc(),
+            aliases: ['bank holidays', 'shutdown', 'time off'],
+            render: (setting: Setting) => {
+              renderHolidays(setting.controlEl, this.plugin.settings, () => {
+                this.persist()
+                this.update()
+              })
             }
           }
         ]

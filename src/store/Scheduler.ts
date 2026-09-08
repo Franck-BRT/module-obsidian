@@ -2,6 +2,7 @@ import { Temporal } from '../dates'
 import type { StatusConfig, Task } from '../types'
 import { isTerminalStatus } from '../utils'
 import { flattenTasks } from './TaskTreeOps'
+import { addWorkingDays, ALL_DAYS, nextWorkingDay, workingDaysBetween, type WorkCalendar } from './WorkCalendar'
 
 export interface SchedulePatch {
   taskId: string
@@ -68,6 +69,10 @@ export function wouldCreateCycle(tasks: Task[], fromId: string, toId: string): b
  * With `pullForward`, a predecessor that finished early counts as ending on its
  * completion date and its dependents move up by the days saved, keeping their existing
  * slack and never starting before the day after a predecessor ends.
+ *
+ * Every span and offset is counted in `calendar`'s working days, so a dependent never
+ * lands on a weekend or a holiday. The default calendar works every day, which makes
+ * this arithmetic identical to plain calendar days.
  */
 export function computeSchedule(
   tasks: Task[],
@@ -76,7 +81,8 @@ export function computeSchedule(
   statuses: StatusConfig[] = [],
   pullForward = false,
   /** Predecessors in other projects. They constrain dates here but are never moved. */
-  externals: Task[] = []
+  externals: Task[] = [],
+  calendar: WorkCalendar = ALL_DAYS
 ): ScheduleResult {
   const externalIds = new Set(externals.map((t) => t.id))
   const flat = [...flattenTasks(tasks).map((ft) => ft.task), ...externals]
@@ -163,7 +169,7 @@ export function computeSchedule(
     // the one passed here, so its status can't be re-checked from this side.
     if (!externalIds.has(t.id) && !isTerminalStatus(t.status, statuses)) continue
     dueOf.set(t.id, t.completed)
-    daysSavedBy.set(t.id, daysBetween(t.completed, t.due))
+    daysSavedBy.set(t.id, workingDaysBetween(calendar, t.completed, t.due))
   }
 
   const patches: SchedulePatch[] = []
@@ -188,17 +194,18 @@ export function computeSchedule(
       const depDue = dueOf.get(depId) ?? ''
       if (!depDue) continue
       if (!latestDue || depDue > latestDue) latestDue = depDue
-      const plannedDue = addDays(depDue, daysSavedBy.get(depId) ?? 0)
+      const plannedDue = addWorkingDays(calendar, depDue, daysSavedBy.get(depId) ?? 0)
       if (!latestPlannedDue || plannedDue > latestPlannedDue) latestPlannedDue = plannedDue
     }
     if (!latestDue) continue
 
-    const earliestStart = addDays(latestDue, 1)
-    const daysSaved = daysBetween(latestDue, latestPlannedDue)
+    const earliestStart = nextWorkingDay(calendar, latestDue)
+    const daysSaved = workingDaysBetween(calendar, latestDue, latestPlannedDue)
     const currentStart = startOf.get(id) ?? ''
     const currentDue = dueOf.get(id) ?? ''
 
-    const pullBy = (anchor: string) => Math.min(daysSaved, Math.max(0, daysBetween(earliestStart, anchor)))
+    const pullBy = (anchor: string) =>
+      Math.min(daysSaved, Math.max(0, workingDaysBetween(calendar, earliestStart, anchor)))
 
     let newStart = currentStart
     let newDue = currentDue
@@ -212,25 +219,25 @@ export function computeSchedule(
         newDue = earliestStart
       } else if (daysSaved > 0) {
         pulled = pullBy(currentDue)
-        newDue = addDays(currentDue, -pulled)
+        newDue = addWorkingDays(calendar, currentDue, -pulled)
       }
     } else if (currentStart && currentDue) {
       if (currentStart < earliestStart) {
         // Both ends are inclusive, so the span is one day longer than the gap.
-        const duration = daysBetween(currentStart, currentDue) + 1
+        const duration = workingDaysBetween(calendar, currentStart, currentDue) + 1
         newStart = earliestStart
-        newDue = addDays(earliestStart, duration - 1)
+        newDue = addWorkingDays(calendar, earliestStart, duration - 1)
       } else if (daysSaved > 0) {
         pulled = pullBy(currentStart)
-        newStart = addDays(currentStart, -pulled)
-        newDue = addDays(currentDue, -pulled)
+        newStart = addWorkingDays(calendar, currentStart, -pulled)
+        newDue = addWorkingDays(calendar, currentDue, -pulled)
       }
     } else if (currentStart && !currentDue) {
       if (currentStart < earliestStart) {
         newStart = earliestStart
       } else if (daysSaved > 0) {
         pulled = pullBy(currentStart)
-        newStart = addDays(currentStart, -pulled)
+        newStart = addWorkingDays(calendar, currentStart, -pulled)
       }
     } else {
       newStart = earliestStart

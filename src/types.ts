@@ -1,5 +1,6 @@
 import { today } from './dates'
 import type { TaskIndex } from './store/TaskIndex'
+import type { WorkCalendar } from './store/WorkCalendar'
 
 export type TaskStatus = string
 export type TaskPriority = string
@@ -139,6 +140,8 @@ export interface ProjectConfig {
   defaultView?: ViewMode
   autoSchedule?: boolean
   pullForwardOnEarlyFinish?: boolean
+  /** The working week and holidays stay global; a project only opts in or out. */
+  respectWorkingDays?: boolean
   autoArchiveDays?: number
   showSubtreeConnections?: boolean
   lineBorders?: LineBorders
@@ -158,6 +161,8 @@ export interface ResolvedProjectConfig {
   defaultView: ViewMode
   autoSchedule: boolean
   pullForwardOnEarlyFinish: boolean
+  /** Working days this project schedules against, already resolved from the settings. */
+  workCalendar: WorkCalendar
   autoArchiveDays: number
   showSubtreeConnections: boolean
   lineBorders: LineBorders
@@ -215,6 +220,12 @@ export interface PMSettings {
   lastAutoArchiveDate: string
   autoSchedule: boolean
   pullForwardOnEarlyFinish: boolean
+  /** Keep scheduled dates off weekends and holidays. Off leaves plans on plain calendar days. */
+  respectWorkingDays: boolean
+  /** ISO weekday numbers work can land on: 1 is Monday, 7 is Sunday. */
+  workingWeekdays: number[]
+  /** Public holidays and shutdowns as YYYY-MM-DD, skipped like a weekend. */
+  holidays: string[]
   showSubtreeConnections: boolean
   lineBorders: LineBorders
   kanbanShowSubtasks: boolean
@@ -275,6 +286,11 @@ export const DEFAULT_SETTINGS: PMSettings = {
   lastAutoArchiveDate: '',
   autoSchedule: true,
   pullForwardOnEarlyFinish: false,
+  // Off by default: turning it on is one toggle, but having it on would silently
+  // move the dates of every existing plan on the first reschedule.
+  respectWorkingDays: false,
+  workingWeekdays: [1, 2, 3, 4, 5],
+  holidays: [],
   saveTaskOnClose: true,
   taskEditorSurface: 'modal',
   editorSaveModifier: 'Shift',
