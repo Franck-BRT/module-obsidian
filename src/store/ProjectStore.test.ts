@@ -16,7 +16,7 @@ import {
 import { ProjectStore } from './ProjectStore'
 import { parseFrontmatter } from './YamlParser'
 import { projectTaskFolder } from './vaultFs'
-import { addDays } from './Scheduler'
+import { addDays, daysBetween } from './Scheduler'
 import { buildTaskIndex } from './TaskIndex'
 import { findTask, flattenTasks } from './TaskTreeOps'
 import { VaultIndex } from './VaultIndex'
@@ -1790,5 +1790,127 @@ describe('ProjectStore dependency cycles', () => {
     Notice.shown.length = 0
     await store.scheduleAfterChange(project, b.id)
     expect(Notice.shown.find((m) => m.includes('loop'))).toBeUndefined()
+  })
+})
+
+describe('ProjectStore recurring tasks', () => {
+  // Relative to today: the series is meant to run forward, and a fixed past date
+  // would exercise the catch-up path instead, which has its own test below.
+  const START = addDays(today().toString(), 1)
+  const DUE = addDays(today().toString(), 3)
+
+  async function weeklyTask(overrides: Partial<Task> = {}): Promise<{
+    store: ProjectStore
+    project: Project
+    task: Task
+  }> {
+    const { store } = newStore()
+    const project = await store.createProject('Repeat', 'Projects')
+    const task = makeTask({
+      title: 'Weekly report',
+      start: START,
+      due: DUE,
+      priority: 'high',
+      tags: ['ops'],
+      assignees: ['Alice'],
+      recurrence: { interval: 'weekly', every: 1 },
+      ...overrides
+    })
+    await store.insertTask(project, task)
+    return { store, project, task }
+  }
+
+  const others = (project: Project, task: Task): Task[] =>
+    flattenTasks(project.tasks)
+      .map((f) => f.task)
+      .filter((t) => t.id !== task.id)
+
+  it('creates the next occurrence when the task is completed', async () => {
+    const { store, project, task } = await weeklyTask()
+    await store.updateTask(project, task.id, { status: 'done' })
+
+    const next = others(project, task)
+    expect(next).toHaveLength(1)
+    expect(next[0].title).toBe('Weekly report')
+    expect(next[0].start).toBe(addDays(START, 7))
+    expect(next[0].due).toBe(addDays(DUE, 7))
+    expect(next[0].status).toBe('todo')
+    expect(next[0].completed).toBe('')
+    expect(next[0].progress).toBe(0)
+    // Everything that describes the work carries over.
+    expect(next[0].priority).toBe('high')
+    expect(next[0].tags).toEqual(['ops'])
+    expect(next[0].assignees).toEqual(['Alice'])
+    expect(next[0].recurrence).toEqual({ interval: 'weekly', every: 1 })
+    expect(next[0].id).not.toBe(task.id)
+  })
+
+  it('writes the new occurrence to its own note', async () => {
+    const { store, project, task } = await weeklyTask()
+    await store.updateTask(project, task.id, { status: 'done' })
+    const next = others(project, task)[0]
+    expect(next.filePath).toBeDefined()
+    expect(project.taskIndex.has(next.id)).toBe(true)
+  })
+
+  it('skips past slots when the task is ticked off long after it was due', async () => {
+    const { store, project, task } = await weeklyTask({ start: '2026-01-05', due: '2026-01-07' })
+    await store.updateTask(project, task.id, { status: 'done' })
+    const next = others(project, task)[0]
+    // Back on the original weekday, in the first slot after the completion date.
+    expect(next.due > today().toString()).toBe(true)
+    expect(daysBetween('2026-01-07', next.due) % 7).toBe(0)
+  })
+
+  it('creates nothing for a task without recurrence', async () => {
+    const { store, project, task } = await weeklyTask({ recurrence: undefined })
+    await store.updateTask(project, task.id, { status: 'done' })
+    expect(others(project, task)).toHaveLength(0)
+  })
+
+  it('creates nothing when the series has passed its end date', async () => {
+    const { store, project, task } = await weeklyTask({
+      recurrence: { interval: 'weekly', every: 1, endDate: addDays(DUE, 2) }
+    })
+    await store.updateTask(project, task.id, { status: 'done' })
+    expect(others(project, task)).toHaveLength(0)
+  })
+
+  it('creates nothing when the task is reopened', async () => {
+    const { store, project, task } = await weeklyTask()
+    await store.updateTask(project, task.id, { status: 'done' })
+    await store.updateTask(project, task.id, { status: 'todo' })
+    // The one made by completing it, and no second one from reopening.
+    expect(others(project, task)).toHaveLength(1)
+  })
+
+  it('does not create a second one when completion is saved twice', async () => {
+    const { store, project, task } = await weeklyTask()
+    await store.updateTask(project, task.id, { status: 'done' })
+    await store.updateTask(project, task.id, { status: 'done', progress: 100 })
+    expect(others(project, task)).toHaveLength(1)
+  })
+
+  it('brings subtasks along, reset and shifted by the same offset', async () => {
+    const { store } = newStore()
+    const project = await store.createProject('Repeat', 'Projects')
+    const parent = makeTask({
+      title: 'Weekly review',
+      start: START,
+      due: DUE,
+      recurrence: { interval: 'weekly', every: 1 }
+    })
+    await store.insertTask(project, parent)
+    const child = makeTask({ title: 'Collect numbers', due: addDays(DUE, -1), status: 'done' })
+    await store.insertTask(project, child, parent.id)
+
+    await store.updateTask(project, parent.id, { status: 'done' })
+    const next = flattenTasks(project.tasks)
+      .map((f) => f.task)
+      .find((t) => t.title === 'Weekly review' && t.id !== parent.id)
+    const nextChild = expectDefined(next).subtasks[0]
+    expect(nextChild.title).toBe('Collect numbers')
+    expect(nextChild.due).toBe(addDays(DUE, 6))
+    expect(nextChild.status).toBe('todo')
   })
 })

@@ -6,6 +6,7 @@ import { today } from '../dates'
 import { isTerminalStatus, sanitizeFileName } from '../utils'
 import { archiveTask as doArchiveTask, unarchiveTask as doUnarchiveTask } from './ArchiveOps'
 import { resolveProjectConfig } from './ProjectConfig'
+import { buildNextOccurrence } from './Recurrence'
 import { computeSchedule } from './Scheduler'
 import type { VaultIndex } from './VaultIndex'
 import {
@@ -1224,7 +1225,42 @@ export class ProjectStore implements TaskSource {
       for (const sub of task.subtasks) this.markDirty(project, [sub.id], 'full')
     }
     await this.saveProject(project)
-    if (completionMoved) await this.scheduleAfterEarlyFinish(project, [taskId])
+    if (completionMoved) {
+      await this.spawnNextOccurrence(project, taskId)
+      await this.scheduleAfterEarlyFinish(project, [taskId])
+    }
+  }
+
+  /**
+   * Tick off a recurring task and the next one appears beside it. Nothing happens when
+   * the task is being reopened, when it carries no recurrence, or when the series has
+   * run past its end date.
+   *
+   * The new occurrence lands under the same parent, so a recurring subtask stays one,
+   * and takes the first status the project counts as open.
+   */
+  private async spawnNextOccurrence(project: Project, taskId: string): Promise<void> {
+    const task = findTaskById(project, taskId)
+    if (!task?.recurrence) return
+    const statuses = this.statusesFor(project)
+    if (!isTerminalStatus(task.status, statuses)) return
+    const openStatus = statuses.find((s) => !s.complete)
+    if (!openStatus) return
+
+    const next = buildNextOccurrence(task, openStatus.id, task.completed || today().toString())
+    if (!next) return
+    // Occurrences share a title, so they cannot all take the title's slug. Naming this
+    // one after its id gives it a free path in the shape resolveTaskPath already keeps,
+    // so later saves leave it where it is instead of renaming it into a conflict.
+    const folder = projectTaskFolder(this.app, project.filePath)
+    const slug = fileNameFromPath(taskFilePath(next.title, folder))
+    next.filePath = normalizePath(`${folder}/${slug}-${next.id.slice(0, 8)}.md`)
+    try {
+      await this.insertTask(project, next, findParentId(project, taskId))
+    } catch (e) {
+      console.error(`[dotpm] Failed to create the next occurrence of "${task.title}":`, e)
+      new Notice(`dotpm: Could not create the next occurrence of "${task.title}". Check console for details.`)
+    }
   }
 
   /**
