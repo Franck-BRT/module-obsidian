@@ -224,9 +224,7 @@ export class FakeMetadataCache {
   }
 
   getFirstLinkpathDest(linkpath: string, _sourcePath: string): TFile | null {
-    const direct = this.vault.getAbstractFileByPath(
-      linkpath.endsWith('.md') ? linkpath : `${linkpath}.md`
-    )
+    const direct = this.vault.getAbstractFileByPath(linkpath.endsWith('.md') ? linkpath : `${linkpath}.md`)
     if (direct instanceof TFile) return direct
     return this.vault.getMarkdownFiles().find((f) => f.basename === linkpath) ?? null
   }

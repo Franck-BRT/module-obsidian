@@ -2,6 +2,7 @@ import type { App, Plugin } from 'obsidian'
 import { TFile, TFolder } from 'obsidian'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeFakeApp, type FakeVault } from '../../test/fakeVault'
+import { Notice } from '../../test/obsidian-stub'
 import { today } from '../dates'
 import {
   DEFAULT_SETTINGS,
@@ -1749,5 +1750,45 @@ describe('ProjectStore hand-written project body', () => {
     expect(after.split('## Meeting notes').length - 1).toBe(1)
     expect(after.indexOf('## Meeting notes')).toBeLessThan(after.indexOf('## Tasks'))
     expect(after).toContain('A description.')
+  })
+})
+
+describe('ProjectStore dependency cycles', () => {
+  it('tells the user when tasks depend on each other in a loop', async () => {
+    const { store } = newStore()
+    const project = await store.createProject('Loop', 'Projects')
+    const a = await addNamed(store, project, 'Alpha')
+    const b = await addNamed(store, project, 'Beta')
+    await store.updateTask(project, a.id, { start: '2026-04-01', due: '2026-04-02' })
+    await store.updateTask(project, b.id, { start: '2026-04-03', due: '2026-04-04' })
+    // Only reachable by hand-editing frontmatter: the UI blocks the second edge.
+    await store.updateTask(project, b.id, { dependencies: [a.id] })
+
+    await store.updateTask(project, a.id, { dependencies: [b.id] })
+
+    Notice.shown.length = 0
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    // What the task editor does after a save.
+    await store.scheduleAfterChange(project, a.id)
+
+    const message = Notice.shown.find((m) => m.includes('loop'))
+    expect(message).toBeDefined()
+    expect(message).toContain('Alpha')
+    expect(message).toContain('Beta')
+    warn.mockRestore()
+  })
+
+  it('says nothing when the graph is acyclic', async () => {
+    const { store } = newStore()
+    const project = await store.createProject('Chain', 'Projects')
+    const a = await addNamed(store, project, 'Alpha')
+    const b = await addNamed(store, project, 'Beta')
+    await store.updateTask(project, a.id, { start: '2026-04-01', due: '2026-04-02' })
+
+    await store.updateTask(project, b.id, { dependencies: [a.id] })
+
+    Notice.shown.length = 0
+    await store.scheduleAfterChange(project, b.id)
+    expect(Notice.shown.find((m) => m.includes('loop'))).toBeUndefined()
   })
 })

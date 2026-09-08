@@ -1484,11 +1484,12 @@ export class ProjectStore implements TaskSource {
       { project, seeds: changedTaskId === undefined ? undefined : [changedTaskId] }
     ]
     let total = 0
+    const cycleIds = new Set<string>()
 
     for (let round = 0; round < ProjectStore.MAX_SCHEDULE_ROUNDS && frontier.length > 0; round++) {
       const nextSeeds = new Map<string, Set<string>>()
       for (const job of frontier) {
-        const moved = await this.schedulePass(job.project, job.seeds, loaded)
+        const moved = await this.schedulePass(job.project, job.seeds, loaded, cycleIds)
         total += moved.length
         for (const [path, ids] of this.dependentsElsewhere(
           dependentsOf,
@@ -1509,23 +1510,31 @@ export class ProjectStore implements TaskSource {
         frontier.push({ project: target, seeds: [...ids] })
       }
     }
+    this.reportCycles(cycleIds, loaded)
     return total
   }
 
   private async schedulePass(
     project: Project,
     seeds: string[] | undefined,
-    loaded: Map<string, Project>
+    loaded: Map<string, Project>,
+    /** Ids caught in a dependency cycle, collected across passes for one report. */
+    cycleIds: Set<string>
   ): Promise<string[]> {
     const config = this.configFor(project)
     if (!config.autoSchedule) return []
-    const { patches } = computeSchedule(
+    const { patches, cycles } = computeSchedule(
       project.tasks,
       seeds,
       config.statuses,
       config.pullForwardOnEarlyFinish,
       this.externalPredecessors(project, loaded)
     )
+    // A task in a cycle has no place in the topological order, so it silently stops
+    // being scheduled. Collect them rather than let that pass unnoticed.
+    for (const cycle of cycles) {
+      for (const id of cycle) cycleIds.add(id)
+    }
     if (patches.length === 0) return []
 
     for (const p of patches) {
@@ -1534,6 +1543,30 @@ export class ProjectStore implements TaskSource {
     }
     await this.saveProject(project)
     return patches.map((p) => p.taskId)
+  }
+
+  /**
+   * The UI blocks cycles as they are drawn, so one here came in through hand-edited
+   * frontmatter, an import, or a duplicated project. Those tasks keep their dates and
+   * are skipped from now on, which is worth saying out loud once per pass.
+   */
+  private reportCycles(cycleIds: Set<string>, loaded: Map<string, Project>): void {
+    if (cycleIds.size === 0) return
+    const titleOf = (id: string): string => {
+      for (const project of loaded.values()) {
+        const found = project.taskIndex.get(id)?.task
+        if (found) return found.title
+      }
+      return this.index?.task(id)?.title ?? id
+    }
+    const titles = [...cycleIds].map(titleOf)
+    const shown = titles.slice(0, 3).join(', ')
+    const rest = titles.length > 3 ? `, and ${titles.length - 3} more` : ''
+    console.warn('[dotpm] Dependency cycle, these tasks are not scheduled:', [...cycleIds])
+    new Notice(
+      `dotpm: ${titles.length} task(s) depend on each other in a loop and were left unscheduled: ${shown}${rest}.`,
+      8000
+    )
   }
 
   /** Tasks outside `project` waiting on any of `movedIds`, grouped by their project. */

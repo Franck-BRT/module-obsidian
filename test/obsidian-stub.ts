@@ -9,6 +9,11 @@ export const parseYaml = (raw: string): unknown => parse(raw)
 export const stringifyYaml = (obj: unknown): string => stringify(obj)
 
 export class Notice {
+  /** Recorded so tests can assert on what the user was actually told. */
+  static shown: string[] = []
+  constructor(message?: string) {
+    if (message !== undefined) Notice.shown.push(message)
+  }
   hide(): void {}
 }
 
@@ -20,9 +25,7 @@ export function normalizePath(p: string): string {
 
 export function parseLinktext(linktext: string): { path: string; subpath: string } {
   const hash = linktext.indexOf('#')
-  return hash < 0
-    ? { path: linktext, subpath: '' }
-    : { path: linktext.slice(0, hash), subpath: linktext.slice(hash) }
+  return hash < 0 ? { path: linktext, subpath: '' } : { path: linktext.slice(0, hash), subpath: linktext.slice(hash) }
 }
 
 export class TAbstractFile {
