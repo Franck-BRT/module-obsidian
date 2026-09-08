@@ -96,7 +96,9 @@ export function serializeProject(
   project: Project,
   statuses: StatusConfig[],
   refs: RefWriter,
-  foreign: Record<string, unknown> = {}
+  foreign: Record<string, unknown> = {},
+  /** Body the user wrote by hand, from projectBodyRemainder. Kept above the task list. */
+  extraBody = ''
 ): string {
   const seen = new Set<string>()
   const tasks: Task[] = []
@@ -134,6 +136,11 @@ export function serializeProject(
   yamlLines.push('')
   if (project.description) {
     yamlLines.push(project.description)
+    yamlLines.push('')
+  }
+  // Above the task list, which has to stay last for projectBodyRemainder to find it.
+  if (extraBody.trim()) {
+    yamlLines.push(extraBody.trim())
     yamlLines.push('')
   }
   if (tasks.length) {

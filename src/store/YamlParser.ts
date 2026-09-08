@@ -74,3 +74,49 @@ export function appendYaml(lines: string[], obj: Record<string, unknown>, indent
 export function isOldFormat(frontmatter: Record<string, unknown>): boolean {
   return Array.isArray(frontmatter.tasks) && frontmatter.tasks.length > 0 && !Array.isArray(frontmatter.taskIds)
 }
+
+/** A line the task list generator produced: "- [ ] [[note|Title]]". */
+const GENERATED_TASK_LINE = /^-\s\[[ xX]\]\s/
+
+/** Guards against cutting a "## Tasks" heading the user wrote themselves. */
+function isGeneratedTaskList(section: string): boolean {
+  const lines = section.split('\n').filter((line) => line.trim() !== '')
+  return lines.length > 0 && lines.every((line) => GENERATED_TASK_LINE.test(line.trim()))
+}
+
+/** Cuts the generated "## Tasks" list, which serializeProject always writes last. */
+export function stripGeneratedTaskList(body: string): string {
+  const lines = body.split('\n')
+  let start = -1
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].trim() === '## Tasks') {
+      start = i
+      break
+    }
+  }
+  if (start === -1) return body
+  if (!isGeneratedTaskList(lines.slice(start + 1).join('\n'))) return body
+  return lines.slice(0, start).join('\n')
+}
+
+/**
+ * What is left of a project note's body once the plugin's own output — the title
+ * heading, the description echo and the task list — is taken out. Whatever remains
+ * the user typed by hand, so the next save has to write it back.
+ *
+ * Matching the description exactly means a body we did not write falls through
+ * untouched: the worst case is that it is kept twice, never that it is dropped.
+ */
+export function projectBodyRemainder(body: string, icon: string, title: string, description: string): string {
+  let rest = stripGeneratedTaskList(body).trim()
+  const desc = description.trim()
+  const takeDescription = (): void => {
+    if (desc && rest.startsWith(desc)) rest = rest.slice(desc.length).trim()
+  }
+  // Before the heading too: a hand-made note's whole body is its description.
+  takeDescription()
+  const heading = `# ${icon} ${title}`.trim()
+  if (rest.startsWith(heading)) rest = rest.slice(heading.length).trim()
+  takeDescription()
+  return rest
+}

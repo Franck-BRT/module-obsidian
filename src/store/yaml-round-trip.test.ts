@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeProject, makeTask, type Project, type SavedView, type Task } from '../types'
 import { hydrateProjectFromFrontmatter, hydrateTaskFromFile } from './YamlHydrator'
-import { parseFrontmatter } from './YamlParser'
+import { parseFrontmatter, projectBodyRemainder } from './YamlParser'
 import {
   buildTaskFrontmatter,
   foreignFrontmatter,
@@ -352,5 +352,61 @@ describe('foreign frontmatter', () => {
       status: 'done',
       uuid: 'x'
     })
+  })
+})
+
+describe('project body preservation', () => {
+  const icon = '\u{1F4CB}'
+
+  /** Serialize, then work out what a reload would hand back to the next save. */
+  function remainderAfterSave(p: Project, extra: string): string {
+    const md = serializeProject(p, [], refs, {}, extra)
+    const { frontmatter, body } = parseFrontmatter(md)
+    if (!frontmatter) throw new Error('frontmatter missing')
+    const reloaded = hydrateProjectFromFrontmatter(frontmatter, body, p.filePath, 'Test')
+    return projectBodyRemainder(body, reloaded.icon, reloaded.title, reloaded.description)
+  }
+
+  it('keeps hand-written body content across a save', () => {
+    const p = makeProject('Test', 'Projects/Test.md')
+    p.description = 'The description.'
+    p.tasks = [makeTask({ id: 't1', title: 'One' })]
+    p.tasks[0].filePath = 'Projects/Test_tasks/one.md'
+
+    const extra = '## Meeting notes\n\nDecided to ship on Friday.'
+    expect(remainderAfterSave(p, extra)).toBe(extra)
+  })
+
+  it('survives repeated saves without duplicating or losing anything', () => {
+    const p = makeProject('Test', 'Projects/Test.md')
+    p.description = 'The description.'
+    const extra = '## Notes\n\nSomething I wrote.'
+
+    let carried = extra
+    for (let i = 0; i < 3; i++) carried = remainderAfterSave(p, carried)
+    expect(carried).toBe(extra)
+  })
+
+  it('is empty for a note holding only generated content', () => {
+    const p = makeProject('Test', 'Projects/Test.md')
+    p.description = 'Just a description.'
+    p.tasks = [makeTask({ id: 't1', title: 'One' })]
+    p.tasks[0].filePath = 'Projects/Test_tasks/one.md'
+    expect(remainderAfterSave(p, '')).toBe('')
+  })
+
+  it('keeps a "## Tasks" heading the user wrote themselves', () => {
+    const body = `# ${icon} Test\n\nDesc.\n\n## Tasks\n\nProse, not a generated list.`
+    expect(projectBodyRemainder(body, icon, 'Test', 'Desc.')).toBe('## Tasks\n\nProse, not a generated list.')
+  })
+
+  it('keeps the whole body of a note the plugin never wrote', () => {
+    const body = 'Hand-made note with no heading and no description echo.'
+    expect(projectBodyRemainder(body, icon, 'Test', '')).toBe(body)
+  })
+
+  it('drops the body echo when it is the description of a note without frontmatter', () => {
+    const body = 'Whole body is the description.'
+    expect(projectBodyRemainder(body, icon, 'Test', body)).toBe('')
   })
 })

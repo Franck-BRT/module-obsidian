@@ -1723,3 +1723,31 @@ describe('ProjectStore foreign frontmatter', () => {
     expect(fm.timeEntries).toEqual(EXPECTED)
   })
 })
+
+describe('ProjectStore hand-written project body', () => {
+  /** What a user types into the project note between two plugin saves. */
+  const NOTES = '## Meeting notes\n\nAgreed to ship on Friday.'
+
+  it('keeps content the user added to the note through later saves', async () => {
+    const { store, vault, app } = newStore()
+    const project = await store.createProject('Notes', 'Projects')
+    await store.updateProject(project, { description: 'A description.' })
+
+    // The user appends their own section in Obsidian.
+    const file = fileAt(app, project.filePath)
+    await vault.modify(file, (await vault.cachedRead(file)) + '\n' + NOTES + '\n')
+
+    // A later plugin save must not regenerate the body over it.
+    const store2 = new ProjectStore(app, () => SETTINGS)
+    const reloaded = expectDefined(await store2.loadProject(fileAt(app, project.filePath)))
+    await addNamed(store2, reloaded, 'A task')
+
+    const after = await vault.cachedRead(fileAt(app, project.filePath))
+    expect(after).toContain('## Meeting notes')
+    expect(after).toContain('Agreed to ship on Friday.')
+    // Still exactly once, and the generated list still lands last.
+    expect(after.split('## Meeting notes').length - 1).toBe(1)
+    expect(after.indexOf('## Meeting notes')).toBeLessThan(after.indexOf('## Tasks'))
+    expect(after).toContain('A description.')
+  })
+})
