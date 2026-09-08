@@ -4,6 +4,7 @@ import { IconButton } from '../../primitives/IconButton'
 import { renderTagChip } from '../tagChip'
 import { renderTreeGuides } from '../treeGuides'
 import { makeInlineEdit } from './inlineEdit'
+import { t } from '../../../i18n'
 
 export interface TitleCellProps {
   task: Task
@@ -40,7 +41,7 @@ export class TitleCell {
 
     new IconButton(inner)
       .setIcon('plus')
-      .setTooltip('Add subtask')
+      .setTooltip(t('task.addSubtask'))
       .setRevealOnHover(true)
       .onClick((e) => {
         e.stopPropagation()
@@ -53,15 +54,15 @@ export class TitleCell {
         .setVariant('solid')
         .setSize('sm')
         .setColor('var(--color-purple)')
-        .setTooltip('Milestone')
+        .setTooltip(t('common.milestone'))
     }
     if (task.type === 'subtask') {
       new Chip(inner)
-        .setLabel('Sub')
+        .setLabel(t('common.sub'))
         .setVariant('solid')
         .setSize('sm')
         .setColor('var(--color-green)')
-        .setTooltip('Subtask')
+        .setTooltip(t('common.subtask'))
     }
     if (task.recurrence) {
       new Chip(inner)
@@ -69,15 +70,15 @@ export class TitleCell {
         .setVariant('solid')
         .setSize('sm')
         .setColor('var(--color-blue)')
-        .setTooltip('Recurring')
+        .setTooltip(t('task.recurring'))
     }
     if (task.archived) {
       new Chip(inner)
-        .setLabel('Archived')
+        .setLabel(t('common.archived'))
         .setVariant('solid')
         .setSize('sm')
         .setColor('var(--text-muted)')
-        .setTooltip('Archived')
+        .setTooltip(t('common.archived'))
     }
 
     if (task.tags.length) {

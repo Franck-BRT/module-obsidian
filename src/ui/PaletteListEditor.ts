@@ -2,6 +2,7 @@ import { Notice } from 'obsidian'
 import type { PriorityConfig, StatusConfig } from '../types'
 import { IconButton } from './primitives/IconButton'
 import { renderIconControl } from './composites/properties'
+import { t } from '../i18n'
 
 /** On drop, moves the dragged item to this row's index. */
 export function wireRowDragReorder<T>(row: HTMLElement, index: number, items: T[], onChanged: () => void): void {
@@ -66,7 +67,7 @@ export function renderStatusDoneToggle(parent: HTMLElement, status: StatusConfig
   const wrapper = parent.createEl('label', { cls: 'pm-settings-complete-toggle' })
   const checkbox = wrapper.createEl('input', { type: 'checkbox' })
   checkbox.checked = status.complete
-  wrapper.createSpan({ text: 'Done', cls: 'pm-settings-complete-text' })
+  wrapper.createSpan({ text: t('settings.doneToggle'), cls: 'pm-settings-complete-text' })
   checkbox.addEventListener('change', () => {
     status.complete = checkbox.checked
     onChanged()
@@ -103,7 +104,7 @@ function renderPaletteListEditor<T extends PaletteEntry>(container: HTMLElement,
 
     new IconButton(row)
       .setIcon('x')
-      .setTooltip('Remove')
+      .setTooltip(t('settings.removeEntry'))
       .onClick(() => {
         if (opts.items.length <= 1) {
           new Notice(opts.minOneMessage)
@@ -129,7 +130,7 @@ export function renderStatusListEditor(container: HTMLElement, opts: StatusListE
     items: opts.statuses,
     onChanged: opts.onChanged,
     onDeleted: opts.onDeleted,
-    minOneMessage: 'You must have at least one status.',
+    minOneMessage: t('settings.atLeastOne', { field: t('settings.field.status') }),
     renderExtra: (row, status) => renderStatusDoneToggle(row, status, opts.onChanged)
   })
 }
@@ -145,6 +146,6 @@ export function renderPriorityListEditor(container: HTMLElement, opts: PriorityL
     items: opts.priorities,
     onChanged: opts.onChanged,
     onDeleted: opts.onDeleted,
-    minOneMessage: 'You must have at least one priority.'
+    minOneMessage: t('settings.atLeastOne', { field: t('settings.field.priority') })
   })
 }

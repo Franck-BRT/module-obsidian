@@ -1,4 +1,5 @@
 import { setIcon } from 'obsidian'
+import { t } from '../../i18n'
 
 export interface CollapseToggleProps {
   collapsed: boolean
@@ -15,7 +16,7 @@ export class CollapseToggle {
     setIcon(this.el, 'right-triangle')
     this.el.toggleClass('is-collapsed', props.collapsed)
     const subject = props.subject ?? 'subtasks'
-    this.el.setAttr('aria-label', `${props.collapsed ? 'Expand' : 'Collapse'} ${subject}`)
+    this.el.setAttr('aria-label', `${props.collapsed ? t('field.expand') : t('field.collapse')} ${subject}`)
     this.el.addEventListener('click', props.onToggle)
   }
 }

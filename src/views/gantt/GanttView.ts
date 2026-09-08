@@ -26,6 +26,7 @@ import { svgEl } from '../../utils'
 import { Temporal, today } from '../../dates'
 import type { RendererContext } from './GanttRenderer'
 import { renderTaskLabel } from './TaskLabelRenderer'
+import { t } from '../../i18n'
 
 export class GanttView implements SubView {
   private granularity: GanttGranularity
@@ -98,10 +99,10 @@ export class GanttView implements SubView {
     const levels: GanttGranularity[] = ['day', 'week', 'month', 'quarter', 'year']
     const labels: Record<GanttGranularity, string> = {
       day: 'Day',
-      week: 'Week',
-      month: 'Month',
-      quarter: 'Quarter',
-      year: 'Year'
+      week: t('settings.granularity.week'),
+      month: t('settings.granularity.month'),
+      quarter: t('settings.granularity.quarter'),
+      year: t('settings.granularity.year')
     }
 
     new SegmentedControl<GanttGranularity>(bar, {
@@ -116,10 +117,10 @@ export class GanttView implements SubView {
     })
 
     bar.createSpan({ cls: 'pm-gantt-sep' })
-    new ButtonComponent(bar).setButtonText('Today').onClick(() => this.scrollToToday())
+    new ButtonComponent(bar).setButtonText(t('common.today')).onClick(() => this.scrollToToday())
 
-    new ButtonComponent(bar).setButtonText('Expand all').onClick(() => this.setAllCollapsed(false))
-    new ButtonComponent(bar).setButtonText('Collapse all').onClick(() => this.setAllCollapsed(true))
+    new ButtonComponent(bar).setButtonText(t('gantt.expandAll')).onClick(() => this.setAllCollapsed(false))
+    new ButtonComponent(bar).setButtonText(t('gantt.collapseAll')).onClick(() => this.setAllCollapsed(true))
   }
 
   private renderGantt(): void {
@@ -130,7 +131,7 @@ export class GanttView implements SubView {
     leftPanel.style.minWidth = `${this.labelWidth}px`
     const leftHeader = leftPanel.createDiv('pm-gantt-left-header')
     leftHeader.style.height = `${HEADER_HEIGHT}px`
-    leftHeader.createSpan({ text: 'Task', cls: 'pm-gantt-left-header-label' })
+    leftHeader.createSpan({ text: t('common.task'), cls: 'pm-gantt-left-header-label' })
     const leftBody = leftPanel.createDiv('pm-gantt-left-body')
 
     const resizeHandle = wrapper.createDiv('pm-gantt-resize-handle')
@@ -234,7 +235,7 @@ export class GanttView implements SubView {
 
     const addRow = leftBody.createDiv('pm-gantt-label-row pm-gantt-add-row')
     addRow.style.height = `${ROW_HEIGHT}px`
-    renderAddButton(addRow, 'Add task', (e) => {
+    renderAddButton(addRow, t('gantt.addTask'), (e) => {
       openAddTask(this.plugin, this.scope, { event: e, onSave: () => this.onRefresh() })
     })
 

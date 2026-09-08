@@ -3,6 +3,7 @@ import type { Task, StatusConfig, PriorityConfig, TaskPriority, PriorityIconSet,
 import { PRIORITY_ICON_SETS } from './types'
 import type { DueUrgency } from './ui/composites/dueChip'
 import { today, parsePlainDate } from './dates'
+import { t } from './i18n'
 
 export function displayName(raw: string): string {
   // Values come from frontmatter, where anything YAML allows can turn up in a list of names.
@@ -151,7 +152,7 @@ export function safeAsync<A extends unknown[]>(fn: (...args: A) => Promise<void>
         await fn(...args)
       } catch (err: unknown) {
         console.error('[PM]', err)
-        new Notice('Something went wrong. Check the console for details.')
+        new Notice(t('notice.genericError'))
       }
     })()
   }

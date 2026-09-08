@@ -10,6 +10,7 @@ import type { SortKey, SortDir, TableState } from './TableRenderer'
 import { updateSelectAllCheckbox } from './TableRow'
 import { renderBulkActionBar } from './BulkActionBar'
 import type { BulkAction } from './BulkActionBar'
+import { t } from '../../i18n'
 
 const taskCount = (n: number) => `${n} task${n === 1 ? '' : 's'}`
 
@@ -132,23 +133,23 @@ export class TableView implements SubView {
       }
       switch (action.type) {
         case 'set-parent':
-          new Notice(`Moved ${taskCount(ids.length)} under new parent`)
+          new Notice(t('table.movedUnderParent', { tasks: taskCount(ids.length) }))
           break
         case 'remove-parent':
-          new Notice(`Moved ${taskCount(ids.length)} to top level`)
+          new Notice(t('table.movedToTopLevel', { tasks: taskCount(ids.length) }))
           break
         case 'archive':
-          new Notice(`Archived ${taskCount(ids.length)}`)
+          new Notice(t('table.archivedTasks', { tasks: taskCount(ids.length) }))
           break
         case 'unarchive':
-          new Notice(`Unarchived ${taskCount(ids.length)}`)
+          new Notice(t('table.unarchivedTasks', { tasks: taskCount(ids.length) }))
           break
       }
       this.state.selectedTaskIds.clear()
       await this.onRefresh()
     } catch (err) {
       console.error('Bulk action failed', err)
-      new Notice('Bulk action failed. Please try again.')
+      new Notice(t('table.bulkFailed'))
       await this.onRefresh()
     }
   }

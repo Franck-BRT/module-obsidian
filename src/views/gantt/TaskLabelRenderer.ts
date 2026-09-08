@@ -10,6 +10,7 @@ import { renderProjectChip } from '../../ui/composites/projectChip'
 import { renderStatusDot } from '../../ui/StatusBadge'
 import { safeAsync } from '../../utils'
 import { ROW_HEIGHT } from './TimelineConfig'
+import { t } from '../../i18n'
 
 export interface LabelContext {
   plugin: PMPlugin
@@ -104,7 +105,7 @@ export function renderTaskLabel(
       return owner ? `${ref.title} (${owner.title})` : ref.title
     }
     new Chip(el)
-      .setLabel(`Depends on ${elsewhere.length} elsewhere`)
+      .setLabel(t('task.dependsElsewhere', { count: elsewhere.length }))
       .setVariant('plain')
       .setSize('sm')
       .setTooltip(elsewhere.map(nameOf).join('\n'))
@@ -135,7 +136,7 @@ export function renderTaskLabel(
 
   new IconButton(el)
     .setIcon('plus')
-    .setTooltip('Add subtask')
+    .setTooltip(t('task.addSubtask'))
     .setRevealOnHover(true)
     .onClick((e) => {
       e.stopPropagation()

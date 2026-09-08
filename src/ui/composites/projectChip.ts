@@ -1,4 +1,5 @@
 import { Chip } from '../primitives/Chip'
+import { t } from '../../i18n'
 
 export interface ProjectChipProps {
   title: string
@@ -17,7 +18,7 @@ export function renderProjectChip(parent: HTMLElement, props: ProjectChipProps):
     .setColor(props.color)
   const onClick = props.onClick
   if (onClick) {
-    chip.setTooltip(`Open ${props.title}`).onClick((e) => {
+    chip.setTooltip(t('project.open', { title: props.title })).onClick((e) => {
       e.stopPropagation()
       onClick()
     })

@@ -4,6 +4,7 @@ import type { ArchiveCandidate } from '../store'
 import { collectArchivable, withoutBlockedDependents } from '../store'
 import { today } from '../dates'
 import { isTerminalStatus, safeAsync } from '../utils'
+import { t } from '../i18n'
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000
 
@@ -48,7 +49,14 @@ export class AutoArchiver {
       const tasks = await this.apply(plans)
       settings.lastAutoArchiveDate = stamp
       await this.plugin.saveSettings()
-      if (tasks) this.plugin.showNotice(`Archived ${tasks} completed task(s) in ${plans.length} project(s).`)
+      if (tasks) {
+        this.plugin.showNotice(
+          t('flow.autoArchived', {
+            tasks: t('count.tasks', { count: tasks }),
+            projects: t('count.projects', { count: plans.length })
+          })
+        )
+      }
     } finally {
       this.running = false
     }

@@ -6,9 +6,10 @@ import { TaskModal } from '../modals/TaskModal'
 import { PersonLookupModal, ProjectPickerModal, TaskPickerModal } from '../modals/PickerModals'
 import { ImportModal } from '../modals/ImportModal'
 import { ProjectCreateModal } from '../modals/ProjectCreateModal'
+import { t } from '../i18n'
 
 /** Resolves true if confirmed, false if cancelled. */
-export function confirmDialog(app: App, message: string, confirmLabel = 'Delete'): Promise<boolean> {
+export function confirmDialog(app: App, message: string, confirmLabel = t('common.delete')): Promise<boolean> {
   return new Promise((resolve) => {
     const modal = new ConfirmModal(app, message, confirmLabel, resolve)
     modal.open()
@@ -68,7 +69,7 @@ class TextPromptModal extends Modal {
 
     const btnRow = contentEl.createDiv('pm-modal-btn-row')
 
-    new ButtonComponent(btnRow).setButtonText('Cancel').onClick(() => {
+    new ButtonComponent(btnRow).setButtonText(t('dialog.cancel')).onClick(() => {
       this.finish(null)
       this.close()
     })
@@ -134,7 +135,7 @@ class ConfirmModal extends Modal {
 
     const btnRow = contentEl.createDiv('pm-modal-btn-row')
 
-    new ButtonComponent(btnRow).setButtonText('Cancel').onClick(() => {
+    new ButtonComponent(btnRow).setButtonText(t('dialog.cancel')).onClick(() => {
       this.finish(false)
       this.close()
     })
@@ -176,24 +177,24 @@ class DuplicateSubtasksModal extends Modal {
     this.modalEl.addClass('pm-confirm-modal')
 
     contentEl.createEl('p', {
-      text: `Duplicate "${this.taskTitle}" with its subtasks?`,
+      text: t('project.duplicateConfirm', { title: this.taskTitle }),
       cls: 'pm-confirm-text'
     })
 
     const btnRow = contentEl.createDiv('pm-modal-btn-row')
 
-    new ButtonComponent(btnRow).setButtonText('Cancel').onClick(() => {
+    new ButtonComponent(btnRow).setButtonText(t('dialog.cancel')).onClick(() => {
       this.finish(null)
       this.close()
     })
 
-    new ButtonComponent(btnRow).setButtonText('Task only').onClick(() => {
+    new ButtonComponent(btnRow).setButtonText(t('dialog.taskOnly')).onClick(() => {
       this.finish('task-only')
       this.close()
     })
 
     new ButtonComponent(btnRow)
-      .setButtonText('With subtasks')
+      .setButtonText(t('dialog.withSubtasks'))
       .setCta()
       .onClick(() => {
         this.finish('with-subtasks')

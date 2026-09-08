@@ -21,6 +21,7 @@ import { ChipButton } from '../ui/primitives/ChipButton'
 import { ViewSwitcher } from '../ui/primitives/ViewSwitcher'
 import { ProjectHeader } from '../ui/composites/ProjectHeader'
 import { renderGlyph } from '../ui/composites/properties'
+import { t } from '../i18n'
 
 export const PM_PROJECT_VIEW_TYPE = 'pm-project'
 
@@ -75,7 +76,7 @@ export class ProjectView extends ItemView {
     return PM_PROJECT_VIEW_TYPE
   }
   getDisplayText(): string {
-    return truncateTitle(this.projectScope?.label() ?? 'Project', 10)
+    return truncateTitle(this.projectScope?.label() ?? t('scope.project'), 10)
   }
   getIcon(): string {
     return 'chart-gantt'
@@ -250,8 +251,8 @@ export class ProjectView extends ItemView {
     this.header = null
     this.bodyEl.empty()
     const msg = this.bodyEl.createDiv('pm-empty-state')
-    msg.createEl('h3', { text: 'Nothing to show' })
-    msg.createEl('p', { text: 'No project here. It may have been deleted or renamed.' })
+    msg.createEl('h3', { text: t('project.nothingToShow') })
+    msg.createEl('p', { text: t('project.gone') })
   }
 
   private renderProjectHeader(): void {
@@ -373,7 +374,7 @@ export class ProjectView extends ItemView {
     if (!scope.isMulti) {
       const iconEl = left.createSpan({
         cls: 'pm-toolbar-icon',
-        attr: { 'aria-label': 'Open project page', role: 'button', tabindex: '0' }
+        attr: { 'aria-label': t('project.openPage'), role: 'button', tabindex: '0' }
       })
       renderGlyph(iconEl, { icon: primary.icon, color: primary.color })
       iconEl.addEventListener('click', openOverview)
@@ -382,16 +383,16 @@ export class ProjectView extends ItemView {
     const titleEl = left.createEl('h2', { text: scope.label(), cls: 'pm-toolbar-title' })
     if (!scope.isMulti) {
       titleEl.addClass('pm-toolbar-title--link')
-      titleEl.setAttrs({ 'aria-label': 'Open project page', role: 'button', tabindex: '0' })
+      titleEl.setAttrs({ 'aria-label': t('project.openPage'), role: 'button', tabindex: '0' })
       titleEl.addEventListener('click', openOverview)
     }
     this.renderScopeSwitcher(left)
 
     new ViewSwitcher<ViewMode>(this.toolbarEl, {
       options: [
-        { id: 'table', icon: 'table', label: 'Table' },
-        { id: 'gantt', icon: 'git-fork', label: 'Gantt' },
-        { id: 'kanban', icon: 'layout-dashboard', label: 'Board' }
+        { id: 'table', icon: 'table', label: t('common.table') },
+        { id: 'gantt', icon: 'git-fork', label: t('common.gantt') },
+        { id: 'kanban', icon: 'layout-dashboard', label: t('common.board') }
       ],
       active: this.currentView,
       onChange: (mode) => {
@@ -413,7 +414,7 @@ export class ProjectView extends ItemView {
     if (!scope.isMulti) {
       new ExtraButtonComponent(right)
         .setIcon('settings')
-        .setTooltip('Project settings')
+        .setTooltip(t('project.settings'))
         .onClick(safeAsync(() => this.plugin.router.openProjectEdit(primary.filePath)))
     }
   }
@@ -457,17 +458,17 @@ export class ProjectView extends ItemView {
     const folder = folderOf(own ?? projectPath)
 
     const options: { label: string; spec: ScopeSpec }[] = [
-      { label: 'This project', spec: { kind: 'project', path: projectPath } },
-      { label: 'With sub-projects', spec: { kind: 'subtree', path: projectPath } },
-      { label: folder ? `Folder: ${folder}` : 'Vault folder', spec: { kind: 'folder', path: folder } },
-      { label: 'All projects', spec: { kind: 'vault' } }
+      { label: t('project.thisProject'), spec: { kind: 'project', path: projectPath } },
+      { label: t('project.withSubProjects'), spec: { kind: 'subtree', path: projectPath } },
+      { label: folder ? `Folder: ${folder}` : t('view.vaultFolder'), spec: { kind: 'folder', path: folder } },
+      { label: t('project.allProjects'), spec: { kind: 'vault' } }
     ]
     const current = options.find((option) => scope.key === scopeKey(option.spec))
 
     new ChipButton(parent)
-      .setLabel(current?.label ?? 'This project')
+      .setLabel(current?.label ?? t('project.thisProject'))
       .setShape('pill')
-      .setAriaLabel('Change which projects this view shows')
+      .setAriaLabel(t('view.changeScope'))
       .onClick((e) => {
         const menu = new Menu()
         for (const option of options) {

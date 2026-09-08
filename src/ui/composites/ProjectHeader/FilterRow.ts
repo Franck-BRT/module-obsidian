@@ -5,6 +5,7 @@ import { countActiveFilters } from '../../../store/TaskFilter'
 import { renderFilterDropdown } from '../../FilterDropdown'
 import { ChipButton } from '../../primitives/ChipButton'
 import { displayName, priorityIcon } from '../../../utils'
+import { t } from '../../../i18n'
 
 export interface FilterRowProps {
   tasks: Task[]
@@ -17,12 +18,15 @@ export interface FilterRowProps {
   onClear: () => void
 }
 
-const DUE_LABELS: Record<DueDateFilter, string> = {
-  any: 'Due date',
-  overdue: 'Overdue',
-  'this-week': 'This week',
-  'this-month': 'This month',
-  'no-date': 'No date'
+/** A function, not a constant: a constant would freeze the locale at import time. */
+function dueLabels(): Record<DueDateFilter, string> {
+  return {
+    any: t('filter.dueDate'),
+    overdue: t('common.overdue'),
+    'this-week': t('filter.thisWeek'),
+    'this-month': t('filter.thisMonth'),
+    'no-date': t('filter.noDate')
+  }
 }
 
 export class FilterRow {
@@ -48,7 +52,7 @@ export class FilterRow {
 
     renderFilterDropdown(
       this.el,
-      'Status',
+      t('common.status'),
       filter.statuses,
       statuses.map((s) => ({ id: s.id, label: s.label, icon: s.icon })),
       (selected) => {
@@ -59,7 +63,7 @@ export class FilterRow {
 
     renderFilterDropdown(
       this.el,
-      'Priority',
+      t('common.priority'),
       filter.priorities,
       priorities.map((p) => ({
         id: p.id,
@@ -77,7 +81,7 @@ export class FilterRow {
     if (allAssignees.length) {
       renderFilterDropdown(
         this.el,
-        'Assignee',
+        t('filter.assignee'),
         filter.assignees,
         allAssignees.map((a) => ({ id: a, label: displayName(a) })),
         (selected) => {
@@ -111,7 +115,9 @@ export class FilterRow {
     const btn = new ChipButton(this.el)
     const updateLabel = () => {
       const current = filter.dueDateFilter
-      btn.setLabel(current !== 'any' ? `Due: ${DUE_LABELS[current]}` : DUE_LABELS.any).setActive(current !== 'any')
+      btn
+        .setLabel(current !== 'any' ? t('project.dueFilter', { label: dueLabels()[current] }) : dueLabels().any)
+        .setActive(current !== 'any')
     }
     updateLabel()
     btn.onClick((e) => {
@@ -120,7 +126,7 @@ export class FilterRow {
       for (const opt of opts) {
         menu.addItem((item) =>
           item
-            .setTitle(DUE_LABELS[opt])
+            .setTitle(dueLabels()[opt])
             .setChecked(filter.dueDateFilter === opt)
             .onClick(() => {
               filter.dueDateFilter = opt
@@ -135,7 +141,7 @@ export class FilterRow {
 
   private renderArchivedButton(notify: () => void): void {
     const { filter } = this.props
-    const btn = new ChipButton(this.el).setLabel('Archived').setActive(filter.showArchived)
+    const btn = new ChipButton(this.el).setLabel(t('common.archived')).setActive(filter.showArchived)
     btn.onClick(() => {
       filter.showArchived = !filter.showArchived
       btn.setActive(filter.showArchived)
@@ -149,7 +155,7 @@ export class FilterRow {
       this.clearBtn = null
       return
     }
-    this.clearBtn = new ChipButton(this.el).setLabel(`Clear (${count})`).onClick(() => {
+    this.clearBtn = new ChipButton(this.el).setLabel(t('project.clearFilters', { count })).onClick(() => {
       this.props.onClear()
     })
   }

@@ -1,3 +1,4 @@
+import { t } from '../../i18n'
 export interface MilestonePoint {
   name: string
   dateLabel: string
@@ -28,7 +29,7 @@ export function renderMilestoneTimeline(
   if (todayPos !== null && todayPos >= 0 && todayPos <= 100) {
     const marker = timeline.createDiv('pm-timeline-today')
     marker.style.setProperty('--pm-timeline-pos', `${todayPos}%`)
-    marker.createSpan({ cls: 'pm-timeline-today-label', text: 'Today' })
+    marker.createSpan({ cls: 'pm-timeline-today-label', text: t('common.today') })
   }
 
   const gap = (LABEL_WIDTH / width) * 100

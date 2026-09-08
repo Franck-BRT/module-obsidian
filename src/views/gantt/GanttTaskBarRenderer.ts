@@ -16,6 +16,7 @@ import {
 import { attachBarDrag } from './GanttDragHandler'
 import { handleLinkDotClick } from './GanttLinkHandler'
 import type { RendererContext } from './GanttRenderer'
+import { t } from '../../i18n'
 
 export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: number, ctx: RendererContext): void {
   const project = ctx.scope.projectOf(task.id)
@@ -112,8 +113,13 @@ export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: n
   }
 
   const ttEl = svgEl('title', {})
-  const assigneesStr = task.assignees.length ? `\nAssignees: ${task.assignees.map(displayName).join(', ')}` : ''
-  ttEl.textContent = `${task.title}\n${statusConfig?.label ?? task.status} \u00b7 ${task.priority}\nStart: ${task.start || '\u2014'}  Due: ${task.due || '\u2014'}\nProgress: ${task.progress}%${assigneesStr}`
+  const assigneesStr = task.assignees.length
+    ? `\n${t('gantt.tooltipAssignees')}: ${task.assignees.map(displayName).join(', ')}`
+    : ''
+  ttEl.textContent =
+    `${task.title}\n${statusConfig?.label ?? task.status} \u00b7 ${task.priority}\n` +
+    `${t('gantt.tooltipStart')}: ${task.start || '\u2014'}  ${t('gantt.tooltipDue')}: ${task.due || '\u2014'}\n` +
+    `${t('gantt.tooltipProgress')}: ${task.progress}%${assigneesStr}`
   rect.appendChild(ttEl)
 
   const HANDLE_W = 8
@@ -260,7 +266,7 @@ function renderEmptyRowClickTarget(g: SVGGElement, task: Task, row: number, ctx:
       try {
         await ctx.plugin.store.updateTask(project, task.id, { start: iso, due: iso })
       } catch (err) {
-        new Notice('Failed to set task dates. Please try again.')
+        new Notice(t('gantt.dateFailed'))
         console.error('GanttTaskBarRenderer: click-to-set-dates failed', err)
         return
       }
@@ -270,7 +276,7 @@ function renderEmptyRowClickTarget(g: SVGGElement, task: Task, row: number, ctx:
   )
 
   const tt = svgEl('title', {})
-  tt.textContent = 'Click to set dates'
+  tt.textContent = t('gantt.clickToSetDates')
   hitArea.appendChild(tt)
 }
 

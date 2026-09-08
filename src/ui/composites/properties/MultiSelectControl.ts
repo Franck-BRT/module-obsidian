@@ -5,6 +5,7 @@ import { Chip } from '../../primitives/Chip'
 import { Avatar } from '../../primitives/Avatar'
 import { renderDepRow, type DepLink, type DepOptionEditor } from './depRow'
 import { renderOptionRow } from './optionList'
+import { t } from '../../../i18n'
 
 export interface PickerItem {
   id: string
@@ -144,7 +145,7 @@ export function renderMultiSelect(opts: MultiSelectOpts): void {
     const searchInput = opts.search
       ? popover.contentEl.createEl('input', {
           cls: 'pm-pop-field',
-          attr: { placeholder: opts.placeholder ?? 'Search…', spellcheck: 'false' }
+          attr: { placeholder: opts.placeholder ?? t('picker.search'), spellcheck: 'false' }
         })
       : null
     const listEl = popover.contentEl.createDiv('pm-pop-list')

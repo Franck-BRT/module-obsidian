@@ -1,5 +1,5 @@
 import type { PMSettings } from '../types'
-import { WEEKDAY_LABELS } from '../store/WorkCalendar'
+import { t } from '../i18n'
 
 /** Monday first, matching how a working week is usually written down. */
 const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 7]
@@ -11,7 +11,7 @@ const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 7]
 export function renderWorkingWeekdays(container: HTMLElement, settings: PMSettings, onChange: () => void): void {
   const row = container.createDiv('pm-weekday-row')
   for (const day of WEEKDAY_ORDER) {
-    const label = WEEKDAY_LABELS[day]
+    const label = t(`weekday.${day as 1 | 2 | 3 | 4 | 5 | 6 | 7}`)
     const button = row.createEl('button', {
       cls: 'pm-weekday-toggle',
       text: label.slice(0, 3),

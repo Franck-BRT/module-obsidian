@@ -2,6 +2,7 @@ import type PMPlugin from '../main'
 import { createPersonLink, personCandidates, personKeyer, type PersonCandidate } from '../store'
 import { renderMultiSelect } from './composites/properties'
 import { dedupePeople, displayName } from '../utils'
+import { t } from '../i18n'
 
 export interface PeopleSource {
   /** Offered before the user types. */
@@ -47,13 +48,13 @@ export function renderPersonPicker(opts: PersonPickerOpts): void {
     avatarStack: true,
     search: true,
     addLabel: opts.addLabel,
-    placeholder: 'Search people…',
+    placeholder: t('picker.searchPeople'),
     selected: opts.selected,
     keyOf: personKeyer(plugin.app),
     labelFor: displayName,
     options: () => source.known().map((member) => ({ id: member, label: displayName(member) })),
     moreOptions: (query) => source.search(query).map((candidate) => ({ id: candidate.link, label: candidate.name })),
-    moreHeading: 'People in your vault',
+    moreHeading: t('picker.peopleInVault'),
     add: opts.add,
     remove: opts.remove,
     createLabel: (name) => `Add "${name}"`,

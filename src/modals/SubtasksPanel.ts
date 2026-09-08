@@ -4,6 +4,7 @@ import { renderNoteLink } from '../ui/composites/noteLink'
 import { Checkbox } from '../ui/primitives/Checkbox'
 import { IconButton } from '../ui/primitives/IconButton'
 import { isTerminalStatus, getCompleteStatusId, getDefaultStatusId } from '../utils'
+import { t } from '../i18n'
 
 /** The header count is how many subtasks sit in a terminal status. */
 export function renderSubtasksPanel(
@@ -15,7 +16,7 @@ export function renderSubtasksPanel(
   const subSection = container.createDiv('pm-modal-section')
 
   const subHeader = subSection.createDiv('pm-subtasks-header')
-  const heading = subHeader.createEl('h4', { text: 'Subtasks ', cls: 'pm-modal-section-title' })
+  const heading = subHeader.createEl('h4', { text: t('task.subtasksHeading'), cls: 'pm-modal-section-title' })
   const countEl = heading.createSpan({ cls: 'pm-subtasks-count' })
 
   const subList = subSection.createDiv('pm-modal-subtask-list')
@@ -59,7 +60,7 @@ export function renderSubtasksPanel(
 
       new IconButton(row)
         .setIcon('x')
-        .setTooltip('Remove subtask')
+        .setTooltip(t('task.removeSubtask'))
         .setRevealOnHover(true)
         .onClick(() => {
           task.subtasks = task.subtasks.filter((s) => s.id !== sub.id)
@@ -76,7 +77,7 @@ export function renderSubtasksPanel(
   addRow.createSpan({ cls: 'pm-subtask-checkbox-ghost', attr: { 'aria-hidden': 'true' } })
   const addInput = addRow.createEl('input', {
     cls: 'pm-subtask-add-input',
-    attr: { placeholder: 'Add subtask…' }
+    attr: { placeholder: t('task.addSubtaskPlaceholder') }
   })
   addInput.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return

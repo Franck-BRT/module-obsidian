@@ -4,6 +4,7 @@ import type { Project, Task } from '../../types'
 import { safeAsync } from '../../utils'
 import type { TimelineCfg } from './TimelineConfig'
 import { xToDate, getSnapPoints, snapX } from './TimelineConfig'
+import { t } from '../../i18n'
 
 export interface DragState {
   isDragging: boolean
@@ -130,7 +131,7 @@ export function attachBarDrag(opts: BarDragOpts): () => void {
         await plugin.store.updateTask(project, taskId, patch)
       } catch (err) {
         restore()
-        new Notice('Failed to save date change. Please try again.')
+        new Notice(t('gantt.dragFailed'))
         console.error('GanttDragHandler: save failed', err)
         return
       }
@@ -139,7 +140,7 @@ export function attachBarDrag(opts: BarDragOpts): () => void {
         undo: async () => {
           await plugin.store.updateTask(project, taskId, { start: oldStart, due: oldDue })
           if (plugin.store.configFor(project).autoSchedule) {
-            new Notice('Dates reverted. Dependent task dates may need adjustment.')
+            new Notice(t('gantt.datesReverted'))
           }
           await onRefresh()
         },

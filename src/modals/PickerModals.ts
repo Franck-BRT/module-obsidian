@@ -3,6 +3,7 @@ import type { Task } from '../types'
 import type { ProjectRef } from '../store'
 import { displayName } from '../utils'
 import { renderGlyph } from '../ui/composites/properties'
+import { t } from '../i18n'
 
 /** Lists projects from the index, so picking one doesn't load every project in the vault. */
 export class ProjectPickerModal extends SuggestModal<ProjectRef> {
@@ -12,7 +13,7 @@ export class ProjectPickerModal extends SuggestModal<ProjectRef> {
     private onChoose: (project: ProjectRef) => void
   ) {
     super(app)
-    this.setPlaceholder('Pick a project…')
+    this.setPlaceholder(t('picker.project'))
   }
 
   getSuggestions(query: string): ProjectRef[] {
@@ -36,7 +37,7 @@ export class TaskPickerModal extends SuggestModal<Task> {
     app: App,
     private tasks: Task[],
     private onChoose: (task: Task) => void,
-    placeholder = 'Pick a parent task…'
+    placeholder = t('picker.parentTask')
   ) {
     super(app)
     this.setPlaceholder(placeholder)
@@ -64,7 +65,7 @@ export class PersonLookupModal extends SuggestModal<string> {
     private onChoose: (person: string) => void
   ) {
     super(app)
-    this.setPlaceholder('Pick a person…')
+    this.setPlaceholder(t('picker.person'))
   }
 
   getSuggestions(query: string): string[] {

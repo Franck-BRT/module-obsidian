@@ -6,6 +6,7 @@ import { ProgressBar } from '../primitives/ProgressBar'
 import { renderDueChip, type DueUrgency } from './dueChip'
 import { renderGlyph } from './properties'
 import { renderTreeGuides } from './treeGuides'
+import { t } from '../../i18n'
 
 export interface ProjectRowProps {
   title: string
@@ -66,7 +67,7 @@ export class ProjectRow {
     tasks.createSpan({ cls: 'pm-project-row-tasks', text: `${props.tasksDone}/${props.tasksTotal}` })
     if (props.overdue > 0) {
       new Chip(tasks)
-        .setLabel(`${props.overdue} overdue`)
+        .setLabel(t('project.overdueCount', { count: props.overdue }))
         .setVariant('solid')
         .setColor('var(--color-red)')
         .setSize('sm')
@@ -83,7 +84,7 @@ export class ProjectRow {
     const actions = this.el.createEl('td', { cls: 'pm-table-cell pm-table-cell-actions' })
     new IconButton(actions)
       .setIcon('more-horizontal')
-      .setTooltip('Project actions')
+      .setTooltip(t('project.actions'))
       .setRevealOnHover(true)
       .onClick((e) => props.onActions(e))
 

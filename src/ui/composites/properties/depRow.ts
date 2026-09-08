@@ -1,5 +1,6 @@
 import { setIcon, setTooltip } from 'obsidian'
-import { DEPENDENCY_TYPE_LABELS, DEPENDENCY_TYPES, type DependencyOption } from '../../../types'
+import { DEPENDENCY_TYPES, dependencyTypeLabel, type DependencyOption } from '../../../types'
+import { t } from '../../../i18n'
 import { IconButton } from '../../primitives/IconButton'
 import { renderNoteLink } from '../noteLink'
 
@@ -41,7 +42,7 @@ export function renderDepRow(parent: HTMLElement, props: DepRowProps): HTMLEleme
   if (props.tooltip) setTooltip(row, props.tooltip)
   if (props.option) renderDepOption(row, props.option)
   if (props.onRemove) {
-    new IconButton(row).setIcon('x').setTooltip('Remove dependency').onClick(props.onRemove)
+    new IconButton(row).setIcon('x').setTooltip(t('dependency.remove')).onClick(props.onRemove)
   }
   return row
 }
@@ -53,19 +54,19 @@ function renderDepOption(row: HTMLElement, editor: DepOptionEditor): void {
     select.createEl('option', { value: type, text: type })
   }
   select.value = editor.value.type
-  setTooltip(select, DEPENDENCY_TYPE_LABELS[editor.value.type])
+  setTooltip(select, dependencyTypeLabel(editor.value.type))
   select.addEventListener('change', () => {
-    const type = DEPENDENCY_TYPES.find((t) => t === select.value) ?? editor.value.type
-    setTooltip(select, DEPENDENCY_TYPE_LABELS[type])
+    const type = DEPENDENCY_TYPES.find((candidate) => candidate === select.value) ?? editor.value.type
+    setTooltip(select, dependencyTypeLabel(type))
     editor.onChange({ ...editor.value, type })
   })
 
   const lag = row.createEl('input', {
     cls: 'pm-input pm-dep-lag',
-    attr: { type: 'number', step: '1', 'aria-label': 'Lag in working days' }
+    attr: { type: 'number', step: '1', 'aria-label': t('dependency.lag') }
   })
   lag.value = String(editor.value.lag)
-  setTooltip(lag, 'Lag in working days. Negative overlaps the predecessor.')
+  setTooltip(lag, t('dependency.lagTooltip'))
   lag.addEventListener('change', () => {
     const parsed = Number.parseInt(lag.value, 10)
     const next = Number.isFinite(parsed) ? parsed : 0

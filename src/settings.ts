@@ -1,7 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting, debounce } from 'obsidian'
 import type { SettingDefinitionItem, SettingDefinitionPage } from 'obsidian'
 import type PMPlugin from './main'
-import { type PMSettings, DEFAULT_SETTINGS, PRIORITY_ICON_SET_LABELS, makeId } from './types'
+import { type PMSettings, DEFAULT_SETTINGS, priorityIconSetLabels, makeId } from './types'
 import { flattenTasks } from './store/TaskTreeOps'
 import { saveShortcutLabel } from './utils'
 import {
@@ -13,14 +13,11 @@ import {
 import { renderPaletteFields, renderStatusDoneToggle } from './ui/PaletteListEditor'
 import { renderCustomFieldFields, renderCustomFieldOptions } from './ui/CustomFieldListEditor'
 import { renderPersonPicker } from './ui/PersonPicker'
+import { LOCALES, t } from './i18n'
 import { invalidHolidays, renderHolidays, renderWorkingWeekdays } from './ui/WorkCalendarEditor'
 
 export type { PMSettings }
 export { DEFAULT_SETTINGS }
-
-function plural(count: number, singular: string, plural: string): string {
-  return `${count} ${count === 1 ? singular : plural}`
-}
 
 export class PMSettingTab extends PluginSettingTab {
   plugin: PMPlugin
@@ -37,65 +34,78 @@ export class PMSettingTab extends PluginSettingTab {
   /** Names the entries the calendar will ignore, so a typo doesn't fail silently. */
   private holidayDesc(): string {
     const bad = invalidHolidays(this.plugin.settings.holidays)
-    const base = 'One date per line, as YYYY-MM-DD.'
-    return bad.length === 0 ? base : `${base} Ignored, not a date: ${bad.join(', ')}.`
+    const base = t('settings.holidays.desc')
+    return bad.length === 0 ? base : `${base} ${t('settings.holidays.ignored', { list: bad.join(', ') })}`
   }
 
   getSettingDefinitions(): SettingDefinitionItem[] {
     return [
       {
         type: 'group',
-        heading: 'General',
+        heading: t('settings.group.general'),
         items: [
           {
-            name: 'New project folder',
-            desc: 'Leave it empty to create them in the vault root.',
+            name: t('settings.language.name'),
+            desc: t('settings.language.desc'),
+            aliases: ['language', 'langue', 'i18n', 'traduction', 'français'],
+            control: {
+              type: 'dropdown',
+              key: 'language',
+              options: {
+                auto: t('settings.language.auto'),
+                ...Object.fromEntries(LOCALES.map((l) => [l, t(`settings.language.${l}`)]))
+              }
+            }
+          },
+          {
+            name: t('settings.projectsFolder.name'),
+            desc: t('settings.projectsFolder.desc'),
             aliases: ['projects folder', 'location'],
             control: {
               type: 'folder',
               key: 'projectsFolder',
               defaultValue: 'Projects',
-              placeholder: 'Vault root'
+              placeholder: t('settings.projectsFolder.placeholder')
             }
           },
           this.excludedFoldersPage(),
           {
-            name: 'Open projects in',
-            desc: 'Tasks skips the overview page and goes straight to the table, timeline, or board.',
+            name: t('settings.projectSurface.name'),
+            desc: t('settings.projectSurface.desc'),
             aliases: ['click', 'project list', 'overview'],
             control: {
               type: 'dropdown',
               key: 'projectSurface',
-              options: { overview: 'Overview', tasks: 'Tasks' }
+              options: { overview: t('settings.projectSurface.overview'), tasks: t('settings.projectSurface.tasks') }
             }
           },
           {
-            name: 'Default tasks view',
-            desc: "View a project's tasks open in.",
+            name: t('settings.defaultView.name'),
+            desc: t('settings.defaultView.desc'),
             aliases: ['default view'],
             control: {
               type: 'dropdown',
               key: 'defaultView',
-              options: { table: 'Table', gantt: 'Gantt', kanban: 'Board' }
+              options: { table: t('common.table'), gantt: t('common.gantt'), kanban: t('common.board') }
             }
           },
           {
-            name: 'Open tasks in',
-            desc: "Tab also opens task notes in the task editor instead of Obsidian's.",
+            name: t('settings.taskSurface.name'),
+            desc: t('settings.taskSurface.desc'),
             control: {
               type: 'dropdown',
               key: 'taskEditorSurface',
-              options: { modal: 'Modal', tab: 'Tab' }
+              options: { modal: t('settings.taskSurface.modal'), tab: t('settings.taskSurface.tab') }
             }
           },
           {
-            name: 'Save tasks on close',
-            desc: 'Save changes when the task editor is closed.',
+            name: t('settings.saveOnClose.name'),
+            desc: t('settings.saveOnClose.desc'),
             control: { type: 'toggle', key: 'saveTaskOnClose' }
           },
           {
-            name: 'Save shortcut',
-            desc: 'Key shortcut to create or save tasks and projects.',
+            name: t('settings.saveShortcut.name'),
+            desc: t('settings.saveShortcut.desc'),
             aliases: ['hotkey', 'keyboard'],
             control: {
               type: 'dropdown',
@@ -107,73 +117,48 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
-        heading: 'Style',
+        heading: t('settings.group.style'),
         items: [
           {
-            name: 'Show tag colors',
-            desc: 'Give each tag a colored dot derived from its name.',
+            name: t('settings.tagColors.name'),
+            desc: t('settings.tagColors.desc'),
             aliases: ['appearance'],
             control: { type: 'toggle', key: 'showTagColors' }
           },
           {
-            name: 'Priority icons',
-            desc: 'Icon set for priorities that have no icon of their own.',
+            name: t('settings.priorityIcons.name'),
+            desc: t('settings.priorityIcons.desc'),
             aliases: ['appearance', 'chevrons', 'signal'],
             control: {
               type: 'dropdown',
               key: 'priorityIcons',
-              options: PRIORITY_ICON_SET_LABELS
+              options: priorityIconSetLabels()
             }
           }
         ]
       },
       {
         type: 'group',
-        heading: 'Table',
+        heading: t('settings.group.table'),
         items: [
           {
-            name: 'Show subtree connections',
-            desc: 'Draw lines tying a subtask row back to its parent.',
+            name: t('settings.subtreeConnections.name'),
+            desc: t('settings.subtreeConnections.desc'),
             aliases: ['tree', 'indent', 'subtask'],
             control: { type: 'toggle', key: 'showSubtreeConnections' }
           },
           {
-            name: 'Line borders',
-            desc: 'Rules drawn between rows, between columns, or both.',
+            name: t('settings.lineBorders.name'),
+            desc: t('settings.lineBorders.desc'),
             aliases: ['grid', 'lines'],
             control: {
               type: 'dropdown',
               key: 'lineBorders',
-              options: { none: 'None', horizontal: 'Horizontal', vertical: 'Vertical', both: 'Both' }
-            }
-          }
-        ]
-      },
-      {
-        type: 'group',
-        heading: 'Gantt',
-        items: [
-          {
-            name: 'Default granularity',
-            desc: 'Time unit for each column in the timeline.',
-            aliases: ['timeline', 'zoom'],
-            control: {
-              type: 'dropdown',
-              key: 'ganttGranularity',
-              options: { day: 'Day', week: 'Week', month: 'Month', quarter: 'Quarter', year: 'Year' }
-            }
-          },
-          {
-            name: 'Week label',
-            desc: 'Text shown in weekly header cells.',
-            aliases: ['timeline'],
-            control: {
-              type: 'dropdown',
-              key: 'ganttWeekLabel',
               options: {
-                weekNumber: 'Week number (w15)',
-                dateRange: 'Date range (apr 7\u201313)',
-                both: 'Both (w15: apr 7\u201313)'
+                none: t('common.none'),
+                horizontal: t('common.horizontal'),
+                vertical: t('common.vertical'),
+                both: t('common.both')
               }
             }
           }
@@ -181,17 +166,53 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
-        heading: 'Board',
+        heading: t('settings.group.gantt'),
         items: [
           {
-            name: 'Show subtasks',
-            desc: 'Display subtasks as individual cards.',
+            name: t('settings.granularity.name'),
+            desc: t('settings.granularity.desc'),
+            aliases: ['timeline', 'zoom'],
+            control: {
+              type: 'dropdown',
+              key: 'ganttGranularity',
+              options: {
+                day: t('settings.granularity.day'),
+                week: t('settings.granularity.week'),
+                month: t('settings.granularity.month'),
+                quarter: t('settings.granularity.quarter'),
+                year: t('settings.granularity.year')
+              }
+            }
+          },
+          {
+            name: t('settings.weekLabel.name'),
+            desc: t('settings.weekLabel.desc'),
+            aliases: ['timeline'],
+            control: {
+              type: 'dropdown',
+              key: 'ganttWeekLabel',
+              options: {
+                weekNumber: t('settings.weekLabel.weekNumber'),
+                dateRange: t('settings.weekLabel.dateRange'),
+                both: t('settings.weekLabel.both')
+              }
+            }
+          }
+        ]
+      },
+      {
+        type: 'group',
+        heading: t('settings.group.board'),
+        items: [
+          {
+            name: t('settings.kanbanSubtasks.name'),
+            desc: t('settings.kanbanSubtasks.desc'),
             aliases: ['kanban'],
             control: { type: 'toggle', key: 'kanbanShowSubtasks' }
           },
           {
-            name: 'Show description preview',
-            desc: 'Display the first few lines of each task description.',
+            name: t('settings.kanbanPreview.name'),
+            desc: t('settings.kanbanPreview.desc'),
             aliases: ['kanban'],
             control: { type: 'toggle', key: 'kanbanShowDescriptionPreview' }
           }
@@ -199,17 +220,17 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
-        heading: 'Scheduling',
+        heading: t('settings.group.scheduling'),
         items: [
           {
-            name: 'Auto-schedule',
-            desc: 'Adjust dependent task dates when a task changes.',
+            name: t('settings.autoSchedule.name'),
+            desc: t('settings.autoSchedule.desc'),
             aliases: ['dependencies'],
             control: { type: 'toggle', key: 'autoSchedule' }
           },
           {
-            name: 'Pull dependents forward',
-            desc: 'Move dependent tasks earlier when a task is completed before its due date.',
+            name: t('settings.pullForward.name'),
+            desc: t('settings.pullForward.desc'),
             aliases: ['dependencies'],
             control: {
               type: 'toggle',
@@ -218,8 +239,8 @@ export class PMSettingTab extends PluginSettingTab {
             }
           },
           {
-            name: 'Skip weekends and holidays',
-            desc: 'Scheduled dates land on working days only. Dates you set by hand are left alone.',
+            name: t('settings.workingDays.name'),
+            desc: t('settings.workingDays.desc'),
             aliases: ['working days', 'weekend', 'holidays', 'business days'],
             control: {
               type: 'toggle',
@@ -228,15 +249,15 @@ export class PMSettingTab extends PluginSettingTab {
             }
           },
           {
-            name: 'Working week',
-            desc: 'The days work can land on.',
+            name: t('settings.workingWeek.name'),
+            desc: t('settings.workingWeek.desc'),
             aliases: ['weekdays', 'working days'],
             render: (setting: Setting) => {
               renderWorkingWeekdays(setting.controlEl, this.plugin.settings, () => this.persist())
             }
           },
           {
-            name: 'Holidays',
+            name: t('settings.holidays.name'),
             desc: this.holidayDesc(),
             aliases: ['bank holidays', 'shutdown', 'time off'],
             render: (setting: Setting) => {
@@ -250,11 +271,11 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
-        heading: 'Archive',
+        heading: t('settings.group.archive'),
         items: [
           {
-            name: 'Auto-archive completed tasks',
-            desc: "Move completed tasks to the project's archive after this many days. Set it to 0 to keep them in place.",
+            name: t('settings.autoArchive.name'),
+            desc: t('settings.autoArchive.desc'),
             aliases: ['archive', 'cleanup', 'done'],
             control: {
               type: 'slider',
@@ -268,17 +289,17 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
-        heading: 'Notifications',
+        heading: t('settings.group.notifications'),
         items: [
           {
-            name: 'Due date reminders',
-            desc: 'Show a banner when a task is approaching its due date.',
+            name: t('settings.notifications.name'),
+            desc: t('settings.notifications.desc'),
             aliases: ['notifications', 'banner'],
             control: { type: 'toggle', key: 'notificationsEnabled' }
           },
           {
-            name: 'Days in advance',
-            desc: 'How many days before the due date to notify.',
+            name: t('settings.leadDays.name'),
+            desc: t('settings.leadDays.desc'),
             aliases: ['notifications', 'reminders', 'lead time'],
             control: {
               type: 'slider',
@@ -293,12 +314,12 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
-        heading: 'Task fields',
+        heading: t('settings.group.taskFields'),
         items: [this.statusesPage(), this.prioritiesPage(), this.customFieldsPage(), this.teamMembersPage()]
       },
       {
         type: 'group',
-        heading: 'Integrations',
+        heading: t('settings.group.integrations'),
         visible: () => isTaskNotesInstalled(this.app),
         items: [this.taskNotesPage()]
       }
@@ -320,14 +341,14 @@ export class PMSettingTab extends PluginSettingTab {
     const statuses = this.plugin.settings.statuses
     return {
       type: 'page',
-      name: 'Statuses',
-      desc: 'Labels, colors, and icons for the status field.',
-      displayValue: () => plural(this.plugin.settings.statuses.length, 'status', 'statuses'),
+      name: t('settings.statuses.name'),
+      desc: t('settings.statuses.desc'),
+      displayValue: () => t('count.statuses', { count: this.plugin.settings.statuses.length }),
       items: [
         {
           type: 'list',
-          heading: 'Statuses',
-          emptyState: 'No statuses.',
+          heading: t('settings.statuses.name'),
+          emptyState: t('settings.statuses.empty'),
           items: statuses.map((status) => ({
             name: status.label,
             render: (setting: Setting) => {
@@ -339,11 +360,11 @@ export class PMSettingTab extends PluginSettingTab {
           onReorder: (from, to) => this.reorder(statuses, from, to),
           onDelete: (index) => this.deleteEntry('status', index),
           addItem: {
-            name: 'Add status',
+            name: t('settings.statuses.add'),
             action: () => {
               statuses.push({
                 id: 'status-' + makeId().slice(0, 6),
-                label: 'New status',
+                label: t('settings.statuses.new'),
                 color: '#8a94a0',
                 icon: '',
                 complete: false
@@ -361,14 +382,14 @@ export class PMSettingTab extends PluginSettingTab {
     const fields = this.plugin.settings.customFields
     return {
       type: 'page',
-      name: 'Custom fields',
-      desc: 'Extra task properties available across all projects.',
-      displayValue: () => plural(this.plugin.settings.customFields.length, 'field', 'fields'),
+      name: t('settings.customFields.name'),
+      desc: t('settings.customFields.desc'),
+      displayValue: () => t('count.fields', { count: this.plugin.settings.customFields.length }),
       items: [
         {
           type: 'list',
-          heading: 'Custom fields',
-          emptyState: 'No custom fields.',
+          heading: t('settings.customFields.name'),
+          emptyState: t('settings.customFields.empty'),
           items: fields.map((field) => ({
             name: field.name,
             render: (setting: Setting) => {
@@ -390,9 +411,9 @@ export class PMSettingTab extends PluginSettingTab {
             this.update()
           },
           addItem: {
-            name: 'Add custom field',
+            name: t('settings.customFields.add'),
             action: () => {
-              fields.push({ id: makeId(), name: 'New field', type: 'text' })
+              fields.push({ id: makeId(), name: t('settings.customFields.new'), type: 'text' })
               this.persist()
               this.update()
             }
@@ -406,14 +427,14 @@ export class PMSettingTab extends PluginSettingTab {
     const priorities = this.plugin.settings.priorities
     return {
       type: 'page',
-      name: 'Priorities',
-      desc: 'Labels, colors, and icons for the priority field.',
-      displayValue: () => plural(this.plugin.settings.priorities.length, 'priority', 'priorities'),
+      name: t('settings.priorities.name'),
+      desc: t('settings.priorities.desc'),
+      displayValue: () => t('count.priorities', { count: this.plugin.settings.priorities.length }),
       items: [
         {
           type: 'list',
-          heading: 'Priorities',
-          emptyState: 'No priorities.',
+          heading: t('settings.priorities.name'),
+          emptyState: t('settings.priorities.empty'),
           items: priorities.map((priority) => ({
             name: priority.label,
             render: (setting: Setting) => {
@@ -424,11 +445,11 @@ export class PMSettingTab extends PluginSettingTab {
           onReorder: (from, to) => this.reorder(priorities, from, to),
           onDelete: (index) => this.deleteEntry('priority', index),
           addItem: {
-            name: 'Add priority',
+            name: t('settings.priorities.add'),
             action: () => {
               priorities.push({
                 id: 'priority-' + makeId().slice(0, 6),
-                label: 'New priority',
+                label: t('settings.priorities.new'),
                 color: '#8a94a0',
                 icon: ''
               })
@@ -445,8 +466,8 @@ export class PMSettingTab extends PluginSettingTab {
     const connected = (): boolean => getTaskNotesApi(this.app) !== null
     return {
       type: 'page',
-      name: 'TaskNotes',
-      desc: 'Share statuses and priorities with the TaskNotes plugin.',
+      name: t('settings.tasknotes.name'),
+      desc: t('settings.tasknotes.desc'),
       displayValue: () => this.taskNotesStatus(),
       status: () => (connected() ? null : 'warning'),
       items: [
@@ -456,14 +477,14 @@ export class PMSettingTab extends PluginSettingTab {
             (button) =>
               button
                 .setIcon('refresh-cw')
-                .setTooltip('Import from TaskNotes')
+                .setTooltip(t('settings.tasknotes.import'))
                 .setDisabled(!connected())
                 .onClick(() => this.importFromTaskNotes())
           ],
           items: [
             {
-              name: 'Statuses and priorities',
-              desc: 'Copies labels, colors, and completion from TaskNotes 4.10 or newer.',
+              name: t('settings.tasknotes.palettes'),
+              desc: t('settings.tasknotes.palettesDesc'),
               render: (setting: Setting) => {
                 setting.controlEl.createDiv({ cls: 'setting-item-value', text: this.taskNotesStatus() })
               }
@@ -477,31 +498,31 @@ export class PMSettingTab extends PluginSettingTab {
   /** Whether an import would change anything right now. */
   private taskNotesStatus(): string {
     const api = getTaskNotesApi(this.app)
-    if (!api) return 'Update required'
+    if (!api) return t('settings.tasknotes.updateRequired')
     const { added, updated } = countTaskNotesPaletteChanges(api, this.plugin.settings)
     const total = added + updated
-    return total === 0 ? 'Up to date' : plural(total, 'change', 'changes')
+    return total === 0 ? t('settings.tasknotes.upToDate') : t('count.changes', { count: total })
   }
 
   private excludedFoldersPage(): SettingDefinitionPage {
     const folders = this.plugin.settings.excludedFolders
     return {
       type: 'page',
-      name: 'Excluded folders',
-      desc: 'Folders to skip when looking for projects and tasks, such as templates.',
-      displayValue: () => plural(this.plugin.settings.excludedFolders.length, 'folder', 'folders'),
+      name: t('settings.excludedFolders.name'),
+      desc: t('settings.excludedFolders.desc'),
+      displayValue: () => t('count.folders', { count: this.plugin.settings.excludedFolders.length }),
       items: [
         {
           type: 'list',
-          heading: 'Excluded folders',
-          emptyState: 'No folders excluded.',
+          heading: t('settings.excludedFolders.name'),
+          emptyState: t('settings.excludedFolders.empty'),
           items: folders.map((folder, index) => ({
-            name: folder || 'Unnamed folder',
+            name: folder || t('settings.excludedFolders.unnamed'),
             render: (setting: Setting) => {
               setting.setClass('pm-palette-row')
               setting.addText((text) =>
                 text
-                  .setPlaceholder('Templates')
+                  .setPlaceholder(t('settings.excludedFolders.placeholder'))
                   .setValue(folder)
                   .onChange((value) => {
                     this.plugin.settings.excludedFolders[index] = value
@@ -518,7 +539,7 @@ export class PMSettingTab extends PluginSettingTab {
             this.update()
           },
           addItem: {
-            name: 'Add folder',
+            name: t('settings.excludedFolders.add'),
             action: () => {
               folders.push('')
               this.persist()
@@ -534,30 +555,30 @@ export class PMSettingTab extends PluginSettingTab {
     const members = this.plugin.settings.globalTeamMembers
     return {
       type: 'page',
-      name: 'Team members',
-      desc: 'People available as assignees across all projects.',
-      displayValue: () => plural(this.plugin.settings.globalTeamMembers.length, 'person', 'people'),
+      name: t('settings.team.name'),
+      desc: t('settings.team.desc'),
+      displayValue: () => t('count.people', { count: this.plugin.settings.globalTeamMembers.length }),
       items: [
         {
-          name: 'People folder',
-          desc: 'Where person notes are looked for and created. Leave it empty to search the whole vault.',
+          name: t('settings.peopleFolder.name'),
+          desc: t('settings.peopleFolder.desc'),
           aliases: ['people', 'person notes'],
           control: {
             type: 'folder',
             key: 'peopleFolder',
             defaultValue: 'People',
-            placeholder: 'Whole vault'
+            placeholder: t('settings.peopleFolder.placeholder')
           }
         },
         {
-          name: 'Team members',
-          desc: 'Offered as assignees and members in every project.',
+          name: t('settings.team.name'),
+          desc: t('settings.team.membersDesc'),
           render: (setting: Setting) => {
             renderPersonPicker({
               container: setting.controlEl,
               plugin: this.plugin,
               sourcePath: '',
-              addLabel: 'Add member',
+              addLabel: t('settings.team.add'),
               selected: () => this.plugin.settings.globalTeamMembers,
               add: (value) => {
                 members.push(value)
@@ -590,7 +611,7 @@ export class PMSettingTab extends PluginSettingTab {
   private deleteEntry(field: 'status' | 'priority', index: number): void {
     const entries = field === 'status' ? this.plugin.settings.statuses : this.plugin.settings.priorities
     if (entries.length <= 1) {
-      new Notice(`You must have at least one ${field}.`)
+      new Notice(t('settings.atLeastOne', { field }))
       return
     }
     const [removed] = entries.splice(index, 1)
@@ -602,16 +623,14 @@ export class PMSettingTab extends PluginSettingTab {
   private importFromTaskNotes(): void {
     const api = getTaskNotesApi(this.app)
     if (!api) {
-      new Notice('TaskNotes 4.10 or newer is required.')
+      new Notice(t('settings.tasknotes.tooOld'))
       return
     }
     const { added, updated } = importTaskNotesPalettes(api, this.plugin.settings)
     this.persist()
     this.update()
     new Notice(
-      added || updated
-        ? `Imported from TaskNotes: ${added} added, ${updated} updated.`
-        : 'Statuses and priorities already match TaskNotes.'
+      added || updated ? t('settings.tasknotes.imported', { added, updated }) : t('settings.tasknotes.alreadyMatch')
     )
   }
 
@@ -639,7 +658,13 @@ export class PMSettingTab extends PluginSettingTab {
       }
     }
     if (remapped > 0) {
-      new Notice(`Remapped ${remapped} task${remapped === 1 ? '' : 's'} from '${deletedLabel}' to '${fallback.label}'.`)
+      new Notice(
+        t('settings.remapped', {
+          tasks: t('count.tasks', { count: remapped }),
+          from: deletedLabel,
+          to: fallback.label
+        })
+      )
     }
   }
 }

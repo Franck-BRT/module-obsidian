@@ -10,6 +10,7 @@ import {
   renderSelectControl
 } from '../ui/composites/properties'
 import { stringifyCustomValue } from '../utils'
+import { t } from '../i18n'
 
 export function renderCustomFieldInput(
   cf: CustomFieldDef,
@@ -67,8 +68,8 @@ export function renderCustomFieldInput(
       }
       renderMultiSelect({
         container: wrap,
-        addLabel: 'Add value',
-        addLabelMore: 'Add another',
+        addLabel: t('picker.addValue'),
+        addLabelMore: t('task.addAnother'),
         selected: picked,
         options: () => (cf.options ?? []).map((option) => ({ id: option, label: option })),
         add: (option) => {
@@ -86,7 +87,7 @@ export function renderCustomFieldInput(
         plugin,
         sourcePath: task.filePath ?? project.filePath,
         extra: () => [...project.teamMembers, ...collectAllAssignees(project.tasks)],
-        addLabel: 'Set person',
+        addLabel: t('picker.setPerson'),
         selected: () => {
           const current = task.customFields[cf.id]
           return typeof current === 'string' && current ? [current] : []

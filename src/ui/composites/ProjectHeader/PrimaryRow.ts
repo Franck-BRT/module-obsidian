@@ -3,6 +3,7 @@ import type { FilterState, SavedView } from '../../../types'
 import { ChipButton } from '../../primitives/ChipButton'
 import { isFilterActive } from '../../../store/TaskFilter'
 import { safeAsync } from '../../../utils'
+import { t } from '../../../i18n'
 
 export interface PrimaryRowProps {
   savedViews: SavedView[]
@@ -51,7 +52,7 @@ export class PrimaryRow {
   private renderSearchInput(): void {
     const input = this.el.createEl('input', {
       type: 'text',
-      placeholder: 'Search tasks…',
+      placeholder: t('task.searchTasks'),
       cls: 'pm-project-header-search'
     })
     input.value = this.props.filter.text
@@ -65,7 +66,7 @@ export class PrimaryRow {
     const wrap = parent.createDiv('pm-project-header-saved-views')
 
     new ChipButton(wrap)
-      .setLabel('All')
+      .setLabel(t('common.all'))
       .setShape('pill')
       .setActive(!this.props.activeSavedViewId)
       .onClick(() => {
@@ -90,13 +91,13 @@ export class PrimaryRow {
         const menu = new Menu()
         menu.addItem((item) =>
           item
-            .setTitle('Update with current filters')
+            .setTitle(t('project.updateView'))
             .setIcon('refresh-cw')
             .onClick(safeAsync(() => this.props.onSavedViewUpdate(sv.id)))
         )
         menu.addItem((item) =>
           item
-            .setTitle('Delete view')
+            .setTitle(t('project.deleteView'))
             .setIcon('trash')
             .onClick(safeAsync(() => this.props.onSavedViewDelete(sv.id)))
         )
@@ -116,7 +117,7 @@ export class PrimaryRow {
     const wrapper = parent.createDiv('pm-project-header-save-input')
     const input = wrapper.createEl('input', {
       type: 'text',
-      placeholder: 'View name…',
+      placeholder: t('project.viewName'),
       cls: 'pm-project-header-save-input-field'
     })
     input.focus()
@@ -155,10 +156,10 @@ export class PrimaryRow {
     const isFilterRowVisible =
       this.props.filterRowExpanded || isFilterActive(this.props.filter) || this.props.filter.showArchived
     const btn = new ChipButton(parent)
-      .setLabel('Filter')
+      .setLabel(t('project.filter'))
       .setShape('pill')
       .setActive(isFilterRowVisible)
-      .setAriaLabel('Toggle filter row')
+      .setAriaLabel(t('filter.toggleRow'))
       .onClick(() => {
         this.props.onToggleFilterRow()
       })

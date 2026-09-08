@@ -1,6 +1,8 @@
 import { today } from './dates'
 import type { TaskIndex } from './store/TaskIndex'
 import type { WorkCalendar } from './store/WorkCalendar'
+import type { LanguageSetting } from './i18n'
+import { t } from './i18n'
 
 export type TaskStatus = string
 export type TaskPriority = string
@@ -24,11 +26,8 @@ export interface Recurrence {
 export const DEPENDENCY_TYPES = ['FS', 'SS', 'FF', 'SF'] as const
 export type DependencyType = (typeof DEPENDENCY_TYPES)[number]
 
-export const DEPENDENCY_TYPE_LABELS: Record<DependencyType, string> = {
-  FS: 'Finish to start',
-  SS: 'Start to start',
-  FF: 'Finish to finish',
-  SF: 'Start to finish'
+export function dependencyTypeLabel(type: DependencyType): string {
+  return t(`dependency.${type}`)
 }
 
 /** Extra scheduling terms for one predecessor. Lag is in working days and may be negative. */
@@ -215,12 +214,14 @@ export const PRIORITY_ICON_SETS: Record<PriorityIconSet, string[]> = {
   none: []
 }
 
-export const PRIORITY_ICON_SET_LABELS: Record<PriorityIconSet, string> = {
-  chevrons: 'Chevrons',
-  signal: 'Signal bars',
-  arrows: 'Arrows',
-  alerts: 'Alerts',
-  none: 'None'
+export function priorityIconSetLabels(): Record<PriorityIconSet, string> {
+  return {
+    chevrons: t('priorityIcons.chevrons'),
+    signal: t('priorityIcons.signal'),
+    arrows: t('priorityIcons.arrows'),
+    alerts: t('priorityIcons.alerts'),
+    none: t('priorityIcons.none')
+  }
 }
 
 export interface PMSettings {
@@ -260,6 +261,8 @@ export interface PMSettings {
   showTagColors: boolean
   saveTaskOnClose: boolean
   taskEditorSurface: 'modal' | 'tab'
+  /** 'auto' follows Obsidian's own UI language. */
+  language: LanguageSetting
   /** Key shortcut to create or save tasks and projects. */
   editorSaveModifier: 'Shift' | 'Mod'
   /** Where a project link lands: its overview page or its tasks in the default view. */
@@ -289,6 +292,33 @@ export const DEFAULT_PRIORITIES: PriorityConfig[] = [
   { id: 'medium', label: 'Medium', color: '#8a94a0', icon: '' },
   { id: 'low', label: 'Low', color: '#79b58d', icon: '' }
 ]
+
+/**
+ * The palettes a fresh install starts with, in the active language. They are seeded
+ * into the user's settings once and editable from there on, so switching language
+ * later leaves labels the user may have renamed alone.
+ */
+export function seedStatuses(): StatusConfig[] {
+  const labels: Record<string, string> = {
+    todo: t('default.status.todo'),
+    'in-progress': t('default.status.inProgress'),
+    blocked: t('default.status.blocked'),
+    review: t('default.status.review'),
+    done: t('default.status.done'),
+    cancelled: t('default.status.cancelled')
+  }
+  return DEFAULT_STATUSES.map((s) => ({ ...s, label: labels[s.id] ?? s.label }))
+}
+
+export function seedPriorities(): PriorityConfig[] {
+  const labels: Record<string, string> = {
+    critical: t('default.priority.critical'),
+    high: t('default.priority.high'),
+    medium: t('default.priority.medium'),
+    low: t('default.priority.low')
+  }
+  return DEFAULT_PRIORITIES.map((p) => ({ ...p, label: labels[p.id] ?? p.label }))
+}
 
 export const DEFAULT_SETTINGS: PMSettings = {
   projectsFolder: 'Projects',
@@ -320,6 +350,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   holidays: [],
   saveTaskOnClose: true,
   taskEditorSurface: 'modal',
+  language: 'auto',
   editorSaveModifier: 'Shift',
   projectSurface: 'overview',
   projectFilters: {},
@@ -336,7 +367,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
   const now = new Date().toISOString()
   return {
     id: makeId(),
-    title: 'New Task',
+    title: t('task.newTask'),
     description: '',
     type: 'task',
     status: 'todo',

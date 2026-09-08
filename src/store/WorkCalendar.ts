@@ -20,16 +20,6 @@ export const ALL_DAYS: WorkCalendar = {
   holidays: new Set()
 }
 
-export const WEEKDAY_LABELS: Record<number, string> = {
-  1: 'Monday',
-  2: 'Tuesday',
-  3: 'Wednesday',
-  4: 'Thursday',
-  5: 'Friday',
-  6: 'Saturday',
-  7: 'Sunday'
-}
-
 /**
  * A calendar with no working weekday would make every search here run forever, so an
  * empty or malformed list falls back to every day working.

@@ -5,6 +5,7 @@ import { flattenTasks } from '../store'
 import { EmptyState } from '../ui/primitives/EmptyState'
 import { truncateTitle } from '../utils'
 import { TaskEditor } from '../modals/TaskEditor'
+import { t } from '../i18n'
 
 export const PM_TASK_VIEW_TYPE = 'pm-task'
 
@@ -21,7 +22,7 @@ export class TaskView extends ItemView {
   plugin: PMPlugin
   private editor: TaskEditor | null = null
   private state: TaskViewState = {}
-  private taskTitle = 'Task'
+  private taskTitle = t('common.task')
   private keyScope: Scope
 
   constructor(leaf: WorkspaceLeaf, plugin: PMPlugin) {
@@ -74,7 +75,7 @@ export class TaskView extends ItemView {
     const resolvedProjectPath = projectPath ?? (filePath ? this.plugin.index.projectPathForTask(filePath) : null)
     const project = resolvedProjectPath ? await this.plugin.store.loadProjectByPath(resolvedProjectPath) : null
     if (!project) {
-      this.showMissing('This note does not belong to a project.')
+      this.showMissing(t('view.notInProject'))
       return
     }
 
@@ -88,7 +89,7 @@ export class TaskView extends ItemView {
       await this.plugin.store.loadTaskBody(task)
     }
 
-    this.taskTitle = task?.title ?? 'New task'
+    this.taskTitle = task?.title ?? t('view.newTask')
     this.editor = new TaskEditor(
       this.app,
       this.plugin,
@@ -103,7 +104,7 @@ export class TaskView extends ItemView {
   }
 
   private showMissing(message: string): void {
-    this.taskTitle = 'Task'
-    new EmptyState(this.contentEl).setIcon('square-check-big').setTitle('No task here').setBody(message)
+    this.taskTitle = t('common.task')
+    new EmptyState(this.contentEl).setIcon('square-check-big').setTitle(t('project.noTaskHere')).setBody(message)
   }
 }

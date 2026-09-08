@@ -58,6 +58,7 @@ import {
   TASK_FOLDER_NAME
 } from './vaultFs'
 import type { ImportNoteOptions, TaskSource } from './TaskSource'
+import { t } from '../i18n'
 
 /** 'fm' writes via processFrontMatter; 'full' rewrites the body too, via vault.process. */
 type DirtyKind = 'fm' | 'full'
@@ -430,7 +431,7 @@ export class ProjectStore implements TaskSource {
       return project
     } catch (e) {
       console.error(`[PM] Failed to load project ${file.path}:`, e)
-      new Notice(`dotpm: Failed to load "${file.basename}". Check console for details.`)
+      new Notice(t('notice.loadProjectFailed', { name: file.basename }))
       return null
     }
   }
@@ -491,8 +492,8 @@ export class ProjectStore implements TaskSource {
 
     // Re-parent orphans from the parentId in their own file.
     const childIds = new Set<string>()
-    for (const t of taskMap.values()) {
-      for (const s of t.subtasks) childIds.add(s.id)
+    for (const parent of taskMap.values()) {
+      for (const sub of parent.subtasks) childIds.add(sub.id)
     }
     for (const [taskId, pid] of parentIdMap) {
       if (childIds.has(taskId)) continue
@@ -551,7 +552,7 @@ export class ProjectStore implements TaskSource {
         console.warn(`[PM] Task file no longer exists, skipping: ${file.path}`)
       } else {
         console.error(`[PM] Failed to load task ${file.path}:`, e)
-        new Notice(`dotpm: Failed to load task "${file.basename}". Check console for details.`)
+        new Notice(t('notice.loadTaskFailed', { name: file.basename }))
       }
       return { task: null, subtaskIds: [], parentId: null }
     }
@@ -680,7 +681,7 @@ export class ProjectStore implements TaskSource {
       for (const [id, kind] of dirty) this.markDirty(project, [id], kind)
       if (e instanceof TaskFileNameConflictError) throw e
       console.error(`[PM] Failed to save project "${project.title}":`, e)
-      new Notice(`dotpm: Failed to save "${project.title}". Check console for details.`)
+      new Notice(t('notice.saveProjectFailed', { name: project.title }))
       throw e
     }
   }
@@ -1259,7 +1260,7 @@ export class ProjectStore implements TaskSource {
       await this.insertTask(project, next, findParentId(project, taskId))
     } catch (e) {
       console.error(`[dotpm] Failed to create the next occurrence of "${task.title}":`, e)
-      new Notice(`dotpm: Could not create the next occurrence of "${task.title}". Check console for details.`)
+      new Notice(t('notice.occurrenceFailed', { name: task.title }))
     }
   }
 
@@ -1271,7 +1272,7 @@ export class ProjectStore implements TaskSource {
   private async reconcileSubtasks(project: Project, parent: Task, oldSubtree: Task[]): Promise<void> {
     indexAddSubtree(project, parent, findParentId(project, parent.id))
 
-    const old = new Map(oldSubtree.map((t) => [t.id, t]))
+    const old = new Map(oldSubtree.map((prev) => [prev.id, prev]))
     const liveIds = new Set<string>()
     for (const { task } of flattenTasks(parent.subtasks)) {
       liveIds.add(task.id)
@@ -1600,10 +1601,7 @@ export class ProjectStore implements TaskSource {
     const shown = titles.slice(0, 3).join(', ')
     const rest = titles.length > 3 ? `, and ${titles.length - 3} more` : ''
     console.warn('[dotpm] Dependency cycle, these tasks are not scheduled:', [...cycleIds])
-    new Notice(
-      `dotpm: ${titles.length} task(s) depend on each other in a loop and were left unscheduled: ${shown}${rest}.`,
-      8000
-    )
+    new Notice(t('notice.dependencyCycle', { count: titles.length, titles: `${shown}${rest}` }), 8000)
   }
 
   /** Tasks outside `project` waiting on any of `movedIds`, grouped by their project. */

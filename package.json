@@ -1,7 +1,7 @@
 {
   "name": "project-manager",
   "version": "2.3.1",
-  "description": "dotpm — project management for Obsidian",
+  "description": "dotpm \u2014 project management for Obsidian",
   "repository": "github:dotpm/obsidian-pm",
   "main": "main.js",
   "type": "module",
@@ -15,6 +15,7 @@
     "check": "run-p check:**",
     "check:code": "oxlint ./src",
     "check:format": "oxfmt --check ./src",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "check:submission": "eslint --max-warnings 0 src/",
     "check:types": "tsc -noEmit -skipLibCheck",
     "fix": "run-p fix:**",

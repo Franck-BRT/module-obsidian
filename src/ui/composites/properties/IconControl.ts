@@ -1,6 +1,7 @@
 import { getIconIds, setIcon } from 'obsidian'
 import { Popover } from '../../primitives/Popover'
 import { renderGlyph, renderOptionRow } from './optionList'
+import { t } from '../../../i18n'
 
 export interface IconControlOpts {
   container: HTMLElement
@@ -50,7 +51,7 @@ export function renderIconControl(opts: IconControlOpts): void {
 
     const search = popover.contentEl.createEl('input', {
       cls: 'pm-pop-field',
-      attr: { placeholder: 'Search icons or paste an emoji', spellcheck: 'false' }
+      attr: { placeholder: t('picker.searchIcons'), spellcheck: 'false' }
     })
     const clearRow = popover.contentEl.createDiv()
     const grid = popover.contentEl.createDiv('pm-icon-grid')
@@ -68,7 +69,7 @@ export function renderIconControl(opts: IconControlOpts): void {
 
       clearRow.empty()
       renderOptionRow(clearRow, {
-        label: 'No icon',
+        label: t('picker.noIcon'),
         icon: 'ban',
         selected: !value,
         onPick: () => commit('')
@@ -92,7 +93,7 @@ export function renderIconControl(opts: IconControlOpts): void {
       if (found.length > GRID_LIMIT) {
         hint.setText(`Showing ${GRID_LIMIT} of ${found.length}. Keep typing to narrow.`)
       } else if (found.length === 0 && !isGlyphQuery(query)) {
-        hint.setText('No icon matches that.')
+        hint.setText(t('field.noIconMatch'))
       }
     }
 

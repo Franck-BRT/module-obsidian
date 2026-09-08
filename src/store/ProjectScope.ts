@@ -2,6 +2,7 @@ import type { CustomFieldDef, PriorityConfig, Project, ResolvedProjectConfig, St
 import { findTaskById } from './TaskIndex'
 import type { TaskSource } from './TaskSource'
 import type { VaultIndex } from './VaultIndex'
+import { t } from '../i18n'
 
 /** What a project view renders. Carried in the view state, so a layout restores it. */
 export type ScopeSpec =
@@ -88,13 +89,13 @@ export class ProjectScope {
   label(): string {
     switch (this.spec.kind) {
       case 'project':
-        return this.primary?.title ?? 'Project'
+        return this.primary?.title ?? t('scope.project')
       case 'subtree':
-        return this.primary ? `${this.primary.title} and sub-projects` : 'Project'
+        return this.primary ? t('scope.andSubProjects', { title: this.primary.title }) : t('scope.project')
       case 'folder':
-        return this.spec.path.slice(this.spec.path.lastIndexOf('/') + 1) || 'Vault'
+        return this.spec.path.slice(this.spec.path.lastIndexOf('/') + 1) || t('scope.vault')
       case 'vault':
-        return 'All projects'
+        return t('project.allProjects')
     }
   }
 

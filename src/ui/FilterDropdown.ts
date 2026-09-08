@@ -1,6 +1,7 @@
 import { Menu } from 'obsidian'
 import { ChipButton } from './primitives/ChipButton'
 import { addPaletteMenuItem } from './StatusBadge'
+import { t } from '../i18n'
 
 export interface FilterOption {
   id: string
@@ -46,7 +47,7 @@ export function renderFilterDropdown(
     if (selected.length) {
       menu.addSeparator()
       menu.addItem((item) =>
-        item.setTitle('Clear').onClick(() => {
+        item.setTitle(t('common.clear')).onClick(() => {
           selected.length = 0
           onChange(selected)
           updateLabel()

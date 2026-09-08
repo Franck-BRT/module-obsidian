@@ -1,6 +1,7 @@
 import { setIcon } from 'obsidian'
 import { Popover } from '../../primitives/Popover'
 import { renderGlyph, renderOptionRow, type SelectItem } from './optionList'
+import { t } from '../../../i18n'
 
 export interface SelectControlOpts {
   container: HTMLElement
@@ -19,7 +20,7 @@ export function renderSelectControl(opts: SelectControlOpts): void {
   const trigger = opts.container.createEl('button', { cls: 'pm-prop-inline' })
   if (!selected) trigger.addClass('pm-prop-inline--empty')
   renderGlyph(trigger, { color: selected?.color, icon: selected?.icon })
-  trigger.createSpan({ cls: 'pm-prop-inline-label', text: selected?.label ?? opts.placeholder ?? 'Select' })
+  trigger.createSpan({ cls: 'pm-prop-inline-label', text: selected?.label ?? opts.placeholder ?? t('picker.select') })
   const chevron = trigger.createSpan({ cls: 'pm-prop-chevron' })
   setIcon(chevron, 'chevron-down')
 
@@ -33,7 +34,7 @@ export function renderSelectControl(opts: SelectControlOpts): void {
     const searchInput = opts.search
       ? pop.contentEl.createEl('input', {
           cls: 'pm-pop-field',
-          attr: { placeholder: opts.searchPlaceholder ?? 'Search…', spellcheck: 'false' }
+          attr: { placeholder: opts.searchPlaceholder ?? t('picker.search'), spellcheck: 'false' }
         })
       : null
     const list = pop.contentEl.createDiv('pm-pop-list')

@@ -6,6 +6,7 @@ import { safeAsync, saveShortcutLabel } from '../utils'
 import { renderPersonPicker } from '../ui/PersonPicker'
 import { renderPropRow } from '../ui/FormField'
 import { renderIconControl, renderSelectControl } from '../ui/composites/properties'
+import { t } from '../i18n'
 
 interface Draft {
   title: string
@@ -82,11 +83,11 @@ export class ProjectCreateModal extends Modal {
     this.crumbFolder = crumb.createSpan({ cls: 'pm-te-crumb-name', text: this.targetFolder() })
     const sep = crumb.createSpan({ cls: 'pm-te-crumb-sep' })
     setIcon(sep, 'chevron-right')
-    crumb.createSpan({ text: 'New project' })
+    crumb.createSpan({ text: t('project.new') })
 
     this.header.createDiv('pm-te-header-spacer')
 
-    const closeBtn = new ExtraButtonComponent(this.header).setIcon('x').setTooltip('Close')
+    const closeBtn = new ExtraButtonComponent(this.header).setIcon('x').setTooltip(t('common.close'))
     closeBtn.extraSettingsEl.addClass('pm-te-header-btn')
     closeBtn.onClick(() => this.close())
   }
@@ -99,7 +100,7 @@ export class ProjectCreateModal extends Modal {
     const wrap = parent.createDiv('pm-te-title-wrap')
     this.titleInput = wrap.createEl('textarea', { cls: 'pm-te-title' })
     this.titleInput.rows = 1
-    this.titleInput.placeholder = 'Project name'
+    this.titleInput.placeholder = t('project.name')
     this.titleInput.spellcheck = false
     this.titleError = wrap.createDiv({ cls: 'pm-modal-title-error', attr: { hidden: '' } })
 
@@ -122,7 +123,7 @@ export class ProjectCreateModal extends Modal {
   private renderIcon(parent: HTMLElement): void {
     renderPropRow(
       parent,
-      'Icon',
+      t('field.icon'),
       () => {
         this.iconHost = createDiv('pm-prop-value')
         this.drawIcon()
@@ -147,7 +148,7 @@ export class ProjectCreateModal extends Modal {
   private renderColor(parent: HTMLElement): void {
     renderPropRow(
       parent,
-      'Color',
+      t('field.color'),
       () => {
         const cell = createDiv('pm-prop-value pm-prop-color')
         const picker = cell.createEl('input', { type: 'color', cls: 'pm-color-custom' })
@@ -166,7 +167,7 @@ export class ProjectCreateModal extends Modal {
   private renderParent(parent: HTMLElement): void {
     renderPropRow(
       parent,
-      'Parent',
+      t('field.parent'),
       () => {
         const cell = createDiv('pm-prop-value')
         const draw = (): void => {
@@ -174,10 +175,10 @@ export class ProjectCreateModal extends Modal {
           renderSelectControl({
             container: cell,
             value: this.draft.parentPath,
-            placeholder: 'No parent',
+            placeholder: t('common.noParent'),
             search: true,
             options: [
-              { id: '', label: 'No parent' },
+              { id: '', label: t('common.noParent') },
               ...this.plugin.index.projectRefs().map((ref) => ({ id: ref.path, label: ref.title, color: ref.color }))
             ],
             onChange: (path) => {
@@ -197,7 +198,7 @@ export class ProjectCreateModal extends Modal {
   private renderMembers(parent: HTMLElement): void {
     renderPropRow(
       parent,
-      'Members',
+      t('project.members'),
       () => {
         const cell = createDiv('pm-prop-value')
         renderPersonPicker({
@@ -205,7 +206,7 @@ export class ProjectCreateModal extends Modal {
           plugin: this.plugin,
           // The note doesn't exist yet, so links are resolved from the vault root.
           sourcePath: '',
-          addLabel: 'Add member',
+          addLabel: t('project.addMember'),
           selected: () => this.draft.teamMembers,
           add: (value) => {
             this.draft.teamMembers.push(value)
@@ -222,9 +223,9 @@ export class ProjectCreateModal extends Modal {
 
   private renderDescription(parent: HTMLElement): void {
     const section = parent.createDiv('pm-modal-section pm-modal-desc-section')
-    section.createEl('h4', { text: 'Description', cls: 'pm-modal-section-title' })
+    section.createEl('h4', { text: t('common.description'), cls: 'pm-modal-section-title' })
     const area = section.createEl('textarea', { cls: 'pm-modal-description' })
-    area.placeholder = 'What this project covers and what done looks like'
+    area.placeholder = t('field.projectCovers')
     const autoResize = () => {
       area.setCssProps({ '--desc-height': 'auto' })
       area.setCssProps({ '--desc-height': area.scrollHeight + 'px' })
@@ -245,7 +246,7 @@ export class ProjectCreateModal extends Modal {
 
     footer.createDiv('pm-footer-spacer')
 
-    new ButtonComponent(footer).setButtonText('Cancel').onClick(() => this.close())
+    new ButtonComponent(footer).setButtonText(t('dialog.cancel')).onClick(() => this.close())
     this.submit = new ButtonComponent(footer)
       .setButtonText(`Create project (${saveShortcutLabel(this.plugin.settings.editorSaveModifier)})`)
       .setCta()
@@ -261,7 +262,7 @@ export class ProjectCreateModal extends Modal {
     this.pathHint.lastElementChild?.setText(path)
     this.pathHint.toggleClass('pm-hidden', !path)
     if (taken) {
-      this.titleError.setText('A note with this name is already there.')
+      this.titleError.setText(t('field.nameTaken'))
       this.titleError.removeAttribute('hidden')
       this.titleInput.addClass('pm-input-error')
     } else {

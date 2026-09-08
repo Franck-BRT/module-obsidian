@@ -19,6 +19,10 @@ export class Notice {
 
 export function setIcon(): void {}
 
+export function getLanguage(): string {
+  return 'en'
+}
+
 export function normalizePath(p: string): string {
   return p.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '').replace(/\/+$/, '')
 }

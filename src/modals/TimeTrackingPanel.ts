@@ -3,6 +3,7 @@ import { totalLoggedHours } from '../store/TaskTreeOps'
 import { today } from '../dates'
 import { renderAddButton } from '../ui/composites/addButton'
 import { IconButton } from '../ui/primitives/IconButton'
+import { t } from '../i18n'
 
 export function renderTimeTrackingPanel(container: HTMLElement, task: Task): void {
   if (task.type === 'milestone') return
@@ -15,10 +16,10 @@ export function renderTimeTrackingPanel(container: HTMLElement, task: Task): voi
   timeHeader.createEl('h4', { text: timeLabel, cls: 'pm-modal-section-title' })
 
   const estRow = timeSection.createDiv('pm-time-est-row')
-  estRow.createSpan({ text: 'Estimate:', cls: 'pm-time-label' })
+  estRow.createSpan({ text: t('task.estimate'), cls: 'pm-time-label' })
   const estInput = estRow.createEl('input', { type: 'number', cls: 'pm-prop-text pm-time-est-input' })
   estInput.value = est > 0 ? String(est) : ''
-  estInput.placeholder = 'Hours'
+  estInput.placeholder = t('field.hours')
   estInput.min = '0'
   estInput.step = '0.5'
   estInput.addEventListener('change', () => {
@@ -45,7 +46,7 @@ export function renderTimeTrackingPanel(container: HTMLElement, task: Task): voi
       hoursInput.value = String(log.hours)
       hoursInput.min = '0'
       hoursInput.step = '0.25'
-      hoursInput.placeholder = 'Hours'
+      hoursInput.placeholder = t('field.hours')
       hoursInput.addEventListener('change', () => {
         log.hours = parseFloat(hoursInput.value) || 0
       })
@@ -59,7 +60,7 @@ export function renderTimeTrackingPanel(container: HTMLElement, task: Task): voi
 
       new IconButton(row)
         .setIcon('x')
-        .setTooltip('Remove log')
+        .setTooltip(t('task.removeLog'))
         .onClick(() => {
           logs.splice(i, 1)
           renderLogs()
@@ -68,7 +69,7 @@ export function renderTimeTrackingPanel(container: HTMLElement, task: Task): voi
   }
   renderLogs()
 
-  renderAddButton(timeSection, 'Log time', () => {
+  renderAddButton(timeSection, t('field.logTime'), () => {
     if (!task.timeLogs) task.timeLogs = []
     task.timeLogs.push({
       date: today().toString(),

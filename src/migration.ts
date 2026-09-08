@@ -2,6 +2,7 @@ import { Notice, TFile } from 'obsidian'
 import type PMPlugin from './main'
 import type { ScopeSpec } from './store'
 import { parseFrontmatter, isOldFormat } from './store/YamlParser'
+import { t } from './i18n'
 
 /** Rewrites projects whose tasks are embedded in frontmatter as one file per task. */
 export async function migrateProjects(plugin: PMPlugin): Promise<void> {
@@ -19,18 +20,18 @@ export async function migrateProjects(plugin: PMPlugin): Promise<void> {
       const project = await plugin.store.loadProject(file)
       if (!project || project.tasks.length === 0) continue
 
-      new Notice(`Migrating project: ${project.title}...`)
+      new Notice(t('notice.migrating', { name: project.title }))
 
       await plugin.store.saveProject(project)
       migrated++
     } catch (e) {
       console.error(`[PM] Migration failed for ${file.path}:`, e)
-      new Notice(`dotpm: Migration failed for "${file.basename}". Check console for details.`)
+      new Notice(t('notice.migrationFailed', { name: file.basename }))
     }
   }
 
   if (migrated > 0) {
-    new Notice(`dotpm: Migrated ${migrated} project(s) to new format.`)
+    new Notice(t('notice.migrated', { projects: t('count.projects', { count: migrated }) }))
   }
 }
 
@@ -69,7 +70,7 @@ export async function migrateProjectLayout(plugin: PMPlugin): Promise<void> {
       })
     } catch (e) {
       console.error(`[PM] Failed to move "${path}" into its own folder:`, e)
-      new Notice(`dotpm: Could not move "${path}" into its own folder. Check console for details.`)
+      new Notice(t('notice.moveFolderFailed', { path }))
     }
   }
 
@@ -84,7 +85,7 @@ export async function migrateProjectLayout(plugin: PMPlugin): Promise<void> {
   remapProjectSettings(plugin, moves)
   retargetOpenViews(plugin, moves)
   await plugin.saveSettings()
-  new Notice(`dotpm: Moved ${moves.length} project(s) into their own folders.`)
+  new Notice(t('notice.movedIntoFolders', { projects: t('count.projects', { count: moves.length }) }))
 }
 
 function movedPath(path: string, moves: ProjectMove[]): string | null {

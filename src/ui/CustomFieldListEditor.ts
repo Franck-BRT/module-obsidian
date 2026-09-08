@@ -2,15 +2,16 @@ import type { CustomFieldDef } from '../types'
 import { CUSTOM_FIELD_TYPES, makeId } from '../types'
 import { IconButton } from './primitives/IconButton'
 import { renderAddButton } from './composites/addButton'
+import { t } from '../i18n'
 
 export const CUSTOM_FIELD_TYPE_LABELS: Record<CustomFieldDef['type'], string> = {
-  text: 'Text',
-  number: 'Number',
-  date: 'Date',
-  select: 'Select',
-  multiselect: 'Multi-select',
-  person: 'Person',
-  checkbox: 'Checkbox',
+  text: t('fieldType.text'),
+  number: t('fieldType.number'),
+  date: t('fieldType.date'),
+  select: t('fieldType.select'),
+  multiselect: t('fieldType.multiselect'),
+  person: t('fieldType.person'),
+  checkbox: t('fieldType.checkbox'),
   url: 'URL'
 }
 
@@ -29,8 +30,8 @@ export function renderCustomFieldListEditor(container: HTMLElement, opts: Custom
   const rerender = opts.redraw ?? ((): void => renderCustomFieldListEditor(container, opts))
   container.empty()
   opts.fields.forEach((field, index) => renderRow(container, field, index, opts, rerender))
-  renderAddButton(container, 'Add custom field', () => {
-    opts.fields.push({ id: makeId(), name: 'New field', type: 'text', options: [] })
+  renderAddButton(container, t('settings.customFields.add'), () => {
+    opts.fields.push({ id: makeId(), name: t('settings.customFields.new'), type: 'text', options: [] })
     opts.onChanged()
     rerender()
   })
@@ -48,7 +49,7 @@ function renderRow(
   opts.renderExtra?.(row, field)
   new IconButton(row)
     .setIcon('x')
-    .setTooltip('Remove field')
+    .setTooltip(t('settings.customFields.removeField'))
     .onClick(() => {
       opts.fields.splice(index, 1)
       opts.onChanged()
@@ -65,7 +66,7 @@ export function renderCustomFieldFields(
   redraw: () => void
 ): void {
   const name = parent.createEl('input', { type: 'text', value: field.name, cls: 'pm-input pm-cf-name' })
-  name.placeholder = 'Field name'
+  name.placeholder = t('field.fieldName')
   name.addEventListener('change', () => {
     field.name = name.value
     onChanged()
@@ -101,14 +102,14 @@ export function renderCustomFieldOptions(parent: HTMLElement, field: CustomField
       })
       new IconButton(optionRow)
         .setIcon('x')
-        .setTooltip('Remove option')
+        .setTooltip(t('settings.customFields.removeOption'))
         .onClick(() => {
           options.splice(i, 1)
           onChanged()
           drawOptions()
         })
     })
-    renderAddButton(optionsWrap, 'Add option', () => {
+    renderAddButton(optionsWrap, t('field.addOption'), () => {
       options.push('')
       drawOptions()
     })
