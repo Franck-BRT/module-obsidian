@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Documents
-version: 2.6.1
+version: 2.7.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Documents 2.6.1
+# Recette — Black Documents 2.7.0
 
 Plan de test manuel pour le fork. Les **548 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -24,6 +24,10 @@ cassé de ce qui marchait. Les **[N]** portent sur les **nouveautés**.
 ---
 
 ## 0. Installation et reprise des données
+
+> Depuis une **2.6.x**, il n'y a rien à reprendre : le dossier et l'identifiant n'ont pas
+> bougé, on remplace les trois fichiers et on recharge. Les points ci-dessous concernent
+> une première installation, ou une reprise depuis **dotpm** / **dotpm FR**.
 
 - [ ] **[R]** Toute autre copie est désactivée : l'upstream **dotpm**, et l'ancien **dotpm FR** si tu l'avais installé
 - [ ] Le dossier `<coffre>/.obsidian/plugins/black-documents/` contient bien `main.js`, `manifest.json`, `styles.css`
@@ -271,7 +275,9 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] ✅ **Attendu** : une notification confirme l'ajout
 - [ ] Ouvrir le recueil : ✅ **Attendu** : la tâche y est
 - [ ] Ajouter une tâche d'un **deuxième projet** : ✅ **Attendu** : les deux coexistent dans la même vue
-- [ ] ✅ **Attendu** : la colonne « Projet » indique le projet d'origine de chaque tâche
+- [ ] ✅ **Attendu** : chaque tâche est rangée sous un **en-tête portant son projet d'origine**
+- [ ] ✅ **Attendu** : **pas** de colonne « Projet » dans un recueil — l'en-tête le dit déjà
+- [ ] Dans une vue **tous projets** (pas un recueil) : ✅ **Attendu** : la colonne « Projet » est **toujours là**
 - [ ] Dans le recueil, clic droit → **« Retirer du recueil »** : ✅ **Attendu** : la tâche disparaît du recueil
 - [ ] ✅ **Attendu** : la tâche est **toujours présente dans son projet d'origine**
 
@@ -318,7 +324,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ### Regroupement par projet [N]
 
-> **Nouveau** : dans un recueil, chaque tâche est rangée sous un en-tête
+> **Nouveau en 2.7.0** : dans un recueil, chaque tâche est rangée sous un en-tête
 > portant le projet dont elle vient.
 
 - [ ] Ouvrir un recueil contenant des tâches de **deux projets au moins**

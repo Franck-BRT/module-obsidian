@@ -7,12 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-09-09
+
 ### Added
 
 - A collection groups its tasks under the project each one comes from. The heading
   carries the project's icon and colour, says how many tasks it holds, opens the project
   when clicked, and folds shut. What is folded is remembered per collection, so the same
   project can be open in one collection and shut in another
+- A task whose project has since moved or been deleted is not dropped from the view: it
+  gathers under a "Project not found" heading, last
+
+### Changed
+
+- The table in a collection no longer carries the "Project" column. The heading above
+  each block says it once, so the column repeated it on every line and cost the width
+  the task titles needed. Every other multi-project view keeps it
 
 ## [2.6.1] - 2026-09-09
 

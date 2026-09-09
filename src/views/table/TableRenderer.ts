@@ -79,6 +79,15 @@ export interface TableContext {
   onBulkDelete: () => void
 }
 
+/**
+ * A collection already says which project every row comes from, in the heading above
+ * its block, so the column would repeat it on every line. Any other multi-project view
+ * has no headings and still needs it.
+ */
+export function showsProjectColumn(scope: ProjectScope): boolean {
+  return scope.isMulti && scope.spec.kind !== 'collection'
+}
+
 export function renderTable(ctx: TableContext): void {
   const wrapper = ctx.container.createDiv('pm-table-wrapper')
   ctx.state.wrapper = wrapper
@@ -116,7 +125,7 @@ export function renderTable(ctx: TableContext): void {
   const cols: { key: SortKey | null; label: string; width?: string }[] = [
     { key: null, label: '', width: '32px' },
     { key: 'title', label: t('common.task'), width: 'auto' },
-    ...(ctx.scope.isMulti ? [{ key: null, label: t('common.project'), width: '130px' } as const] : []),
+    ...(showsProjectColumn(ctx.scope) ? [{ key: null, label: t('common.project'), width: '130px' } as const] : []),
     { key: 'status', label: t('common.status'), width: '130px' },
     { key: 'priority', label: t('common.priority'), width: '110px' },
     { key: 'assignees', label: t('task.assignees'), width: '140px' },
@@ -289,7 +298,7 @@ function renderWindowRows(ctx: TableContext): void {
   if (!tbody) return
 
   const rows = state.visibleRows
-  const colCount = 10 + ctx.scope.customFields().length + (ctx.scope.isMulti ? 1 : 0)
+  const colCount = 10 + ctx.scope.customFields().length + (showsProjectColumn(ctx.scope) ? 1 : 0)
   const { start, end } = computeWindow(state)
   state.windowStart = start
   state.windowEnd = end

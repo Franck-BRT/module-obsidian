@@ -2,7 +2,7 @@ import { Menu, type App } from 'obsidian'
 import { getStatusConfig, dueUrgency, isTerminalStatus, safeAsync, stringifyCustomValue } from '../../utils'
 import type { CustomFieldDef } from '../../types'
 import { totalLoggedHours } from '../../store/TaskTreeOps'
-import { updateSelectCheckboxes, getVisibleTaskIds } from './TableRenderer'
+import { showsProjectColumn, updateSelectCheckboxes, getVisibleTaskIds } from './TableRenderer'
 import type { TableContext, TableGroupRow, TableState, TableTaskRow } from './TableRenderer'
 import { openTaskModal } from '../../ui/ModalFactory'
 import { buildTaskContextMenu } from '../../ui/TaskContextMenu'
@@ -140,7 +140,7 @@ export function renderTaskRow(tbody: HTMLElement, flat: TableTaskRow, ctx: Table
     }
   })
 
-  if (ctx.scope.isMulti) {
+  if (showsProjectColumn(ctx.scope)) {
     new ProjectCell(row, {
       title: project.title,
       color: project.color,
