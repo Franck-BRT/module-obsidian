@@ -12,6 +12,12 @@
 
 </div>
 
+> **This is a fork.** [`Franck-BRT/module-obsidian`](https://github.com/Franck-BRT/module-obsidian)
+> tracks [`dotpm/obsidian-pm`](https://github.com/dotpm/obsidian-pm) and adds a French
+> interface, working-day scheduling, typed dependencies and working recurring tasks.
+> It installs as `dotpm-fr`, beside the original rather than over it.
+> See [docs/fork.md](docs/fork.md) for what changed and how upstream is merged in.
+
 Table views, Gantt charts, Kanban boards, custom fields, time tracking, smart scheduling — all stored as plain Markdown with YAML frontmatter. No external services. No sync subscriptions. Your data stays yours.
 
 <img width="1422" height="791" alt="dotpm dashboard" src="https://github.com/user-attachments/assets/ca6bc67f-e656-45be-b93a-17410555ec1a" />

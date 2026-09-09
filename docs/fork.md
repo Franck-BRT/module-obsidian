@@ -79,6 +79,41 @@ checks make sure the gap does not go unnoticed:
 The language follows Obsidian's own unless the plugin's Language setting overrides it.
 Adding a locale means one file, one entry in `LOCALES`, and nothing else.
 
+## Installing it
+
+The fork's plugin id is **`dotpm-fr`**, not upstream's `project-manager`. That is
+deliberate: sharing the id means sharing the folder, and Obsidian would eventually
+overwrite this build with an upstream release without saying anything.
+
+1. Disable **dotpm** in Obsidian if it is installed. Two copies both claiming the
+   vault's `pm-project` notes will fight over them.
+2. Unzip `dotpm-fr-<version>.zip` into `<vault>/.obsidian/plugins/`, or copy
+   `main.js`, `manifest.json` and `styles.css` into
+   `<vault>/.obsidian/plugins/dotpm-fr/`.
+3. To keep the settings from the original, copy its `data.json`:
+   `cp <vault>/.obsidian/plugins/project-manager/data.json <vault>/.obsidian/plugins/dotpm-fr/`
+   Projects and tasks need nothing — they are plain Markdown notes and belong to the
+   vault, not to the plugin.
+4. Reload Obsidian and enable **dotpm FR**.
+
+For updates without doing this by hand, [BRAT](https://github.com/TfTHacker/obsidian42-brat)
+can follow this repository's releases: add `Franck-BRT/module-obsidian` as a beta plugin.
+
+## Cutting a release
+
+```sh
+pnpm check && pnpm test        # must be clean
+# bump `version` in manifest.json and add it to versions.json
+pnpm build && pnpm package     # dist/dotpm-fr/ and dist/dotpm-fr-<version>.zip
+git tag <version> && git push origin <version>
+```
+
+The tag triggers `.github/workflows/release.yml`, which rebuilds from the tag, refuses
+to publish if the tag and `manifest.json` disagree or the version is missing from
+`versions.json`, and attaches `main.js`, `manifest.json` and `styles.css` to a GitHub
+release. Those three loose files are what Obsidian and BRAT install; the zip is only a
+convenience for installing by hand.
+
 ## Running it
 
 ```sh

@@ -1,4 +1,4 @@
-import { watch, writeFileSync } from 'node:fs'
+import { readFileSync, watch, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { bundle } from 'lightningcss'
@@ -9,7 +9,9 @@ const stylesDir = join(root, 'src/styles')
 
 const prod = Boolean(process.env['PRODUCTION'])
 const vaultPath = process.env['VAULT_PATH']
-const outDir = vaultPath ? `${vaultPath}/.obsidian/plugins/project-manager` : root
+// Read rather than hard-coded: the fork's id is not the upstream one.
+const { id } = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf8'))
+const outDir = vaultPath ? `${vaultPath}/.obsidian/plugins/${id}` : root
 const outFile = join(outDir, 'styles.css')
 
 function build() {

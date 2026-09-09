@@ -12,6 +12,7 @@
     "build": "run-p build:js build:css",
     "build:js": "PRODUCTION=1 tsdown",
     "build:css": "PRODUCTION=1 node scripts/build-styles.mjs",
+    "package": "node scripts/package.mjs",
     "check": "run-p check:**",
     "check:code": "oxlint ./src",
     "check:format": "oxfmt --check ./src",

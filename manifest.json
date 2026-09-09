@@ -1,11 +1,11 @@
 {
-  "id": "project-manager",
-  "name": "dotpm",
-  "version": "2.3.1",
+  "id": "dotpm-fr",
+  "name": "dotpm FR",
+  "version": "2.4.0",
   "minAppVersion": "1.13.0",
-  "description": "Full-featured project management: stunning Gantt charts, Kanban boards, Table views, customizable fields, due date notifications.",
-  "author": "dotpm",
-  "authorUrl": "https://dotpm.pm",
+  "description": "Project management in your vault: Gantt charts, boards, tables, custom fields. Fork of dotpm with a French interface, working-day scheduling, typed dependencies and working recurring tasks.",
+  "author": "Stepan Kropachev and dotpm contributors; fork by Franck-BRT",
+  "authorUrl": "https://github.com/Franck-BRT/module-obsidian",
   "fundingUrl": "https://buymeacoffee.com/kropachev",
   "isDesktopOnly": false
 }

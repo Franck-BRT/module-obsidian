@@ -1,9 +1,12 @@
 import { builtinModules } from 'node:module'
 import { defineConfig } from 'tsdown'
+// Read rather than hard-coded: the fork's id is not the upstream one, and a stale
+// literal here silently builds into the wrong plugin folder.
+import manifest from './manifest.json' with { type: 'json' }
 
 const prod = Boolean(process.env['PRODUCTION'])
 const vaultPath = process.env['VAULT_PATH']
-const outDir = vaultPath ? `${vaultPath}/.obsidian/plugins/project-manager` : '.'
+const outDir = vaultPath ? `${vaultPath}/.obsidian/plugins/${manifest.id}` : '.'
 
 export default defineConfig({
   entry: 'src/main.ts',

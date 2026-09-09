@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-09-09
+
+First release of the `Franck-BRT/module-obsidian` fork, from upstream dotpm 2.3.1.
+
+The plugin id is `dotpm-fr`, not upstream's `project-manager`, so this build installs
+beside the community plugin instead of being overwritten by its next update. Disable
+the original before enabling this one — two copies both claiming the vault's project
+notes will fight. Settings carry over by copying `data.json` from the old plugin
+folder to the new one; task and project notes need nothing, they are plain Markdown.
+
+### Added
+
+- The interface is translated, French to start with. The language follows Obsidian's
+  own unless the new Language setting overrides it, and an untranslated string falls
+  back to English rather than showing a key
+- Scheduling can skip weekends and holidays, with a configurable working week. Off by
+  default: turning it on would otherwise move the dates of every existing plan
+- Dependencies carry a link type — finish-to-start, start-to-start, finish-to-finish,
+  start-to-finish — and a lag in working days, negative to overlap the predecessor
+- Recurring tasks create their next occurrence when completed, subtasks included
+
+### Fixed
+
+- Content written by hand into a project note survives a save. The body was
+  regenerated whole, so anything added to it was dropped silently
+- Tasks caught in a dependency cycle are reported. They were detected and then
+  discarded, so they quietly stopped being scheduled
+- `pnpm dev` builds into the folder named by the manifest rather than a hard-coded id
+
+
 ## [2.3.1] - 2026-09-07
 
 ### Fixed
