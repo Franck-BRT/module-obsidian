@@ -16,11 +16,12 @@ import {
   matchPersonNotes,
   personLink,
   ProjectStore,
+  readFormerSettings,
   removeFromCollection,
   scopeKey,
   VaultIndex
 } from './store'
-import type { ProjectRef, TaskSource } from './store'
+import type { FormerSettings, ProjectRef, TaskSource } from './store'
 import { PMSettingTab } from './settings'
 import { ProjectView, PM_PROJECT_VIEW_TYPE } from './views/ProjectView'
 import { ProjectOverviewView, PM_PROJECT_OVERVIEW_VIEW_TYPE } from './views/ProjectOverviewView'
@@ -335,7 +336,11 @@ export default class PMPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const saved = (await this.loadData()) as Partial<PMSettings> | null
+    let saved = (await this.loadData()) as Partial<PMSettings> | null
+    // Only when this folder holds nothing of its own: an install that has already run
+    // once must never be overwritten by what an older folder still remembers.
+    const adopted = saved ? null : await this.adoptFormerSettings()
+    if (adopted) saved = adopted.settings
     // Cloned: a shallow merge would hand the live settings the very arrays and objects
     // DEFAULT_SETTINGS holds, and the first edit would write into the defaults.
     this.settings = Object.assign(structuredClone(DEFAULT_SETTINGS), saved ?? {})
@@ -377,7 +382,28 @@ export default class PMPlugin extends Plugin {
       migrated = true
     }
 
-    if (migrated) await this.saveSettings()
+    if (migrated || adopted) await this.saveSettings()
+    if (adopted) new Notice(t('notice.settingsAdopted', { folder: adopted.folder }))
+  }
+
+  /**
+   * Reads the settings left in the folder this plugin used to be installed under, so a
+   * rename does not silently reset everyone to the defaults. Failing is fine — the
+   * defaults are a working plugin, and nothing has been written yet.
+   */
+  private async adoptFormerSettings(): Promise<FormerSettings | null> {
+    const read = async (path: string): Promise<string | null> => {
+      try {
+        return await this.app.vault.adapter.read(path)
+      } catch {
+        return null
+      }
+    }
+    try {
+      return await readFormerSettings(read, this.app.vault.configDir)
+    } catch {
+      return null
+    }
   }
 
   /**

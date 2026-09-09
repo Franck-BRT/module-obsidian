@@ -22,7 +22,7 @@ export const fr: Catalog = {
   'command.personTasks': "Afficher les tâches assignées à quelqu'un",
   'command.personTasksThisNote': 'Afficher les tâches assignées à cette note',
   'command.linkPeople': 'Relier les assignés à leurs notes de personne',
-  'ribbon.title': 'Black Documents',
+  'ribbon.title': 'Black Projects',
 
   'common.all': 'Tout',
   'common.archive': 'Archiver',
@@ -252,19 +252,20 @@ export const fr: Catalog = {
   'notify.dueInDays': '📅 Échéance dans {days} j : « {task} » dans {project}',
 
   'notice.genericError': "Une erreur est survenue. Consultez la console pour plus d'informations.",
-  'notice.loadProjectFailed': 'Black Documents : échec du chargement de « {name} ». Consultez la console.',
-  'notice.loadTaskFailed': 'Black Documents : échec du chargement de la tâche « {name} ». Consultez la console.',
-  'notice.saveProjectFailed': "Black Documents : échec de l'enregistrement de « {name} ». Consultez la console.",
+  'notice.loadProjectFailed': 'Black Projects : échec du chargement de « {name} ». Consultez la console.',
+  'notice.loadTaskFailed': 'Black Projects : échec du chargement de la tâche « {name} ». Consultez la console.',
+  'notice.saveProjectFailed': "Black Projects : échec de l'enregistrement de « {name} ». Consultez la console.",
   'notice.occurrenceFailed':
-    'Black Documents : impossible de créer la prochaine occurrence de « {name} ». Consultez la console.',
+    'Black Projects : impossible de créer la prochaine occurrence de « {name} ». Consultez la console.',
   'notice.dependencyCycle':
-    'Black Documents : {count} tâche(s) dépendent les unes des autres en boucle et n’ont pas été planifiées : {titles}.',
+    'Black Projects : {count} tâche(s) dépendent les unes des autres en boucle et n’ont pas été planifiées : {titles}.',
   'notice.migrating': 'Migration du projet : {name}...',
-  'notice.migrationFailed': 'Black Documents : échec de la migration de « {name} ». Consultez la console.',
-  'notice.migrated': 'Black Documents : {projects} migré(s) vers le nouveau format.',
+  'notice.settingsAdopted': 'Black Projects : réglages repris du dossier précédent {folder}.',
+  'notice.migrationFailed': 'Black Projects : échec de la migration de « {name} ». Consultez la console.',
+  'notice.migrated': 'Black Projects : {projects} migré(s) vers le nouveau format.',
   'notice.moveFolderFailed':
-    'Black Documents : impossible de déplacer « {path} » dans son propre dossier. Consultez la console.',
-  'notice.movedIntoFolders': 'Black Documents : {projects} déplacé(s) dans leur propre dossier.',
+    'Black Projects : impossible de déplacer « {path} » dans son propre dossier. Consultez la console.',
+  'notice.movedIntoFolders': 'Black Projects : {projects} déplacé(s) dans leur propre dossier.',
   'notice.noTasksForPerson': 'Aucune tâche assignée à {name}',
 
   'flow.duplicateAs': 'Dupliquer « {title} » sous le nom',

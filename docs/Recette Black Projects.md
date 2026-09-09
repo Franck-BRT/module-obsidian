@@ -1,14 +1,14 @@
 ---
 type: recette
-module: Black Documents
-version: 2.7.0
+module: Black Projects
+version: 2.8.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Documents 2.7.0
+# Recette — Black Projects 2.8.0
 
-Plan de test manuel pour le fork. Les **548 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **556 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -25,19 +25,26 @@ cassé de ce qui marchait. Les **[N]** portent sur les **nouveautés**.
 
 ## 0. Installation et reprise des données
 
-> Depuis une **2.6.x**, il n'y a rien à reprendre : le dossier et l'identifiant n'ont pas
-> bougé, on remplace les trois fichiers et on recharge. Les points ci-dessous concernent
-> une première installation, ou une reprise depuis **dotpm** / **dotpm FR**.
+> **Nouveau en 2.8.0** : le module change de nom **et de dossier** — `black-documents`
+> devient `black-projects`. Cette fois la reprise des réglages est **automatique** :
+> rien à recopier à la main.
 
-- [ ] **[R]** Toute autre copie est désactivée : l'upstream **dotpm**, et l'ancien **dotpm FR** si tu l'avais installé
-- [ ] Le dossier `<coffre>/.obsidian/plugins/black-documents/` contient bien `main.js`, `manifest.json`, `styles.css`
-- [ ] **Black Documents** apparaît dans la liste des modules et s'active sans erreur
+- [ ] **[R]** Toute autre copie est désactivée : l'upstream **dotpm**, l'ancien **Black Documents**, et **dotpm FR** si tu l'avais installé
+- [ ] Le dossier `<coffre>/.obsidian/plugins/black-projects/` contient bien `main.js`, `manifest.json`, `styles.css`
+- [ ] **Black Projects** apparaît dans la liste des modules et s'active sans erreur
 - [ ] La console développeur (`Ctrl/Cmd+Maj+I`) ne montre **aucune erreur rouge** au démarrage
-- [ ] Après avoir copié le `data.json` de l'ancien dossier (`dotpm-fr` ou `project-manager`), les statuts, priorités et champs personnalisés sont bien ceux d'avant
+- [ ] **[N]** Au premier démarrage, une notification annonce que les **réglages ont été repris** du dossier `black-documents`
+- [ ] ✅ **Attendu** : statuts, priorités, champs personnalisés, langue et filtres sont **ceux d'avant**, sans avoir recopié quoi que ce soit
+- [ ] Le fichier `data.json` est bien **écrit dans le nouveau dossier** (donc conservé au prochain lancement)
+- [ ] Redémarrer une seconde fois : ✅ **Attendu** : **pas** de nouvelle notification de reprise
+- [ ] **[N]** Modifier un réglage, redémarrer : ✅ **Attendu** : c'est ta modification qui subsiste,
+      pas l'ancienne valeur du dossier `black-documents` *(une reprise ne doit jamais écraser un dossier déjà utilisé)*
+- [ ] **[N]** Si l'upstream **dotpm** est encore installé : ✅ **Attendu** : ses réglages ne sont **pas** repris
 - [ ] **[R]** Les tâches et projets écrits par une version précédente s'ouvrent tels quels
       *(le format de données n'a pas changé : `pm-project`, `pm-task`, `pm-collection`)*
-- [ ] L'ancien dossier de module est supprimé, pour que deux copies n'indexent pas le coffre
-- [ ] Le nom **Black Documents** apparaît bien dans : la liste des modules, l'info-bulle du ruban,
+- [ ] **Une fois les réglages repris**, l'ancien dossier de module est supprimé, pour que deux copies n'indexent pas le coffre
+      ⚠️ dans cet ordre : la reprise lit le `data.json` de l'ancien dossier au premier démarrage
+- [ ] Le nom **Black Projects** apparaît bien dans : la liste des modules, l'info-bulle du ruban,
       l'en-tête des réglages, et le préfixe des notifications
 - [ ] **[R]** Les projets et tâches existants apparaissent — ils n'ont eu besoin d'aucune migration
 - [ ] L'icône dans le ruban ouvre le tableau de bord
@@ -112,9 +119,9 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Ouvrir la note de **A** dans l'éditeur Obsidian et ajouter à la main dans le frontmatter :
       `dependencies: ["<id de B>"]`
       (l'id de B se copie depuis son éditeur : `Plus d'actions` → `Copier l'identifiant`)
-- [ ] Revenir dans Black Documents, ouvrir la tâche **A** et **l'enregistrer**
+- [ ] Revenir dans Black Projects, ouvrir la tâche **A** et **l'enregistrer**
 - [ ] ✅ **Attendu** : une notification annonce que des tâches dépendent les unes des autres en boucle, **en nommant A et B**
-- [ ] ✅ **Attendu** : la console contient une ligne `[Black Documents] Dependency cycle` avec les identifiants
+- [ ] ✅ **Attendu** : la console contient une ligne `[Black Projects] Dependency cycle` avec les identifiants
 - [ ] Retirer la dépendance fautive, réenregistrer
 - [ ] ✅ **Attendu** : plus aucune notification de cycle
 
@@ -134,7 +141,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ### Réglage
 
-- [ ] `Réglages` → `Black Documents` → section **Planification**
+- [ ] `Réglages` → `Black Projects` → section **Planification**
 - [ ] L'option **« Ignorer week-ends et jours fériés »** est présente et **désactivée**
 - [ ] Juste en dessous : **« Semaine de travail »** avec sept boutons (Lun → Dim), Lun–Ven actifs
 - [ ] Et **« Jours fériés »**, une zone de texte, une date par ligne
@@ -226,14 +233,14 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ## 7. Interface française [N]
 
-- [ ] `Réglages` → `Black Documents` → **Général** → le réglage **« Langue »** existe
+- [ ] `Réglages` → `Black Projects` → **Général** → le réglage **« Langue »** existe
 - [ ] Sur **« Comme Obsidian »**, avec Obsidian en français : l'interface est **en français**
 - [ ] Forcer **English** : l'interface repasse en anglais (rouvrir les vues si besoin)
 - [ ] Forcer **Français** avec Obsidian en anglais : l'interface reste **en français**
 
 ### Là où il faut vraiment regarder
 
-- [ ] **Palette de commandes** : toutes les commandes Black Documents sont en français
+- [ ] **Palette de commandes** : toutes les commandes Black Projects sont en français
 - [ ] **Éditeur de tâche** : tous les libellés de champs, y compris les propriétés à ajouter
 - [ ] **Menu contextuel** d'une tâche (clic droit)
 - [ ] **Barre d'actions groupées** (sélectionner plusieurs tâches dans le tableur)
@@ -381,7 +388,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       ✅ **Attendu** : un message clair, pas une erreur silencieuse
 - [ ] Renommer un projet : ses tâches suivent, les liens restent valides
 - [ ] Déplacer un dossier de projet dans le coffre : le plugin s'y retrouve
-- [ ] Éditer une note de tâche à la main puis revenir dans Black Documents : les modifications sont reprises
+- [ ] Éditer une note de tâche à la main puis revenir dans Black Projects : les modifications sont reprises
 - [ ] Supprimer une note de tâche depuis l'explorateur Obsidian : le projet ne casse pas
 - [ ] Sur un projet d'une **cinquantaine de tâches** : l'ouverture des vues reste fluide
 - [ ] Fermer et rouvrir Obsidian : tout est retrouvé, aucune erreur en console

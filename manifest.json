@@ -1,6 +1,6 @@
 {
-  "id": "black-documents",
-  "name": "Black Documents",
+  "id": "black-projects",
+  "name": "Black Projects",
   "version": "2.7.0",
   "minAppVersion": "1.13.0",
   "description": "Project management in your vault: Gantt charts, boards, tables, custom fields, and collections gathering chosen tasks across projects. French interface, working-day scheduling, typed dependencies and working recurring tasks.",

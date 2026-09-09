@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The plugin is now called **Black Projects**, and its id is `black-projects`
+
+### Added
+
+- Settings carry themselves over when the plugin folder changes. On its first load, a
+  folder holding no `data.json` of its own reads the one left behind in
+  `black-documents` or `dotpm-fr` and adopts it, saying so in a notice. Upstream's
+  `project-manager` is deliberately left alone: it may still be installed and running,
+  so inheriting its configuration unasked would be a surprise. So this rename costs
+  nothing to carry out — unzip, enable, done. Projects and tasks never needed anything
+  either way, being plain notes whose frontmatter has never named the plugin
+
 ## [2.7.0] - 2026-09-09
 
 ### Added

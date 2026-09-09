@@ -1,6 +1,6 @@
 <div align="center">
 
-# Black Documents for Obsidian
+# Black Projects for Obsidian
 *Full-featured project management, natively in your vault.*
 
 [![Obsidian community plugin](https://img.shields.io/badge/Obsidian-Community%20Plugin-7c3aed?style=for-the-badge&logo=obsidian&logoColor=white)](https://community.obsidian.md/plugins/project-manager)
@@ -10,16 +10,16 @@
 
 </div>
 
-> **Black Documents is a fork of [dotpm](https://github.com/dotpm/obsidian-pm).**
+> **Black Projects is a fork of [dotpm](https://github.com/dotpm/obsidian-pm).**
 > [`Franck-BRT/module-obsidian`](https://github.com/Franck-BRT/module-obsidian) tracks
 > upstream and adds a French interface, working-day scheduling, typed dependencies,
 > working recurring tasks, and collections gathering chosen tasks across projects.
-> It installs as `black-documents`, beside the original rather than over it.
+> It installs as `black-projects`, beside the original rather than over it.
 > See [docs/fork.md](docs/fork.md) for what changed and how upstream is merged in.
 
 Table views, Gantt charts, Kanban boards, custom fields, time tracking, smart scheduling — all stored as plain Markdown with YAML frontmatter. No external services. No sync subscriptions. Your data stays yours.
 
-<img width="1422" height="791" alt="Black Documents dashboard" src="https://github.com/user-attachments/assets/ca6bc67f-e656-45be-b93a-17410555ec1a" />
+<img width="1422" height="791" alt="Black Projects dashboard" src="https://github.com/user-attachments/assets/ca6bc67f-e656-45be-b93a-17410555ec1a" />
 
 ## What's inside
 
@@ -55,7 +55,7 @@ Card-based board grouped by status. Drag cards between columns to update status 
 - **Subtasks** — Nest tasks to any depth. Collapse/expand hierarchies across all views.
 - **Dependencies** — Link blocking/dependent tasks. Visualized as arrows on the Gantt chart.
 - **Milestones** — Zero-duration tasks for key dates and deliverables.
-- **Archive** — Archive completed tasks without deleting. Toggle visibility at any time. Completed tasks can also be archived automatically once they have been done for a set number of days, or on demand with **Black Documents: Archive completed tasks**.
+- **Archive** — Archive completed tasks without deleting. Toggle visibility at any time. Completed tasks can also be archived automatically once they have been done for a set number of days, or on demand with **Black Projects: Archive completed tasks**.
 
 ### Scheduling & time
 - **Drag-and-drop scheduling** — Reschedule tasks by dragging bars on the Gantt chart.
@@ -80,7 +80,7 @@ Card-based board grouped by status. Drag cards between columns to update status 
   - Delete
 
 ### Import
-You can add any existing note from your vault to project as a task. Run **Black Documents: Import notes as tasks** in the Command Palette, pick a project, select files, then choose default status, default priority, and whether to **move** files into the task folder or **copy** them. Already-imported notes are skipped.
+You can add any existing note from your vault to project as a task. Run **Black Projects: Import notes as tasks** in the Command Palette, pick a project, select files, then choose default status, default priority, and whether to **move** files into the task folder or **copy** them. Already-imported notes are skipped.
 
 https://github.com/user-attachments/assets/64e386c5-09b5-42a6-9599-089cc54c98eb
 
@@ -107,7 +107,7 @@ There is no real-time multi-user editing. Two people editing the same task at on
 
 ## Using with TaskNotes
 
-Black Documents works alongside the [TaskNotes](https://github.com/callumalpass/tasknotes) plugin (4.10 or newer).
+Black Projects works alongside the [TaskNotes](https://github.com/callumalpass/tasknotes) plugin (4.10 or newer).
 
 ### Import TaskNotes tasks
 
@@ -123,17 +123,17 @@ Choose **move** to turn the TaskNotes notes into task files inside the project's
 
 ### Align statuses and priorities
 
-**Settings > Import from TaskNotes** copies TaskNotes' status and priority palettes into Black Documents, so both plugins use the same values, names, and colors. Entries TaskNotes doesn't know are kept.
+**Settings > Import from TaskNotes** copies TaskNotes' status and priority palettes into Black Projects, so both plugins use the same values, names, and colors. Entries TaskNotes doesn't know are kept.
 
-### Let TaskNotes see Black Documents tasks
+### Let TaskNotes see Black Projects tasks
 
-TaskNotes can be configured to list and edit Black Documents tasks in place, without conversion:
+TaskNotes can be configured to list and edit Black Projects tasks in place, without conversion:
 
 1. In TaskNotes settings, set task identification to **property** with name `pm-task` and value `true`.
 2. In its field mapping, map **scheduled** to `start`.
-3. Add your Black Documents status and priority values to TaskNotes' palettes.
+3. Add your Black Projects status and priority values to TaskNotes' palettes.
 
-Task hierarchy and dependencies don't resolve on the TaskNotes side (it uses project links and `blockedBy`, Black Documents uses id references), but both plugins edit frontmatter non-destructively, so each one's extra fields survive the other's writes.
+Task hierarchy and dependencies don't resolve on the TaskNotes side (it uses project links and `blockedBy`, Black Projects uses id references), but both plugins edit frontmatter non-destructively, so each one's extra fields survive the other's writes.
 
 ## Settings
 
@@ -180,17 +180,17 @@ Each task is a `.md` file in your vault supporting:
 
 ## Installation
 
-Black Documents is a fork, so it is not in Obsidian's community plugin list. It
+Black Projects is a fork, so it is not in Obsidian's community plugin list. It
 installs beside upstream **dotpm** rather than over it — see
-[docs/fork.md](docs/fork.md#installing-it) for the full steps, including carrying your
-settings over.
+[docs/fork.md](docs/fork.md#installing-it) for the full steps. Coming from an earlier
+**Black Documents** or **dotpm FR** build, your settings come across on their own.
 
 ### Manual
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](../../releases/latest).
-2. Create a folder: `<vault>/.obsidian/plugins/black-documents/`
+2. Create a folder: `<vault>/.obsidian/plugins/black-projects/`
 3. Copy the three files into that folder.
-4. Reload Obsidian and enable **Black Documents** under **Settings > Community plugins**.
+4. Reload Obsidian and enable **Black Projects** under **Settings > Community plugins**.
 
 ### Via BRAT (to follow releases)
 

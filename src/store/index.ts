@@ -50,6 +50,8 @@ export {
   type CollectionMembership
 } from './Collection'
 export type { ScopeSpec } from './ProjectScope'
+export { readFormerSettings } from './formerSettings'
+export type { FormerSettings } from './formerSettings'
 export { VaultIndex } from './VaultIndex'
 export type { ProjectRef, TaskRef } from './VaultIndex'
 export {

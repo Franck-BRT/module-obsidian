@@ -24,7 +24,7 @@ export const en = {
   'command.personTasks': 'Show tasks assigned to a person',
   'command.personTasksThisNote': 'Show tasks assigned to this note',
   'command.linkPeople': 'Link assignees to their person notes',
-  'ribbon.title': 'Black Documents',
+  'ribbon.title': 'Black Projects',
 
   // Shared words, used in more than one place.
   'common.all': 'All',
@@ -271,18 +271,19 @@ export const en = {
 
   // Things that went wrong, or that the plugin did on its own.
   'notice.genericError': 'Something went wrong. Check the console for details.',
-  'notice.loadProjectFailed': 'Black Documents: Failed to load "{name}". Check console for details.',
-  'notice.loadTaskFailed': 'Black Documents: Failed to load task "{name}". Check console for details.',
-  'notice.saveProjectFailed': 'Black Documents: Failed to save "{name}". Check console for details.',
+  'notice.loadProjectFailed': 'Black Projects: Failed to load "{name}". Check console for details.',
+  'notice.loadTaskFailed': 'Black Projects: Failed to load task "{name}". Check console for details.',
+  'notice.saveProjectFailed': 'Black Projects: Failed to save "{name}". Check console for details.',
   'notice.occurrenceFailed':
-    'Black Documents: Could not create the next occurrence of "{name}". Check console for details.',
+    'Black Projects: Could not create the next occurrence of "{name}". Check console for details.',
   'notice.dependencyCycle':
-    'Black Documents: {count} task(s) depend on each other in a loop and were left unscheduled: {titles}.',
+    'Black Projects: {count} task(s) depend on each other in a loop and were left unscheduled: {titles}.',
   'notice.migrating': 'Migrating project: {name}...',
-  'notice.migrationFailed': 'Black Documents: Migration failed for "{name}". Check console for details.',
-  'notice.migrated': 'Black Documents: Migrated {projects} to new format.',
-  'notice.moveFolderFailed': 'Black Documents: Could not move "{path}" into its own folder. Check console for details.',
-  'notice.movedIntoFolders': 'Black Documents: Moved {projects} into their own folders.',
+  'notice.settingsAdopted': 'Black Projects: settings taken over from the previous {folder} folder.',
+  'notice.migrationFailed': 'Black Projects: Migration failed for "{name}". Check console for details.',
+  'notice.migrated': 'Black Projects: Migrated {projects} to new format.',
+  'notice.moveFolderFailed': 'Black Projects: Could not move "{path}" into its own folder. Check console for details.',
+  'notice.movedIntoFolders': 'Black Projects: Moved {projects} into their own folders.',
   'notice.noTasksForPerson': 'No tasks assigned to {name}',
 
   // Flows the plugin runs from a command: prompts, confirmations and their results.
