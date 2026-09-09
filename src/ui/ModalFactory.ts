@@ -1,9 +1,9 @@
 import { type App, ButtonComponent, Modal } from 'obsidian'
 import type PMPlugin from '../main'
 import type { Project, Task } from '../types'
-import { flattenTasks, type ProjectRef } from '../store'
+import { flattenTasks, type CollectionRef, type ProjectRef } from '../store'
 import { TaskModal } from '../modals/TaskModal'
-import { PersonLookupModal, ProjectPickerModal, TaskPickerModal } from '../modals/PickerModals'
+import { CollectionPickerModal, PersonLookupModal, ProjectPickerModal, TaskPickerModal } from '../modals/PickerModals'
 import { ImportModal } from '../modals/ImportModal'
 import { ProjectCreateModal } from '../modals/ProjectCreateModal'
 import { t } from '../i18n'
@@ -281,6 +281,14 @@ export function openProjectPicker(
   onChoose: (project: ProjectRef) => void
 ): void {
   new ProjectPickerModal(plugin.app, projects, onChoose).open()
+}
+
+export function openCollectionPicker(
+  plugin: PMPlugin,
+  collections: CollectionRef[],
+  onChoose: (collection: CollectionRef) => void
+): void {
+  new CollectionPickerModal(plugin.app, collections, onChoose).open()
 }
 
 export function openTaskPicker(plugin: PMPlugin, tasks: Task[], onChoose: (task: Task) => void): void {

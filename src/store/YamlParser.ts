@@ -2,6 +2,7 @@ import { parseYaml } from 'obsidian'
 
 export const FRONTMATTER_KEY = 'pm-project'
 export const TASK_FRONTMATTER_KEY = 'pm-task'
+export const COLLECTION_FRONTMATTER_KEY = 'pm-collection'
 
 export function parseFrontmatter(content: string): {
   frontmatter: Record<string, unknown> | null

@@ -26,8 +26,18 @@ export function countActiveFilters(filter: FilterState): number {
   return count
 }
 
+/**
+ * The fields a filter actually reads. Named so the predicate can run against an index
+ * entry as well as a loaded task — deciding what belongs in a collection should not
+ * mean loading every project in the vault.
+ */
+export type FilterableTask = Pick<
+  Task,
+  'id' | 'title' | 'status' | 'priority' | 'assignees' | 'tags' | 'archived' | 'due'
+>
+
 export function matchesFilter(
-  task: Task,
+  task: FilterableTask,
   filter: FilterState,
   statuses: StatusConfig[] = [],
   keyOf: (raw: string) => string = displayName
@@ -97,7 +107,7 @@ export function applyTaskFilterFlat(
   return flat.filter(({ task }) => matchesFilter(task, filter, statuses, keyOf))
 }
 
-function matchDueDateFilter(task: Task, filter: DueDateFilter, statuses: StatusConfig[]): boolean {
+function matchDueDateFilter(task: FilterableTask, filter: DueDateFilter, statuses: StatusConfig[]): boolean {
   if (filter === 'no-date') return !task.due
   const due = parsePlainDate(task.due)
   if (!due) return false

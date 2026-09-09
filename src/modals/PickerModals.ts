@@ -1,6 +1,6 @@
 import { SuggestModal, App } from 'obsidian'
 import type { Task } from '../types'
-import type { ProjectRef } from '../store'
+import type { CollectionRef, ProjectRef } from '../store'
 import { displayName } from '../utils'
 import { renderGlyph } from '../ui/composites/properties'
 import { t } from '../i18n'
@@ -29,6 +29,33 @@ export class ProjectPickerModal extends SuggestModal<ProjectRef> {
 
   onChooseSuggestion(project: ProjectRef): void {
     this.onChoose(project)
+  }
+}
+
+/** Lists collections from the index, which holds their whole definition. */
+export class CollectionPickerModal extends SuggestModal<CollectionRef> {
+  constructor(
+    app: App,
+    private collections: CollectionRef[],
+    private onChoose: (collection: CollectionRef) => void
+  ) {
+    super(app)
+    this.setPlaceholder(t('collection.pick'))
+  }
+
+  getSuggestions(query: string): CollectionRef[] {
+    const q = query.toLowerCase()
+    return this.collections.filter((c) => c.title.toLowerCase().includes(q))
+  }
+
+  renderSuggestion(collection: CollectionRef, el: HTMLElement): void {
+    const row = el.createSpan({ cls: 'pm-picker-suggestion' })
+    renderGlyph(row, { icon: collection.icon, color: collection.color })
+    row.createSpan({ text: collection.title })
+  }
+
+  onChooseSuggestion(collection: CollectionRef): void {
+    this.onChoose(collection)
   }
 }
 

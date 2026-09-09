@@ -36,7 +36,17 @@ export {
   updateTaskInTree
 } from './TaskTreeOps'
 export type { FlatTask } from './TaskTreeOps'
+export { CollectionStore } from './CollectionStore'
+export type { CollectionRef } from './VaultIndex'
 export { ProjectScope, resolveScopePaths, scopeKey } from './ProjectScope'
+export {
+  addToCollection,
+  collectionMemberIds,
+  collectionProjectPaths,
+  collectionRoots,
+  removeFromCollection,
+  type CollectionMembership
+} from './Collection'
 export type { ScopeSpec } from './ProjectScope'
 export { VaultIndex } from './VaultIndex'
 export type { ProjectRef, TaskRef } from './VaultIndex'

@@ -2,6 +2,7 @@ import { ButtonComponent, ExtraButtonComponent, ItemView, Menu, Scope, Workspace
 import type PMPlugin from '../main'
 import { type Project, type ViewMode, type FilterState, type SavedView, makeDefaultFilter, makeId } from '../types'
 import {
+  collectionMemberIds,
   folderOf,
   personKeyer,
   ProjectScope,
@@ -177,13 +178,23 @@ export class ProjectView extends ItemView {
     void this.refreshProject()
   }
 
+  /** Null for every scope but a collection, whose members decide what the views show. */
+  private collectionOf(spec: ScopeSpec): { title: string; memberIds: string[] } | null {
+    if (spec.kind !== 'collection') return null
+    const ref = this.plugin.index.collectionRef(spec.path)
+    if (!ref) return null
+    const refs = this.plugin.index.allTaskRefs()
+    return { title: ref.title, memberIds: collectionMemberIds(ref, refs, this.plugin.settings.statuses) }
+  }
+
   private async loadScope(): Promise<void> {
     this.ensureInitialized()
     if (!this.spec) return
-    const paths = resolveScopePaths(this.spec, this.plugin.index)
+    const statuses = this.plugin.settings.statuses
+    const paths = resolveScopePaths(this.spec, this.plugin.index, statuses)
     this.loadedPaths = paths
     const projects = await this.plugin.store.loadProjects(paths)
-    this.projectScope = new ProjectScope(this.spec, projects, this.plugin.store)
+    this.projectScope = new ProjectScope(this.spec, projects, this.plugin.store, this.collectionOf(this.spec))
     if (!this.projectScope.primary) {
       this.renderEmptyScope()
       return
@@ -251,8 +262,10 @@ export class ProjectView extends ItemView {
     this.header = null
     this.bodyEl.empty()
     const msg = this.bodyEl.createDiv('pm-empty-state')
+    // An empty collection is normal and fixable; a missing project is not the same thing.
+    const isCollection = this.spec?.kind === 'collection' && this.plugin.index.collectionRef(this.spec.path)
     msg.createEl('h3', { text: t('project.nothingToShow') })
-    msg.createEl('p', { text: t('project.gone') })
+    msg.createEl('p', { text: isCollection ? t('collection.empty') : t('project.gone') })
   }
 
   private renderProjectHeader(): void {
@@ -447,8 +460,59 @@ export class ProjectView extends ItemView {
     menu.showAtMouseEvent(e)
   }
 
+  /**
+   * A collection's contents are its own business, so the project/folder/vault switcher
+   * has nothing to offer it. Its chip edits the rule instead: the filter bar above is
+   * already the right editor for one, so the action just adopts what it currently says.
+   */
+  private renderCollectionChip(parent: HTMLElement, path: string): void {
+    const ref = this.plugin.index.collectionRef(path)
+    new ChipButton(parent)
+      .setLabel(ref?.rule ? t('collection.hasRule') : t('scope.collection'))
+      .setShape('pill')
+      .onClick((e) => {
+        const menu = new Menu()
+        menu.addItem((item) =>
+          item
+            .setTitle(t('collection.saveRule'))
+            .setIcon('filter')
+            .onClick(
+              safeAsync(async () => {
+                await this.plugin.collections.update(path, (collection) => ({
+                  ...collection,
+                  rule: { ...this.filter }
+                }))
+                this.plugin.index.build()
+                this.plugin.showNotice(t('collection.ruleSaved'))
+                await this.loadScope()
+              })
+            )
+        )
+        if (ref?.rule) {
+          menu.addItem((item) =>
+            item
+              .setTitle(t('collection.clearRule'))
+              .setIcon('filter-x')
+              .onClick(
+                safeAsync(async () => {
+                  await this.plugin.collections.update(path, ({ rule: _dropped, ...rest }) => rest)
+                  this.plugin.index.build()
+                  this.plugin.showNotice(t('collection.ruleCleared'))
+                  await this.loadScope()
+                })
+              )
+          )
+        }
+        menu.showAtMouseEvent(e)
+      })
+  }
+
   private renderScopeSwitcher(parent: HTMLElement): void {
     const scope = this.projectScope
+    if (scope?.spec.kind === 'collection') {
+      this.renderCollectionChip(parent, scope.spec.path)
+      return
+    }
     const primary = scope?.primary
     if (!scope || !primary) return
     const path = scope.spec.kind === 'vault' ? primary.filePath : scope.spec.path
@@ -460,7 +524,10 @@ export class ProjectView extends ItemView {
     const options: { label: string; spec: ScopeSpec }[] = [
       { label: t('project.thisProject'), spec: { kind: 'project', path: projectPath } },
       { label: t('project.withSubProjects'), spec: { kind: 'subtree', path: projectPath } },
-      { label: folder ? `Folder: ${folder}` : t('view.vaultFolder'), spec: { kind: 'folder', path: folder } },
+      {
+        label: folder ? t('view.folderNamed', { folder }) : t('view.vaultFolder'),
+        spec: { kind: 'folder', path: folder }
+      },
       { label: t('project.allProjects'), spec: { kind: 'vault' } }
     ]
     const current = options.find((option) => scope.key === scopeKey(option.spec))

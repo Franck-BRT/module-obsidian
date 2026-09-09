@@ -1,9 +1,9 @@
 import type { App, Plugin, TAbstractFile } from 'obsidian'
 import { TFile, normalizePath } from 'obsidian'
-import type { CustomFieldDef, PMSettings, StatusConfig } from '../types'
+import type { CustomFieldDef, FilterState, PMSettings, StatusConfig } from '../types'
 import { today } from '../dates'
 import { reaches } from './Scheduler'
-import { FRONTMATTER_KEY, TASK_FRONTMATTER_KEY } from './YamlParser'
+import { COLLECTION_FRONTMATTER_KEY, FRONTMATTER_KEY, TASK_FRONTMATTER_KEY } from './YamlParser'
 import { customFieldList, stringList } from './YamlHydrator'
 import { projectPathForTaskPath, resolveVaultLink } from './vaultFs'
 import { isRefLink, refToId, refToPath } from './refs'
@@ -29,6 +29,23 @@ export interface ProjectRef {
   autoArchiveDays: number | null
 }
 
+/**
+ * A collection's whole definition, which lives in frontmatter and so costs nothing to
+ * index. Keeping it here makes working out what a collection holds synchronous, which
+ * the project list and the view router both need.
+ */
+export interface CollectionRef {
+  path: string
+  id: string
+  title: string
+  icon: string
+  color: string
+  sources: string[]
+  rule?: FilterState
+  include: string[]
+  exclude: string[]
+}
+
 export interface TaskRef {
   id: string
   path: string
@@ -42,6 +59,7 @@ export interface TaskRef {
   completed: string
   dependencies: string[]
   assignees: string[]
+  tags: string[]
   archived: boolean
 }
 
@@ -87,6 +105,7 @@ export class VaultIndex {
   private tasks = new Map<string, TaskRef>()
   private taskById = new Map<string, TaskRef>()
   private tasksByProject = new Map<string, Set<string>>()
+  private collections = new Map<string, CollectionRef>()
   private changeHandlers = new Set<() => void>()
   private cachedTree: { parents: Map<string, string | null>; children: Map<string, string[]> } = {
     parents: new Map(),
@@ -110,6 +129,7 @@ export class VaultIndex {
     this.tasks.clear()
     this.taskById.clear()
     this.tasksByProject.clear()
+    this.collections.clear()
     this.treeDirty = true
     this.dependentsDirty = true
     for (const file of this.app.vault.getMarkdownFiles()) this.read(file)
@@ -417,6 +437,7 @@ export class VaultIndex {
     if (!frontmatter) return
     if (frontmatter[FRONTMATTER_KEY] === true && !insideTaskFolder(path)) this.addProject(path, file, frontmatter)
     else if (frontmatter[TASK_FRONTMATTER_KEY] === true) this.addTask(path, frontmatter)
+    else if (frontmatter[COLLECTION_FRONTMATTER_KEY] === true) this.addCollection(path, file, frontmatter)
   }
 
   private addProject(path: string, file: TFile, frontmatter: Record<string, unknown>): void {
@@ -439,6 +460,31 @@ export class VaultIndex {
     this.treeDirty = true
   }
 
+  /** Enough to list a collection and open it; the definition is loaded on demand. */
+  collectionRefs(): CollectionRef[] {
+    return [...this.collections.values()].sort((a, b) => a.title.localeCompare(b.title))
+  }
+
+  collectionRef(path: string): CollectionRef | null {
+    return this.collections.get(normalizePath(path)) ?? null
+  }
+
+  private addCollection(path: string, file: TFile, frontmatter: Record<string, unknown>): void {
+    this.collections.set(path, {
+      path,
+      id: str(frontmatter.id, file.basename),
+      title: str(frontmatter.title, file.basename),
+      icon: str(frontmatter.icon, '\u{1F5C2}\uFE0F'),
+      color: str(frontmatter.color, '#6b8fbe'),
+      sources: stringList(frontmatter.sources)
+        .map((raw) => resolveVaultLink(this.app, raw, path))
+        .filter((target): target is string => target !== null),
+      ...(frontmatter.rule ? { rule: collectionRule(frontmatter.rule) } : {}),
+      include: stringList(frontmatter.include).map((raw) => refToId(this.app, raw, path)),
+      exclude: stringList(frontmatter.exclude).map((raw) => refToId(this.app, raw, path))
+    })
+  }
+
   private addTask(path: string, frontmatter: Record<string, unknown>): void {
     const projectId = str(frontmatter.projectId)
     const ref: TaskRef = {
@@ -454,6 +500,7 @@ export class VaultIndex {
       completed: str(frontmatter.completed),
       dependencies: stringList(frontmatter.dependencies).map((raw) => refToId(this.app, raw, path)),
       assignees: stringList(frontmatter.assignees),
+      tags: stringList(frontmatter.tags),
       archived: path.split('/').at(-2) === 'Archive'
     }
     this.tasks.set(path, ref)
@@ -587,7 +634,7 @@ export class VaultIndex {
       this.treeDirty = true
       return true
     }
-    return false
+    return this.collections.delete(normalized)
   }
 
   /**
@@ -633,5 +680,19 @@ export class VaultIndex {
 
   private emitChange(): void {
     for (const handler of this.changeHandlers) handler()
+  }
+}
+
+/** Same shape the saved views use; anything unreadable falls back to a neutral filter. */
+function collectionRule(raw: unknown): FilterState {
+  const f = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  return {
+    text: str(f.text),
+    statuses: stringList(f.statuses),
+    priorities: stringList(f.priorities),
+    assignees: stringList(f.assignees),
+    tags: stringList(f.tags),
+    dueDateFilter: (typeof f.dueDateFilter === 'string' ? f.dueDateFilter : 'any') as FilterState['dueDateFilter'],
+    showArchived: f.showArchived === true
   }
 }

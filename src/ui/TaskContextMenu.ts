@@ -8,6 +8,8 @@ import { t } from '../i18n'
 export interface TaskMenuContext {
   plugin: PMPlugin
   project: Project
+  /** Set when the menu opens inside a collection, which adds the option to leave it. */
+  collectionPath?: string
   onRefresh: () => Promise<void>
 }
 
@@ -39,6 +41,28 @@ export function buildTaskContextMenu(menu: Menu, task: Task, ctx: TaskMenuContex
         })
       })
   )
+  menu.addItem((item) =>
+    item
+      .setTitle(t('collection.addTo'))
+      .setIcon('library')
+      .onClick(() => {
+        ctx.plugin.addTaskToCollection(task.id)
+      })
+  )
+  if (ctx.collectionPath) {
+    const path = ctx.collectionPath
+    menu.addItem((item) =>
+      item
+        .setTitle(t('collection.removeFrom'))
+        .setIcon('list-x')
+        .onClick(
+          safeAsync(async () => {
+            await ctx.plugin.removeTaskFromCollection(path, task.id)
+            await ctx.onRefresh()
+          })
+        )
+    )
+  }
   menu.addItem((item) =>
     item
       .setTitle(t('menu.duplicateTask'))

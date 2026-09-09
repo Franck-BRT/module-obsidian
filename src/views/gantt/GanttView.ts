@@ -233,11 +233,13 @@ export class GanttView implements SubView {
     leftPanel.addEventListener('wheel', onLeftWheel, { passive: false })
     this.cleanupFns.push(() => leftPanel.removeEventListener('wheel', onLeftWheel))
 
-    const addRow = leftBody.createDiv('pm-gantt-label-row pm-gantt-add-row')
-    addRow.style.height = `${ROW_HEIGHT}px`
-    renderAddButton(addRow, t('gantt.addTask'), (e) => {
-      openAddTask(this.plugin, this.scope, { event: e, onSave: () => this.onRefresh() })
-    })
+    if (this.scope.canAddTask) {
+      const addRow = leftBody.createDiv('pm-gantt-label-row pm-gantt-add-row')
+      addRow.style.height = `${ROW_HEIGHT}px`
+      renderAddButton(addRow, t('gantt.addTask'), (e) => {
+        openAddTask(this.plugin, this.scope, { event: e, onSave: () => this.onRefresh() })
+      })
+    }
 
     // The right panel's horizontal scrollbar eats into its viewport height, letting it
     // scroll further than the left body; without this spacer the rows desync at the bottom.

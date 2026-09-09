@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { makeProject, makeTask, type Project, type SavedView, type Task } from '../types'
-import { hydrateProjectFromFrontmatter, hydrateTaskFromFile } from './YamlHydrator'
+import {
+  makeCollection,
+  makeDefaultFilter,
+  makeProject,
+  makeTask,
+  type Collection,
+  type Project,
+  type SavedView,
+  type Task
+} from '../types'
+import { hydrateCollection, hydrateProjectFromFrontmatter, hydrateTaskFromFile } from './YamlHydrator'
 import { parseFrontmatter, projectBodyRemainder } from './YamlParser'
 import {
   buildTaskFrontmatter,
   foreignFrontmatter,
   PROJECT_FRONTMATTER_KEYS,
+  serializeCollection,
   serializeProject,
   serializeTask,
   TASK_FRONTMATTER_KEYS,
@@ -463,5 +473,60 @@ describe('dependency options round-trip', () => {
     const { frontmatter, body } = parseFrontmatter(withJunk)
     if (!frontmatter) throw new Error('frontmatter missing')
     expect(hydrateTaskFromFile(frontmatter, body, 'Projects/Test_tasks/t.md').task.dependencyOptions).toBeUndefined()
+  })
+})
+
+describe('collection round-trip', () => {
+  /**
+   * Stands in for Obsidian's link resolver: a wikilink drops the extension on the way
+   * out and gets it back on the way in, which is what the real one does.
+   */
+  const inner = (raw: string): string => raw.replace(/^\[\[|\]\]$/g, '').split('|')[0]
+  const resolve = {
+    taskId: inner,
+    projectPath: (raw: string) => (inner(raw) ? `${inner(raw)}.md` : null)
+  }
+
+  function roundTrip(c: Collection): Collection {
+    const md = serializeCollection(c, refs)
+    const { frontmatter, body } = parseFrontmatter(md)
+    if (!frontmatter) throw new Error('frontmatter missing')
+    return hydrateCollection(frontmatter, body, c.filePath, 'Test', resolve)
+  }
+
+  function base(): Collection {
+    return { ...makeCollection('Comité', 'Projects/Comité.md'), description: 'What we present.' }
+  }
+
+  it('preserves a hand-picked list', () => {
+    const original = { ...base(), include: ['task-1', 'task-2'], exclude: ['task-3'] }
+    const back = roundTrip(original)
+    expect(back.include).toEqual(['task-1', 'task-2'])
+    expect(back.exclude).toEqual(['task-3'])
+    expect(back.title).toBe('Comité')
+    expect(back.description).toBe('What we present.')
+  })
+
+  it('preserves a rule and its sources', () => {
+    const original: Collection = {
+      ...base(),
+      sources: ['Projects/A/A.md'],
+      rule: { ...makeDefaultFilter(), tags: ['comite'], priorities: ['high'], showArchived: true }
+    }
+    const back = roundTrip(original)
+    expect(back.rule).toEqual(original.rule)
+    expect(back.sources).toEqual(['Projects/A/A.md'])
+  })
+
+  it('keeps a rule-less collection rule-less, rather than inventing an empty rule', () => {
+    // An empty rule would match everything; absence has to survive the trip.
+    const back = roundTrip(base())
+    expect(back.rule).toBeUndefined()
+    expect(serializeCollection(base(), refs)).not.toContain('rule:')
+  })
+
+  it('writes no task list, so a rule’s matches never churn the note', () => {
+    const md = serializeCollection({ ...base(), include: ['task-1'] }, refs)
+    expect(md).not.toContain('## Tasks')
   })
 })

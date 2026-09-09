@@ -143,6 +143,35 @@ export interface SavedView {
   viewMode?: ViewMode
 }
 
+/**
+ * A named set of tasks drawn from across projects: a reporting pack, everything at one
+ * status, a theme that cuts through the portfolio. The tasks stay in the projects that
+ * own them — a collection holds references, never copies, and editing one from here
+ * writes back to its own note.
+ *
+ * Membership is `rule` (when set) plus `include`, minus `exclude`. A collection with no
+ * rule is a purely hand-picked list; one with a rule and no manual entries is a live
+ * query; the two combine so a rule can be corrected without being abandoned.
+ */
+export interface Collection {
+  id: string
+  title: string
+  description: string
+  color: string
+  icon: string
+  /** Project paths the rule searches. Empty means every project in the vault. */
+  sources: string[]
+  /** Absent means membership is the manual list alone. */
+  rule?: FilterState
+  /** Task ids pulled in by hand, whatever the rule says. */
+  include: string[]
+  /** Task ids kept out by hand, even when the rule matches them. */
+  exclude: string[]
+  createdAt: string
+  updatedAt: string
+  filePath: string
+}
+
 export interface PerProjectFilter {
   filter: FilterState
   activeSavedViewId: string | null
@@ -361,6 +390,23 @@ export const DEFAULT_SETTINGS: PMSettings = {
 
 export function makeId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
+}
+
+export function makeCollection(title: string, filePath: string): Collection {
+  const now = new Date().toISOString()
+  return {
+    id: makeId(),
+    title,
+    description: '',
+    color: '#6b8fbe',
+    icon: '\u{1F5C2}\uFE0F',
+    sources: [],
+    include: [],
+    exclude: [],
+    createdAt: now,
+    updatedAt: now,
+    filePath
+  }
 }
 
 export function makeTask(overrides: Partial<Task> = {}): Task {

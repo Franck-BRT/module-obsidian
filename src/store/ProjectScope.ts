@@ -1,4 +1,5 @@
 import type { CustomFieldDef, PriorityConfig, Project, ResolvedProjectConfig, StatusConfig, Task } from '../types'
+import { collectionMemberIds, collectionProjectPaths, collectionRoots } from './Collection'
 import { findTaskById } from './TaskIndex'
 import type { TaskSource } from './TaskSource'
 import type { VaultIndex } from './VaultIndex'
@@ -9,6 +10,7 @@ export type ScopeSpec =
   | { kind: 'project'; path: string }
   | { kind: 'subtree'; path: string }
   | { kind: 'folder'; path: string }
+  | { kind: 'collection'; path: string }
   | { kind: 'vault' }
 
 export function scopeKey(spec: ScopeSpec): string {
@@ -16,7 +18,7 @@ export function scopeKey(spec: ScopeSpec): string {
 }
 
 /** The project paths a spec covers, in the order the views should show them. */
-export function resolveScopePaths(spec: ScopeSpec, index: VaultIndex): string[] {
+export function resolveScopePaths(spec: ScopeSpec, index: VaultIndex, statuses: StatusConfig[] = []): string[] {
   switch (spec.kind) {
     case 'project':
       return index.projectRef(spec.path) ? [spec.path] : []
@@ -25,6 +27,12 @@ export function resolveScopePaths(spec: ScopeSpec, index: VaultIndex): string[] 
     case 'folder': {
       const prefix = spec.path === '' ? '' : `${spec.path}/`
       return index.projectPaths().filter((path) => path.startsWith(prefix))
+    }
+    case 'collection': {
+      const ref = index.collectionRef(spec.path)
+      if (!ref) return []
+      const refs = index.allTaskRefs()
+      return collectionProjectPaths(collectionMemberIds(ref, refs, statuses), refs)
     }
     case 'vault':
       return index.projectPaths()
@@ -56,7 +64,9 @@ export class ProjectScope {
   constructor(
     readonly spec: ScopeSpec,
     readonly projects: Project[],
-    private store: TaskSource
+    private store: TaskSource,
+    /** Set for a collection scope: its name, and the tasks it holds, in display order. */
+    private readonly collection: { title: string; memberIds: string[] } | null = null
   ) {}
 
   /** Drops the resolved configs, for when a palette changed under a live view. */
@@ -94,13 +104,27 @@ export class ProjectScope {
         return this.primary ? t('scope.andSubProjects', { title: this.primary.title }) : t('scope.project')
       case 'folder':
         return this.spec.path.slice(this.spec.path.lastIndexOf('/') + 1) || t('scope.vault')
+      case 'collection':
+        return this.collection?.title ?? t('scope.collection')
       case 'vault':
         return t('project.allProjects')
     }
   }
 
-  /** Every project's top-level tasks, the projects kept in scope order. */
+  /**
+   * A collection gathers tasks that already belong somewhere else, so there is no
+   * sensible project for a new one to land in.
+   */
+  get canAddTask(): boolean {
+    return this.spec.kind !== 'collection'
+  }
+
+  /**
+   * What the views render as roots. For a collection that is its members, wherever
+   * they sit in their own projects' trees; otherwise every project's top-level tasks.
+   */
   tasks(): Task[] {
+    if (this.spec.kind === 'collection') return collectionRoots(this.collection?.memberIds ?? [], this.projects)
     if (!this.isMulti) return this.primary?.tasks ?? []
     return this.projects.flatMap((project) => project.tasks)
   }

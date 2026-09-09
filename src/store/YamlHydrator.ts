@@ -1,6 +1,8 @@
 import type {
+  Collection,
   CustomFieldDef,
   DependencyOption,
+  FilterState,
   PriorityConfig,
   PriorityIconSet,
   Project,
@@ -251,4 +253,50 @@ function dependencyOptionMap(raw: unknown): Record<string, DependencyOption> | u
     out[id] = { type, lag }
   }
   return Object.keys(out).length ? out : undefined
+}
+
+/** Shared by saved views and collection rules; unknown fields fall back to a neutral filter. */
+function hydrateFilterState(raw: unknown): FilterState {
+  const f = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  return {
+    text: typeof f.text === 'string' ? f.text : '',
+    statuses: stringList(f.statuses),
+    priorities: stringList(f.priorities),
+    assignees: stringList(f.assignees),
+    tags: stringList(f.tags),
+    dueDateFilter: (typeof f.dueDateFilter === 'string' ? f.dueDateFilter : 'any') as FilterState['dueDateFilter'],
+    showArchived: f.showArchived === true
+  }
+}
+
+/**
+ * A collection note. `include`, `exclude` and `sources` are written as wikilinks, so
+ * the caller passes the resolver that turns those back into ids and paths.
+ */
+export function hydrateCollection(
+  frontmatter: Record<string, unknown>,
+  body: string,
+  filePath: string,
+  basename: string,
+  resolve: { taskId: (raw: string) => string; projectPath: (raw: string) => string | null }
+): Collection {
+  const description = frontmatter.description
+  return {
+    id: (frontmatter.id as string) ?? basename,
+    title: (frontmatter.title as string) ?? basename,
+    description: typeof description === 'string' ? description : body.trim(),
+    color: (frontmatter.color as string) ?? '#6b8fbe',
+    icon: (frontmatter.icon as string) ?? '\u{1F5C2}️',
+    sources: stringList(frontmatter.sources)
+      .map(resolve.projectPath)
+      .filter((path): path is string => path !== null),
+    // Absent, not empty: a collection with no rule is a hand-picked list, which is not
+    // the same thing as a rule that matches everything.
+    ...(frontmatter.rule ? { rule: hydrateFilterState(frontmatter.rule) } : {}),
+    include: stringList(frontmatter.include).map(resolve.taskId),
+    exclude: stringList(frontmatter.exclude).map(resolve.taskId),
+    createdAt: (frontmatter.createdAt as string) ?? new Date().toISOString(),
+    updatedAt: (frontmatter.updatedAt as string) ?? new Date().toISOString(),
+    filePath
+  }
 }

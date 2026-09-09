@@ -281,11 +281,13 @@ function renderWindowRows(ctx: TableContext): void {
   }
   if (end < rows.length) spacerRow(tbody, colCount, (rows.length - end) * state.rowHeight)
 
-  const addRow = tbody.createEl('tr', { cls: 'pm-table-add-row' })
-  const addCell = addRow.createEl('td', { attr: { colspan: String(colCount) } })
-  renderAddButton(addCell, t('gantt.addTask'), (e) => {
-    openAddTask(ctx.plugin, ctx.scope, { event: e, onSave: () => ctx.onRefresh() })
-  })
+  if (ctx.scope.canAddTask) {
+    const addRow = tbody.createEl('tr', { cls: 'pm-table-add-row' })
+    const addCell = addRow.createEl('td', { attr: { colspan: String(colCount) } })
+    renderAddButton(addCell, t('gantt.addTask'), (e) => {
+      openAddTask(ctx.plugin, ctx.scope, { event: e, onSave: () => ctx.onRefresh() })
+    })
+  }
 
   calibrateRowHeight(ctx)
 }

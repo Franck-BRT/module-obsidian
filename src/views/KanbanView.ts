@@ -151,7 +151,12 @@ export class KanbanView implements SubView {
     const owner = this.scope.projectOf(task.id)
     if (!owner) return
     const menu = new Menu()
-    buildTaskContextMenu(menu, task, { plugin: this.plugin, project: owner, onRefresh: this.onRefresh })
+    buildTaskContextMenu(menu, task, {
+      plugin: this.plugin,
+      project: owner,
+      ...(this.scope.spec.kind === 'collection' ? { collectionPath: this.scope.spec.path } : {}),
+      onRefresh: this.onRefresh
+    })
     menu.showAtMouseEvent(e)
   }
 

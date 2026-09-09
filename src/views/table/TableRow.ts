@@ -161,7 +161,12 @@ export function renderTaskRow(tbody: HTMLElement, flat: TableTreeRow, ctx: Table
   new ActionsCell(row, {
     onClick: (e) => {
       const menu = new Menu()
-      buildTaskContextMenu(menu, task, { plugin: ctx.plugin, project, onRefresh: ctx.onRefresh })
+      buildTaskContextMenu(menu, task, {
+        plugin: ctx.plugin,
+        project,
+        ...(ctx.scope.spec.kind === 'collection' ? { collectionPath: ctx.scope.spec.path } : {}),
+        onRefresh: ctx.onRefresh
+      })
       menu.showAtMouseEvent(e)
     }
   })

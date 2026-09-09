@@ -9,7 +9,17 @@ import {
   type Task
 } from './types'
 import { flattenTasks, findTask } from './store/TaskTreeOps'
-import { matchPersonNotes, personLink, ProjectStore, scopeKey, VaultIndex } from './store'
+import {
+  addToCollection,
+  collectionMemberIds,
+  CollectionStore,
+  matchPersonNotes,
+  personLink,
+  ProjectStore,
+  removeFromCollection,
+  scopeKey,
+  VaultIndex
+} from './store'
 import type { ProjectRef, TaskSource } from './store'
 import { PMSettingTab } from './settings'
 import { ProjectView, PM_PROJECT_VIEW_TYPE } from './views/ProjectView'
@@ -23,6 +33,7 @@ import {
   openTaskModal,
   openProjectCreate,
   openPersonLookup,
+  openCollectionPicker,
   openProjectPicker,
   openTaskPicker,
   openImportModal,
@@ -39,6 +50,7 @@ import { setLocale, t } from './i18n'
 export default class PMPlugin extends Plugin {
   settings: PMSettings = { ...DEFAULT_SETTINGS }
   store!: TaskSource
+  collections!: CollectionStore
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver
@@ -81,6 +93,7 @@ export default class PMPlugin extends Plugin {
       void this.startupSweep()
     })
     this.store = new ProjectStore(this.app, () => this.settings, this.index)
+    this.collections = new CollectionStore(this.app, this.index)
     this.store.registerVaultSync(this)
     this.notifier = new Notifier(this)
     this.autoArchiver = new AutoArchiver(this)
@@ -112,6 +125,12 @@ export default class PMPlugin extends Plugin {
       callback: () => {
         void this.router.openDashboard()
       }
+    })
+
+    this.addCommand({
+      id: 'new-collection',
+      name: t('collection.new'),
+      callback: safeAsync(() => this.createCollection())
     })
 
     this.addCommand({
@@ -370,6 +389,58 @@ export default class PMPlugin extends Plugin {
     if (separator === -1) return true
     const path = key.slice(separator + 1)
     return path === '' || this.app.vault.getAbstractFileByPath(path) !== null
+  }
+
+  /** Prompts for a name and opens the empty collection, ready to be filled. */
+  async createCollection(): Promise<void> {
+    const title = await promptText(this.app, t('collection.new'), t('collection.name'), '')
+    if (!title) return
+    const collection = await this.collections.create(title, this.settings.projectsFolder)
+    if (!collection) return
+    // The index reads it on the metadata change; opening before that finds nothing.
+    this.index.build()
+    await this.router.openScope({ kind: 'collection', path: collection.filePath })
+  }
+
+  /**
+   * Adds a task to a collection the user picks. Membership lives on the collection, not
+   * the task, so nothing about the task's own note changes.
+   */
+  addTaskToCollection(taskId: string): void {
+    const collections = this.index.collectionRefs()
+    if (!collections.length) {
+      this.showNotice(t('collection.noneYet'))
+      return
+    }
+    openCollectionPicker(
+      this,
+      collections,
+      safeAsync(async (ref) => {
+        await this.collections.update(ref.path, (collection) => addToCollection(collection, taskId))
+        this.index.build()
+        this.refreshViews()
+        this.showNotice(t('collection.added', { name: ref.title }))
+      })
+    )
+  }
+
+  async removeTaskFromCollection(collectionPath: string, taskId: string): Promise<void> {
+    const ref = this.index.collectionRef(collectionPath)
+    if (!ref) return
+    // Only a rule-matched task needs an exclusion recorded; a hand-picked one just goes.
+    const matchedByRule = ref.rule
+      ? collectionMemberIds(
+          { ...ref, include: [], exclude: [] },
+          this.index.allTaskRefs(),
+          this.settings.statuses
+        ).includes(taskId)
+      : false
+    await this.collections.update(collectionPath, (collection) =>
+      removeFromCollection(collection, taskId, matchedByRule)
+    )
+    this.index.build()
+    this.refreshViews()
+    this.showNotice(t('collection.removed', { name: ref.title }))
   }
 
   /** Prompts for a title, copies the project with fresh task ids, and opens the copy. */

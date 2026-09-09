@@ -202,6 +202,8 @@ export const en = {
   'project.clearFilters': 'Clear ({count})',
   'project.dueFilter': 'Due: {label}',
   'project.overdueCount': { one: '{count} overdue', other: '{count} overdue' },
+  'project.newButton': '+ new project',
+  'project.behindCount': { one: '{count} with tasks past due', other: '{count} with tasks past due' },
   'project.members': 'Members',
   'project.lookingFor': 'Looking for projects',
   'project.noneYet': 'No projects yet',
@@ -370,6 +372,7 @@ export const en = {
   'view.mayHaveBeenDeleted': 'It may have been deleted or renamed.',
   'view.notInProject': 'This note does not belong to a project.',
   'view.newTask': 'New task',
+  'view.folderNamed': 'Folder: {folder}',
   'view.vaultFolder': 'Vault folder',
   'view.changeScope': 'Change which projects this view shows',
   'view.milestones': 'Milestones',
@@ -396,6 +399,27 @@ export const en = {
   'view.showOnProject': 'Show on this project',
   'view.hideOnProject': 'Hide on this project',
   'view.merge': 'Merge',
+
+  // Collections: named sets of tasks drawn from across projects.
+  'collection.new': 'Create collection',
+  'collection.name': 'Collection name',
+  'collection.section': 'Collections',
+  'collection.addTo': 'Add to collection',
+  'collection.removeFrom': 'Remove from collection',
+  'collection.added': 'Added to {name}',
+  'collection.removed': 'Removed from {name}',
+  'collection.noneYet': 'No collection yet. Create one first.',
+  'collection.pick': 'Pick a collection…',
+  'collection.empty': 'This collection is empty. Add tasks to it from their own project.',
+  'collection.open': 'Open collection',
+  'collection.delete': 'Delete collection',
+  'collection.deleteConfirm': 'Delete the collection "{title}"? The tasks it gathers are left untouched.',
+  'collection.saveRule': 'Save the current filters as this collection’s rule',
+  'collection.ruleSaved': 'Rule saved: the collection now follows the current filters.',
+  'collection.clearRule': 'Clear the rule',
+  'collection.ruleCleared': 'Rule cleared: the collection is now a hand-picked list.',
+  'collection.hasRule': 'Follows a rule',
+  'count.collections': { one: '{count} collection', other: '{count} collections' },
 
   // Settings, grouped as they appear in the tab.
   'settings.group.general': 'General',
@@ -531,6 +555,7 @@ export const en = {
   'settings.excludedFolders.placeholder': 'Templates',
   'scope.project': 'Project',
   'scope.andSubProjects': '{title} and sub-projects',
+  'scope.collection': 'Collection',
   'scope.vault': 'Vault',
 
   // Days of the week, in the working-week picker.
