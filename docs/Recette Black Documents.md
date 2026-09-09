@@ -1,12 +1,12 @@
 ---
 type: recette
-module: dotpm FR
-version: 2.5.0
+module: Black Documents
+version: 2.6.0
 date_recette:
 testeur:
 ---
 
-# Recette — dotpm FR 2.5.0
+# Recette — Black Documents 2.6.0
 
 Plan de test manuel pour le fork. Les **544 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -25,11 +25,16 @@ cassé de ce qui marchait. Les **[N]** portent sur les **nouveautés**.
 
 ## 0. Installation et reprise des données
 
-- [ ] **[R]** L'ancien plugin **dotpm** est désactivé dans Obsidian avant d'activer celui-ci
-- [ ] Le dossier `<coffre>/.obsidian/plugins/dotpm-fr/` contient bien `main.js`, `manifest.json`, `styles.css`
-- [ ] **dotpm FR** apparaît dans la liste des modules et s'active sans erreur
+- [ ] **[R]** Toute autre copie est désactivée : l'upstream **dotpm**, et l'ancien **dotpm FR** si tu l'avais installé
+- [ ] Le dossier `<coffre>/.obsidian/plugins/black-documents/` contient bien `main.js`, `manifest.json`, `styles.css`
+- [ ] **Black Documents** apparaît dans la liste des modules et s'active sans erreur
 - [ ] La console développeur (`Ctrl/Cmd+Maj+I`) ne montre **aucune erreur rouge** au démarrage
-- [ ] Après avoir copié l'ancien `data.json`, les statuts, priorités et champs personnalisés sont bien ceux d'avant
+- [ ] Après avoir copié le `data.json` de l'ancien dossier (`dotpm-fr` ou `project-manager`), les statuts, priorités et champs personnalisés sont bien ceux d'avant
+- [ ] **[R]** Les tâches et projets écrits par une version précédente s'ouvrent tels quels
+      *(le format de données n'a pas changé : `pm-project`, `pm-task`, `pm-collection`)*
+- [ ] L'ancien dossier de module est supprimé, pour que deux copies n'indexent pas le coffre
+- [ ] Le nom **Black Documents** apparaît bien dans : la liste des modules, l'info-bulle du ruban,
+      l'en-tête des réglages, et le préfixe des notifications
 - [ ] **[R]** Les projets et tâches existants apparaissent — ils n'ont eu besoin d'aucune migration
 - [ ] L'icône dans le ruban ouvre le tableau de bord
 
@@ -103,9 +108,9 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Ouvrir la note de **A** dans l'éditeur Obsidian et ajouter à la main dans le frontmatter :
       `dependencies: ["<id de B>"]`
       (l'id de B se copie depuis son éditeur : `Plus d'actions` → `Copier l'identifiant`)
-- [ ] Revenir dans dotpm, ouvrir la tâche **A** et **l'enregistrer**
+- [ ] Revenir dans Black Documents, ouvrir la tâche **A** et **l'enregistrer**
 - [ ] ✅ **Attendu** : une notification annonce que des tâches dépendent les unes des autres en boucle, **en nommant A et B**
-- [ ] ✅ **Attendu** : la console contient une ligne `[dotpm] Dependency cycle` avec les identifiants
+- [ ] ✅ **Attendu** : la console contient une ligne `[Black Documents] Dependency cycle` avec les identifiants
 - [ ] Retirer la dépendance fautive, réenregistrer
 - [ ] ✅ **Attendu** : plus aucune notification de cycle
 
@@ -125,7 +130,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ### Réglage
 
-- [ ] `Réglages` → `dotpm FR` → section **Planification**
+- [ ] `Réglages` → `Black Documents` → section **Planification**
 - [ ] L'option **« Ignorer week-ends et jours fériés »** est présente et **désactivée**
 - [ ] Juste en dessous : **« Semaine de travail »** avec sept boutons (Lun → Dim), Lun–Ven actifs
 - [ ] Et **« Jours fériés »**, une zone de texte, une date par ligne
@@ -217,14 +222,14 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ## 7. Interface française [N]
 
-- [ ] `Réglages` → `dotpm FR` → **Général** → le réglage **« Langue »** existe
+- [ ] `Réglages` → `Black Documents` → **Général** → le réglage **« Langue »** existe
 - [ ] Sur **« Comme Obsidian »**, avec Obsidian en français : l'interface est **en français**
 - [ ] Forcer **English** : l'interface repasse en anglais (rouvrir les vues si besoin)
 - [ ] Forcer **Français** avec Obsidian en anglais : l'interface reste **en français**
 
 ### Là où il faut vraiment regarder
 
-- [ ] **Palette de commandes** : toutes les commandes dotpm sont en français
+- [ ] **Palette de commandes** : toutes les commandes Black Documents sont en français
 - [ ] **Éditeur de tâche** : tous les libellés de champs, y compris les propriétés à ajouter
 - [ ] **Menu contextuel** d'une tâche (clic droit)
 - [ ] **Barre d'actions groupées** (sélectionner plusieurs tâches dans le tableur)
@@ -325,7 +330,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       ✅ **Attendu** : un message clair, pas une erreur silencieuse
 - [ ] Renommer un projet : ses tâches suivent, les liens restent valides
 - [ ] Déplacer un dossier de projet dans le coffre : le plugin s'y retrouve
-- [ ] Éditer une note de tâche à la main puis revenir dans dotpm : les modifications sont reprises
+- [ ] Éditer une note de tâche à la main puis revenir dans Black Documents : les modifications sont reprises
 - [ ] Supprimer une note de tâche depuis l'explorateur Obsidian : le projet ne casse pas
 - [ ] Sur un projet d'une **cinquantaine de tâches** : l'ouverture des vues reste fluide
 - [ ] Fermer et rouvrir Obsidian : tout est retrouvé, aucune erreur en console

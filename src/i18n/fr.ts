@@ -22,7 +22,7 @@ export const fr: Catalog = {
   'command.personTasks': "Afficher les tâches assignées à quelqu'un",
   'command.personTasksThisNote': 'Afficher les tâches assignées à cette note',
   'command.linkPeople': 'Relier les assignés à leurs notes de personne',
-  'ribbon.title': 'Gestion de projet',
+  'ribbon.title': 'Black Documents',
 
   'common.all': 'Tout',
   'common.archive': 'Archiver',
@@ -250,17 +250,19 @@ export const fr: Catalog = {
   'notify.dueInDays': '📅 Échéance dans {days} j : « {task} » dans {project}',
 
   'notice.genericError': "Une erreur est survenue. Consultez la console pour plus d'informations.",
-  'notice.loadProjectFailed': 'dotpm : échec du chargement de « {name} ». Consultez la console.',
-  'notice.loadTaskFailed': 'dotpm : échec du chargement de la tâche « {name} ». Consultez la console.',
-  'notice.saveProjectFailed': "dotpm : échec de l'enregistrement de « {name} ». Consultez la console.",
-  'notice.occurrenceFailed': 'dotpm : impossible de créer la prochaine occurrence de « {name} ». Consultez la console.',
+  'notice.loadProjectFailed': 'Black Documents : échec du chargement de « {name} ». Consultez la console.',
+  'notice.loadTaskFailed': 'Black Documents : échec du chargement de la tâche « {name} ». Consultez la console.',
+  'notice.saveProjectFailed': "Black Documents : échec de l'enregistrement de « {name} ». Consultez la console.",
+  'notice.occurrenceFailed':
+    'Black Documents : impossible de créer la prochaine occurrence de « {name} ». Consultez la console.',
   'notice.dependencyCycle':
-    'dotpm : {count} tâche(s) dépendent les unes des autres en boucle et n’ont pas été planifiées : {titles}.',
+    'Black Documents : {count} tâche(s) dépendent les unes des autres en boucle et n’ont pas été planifiées : {titles}.',
   'notice.migrating': 'Migration du projet : {name}...',
-  'notice.migrationFailed': 'dotpm : échec de la migration de « {name} ». Consultez la console.',
-  'notice.migrated': 'dotpm : {projects} migré(s) vers le nouveau format.',
-  'notice.moveFolderFailed': 'dotpm : impossible de déplacer « {path} » dans son propre dossier. Consultez la console.',
-  'notice.movedIntoFolders': 'dotpm : {projects} déplacé(s) dans leur propre dossier.',
+  'notice.migrationFailed': 'Black Documents : échec de la migration de « {name} ». Consultez la console.',
+  'notice.migrated': 'Black Documents : {projects} migré(s) vers le nouveau format.',
+  'notice.moveFolderFailed':
+    'Black Documents : impossible de déplacer « {path} » dans son propre dossier. Consultez la console.',
+  'notice.movedIntoFolders': 'Black Documents : {projects} déplacé(s) dans leur propre dossier.',
   'notice.noTasksForPerson': 'Aucune tâche assignée à {name}',
 
   'flow.duplicateAs': 'Dupliquer « {title} » sous le nom',

@@ -1259,7 +1259,7 @@ export class ProjectStore implements TaskSource {
     try {
       await this.insertTask(project, next, findParentId(project, taskId))
     } catch (e) {
-      console.error(`[dotpm] Failed to create the next occurrence of "${task.title}":`, e)
+      console.error(`[Black Documents] Failed to create the next occurrence of "${task.title}":`, e)
       new Notice(t('notice.occurrenceFailed', { name: task.title }))
     }
   }
@@ -1600,7 +1600,7 @@ export class ProjectStore implements TaskSource {
     const titles = [...cycleIds].map(titleOf)
     const shown = titles.slice(0, 3).join(', ')
     const rest = titles.length > 3 ? `, and ${titles.length - 3} more` : ''
-    console.warn('[dotpm] Dependency cycle, these tasks are not scheduled:', [...cycleIds])
+    console.warn('[Black Documents] Dependency cycle, these tasks are not scheduled:', [...cycleIds])
     new Notice(t('notice.dependencyCycle', { count: titles.length, titles: `${shown}${rest}` }), 8000)
   }
 

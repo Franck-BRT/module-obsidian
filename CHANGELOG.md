@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-09-09
+
+### Changed
+
+- The plugin is now called **Black Documents**, and its id is `black-documents`. The
+  folder moves with it, so this release needs the same one-off step as 2.4.0: disable
+  and remove the old plugin, unzip the new one, and copy `data.json` across. Projects
+  and tasks need nothing — the frontmatter keys are untouched and none of them ever
+  named the plugin
+- Notices, the ribbon and the settings tab carry the new name; the console prefix is
+  now `[Black Documents]`
+- The README no longer shows upstream's download and star counts under this fork's
+  title, and its install steps point here rather than at the community listing
+
+The data format is unchanged. `pm-project`, `pm-task` and `pm-collection` still mean
+what they meant, so a vault written by any earlier build opens as it was.
+
+
 ## [2.5.0] - 2026-09-09
 
 ### Added

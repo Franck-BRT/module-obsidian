@@ -1,7 +1,8 @@
 # This fork
 
-`Franck-BRT/module-obsidian` is a fork of [`dotpm/obsidian-pm`](https://github.com/dotpm/obsidian-pm),
-MIT-licensed, forked at **2.3.1**. Upstream is actively developed, so this fork tracks
+**Black Documents** (`Franck-BRT/module-obsidian`) is a fork of
+[`dotpm/obsidian-pm`](https://github.com/dotpm/obsidian-pm), MIT-licensed, forked at
+**2.3.1**. Upstream is actively developed, so this fork tracks
 it rather than diverging: our changes ride on top and upstream releases are merged in.
 
 ## What this fork adds
@@ -14,6 +15,7 @@ it rather than diverging: our changes ride on top and upstream releases are merg
 | Recurring tasks actually repeat | `interval`, `every` and `endDate` were written, badged, and never read back |
 | Typed dependencies (FS/SS/FF/SF) and lag | Every link meant finish-to-start with exactly one day between the two tasks |
 | French translation, and the machinery for any other | Every string was hard-coded English |
+| Collections gathering chosen tasks across projects | No way to see tasks from several projects as one named set |
 
 Each is one commit, kept self-contained so a conflict during a merge is confined to it.
 
@@ -81,20 +83,24 @@ Adding a locale means one file, one entry in `LOCALES`, and nothing else.
 
 ## Installing it
 
-The fork's plugin id is **`dotpm-fr`**, not upstream's `project-manager`. That is
+The plugin id is **`black-documents`**, not upstream's `project-manager`. That is
 deliberate: sharing the id means sharing the folder, and Obsidian would eventually
 overwrite this build with an upstream release without saying anything.
 
-1. Disable **dotpm** in Obsidian if it is installed. Two copies both claiming the
-   vault's `pm-project` notes will fight over them.
-2. Unzip `dotpm-fr-<version>.zip` into `<vault>/.obsidian/plugins/`, or copy
+1. Disable any other copy in Obsidian — upstream **dotpm**, or an earlier **dotpm FR**
+   build of this fork. Two copies both claiming the vault's `pm-project` notes will
+   fight over them.
+2. Unzip `black-documents-<version>.zip` into `<vault>/.obsidian/plugins/`, or copy
    `main.js`, `manifest.json` and `styles.css` into
-   `<vault>/.obsidian/plugins/dotpm-fr/`.
-3. To keep the settings from the original, copy its `data.json`:
-   `cp <vault>/.obsidian/plugins/project-manager/data.json <vault>/.obsidian/plugins/dotpm-fr/`
+   `<vault>/.obsidian/plugins/black-documents/`.
+3. To keep your settings, copy the `data.json` from whichever folder you were using —
+   `project-manager` for upstream, `dotpm-fr` for a 2.4 or 2.5 build of this fork:
+   `cp <vault>/.obsidian/plugins/dotpm-fr/data.json <vault>/.obsidian/plugins/black-documents/`
    Projects and tasks need nothing — they are plain Markdown notes and belong to the
-   vault, not to the plugin.
-4. Reload Obsidian and enable **dotpm FR**.
+   vault, not to the plugin. The frontmatter keys are unchanged, so nothing in them
+   refers to the plugin's name.
+4. Reload Obsidian and enable **Black Documents**.
+5. Once it works, delete the old plugin folder so the two cannot both index the vault.
 
 For updates without doing this by hand, [BRAT](https://github.com/TfTHacker/obsidian42-brat)
 can follow this repository's releases: add `Franck-BRT/module-obsidian` as a beta plugin.
@@ -104,7 +110,7 @@ can follow this repository's releases: add `Franck-BRT/module-obsidian` as a bet
 ```sh
 pnpm check && pnpm test        # must be clean
 # bump `version` in manifest.json and add it to versions.json
-pnpm build && pnpm package     # dist/dotpm-fr/ and dist/dotpm-fr-<version>.zip
+pnpm build && pnpm package     # dist/black-documents/ and its zip
 git tag <version> && git push origin <version>
 ```
 
@@ -118,7 +124,7 @@ convenience for installing by hand.
 
 ```sh
 pnpm install
-pnpm test          # 516 tests
+pnpm test          # 544 tests
 pnpm run check     # lint, format, types, submission lint
 pnpm run build     # main.js + styles.css
 VAULT_PATH=/path/to/vault pnpm run dev   # builds straight into the vault's plugin folder

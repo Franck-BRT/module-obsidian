@@ -1,26 +1,25 @@
 <div align="center">
 
-# dotpm for Obsidian
+# Black Documents for Obsidian
 *Full-featured project management, natively in your vault.*
 
 [![Obsidian community plugin](https://img.shields.io/badge/Obsidian-Community%20Plugin-7c3aed?style=for-the-badge&logo=obsidian&logoColor=white)](https://community.obsidian.md/plugins/project-manager)
-[![Downloads](https://img.shields.io/github/downloads/dotpm/obsidian-pm/total?style=for-the-badge&color=2ea44f)](https://github.com/dotpm/obsidian-pm/releases)
-[![Stars](https://img.shields.io/github/stars/dotpm/obsidian-pm?style=for-the-badge&color=007acc)](https://github.com/dotpm/obsidian-pm/stargazers)
 [![Support](https://img.shields.io/badge/Donate-Buy%20Me%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/kropachev)
 
-**[Install from Obsidian](https://community.obsidian.md/plugins/project-manager)** · **[Website](https://dotpm.pm)** · **[Changelog](CHANGELOG.md)**
+**[Install](docs/fork.md#installing-it)** · **[What this fork changes](docs/fork.md)** · **[Changelog](CHANGELOG.md)**
 
 </div>
 
-> **This is a fork.** [`Franck-BRT/module-obsidian`](https://github.com/Franck-BRT/module-obsidian)
-> tracks [`dotpm/obsidian-pm`](https://github.com/dotpm/obsidian-pm) and adds a French
-> interface, working-day scheduling, typed dependencies and working recurring tasks.
-> It installs as `dotpm-fr`, beside the original rather than over it.
+> **Black Documents is a fork of [dotpm](https://github.com/dotpm/obsidian-pm).**
+> [`Franck-BRT/module-obsidian`](https://github.com/Franck-BRT/module-obsidian) tracks
+> upstream and adds a French interface, working-day scheduling, typed dependencies,
+> working recurring tasks, and collections gathering chosen tasks across projects.
+> It installs as `black-documents`, beside the original rather than over it.
 > See [docs/fork.md](docs/fork.md) for what changed and how upstream is merged in.
 
 Table views, Gantt charts, Kanban boards, custom fields, time tracking, smart scheduling — all stored as plain Markdown with YAML frontmatter. No external services. No sync subscriptions. Your data stays yours.
 
-<img width="1422" height="791" alt="dotpm dashboard" src="https://github.com/user-attachments/assets/ca6bc67f-e656-45be-b93a-17410555ec1a" />
+<img width="1422" height="791" alt="Black Documents dashboard" src="https://github.com/user-attachments/assets/ca6bc67f-e656-45be-b93a-17410555ec1a" />
 
 ## What's inside
 
@@ -56,7 +55,7 @@ Card-based board grouped by status. Drag cards between columns to update status 
 - **Subtasks** — Nest tasks to any depth. Collapse/expand hierarchies across all views.
 - **Dependencies** — Link blocking/dependent tasks. Visualized as arrows on the Gantt chart.
 - **Milestones** — Zero-duration tasks for key dates and deliverables.
-- **Archive** — Archive completed tasks without deleting. Toggle visibility at any time. Completed tasks can also be archived automatically once they have been done for a set number of days, or on demand with **dotpm: Archive completed tasks**.
+- **Archive** — Archive completed tasks without deleting. Toggle visibility at any time. Completed tasks can also be archived automatically once they have been done for a set number of days, or on demand with **Black Documents: Archive completed tasks**.
 
 ### Scheduling & time
 - **Drag-and-drop scheduling** — Reschedule tasks by dragging bars on the Gantt chart.
@@ -81,7 +80,7 @@ Card-based board grouped by status. Drag cards between columns to update status 
   - Delete
 
 ### Import
-You can add any existing note from your vault to project as a task. Run **dotpm: Import notes as tasks** in the Command Palette, pick a project, select files, then choose default status, default priority, and whether to **move** files into the task folder or **copy** them. Already-imported notes are skipped.
+You can add any existing note from your vault to project as a task. Run **Black Documents: Import notes as tasks** in the Command Palette, pick a project, select files, then choose default status, default priority, and whether to **move** files into the task folder or **copy** them. Already-imported notes are skipped.
 
 https://github.com/user-attachments/assets/64e386c5-09b5-42a6-9599-089cc54c98eb
 
@@ -108,7 +107,7 @@ There is no real-time multi-user editing. Two people editing the same task at on
 
 ## Using with TaskNotes
 
-dotpm works alongside the [TaskNotes](https://github.com/callumalpass/tasknotes) plugin (4.10 or newer).
+Black Documents works alongside the [TaskNotes](https://github.com/callumalpass/tasknotes) plugin (4.10 or newer).
 
 ### Import TaskNotes tasks
 
@@ -124,17 +123,17 @@ Choose **move** to turn the TaskNotes notes into task files inside the project's
 
 ### Align statuses and priorities
 
-**Settings > Import from TaskNotes** copies TaskNotes' status and priority palettes into dotpm, so both plugins use the same values, names, and colors. Entries TaskNotes doesn't know are kept.
+**Settings > Import from TaskNotes** copies TaskNotes' status and priority palettes into Black Documents, so both plugins use the same values, names, and colors. Entries TaskNotes doesn't know are kept.
 
-### Let TaskNotes see dotpm tasks
+### Let TaskNotes see Black Documents tasks
 
-TaskNotes can be configured to list and edit dotpm tasks in place, without conversion:
+TaskNotes can be configured to list and edit Black Documents tasks in place, without conversion:
 
 1. In TaskNotes settings, set task identification to **property** with name `pm-task` and value `true`.
 2. In its field mapping, map **scheduled** to `start`.
-3. Add your dotpm status and priority values to TaskNotes' palettes.
+3. Add your Black Documents status and priority values to TaskNotes' palettes.
 
-Task hierarchy and dependencies don't resolve on the TaskNotes side (it uses project links and `blockedBy`, dotpm uses id references), but both plugins edit frontmatter non-destructively, so each one's extra fields survive the other's writes.
+Task hierarchy and dependencies don't resolve on the TaskNotes side (it uses project links and `blockedBy`, Black Documents uses id references), but both plugins edit frontmatter non-destructively, so each one's extra fields survive the other's writes.
 
 ## Settings
 
@@ -181,27 +180,30 @@ Each task is a `.md` file in your vault supporting:
 
 ## Installation
 
-### From Obsidian (recommended)
-
-1. Open **Settings > Community plugins** and make sure Restricted mode is off.
-2. Click **Browse**, search for **dotpm**, and click **Install**.
-3. Click **Enable**.
-
-Or open the listing directly: [community.obsidian.md/plugins/project-manager](https://community.obsidian.md/plugins/project-manager).
-
-### Via BRAT (beta releases)
-
-1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) from the community store.
-2. Open BRAT settings > **Add Beta Plugin**.
-3. Enter: `https://github.com/dotpm/obsidian-pm`
-4. Enable the plugin in **Settings > Community plugins**.
+Black Documents is a fork, so it is not in Obsidian's community plugin list. It
+installs beside upstream **dotpm** rather than over it — see
+[docs/fork.md](docs/fork.md#installing-it) for the full steps, including carrying your
+settings over.
 
 ### Manual
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](../../releases/latest).
-2. Create a folder: `<vault>/.obsidian/plugins/project-manager/`
+2. Create a folder: `<vault>/.obsidian/plugins/black-documents/`
 3. Copy the three files into that folder.
-4. Reload Obsidian and enable the plugin under **Settings > Community plugins**.
+4. Reload Obsidian and enable **Black Documents** under **Settings > Community plugins**.
+
+### Via BRAT (to follow releases)
+
+1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) from the community store.
+2. Open BRAT settings > **Add Beta Plugin**.
+3. Enter: `https://github.com/Franck-BRT/module-obsidian`
+4. Enable the plugin in **Settings > Community plugins**.
+
+### Upstream instead
+
+To install the original rather than this fork, search for **dotpm** in
+**Settings > Community plugins > Browse**, or open
+[its listing](https://community.obsidian.md/plugins/project-manager).
 
 ## Quick start
 
