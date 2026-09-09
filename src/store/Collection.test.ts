@@ -5,6 +5,7 @@ import {
   collectionMemberIds,
   collectionProjectPaths,
   collectionRoots,
+  groupRowsByProject,
   removeFromCollection
 } from './Collection'
 import type { TaskRef } from './VaultIndex'
@@ -194,5 +195,32 @@ describe('adding and removing by hand', () => {
   it('does not record the same exclusion twice', () => {
     const c = removeFromCollection(collection({ exclude: ['a'] }), 'a', true)
     expect(c.exclude).toEqual(['a'])
+  })
+})
+
+describe('grouping rows under their project', () => {
+  const row = (id: string, project: string | null) => ({ id, project })
+  const group = (rows: { id: string; project: string | null }[]) => groupRowsByProject(rows, (r) => r.project)
+
+  it('keeps one block per project, in the order the projects first appear', () => {
+    const groups = group([row('a', 'B.md'), row('b', 'A.md'), row('c', 'B.md')])
+    expect(groups.map((g) => g.projectPath)).toEqual(['B.md', 'A.md'])
+    expect(groups[0].rows.map((r) => r.id)).toEqual(['a', 'c'])
+    expect(groups[1].rows.map((r) => r.id)).toEqual(['b'])
+  })
+
+  it('keeps a row whose project cannot be resolved, and puts it last', () => {
+    const groups = group([row('lost', null), row('a', 'A.md')])
+    expect(groups.map((g) => g.projectPath)).toEqual(['A.md', ''])
+    expect(groups[1].rows.map((r) => r.id)).toEqual(['lost'])
+  })
+
+  it('loses no row', () => {
+    const rows = [row('a', 'A.md'), row('b', null), row('c', 'B.md'), row('d', 'A.md')]
+    expect(group(rows).flatMap((g) => g.rows)).toHaveLength(rows.length)
+  })
+
+  it('has nothing to group when there are no rows', () => {
+    expect(group([])).toEqual([])
   })
 })

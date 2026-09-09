@@ -1,6 +1,6 @@
 import type PMPlugin from '../../main'
 import type { FilterState, LineBorders, PriorityConfig, PriorityIconSet, StatusConfig } from '../../types'
-import { personKeyer, type ProjectScope } from '../../store'
+import { groupRowsByProject, personKeyer, type ProjectScope } from '../../store'
 import { type FlatTask, flattenTasks } from '../../store/TaskTreeOps'
 import { findTaskById } from '../../store/TaskIndex'
 import { applyTaskFilterFlat, isFilterActive } from '../../store/TaskFilter'
@@ -9,7 +9,7 @@ import { renderAddButton } from '../../ui/composites/addButton'
 import { childTreeGuides } from '../../ui/composites/treeGuides'
 import { openAddTask } from '../addTask'
 import { compareTask } from './TableFilters'
-import { renderTaskRow, updateSelectedRow, updateSelectAllCheckbox } from './TableRow'
+import { renderGroupRow, renderTaskRow, updateSelectedRow, updateSelectAllCheckbox } from './TableRow'
 import { t } from '../../i18n'
 
 type SortKey = 'title' | 'status' | 'priority' | 'due' | 'assignees' | 'progress'
@@ -18,11 +18,29 @@ type SortDir = 'asc' | 'desc'
 export type { SortKey, SortDir }
 
 /** A display row plus what the tree connectors need to know about its siblings. */
-export interface TableTreeRow extends FlatTask {
+export interface TableTaskRow extends FlatTask {
+  kind: 'task'
   /** One entry per indent column: does an ancestor at that column still have rows below it. */
   guides: boolean[]
   isLastChild: boolean
 }
+
+/**
+ * A project heading in a collection view. It stands for a project, not a task, so it
+ * carries no `task` at all: every consumer has to decide what it means rather than
+ * reading a placeholder by accident.
+ */
+export interface TableGroupRow {
+  kind: 'group'
+  projectPath: string
+  title: string
+  icon: string
+  color: string
+  count: number
+  collapsed: boolean
+}
+
+export type TableTreeRow = TableTaskRow | TableGroupRow
 
 export interface TableState {
   sortKey: SortKey
@@ -212,20 +230,22 @@ function fillTableBody(ctx: TableContext): void {
     list.sort((a, b) => compareTask(a.task, b.task, ctx.state, ctx.statuses, ctx.priorities))
   }
 
-  const sorted: TableTreeRow[] = []
+  const sorted: TableTaskRow[] = []
   const addWithChildren = (parentId: string | null, trail: boolean[]) => {
     const items = childrenByParent.get(parentId)
     if (!items) return
     items.forEach((item, i) => {
       const isLastChild = i === items.length - 1
-      sorted.push({ ...item, guides: padGuides(trail, item.depth), isLastChild })
+      sorted.push({ kind: 'task', ...item, guides: padGuides(trail, item.depth), isLastChild })
       addWithChildren(item.task.id, childTreeGuides(trail, isLastChild))
     })
   }
   addWithChildren(null, [])
 
   // When filtering, show all matches regardless of collapsed parent.
-  ctx.state.visibleRows = hasActiveFilter ? sorted : sorted.filter((f) => f.visible)
+  const visible = hasActiveFilter ? sorted : sorted.filter((f) => f.visible)
+  ctx.state.visibleRows =
+    ctx.scope.spec.kind === 'collection' ? withProjectHeadings(visible, ctx, ctx.scope.spec.path) : visible
   ctx.state.renderWindow = () => renderWindowRows(ctx)
   // The data changed, so repaint even if the window bounds happen to match.
   ctx.state.windowStart = -1
@@ -277,7 +297,9 @@ function renderWindowRows(ctx: TableContext): void {
   tbody.empty()
   if (start > 0) spacerRow(tbody, colCount, start * state.rowHeight)
   for (let i = start; i < end; i++) {
-    renderTaskRow(tbody, rows[i], ctx)
+    const row = rows[i]
+    if (row.kind === 'group') renderGroupRow(tbody, row, colCount, ctx)
+    else renderTaskRow(tbody, row, ctx)
   }
   if (end < rows.length) spacerRow(tbody, colCount, (rows.length - end) * state.rowHeight)
 
@@ -414,7 +436,35 @@ export function handleTableKeyDown(e: KeyboardEvent, ctx: TableContext): void {
 }
 
 export function getVisibleTaskIds(state: TableState): string[] {
-  return state.visibleRows.map((f) => f.task.id)
+  return state.visibleRows.filter((row) => row.kind === 'task').map((row) => row.task.id)
+}
+
+/**
+ * Puts a project heading above each block of rows, so a collection says where every
+ * task actually lives. Subtasks need no special case: a subtask belongs to the same
+ * project note as its parent, so grouping keeps it directly under it.
+ *
+ * A folded heading keeps its own rows out of the list but still counts them, so folding
+ * a project never makes a collection look emptier than it is.
+ */
+function withProjectHeadings(rows: TableTaskRow[], ctx: TableContext, collectionPath: string): TableTreeRow[] {
+  const folded = new Set(ctx.plugin.settings.collapsedCollectionGroups[collectionPath] ?? [])
+  const out: TableTreeRow[] = []
+  for (const group of groupRowsByProject(rows, (row) => ctx.scope.projectOf(row.task.id)?.filePath ?? null)) {
+    const ref = group.projectPath ? ctx.plugin.index.projectRef(group.projectPath) : null
+    const collapsed = folded.has(group.projectPath)
+    out.push({
+      kind: 'group',
+      projectPath: group.projectPath,
+      title: ref?.title ?? t('collection.orphanGroup'),
+      icon: ref?.icon ?? '\u2753',
+      color: ref?.color ?? '#8a94a0',
+      count: group.rows.length,
+      collapsed
+    })
+    if (!collapsed) out.push(...group.rows)
+  }
+  return out
 }
 
 async function deleteTask(id: string, ctx: TableContext): Promise<void> {

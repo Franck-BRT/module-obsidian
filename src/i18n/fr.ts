@@ -387,6 +387,8 @@ export const fr: Catalog = {
   'collection.added': 'Ajoutée à {name}',
   'collection.removed': 'Retirée de {name}',
   'collection.noneYet': "Aucun recueil pour l'instant. Créez-en un d'abord.",
+  'collection.orphanGroup': 'Projet introuvable',
+  'collection.groupCount': { one: '{count} tâche', other: '{count} tâches' },
   'collection.pick': 'Choisir un recueil…',
   'collection.empty': 'Ce recueil est vide. Ajoutez-y des tâches depuis leur propre projet.',
   'collection.open': 'Ouvrir le recueil',

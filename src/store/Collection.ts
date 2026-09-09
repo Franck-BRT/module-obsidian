@@ -114,3 +114,27 @@ export function removeFromCollection(collection: Collection, taskId: string, mat
       matchedByRule && !collection.exclude.includes(taskId) ? [...collection.exclude, taskId] : collection.exclude
   }
 }
+
+/** A project heading in a collection view, with the member tasks that sit under it. */
+export interface CollectionGroup<T> {
+  projectPath: string
+  rows: T[]
+}
+
+/**
+ * Splits a collection's rows into one block per owning project, in the order the
+ * projects first appear. Rows whose project cannot be resolved come last under an
+ * empty path, so a task never silently vanishes because its project moved.
+ */
+export function groupRowsByProject<T>(rows: T[], projectPathOf: (row: T) => string | null): CollectionGroup<T>[] {
+  const byPath = new Map<string, T[]>()
+  for (const row of rows) {
+    const path = projectPathOf(row) ?? ''
+    const bucket = byPath.get(path)
+    if (bucket) bucket.push(row)
+    else byPath.set(path, [row])
+  }
+  const groups = [...byPath].map(([projectPath, groupRows]) => ({ projectPath, rows: groupRows }))
+  // Unowned rows are an anomaly worth seeing, but not worth leading with.
+  return groups.sort((a, b) => (a.projectPath === '' ? 1 : b.projectPath === '' ? -1 : 0))
+}

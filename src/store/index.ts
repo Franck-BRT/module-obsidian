@@ -44,7 +44,9 @@ export {
   collectionMemberIds,
   collectionProjectPaths,
   collectionRoots,
+  groupRowsByProject,
   removeFromCollection,
+  type CollectionGroup,
   type CollectionMembership
 } from './Collection'
 export type { ScopeSpec } from './ProjectScope'

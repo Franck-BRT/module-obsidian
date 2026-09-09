@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A collection groups its tasks under the project each one comes from. The heading
+  carries the project's icon and colour, says how many tasks it holds, opens the project
+  when clicked, and folds shut. What is folded is remembered per collection, so the same
+  project can be open in one collection and shut in another
+
 ## [2.6.1] - 2026-09-09
 
 ### Added

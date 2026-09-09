@@ -564,6 +564,21 @@ export default class PMPlugin extends Plugin {
     await this.saveSettings()
   }
 
+  /**
+   * Folds a project heading inside one collection. Keyed by collection so the same
+   * project can be open in one recueil and shut in another.
+   */
+  async toggleCollectionGroupCollapsed(collectionPath: string, projectPath: string): Promise<void> {
+    const groups = this.settings.collapsedCollectionGroups
+    const was = groups[collectionPath] ?? []
+    const folded = was.includes(projectPath) ? was.filter((path) => path !== projectPath) : [...was, projectPath]
+    // Rebuilt rather than assigned, so a collection nothing is folded in leaves no entry.
+    this.settings.collapsedCollectionGroups = Object.fromEntries(
+      Object.entries({ ...groups, [collectionPath]: folded }).filter(([, paths]) => paths.length > 0)
+    )
+    await this.saveSettings()
+  }
+
   /** Resolves by id against the live tree, so it works when a view renders filtered clones. */
   async toggleTaskCollapsed(project: Project, taskId: string): Promise<void> {
     const task = findTask(project.tasks, taskId)

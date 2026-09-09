@@ -8,7 +8,7 @@ testeur:
 
 # Recette — Black Documents 2.6.1
 
-Plan de test manuel pour le fork. Les **544 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **548 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -315,6 +315,34 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] La rajouter par **« Ajouter à un recueil »** : ✅ **Attendu** : elle revient (l'exclusion est levée)
 - [ ] Ajouter à la main une tâche **sans** l'étiquette : ✅ **Attendu** : elle reste, la règle ne la chasse pas
 - [ ] Pastille → **« Effacer la règle »** : ✅ **Attendu** : seules les tâches ajoutées à la main subsistent
+
+### Regroupement par projet [N]
+
+> **Nouveau** : dans un recueil, chaque tâche est rangée sous un en-tête
+> portant le projet dont elle vient.
+
+- [ ] Ouvrir un recueil contenant des tâches de **deux projets au moins**
+- [ ] ✅ **Attendu** : un **en-tête par projet**, avec son icône, sa couleur et son nom
+- [ ] ✅ **Attendu** : l'en-tête indique le **nombre de tâches** qu'il rassemble (« 3 tâches »)
+- [ ] Cliquer le **nom** du projet dans l'en-tête : ✅ **Attendu** : le projet s'ouvre
+- [ ] Cliquer le **chevron** : ✅ **Attendu** : le bloc se replie, l'en-tête reste visible
+      et son compteur continue d'annoncer les tâches repliées
+- [ ] Fermer puis rouvrir le recueil : ✅ **Attendu** : le bloc est **toujours replié**
+- [ ] Plier un projet dans un recueil, ouvrir **un autre recueil** contenant le même projet
+      ✅ **Attendu** : il y est **déplié** — le pliage est mémorisé recueil par recueil
+- [ ] Ajouter une tâche d'un **troisième** projet : ✅ **Attendu** : un nouvel en-tête apparaît
+- [ ] Retirer la dernière tâche d'un projet : ✅ **Attendu** : son en-tête disparaît
+- [ ] Ajouter une tâche **et sa sous-tâche** : ✅ **Attendu** : la sous-tâche reste sous son parent,
+      dans le bloc du projet, avec son indentation
+- [ ] **Filtrer** le recueil sur un statut qui ne laisse rien d'un projet
+      ✅ **Attendu** : l'en-tête de ce projet disparaît aussi — pas de bloc vide
+- [ ] **Trier** par échéance : ✅ **Attendu** : le tri s'applique **à l'intérieur** de chaque bloc
+- [ ] Cocher la case « tout sélectionner » avec un bloc replié
+      ✅ **Attendu** : les tâches repliées ne sont **pas** sélectionnées (comme des sous-tâches repliées)
+- [ ] Naviguer au clavier (`j` / `k`) : ✅ **Attendu** : la sélection **saute** les en-têtes
+- [ ] Vérifier dans un **projet normal** (pas un recueil) : ✅ **Attendu** : **aucun** en-tête de ce type
+- [ ] Recueil avec **beaucoup** de tâches (50+) : ✅ **Attendu** : le défilement reste fluide et
+      la barre de défilement ne saute pas
 
 ### Pièges à vérifier
 

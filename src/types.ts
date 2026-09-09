@@ -304,6 +304,8 @@ export interface PMSettings {
   collapsedTasks: Record<string, string[]>
   /** Paths of projects whose sub-projects are collapsed in the project list. */
   collapsedProjects: string[]
+  /** Collection path -> the project headings folded shut inside it. */
+  collapsedCollectionGroups: Record<string, string[]>
 }
 
 export const DEFAULT_STATUSES: StatusConfig[] = [
@@ -385,7 +387,8 @@ export const DEFAULT_SETTINGS: PMSettings = {
   projectFilters: {},
   scopeViews: {},
   collapsedTasks: {},
-  collapsedProjects: []
+  collapsedProjects: [],
+  collapsedCollectionGroups: {}
 }
 
 export function makeId(): string {

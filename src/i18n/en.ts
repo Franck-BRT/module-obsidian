@@ -412,6 +412,8 @@ export const en = {
   'collection.added': 'Added to {name}',
   'collection.removed': 'Removed from {name}',
   'collection.noneYet': 'No collection yet. Create one first.',
+  'collection.orphanGroup': 'Project not found',
+  'collection.groupCount': { one: '{count} task', other: '{count} tasks' },
   'collection.pick': 'Pick a collection…',
   'collection.empty': 'This collection is empty. Add tasks to it from their own project.',
   'collection.open': 'Open collection',

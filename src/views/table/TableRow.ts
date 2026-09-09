@@ -3,10 +3,12 @@ import { getStatusConfig, dueUrgency, isTerminalStatus, safeAsync, stringifyCust
 import type { CustomFieldDef } from '../../types'
 import { totalLoggedHours } from '../../store/TaskTreeOps'
 import { updateSelectCheckboxes, getVisibleTaskIds } from './TableRenderer'
-import type { TableContext, TableState, TableTreeRow } from './TableRenderer'
+import type { TableContext, TableGroupRow, TableState, TableTaskRow } from './TableRenderer'
 import { openTaskModal } from '../../ui/ModalFactory'
 import { buildTaskContextMenu } from '../../ui/TaskContextMenu'
 import { TaskRow } from '../../ui/composites/TaskRow'
+import { CollapseToggle } from '../../ui/primitives/CollapseToggle'
+import { t } from '../../i18n'
 import { ActionsCell } from '../../ui/composites/cells/ActionsCell'
 import { AssigneesCell } from '../../ui/composites/cells/AssigneesCell'
 import { linkedRefs } from '../linkedRefs'
@@ -21,7 +23,41 @@ import { StatusCell } from '../../ui/composites/cells/StatusCell'
 import { TimeCell } from '../../ui/composites/cells/TimeCell'
 import { TitleCell } from '../../ui/composites/cells/TitleCell'
 
-export function renderTaskRow(tbody: HTMLElement, flat: TableTreeRow, ctx: TableContext): void {
+/**
+ * A project heading standing above the tasks a collection gathered from that project.
+ * It is not a task row: it carries no checkbox, no status and no id, so nothing that
+ * walks the selection or the tree can pick it up by mistake.
+ */
+export function renderGroupRow(tbody: HTMLElement, group: TableGroupRow, colCount: number, ctx: TableContext): void {
+  const collectionPath = ctx.scope.spec.kind === 'collection' ? ctx.scope.spec.path : ''
+  const row = tbody.createEl('tr', { cls: 'pm-table-group-row' })
+  row.toggleClass('is-collapsed', group.collapsed)
+  const cell = row.createEl('td', { cls: 'pm-table-group-cell', attr: { colspan: String(colCount) } })
+
+  new CollapseToggle(cell, {
+    collapsed: group.collapsed,
+    subject: group.title,
+    onToggle: safeAsync(async () => {
+      await ctx.plugin.toggleCollectionGroupCollapsed(collectionPath, group.projectPath)
+      await ctx.onRefresh()
+    })
+  })
+
+  const label = cell.createDiv({ cls: 'pm-table-group-label' })
+  label.style.setProperty('--pm-group-color', group.color)
+  label.createSpan({ cls: 'pm-table-group-icon', text: group.icon })
+  const title = label.createSpan({ cls: 'pm-table-group-title', text: group.title })
+  if (group.projectPath) {
+    title.addClass('pm-table-group-title--link')
+    title.addEventListener(
+      'click',
+      safeAsync(() => ctx.plugin.router.openProjectLink(group.projectPath))
+    )
+  }
+  label.createSpan({ cls: 'pm-table-group-count', text: t('collection.groupCount', { count: group.count }) })
+}
+
+export function renderTaskRow(tbody: HTMLElement, flat: TableTaskRow, ctx: TableContext): void {
   const { task, depth } = flat
   // One row belongs to one project, so ownership is resolved here and used throughout.
   const project = ctx.scope.projectOf(task.id)
@@ -216,7 +252,7 @@ export function updateSelectedRow(state: TableState): void {
   let row = state.tableBody.querySelector(`tr[data-task-id="${state.selectedTaskId}"]`)
   if (!row && state.wrapper && state.renderWindow) {
     // Row is outside the virtual window: scroll it into range and re-render.
-    const idx = state.visibleRows.findIndex((f) => f.task.id === state.selectedTaskId)
+    const idx = state.visibleRows.findIndex((f) => f.kind === 'task' && f.task.id === state.selectedTaskId)
     if (idx === -1) return
     const thead = state.wrapper.querySelector('thead')
     const headerHeight = thead instanceof HTMLElement ? thead.offsetHeight : 0
