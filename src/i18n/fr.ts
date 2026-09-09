@@ -389,6 +389,7 @@ export const fr: Catalog = {
   'collection.delete': 'Supprimer le recueil',
   'collection.deleteConfirm': 'Supprimer le recueil « {title} » ? Les tâches qu’il rassemble ne sont pas touchées.',
   'collection.saveRule': 'Enregistrer les filtres actuels comme règle du recueil',
+  'collection.ruleNeedsFilter': 'Filtrez d’abord la vue, puis enregistrez-la comme règle',
   'collection.ruleSaved': 'Règle enregistrée : le recueil suit désormais les filtres actuels.',
   'collection.clearRule': 'Effacer la règle',
   'collection.ruleCleared': 'Règle effacée : le recueil redevient une liste choisie à la main.',

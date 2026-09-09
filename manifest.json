@@ -1,9 +1,9 @@
 {
   "id": "dotpm-fr",
   "name": "dotpm FR",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "minAppVersion": "1.13.0",
-  "description": "Project management in your vault: Gantt charts, boards, tables, custom fields. Fork of dotpm with a French interface, working-day scheduling, typed dependencies and working recurring tasks.",
+  "description": "Project management in your vault: Gantt charts, boards, tables, custom fields, and collections gathering chosen tasks across projects. Fork of dotpm with a French interface, working-day scheduling, typed dependencies and working recurring tasks.",
   "author": "Stepan Kropachev and dotpm contributors; fork by Franck-BRT",
   "authorUrl": "https://github.com/Franck-BRT/module-obsidian",
   "fundingUrl": "https://buymeacoffee.com/kropachev",

@@ -1,14 +1,14 @@
 ---
 type: recette
 module: dotpm FR
-version: 2.4.0
+version: 2.5.0
 date_recette:
 testeur:
 ---
 
-# Recette — dotpm FR 2.4.0
+# Recette — dotpm FR 2.5.0
 
-Plan de test manuel pour le fork. Les **516 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **544 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -246,6 +246,79 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ---
 
+## 7bis. Recueils [N]
+
+> **Nouveau en 2.5.0** : un recueil rassemble des tâches choisies dans plusieurs
+> projets. Les tâches ne bougent pas — un recueil ne contient que des références.
+
+### Création et affichage
+
+- [ ] Palette de commandes → **« Créer un recueil »**, saisir un nom
+- [ ] ✅ **Attendu** : le recueil s'ouvre, vide, avec un message invitant à y ajouter des tâches
+- [ ] ✅ **Attendu** : la barre d'outils reste visible (nom + pastille) — on ne doit pas se retrouver coincé
+- [ ] Une note est créée dans le dossier des projets, avec `pm-collection: true` dans son frontmatter
+- [ ] Retour au tableau de bord : ✅ **Attendu** : une section **« Recueils »** sous la liste des projets
+- [ ] Le compteur en haut mentionne le nombre de recueils
+
+### Ajout et retrait à la main
+
+- [ ] Dans un projet, clic droit sur une tâche → **« Ajouter à un recueil »** → choisir le recueil
+- [ ] ✅ **Attendu** : une notification confirme l'ajout
+- [ ] Ouvrir le recueil : ✅ **Attendu** : la tâche y est
+- [ ] Ajouter une tâche d'un **deuxième projet** : ✅ **Attendu** : les deux coexistent dans la même vue
+- [ ] ✅ **Attendu** : la colonne « Projet » indique le projet d'origine de chaque tâche
+- [ ] Dans le recueil, clic droit → **« Retirer du recueil »** : ✅ **Attendu** : la tâche disparaît du recueil
+- [ ] ✅ **Attendu** : la tâche est **toujours présente dans son projet d'origine**
+
+### Les tâches restent chez elles
+
+- [ ] Depuis le recueil, modifier le statut, l'échéance et le titre d'une tâche
+- [ ] ✅ **Attendu** : la note de la tâche, dans `_tasks/` de son **projet d'origine**, porte les modifications
+- [ ] ✅ **Attendu** : la tâche apparaît modifiée dans son projet
+- [ ] ✅ **Attendu** : le frontmatter de la tâche ne mentionne **aucun** recueil — l'appartenance vit côté recueil
+- [ ] Le Gantt et le tableau (kanban) du recueil fonctionnent aussi
+- [ ] ✅ **Attendu** : **pas de bouton « Ajouter une tâche »** dans un recueil (elle n'aurait pas de projet)
+
+### Règle
+
+- [ ] Poser une étiquette (ex. `comite`) sur trois tâches réparties dans deux projets
+- [ ] Dans le recueil, filtrer la vue sur cette étiquette
+- [ ] Cliquer la pastille de la barre d'outils → **« Enregistrer les filtres actuels comme règle »**
+- [ ] ✅ **Attendu** : les trois tâches entrent dans le recueil
+- [ ] ✅ **Attendu** : la pastille affiche désormais **« Suit une règle »**
+- [ ] Poser l'étiquette sur une **quatrième** tâche : ✅ **Attendu** : elle rejoint le recueil toute seule
+- [ ] Retirer l'étiquette d'une tâche : ✅ **Attendu** : elle quitte le recueil
+
+### Règle et retouches manuelles
+
+- [ ] Sur une tâche que la règle attrape, **« Retirer du recueil »**
+- [ ] ✅ **Attendu** : elle disparaît **et ne revient pas**, même si elle porte toujours l'étiquette
+      *(une exclusion est enregistrée ; sans ça le retrait n'aurait aucun effet)*
+- [ ] La rajouter par **« Ajouter à un recueil »** : ✅ **Attendu** : elle revient (l'exclusion est levée)
+- [ ] Ajouter à la main une tâche **sans** l'étiquette : ✅ **Attendu** : elle reste, la règle ne la chasse pas
+- [ ] Pastille → **« Effacer la règle »** : ✅ **Attendu** : seules les tâches ajoutées à la main subsistent
+
+### Pièges à vérifier
+
+- [ ] Sur un recueil **sans filtre actif**, la pastille propose une entrée **grisée** invitant à filtrer d'abord
+      ✅ **Attendu** : impossible d'enregistrer un filtre vide comme règle *(ça attraperait tout le coffre)*
+- [ ] Ajouter au recueil **une tâche parente et l'une de ses sous-tâches**
+      ✅ **Attendu** : la sous-tâche apparaît **une seule fois**, sous son parent — pas en double
+- [ ] Ajouter **une sous-tâche seule**, sans son parent
+      ✅ **Attendu** : elle s'affiche comme une ligne de premier niveau
+- [ ] **Supprimer** une tâche membre depuis son projet
+      ✅ **Attendu** : le recueil ne casse pas, la ligne disparaît simplement
+- [ ] **Supprimer le recueil** (clic droit dans le tableau de bord)
+      ✅ **Attendu** : confirmation demandée, puis ✅ **les tâches rassemblées sont intactes**
+- [ ] Écrire du texte à la main dans le corps de la note du recueil, puis ajouter une tâche
+      ✅ **Attendu** : le texte survit (même protection que les notes de projet)
+- [ ] Ouvrir la note du recueil : ✅ **Attendu** : elle contient la **définition** (règle, `include`, `exclude`),
+      et **pas** la liste des tâches actuellement retenues *(elle changerait sans arrêt)*
+
+**Constaté :**
+
+---
+
 ## 8. Robustesse
 
 - [ ] Créer deux tâches portant **exactement le même titre** dans un même projet
@@ -287,6 +360,7 @@ Ce sont des manques identifiés, pas des régressions.
 | 5. Récurrence | | |
 | 6. Dépendances typées | | |
 | 7. Français | | |
+| 7bis. Recueils | | |
 | 8. Robustesse | | |
 
 **Anomalies bloquantes :**
@@ -302,5 +376,5 @@ Ce sont des manques identifiés, pas des régressions.
 Dupliquez cette note, mettez à jour `version` dans le frontmatter, videz les cases et
 les champs « Constaté ». Les sections 1 et 8 sont le **socle de non-régression** : à
 repasser à chaque version, y compris après chaque fusion avec l'upstream. Les sections
-2 à 7 ne concernent que les nouveautés de la 2.4.0 — elles deviendront elles-mêmes
-des tests de non-régression pour la suite.
+2 à 7bis ne concernent que les nouveautés — elles deviennent à leur tour des tests de
+non-régression pour les versions suivantes.

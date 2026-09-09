@@ -415,6 +415,7 @@ export const en = {
   'collection.delete': 'Delete collection',
   'collection.deleteConfirm': 'Delete the collection "{title}"? The tasks it gathers are left untouched.',
   'collection.saveRule': 'Save the current filters as this collection’s rule',
+  'collection.ruleNeedsFilter': 'Filter the view first, then save it as the rule',
   'collection.ruleSaved': 'Rule saved: the collection now follows the current filters.',
   'collection.clearRule': 'Clear the rule',
   'collection.ruleCleared': 'Rule cleared: the collection is now a hand-picked list.',

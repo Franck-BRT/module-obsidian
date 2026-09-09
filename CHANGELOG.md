@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-09-09
+
+### Added
+
+- **Collections**: a named set of tasks drawn from across projects — a reporting pack,
+  everything sitting at one status, a theme that cuts through the portfolio. The tasks
+  stay in the projects that own them; a collection holds references, and editing one
+  from a collection view writes back to its own note
+- Membership is a rule, plus what was added by hand, minus what was taken out by hand.
+  No rule means a hand-picked list; a rule with no manual entries is a live query; the
+  two combine so a rule can be corrected rather than abandoned
+- The filter bar doubles as the rule editor: filter the view, then save those filters as
+  the collection's rule from the chip in the toolbar
+- Collections appear in the dashboard under the projects, with their own progress; a
+  task joins one from its context menu, and leaves from the same menu inside a collection
+
+### Fixed
+
+- Four interface strings were still English: the new-project button, the project count,
+  the past-due count and the folder scope label. They were lower-case prose that the
+  translation sweep's heuristic mistook for code
+
+
 ## [2.4.0] - 2026-09-09
 
 First release of the `Franck-BRT/module-obsidian` fork, from upstream dotpm 2.3.1.

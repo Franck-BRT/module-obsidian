@@ -4,6 +4,7 @@ import { type Project, type ViewMode, type FilterState, type SavedView, makeDefa
 import {
   collectionMemberIds,
   folderOf,
+  isFilterActive,
   personKeyer,
   ProjectScope,
   projectFolderOf,
@@ -261,11 +262,22 @@ export class ProjectView extends ItemView {
     this.headerEl.empty()
     this.header = null
     this.bodyEl.empty()
-    const msg = this.bodyEl.createDiv('pm-empty-state')
     // An empty collection is normal and fixable; a missing project is not the same thing.
-    const isCollection = this.spec?.kind === 'collection' && this.plugin.index.collectionRef(this.spec.path)
+    const collection = this.spec?.kind === 'collection' ? this.plugin.index.collectionRef(this.spec.path) : null
+    if (collection && this.spec?.kind === 'collection') {
+      // Keep enough chrome to name it and reach the rule: an empty collection is exactly
+      // when a rule is worth setting, and a bare empty state would strand the user.
+      const left = this.toolbarEl.createDiv('pm-toolbar-left')
+      renderGlyph(left.createSpan({ cls: 'pm-toolbar-icon' }), {
+        icon: collection.icon,
+        color: collection.color
+      })
+      left.createEl('h2', { text: collection.title, cls: 'pm-toolbar-title' })
+      this.renderCollectionChip(this.toolbarEl.createDiv('pm-toolbar-right'), this.spec.path)
+    }
+    const msg = this.bodyEl.createDiv('pm-empty-state')
     msg.createEl('h3', { text: t('project.nothingToShow') })
-    msg.createEl('p', { text: isCollection ? t('collection.empty') : t('project.gone') })
+    msg.createEl('p', { text: collection ? t('collection.empty') : t('project.gone') })
   }
 
   private renderProjectHeader(): void {
@@ -472,22 +484,28 @@ export class ProjectView extends ItemView {
       .setShape('pill')
       .onClick((e) => {
         const menu = new Menu()
-        menu.addItem((item) =>
-          item
-            .setTitle(t('collection.saveRule'))
-            .setIcon('filter')
-            .onClick(
-              safeAsync(async () => {
-                await this.plugin.collections.update(path, (collection) => ({
-                  ...collection,
-                  rule: { ...this.filter }
-                }))
-                this.plugin.index.build()
-                this.plugin.showNotice(t('collection.ruleSaved'))
-                await this.loadScope()
-              })
-            )
-        )
+        // Saving an empty filter would write a rule that matches the whole vault, which
+        // is never what someone clicking "save the current filters" means.
+        if (!isFilterActive(this.filter)) {
+          menu.addItem((item) => item.setTitle(t('collection.ruleNeedsFilter')).setDisabled(true))
+        } else {
+          menu.addItem((item) =>
+            item
+              .setTitle(t('collection.saveRule'))
+              .setIcon('filter')
+              .onClick(
+                safeAsync(async () => {
+                  await this.plugin.collections.update(path, (collection) => ({
+                    ...collection,
+                    rule: { ...this.filter }
+                  }))
+                  this.plugin.index.build()
+                  this.plugin.showNotice(t('collection.ruleSaved'))
+                  await this.loadScope()
+                })
+              )
+          )
+        }
         if (ref?.rule) {
           menu.addItem((item) =>
             item
