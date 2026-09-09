@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Documents
-version: 2.6.0
+version: 2.6.1
 date_recette:
 testeur:
 ---
 
-# Recette — Black Documents 2.6.0
+# Recette — Black Documents 2.6.1
 
 Plan de test manuel pour le fork. Les **544 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -284,13 +284,26 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Le Gantt et le tableau (kanban) du recueil fonctionnent aussi
 - [ ] ✅ **Attendu** : **pas de bouton « Ajouter une tâche »** dans un recueil (elle n'aurait pas de projet)
 
-### Règle
+### Règle — création depuis une vue filtrée
+
+> C'est le chemin principal : un recueil vide ne peut pas proposer d'étiquettes ni
+> d'assignés à filtrer, puisqu'il ne contient aucune tâche. On part donc d'une vue
+> qui en a.
 
 - [ ] Poser une étiquette (ex. `comite`) sur trois tâches réparties dans deux projets
-- [ ] Dans le recueil, filtrer la vue sur cette étiquette
-- [ ] Cliquer la pastille de la barre d'outils → **« Enregistrer les filtres actuels comme règle »**
-- [ ] ✅ **Attendu** : les trois tâches entrent dans le recueil
-- [ ] ✅ **Attendu** : la pastille affiche désormais **« Suit une règle »**
+- [ ] Commande **« Ouvrir tous les projets dans une vue »**, puis filtrer sur cette étiquette
+- [ ] Cliquer la pastille de portée → **« Enregistrer comme recueil… »**, saisir un nom
+- [ ] ✅ **Attendu** : le recueil s'ouvre, contenant les trois tâches
+- [ ] ✅ **Attendu** : sa pastille affiche **« Suit une règle »**
+- [ ] Refaire l'opération depuis **un seul projet** filtré
+- [ ] ✅ **Attendu** : `sources` dans la note du recueil ne liste que ce projet — la règle
+      ne s'élargit pas silencieusement à tout le coffre
+
+### Règle — ajustement depuis le recueil
+
+- [ ] Dans un recueil **non vide**, changer les filtres puis pastille →
+      **« Enregistrer les filtres actuels comme règle »**
+- [ ] ✅ **Attendu** : la règle est remplacée par les nouveaux filtres
 - [ ] Poser l'étiquette sur une **quatrième** tâche : ✅ **Attendu** : elle rejoint le recueil toute seule
 - [ ] Retirer l'étiquette d'une tâche : ✅ **Attendu** : elle quitte le recueil
 
@@ -305,8 +318,12 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ### Pièges à vérifier
 
-- [ ] Sur un recueil **sans filtre actif**, la pastille propose une entrée **grisée** invitant à filtrer d'abord
+- [ ] Sur un recueil **non vide sans filtre actif**, la pastille propose une entrée **grisée** invitant à filtrer d'abord
       ✅ **Attendu** : impossible d'enregistrer un filtre vide comme règle *(ça attraperait tout le coffre)*
+- [ ] Sur un recueil **vide**, la pastille explique quoi faire : ajouter des tâches depuis leur projet,
+      ou filtrer une vue et l'enregistrer comme recueil
+      ✅ **Attendu** : pas d'invitation à filtrer une vue qui n'a rien à filtrer
+- [ ] Dans une vue **sans filtre actif**, la pastille de portée ne propose **pas** « Enregistrer comme recueil… »
 - [ ] Ajouter au recueil **une tâche parente et l'une de ses sous-tâches**
       ✅ **Attendu** : la sous-tâche apparaît **une seule fois**, sous son parent — pas en double
 - [ ] Ajouter **une sous-tâche seule**, sans son parent

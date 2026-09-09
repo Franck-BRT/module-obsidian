@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-09-09
+
+### Added
+
+- A filtered view can be saved as a collection, from the scope chip. This is how a
+  rule-based collection is meant to be made: a view holding real tasks can offer real
+  tags and assignees to filter on. The collection's sources are the projects that view
+  covered, so a rule built inside one project stays inside it
+
+### Fixed
+
+- An empty collection offered a rule action that could never be used. Its chip invited
+  the user to filter the view first, but an empty collection has no filter bar, and one
+  would have nothing to offer anyway: tags and assignees are drawn from the tasks in
+  scope. It now says what actually works
+- Two more interface strings were still English: the add-task and add-milestone buttons
+
+
 ## [2.6.0] - 2026-09-09
 
 ### Changed

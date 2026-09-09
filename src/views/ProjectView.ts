@@ -18,7 +18,7 @@ import { TableView } from './table/TableView'
 import type { TableViewState } from './table/TableView'
 import { GanttView } from './gantt/GanttView'
 import { KanbanView } from './KanbanView'
-import { openTaskModal } from '../ui/ModalFactory'
+import { openTaskModal, promptText } from '../ui/ModalFactory'
 import { ChipButton } from '../ui/primitives/ChipButton'
 import { ViewSwitcher } from '../ui/primitives/ViewSwitcher'
 import { ProjectHeader } from '../ui/composites/ProjectHeader'
@@ -428,12 +428,14 @@ export class ProjectView extends ItemView {
 
     const right = this.toolbarEl.createDiv('pm-toolbar-right')
     new ButtonComponent(right)
-      .setButtonText('+ add task')
+      .setButtonText(t('project.addTaskButton'))
       .setCta()
       .onClick((e) => this.addTask(e))
 
     if (this.currentView === 'gantt') {
-      new ButtonComponent(right).setButtonText('+ milestone').onClick((e) => this.addTask(e, { type: 'milestone' }))
+      new ButtonComponent(right)
+        .setButtonText(t('project.addMilestoneButton'))
+        .onClick((e) => this.addTask(e, { type: 'milestone' }))
     }
 
     if (!scope.isMulti) {
@@ -486,8 +488,11 @@ export class ProjectView extends ItemView {
         const menu = new Menu()
         // Saving an empty filter would write a rule that matches the whole vault, which
         // is never what someone clicking "save the current filters" means.
+        const empty = this.projectScope?.tasks().length === 0
         if (!isFilterActive(this.filter)) {
-          menu.addItem((item) => item.setTitle(t('collection.ruleNeedsFilter')).setDisabled(true))
+          menu.addItem((item) =>
+            item.setTitle(empty ? t('collection.emptyHint') : t('collection.ruleNeedsFilter')).setDisabled(true)
+          )
         } else {
           menu.addItem((item) =>
             item
@@ -564,8 +569,41 @@ export class ProjectView extends ItemView {
               .onClick(safeAsync(() => this.switchScope(option.spec)))
           )
         }
+        // The way a rule-based collection is actually made: a view with real tasks in
+        // it can offer real tags and assignees to filter on, which an empty one cannot.
+        if (isFilterActive(this.filter)) {
+          menu.addSeparator()
+          menu.addItem((item) =>
+            item
+              .setTitle(t('collection.saveAs'))
+              .setIcon('library')
+              .onClick(safeAsync(() => this.saveFiltersAsCollection()))
+          )
+        }
         menu.showAtMouseEvent(e)
       })
+  }
+
+  /**
+   * Turns the current filters into a new collection. Its sources are the projects this
+   * view covers, so "everything tagged urgent in this project" stays that, rather than
+   * quietly widening to the whole vault.
+   */
+  private async saveFiltersAsCollection(): Promise<void> {
+    const scope = this.projectScope
+    if (!scope) return
+    const name = await promptText(this.app, t('collection.saveAs'), t('collection.saveAsName'), '')
+    if (!name) return
+    const created = await this.plugin.collections.create(name, this.plugin.settings.projectsFolder)
+    if (!created) return
+    await this.plugin.collections.update(created.filePath, (collection) => ({
+      ...collection,
+      rule: { ...this.filter },
+      sources: scope.spec.kind === 'vault' ? [] : scope.projects.map((project) => project.filePath)
+    }))
+    this.plugin.index.build()
+    this.plugin.showNotice(t('collection.created', { name }))
+    await this.plugin.router.openScope({ kind: 'collection', path: created.filePath })
   }
 
   private renderCurrentView(): void {
