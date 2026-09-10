@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-09-10
+
 ### Fixed
 
 - A collection offered an "Add task" button in its toolbar. A collection owns no
@@ -16,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two strings the French sweep missed: the bulk-delete confirmation was English
   throughout, and the "Moved 3 tasks…" notices counted in English inside an otherwise
   French sentence
+- A collection's project heading printed the project's icon setting as text, so a
+  project using a Lucide icon read `lucide-toolbox` beside its name. It goes through
+  the same glyph renderer as everywhere else now: an icon, an emoji, or a coloured dot
+  when the project cannot be resolved
 
 ### Changed
 

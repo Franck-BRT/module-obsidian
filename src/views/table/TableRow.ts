@@ -8,6 +8,7 @@ import { openTaskModal } from '../../ui/ModalFactory'
 import { buildTaskContextMenu } from '../../ui/TaskContextMenu'
 import { TaskRow } from '../../ui/composites/TaskRow'
 import { CollapseToggle } from '../../ui/primitives/CollapseToggle'
+import { renderGlyph } from '../../ui/composites/properties'
 import { t } from '../../i18n'
 import { ActionsCell } from '../../ui/composites/cells/ActionsCell'
 import { AssigneesCell } from '../../ui/composites/cells/AssigneesCell'
@@ -44,8 +45,10 @@ export function renderGroupRow(tbody: HTMLElement, group: TableGroupRow, colCoun
   })
 
   const label = cell.createDiv({ cls: 'pm-table-group-label' })
-  label.style.setProperty('--pm-group-color', group.color)
-  label.createSpan({ cls: 'pm-table-group-icon', text: group.icon })
+  if (group.color) label.setCssProps({ '--pm-group-color': group.color })
+  // Through the shared glyph, so a project's Lucide icon renders as an icon rather than
+  // as the literal `lucide-toolbox` its setting holds.
+  renderGlyph(label, { icon: group.icon, color: group.color })
   const title = label.createSpan({ cls: 'pm-table-group-title', text: group.title })
   if (group.projectPath) {
     title.addClass('pm-table-group-title--link')

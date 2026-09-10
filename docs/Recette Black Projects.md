@@ -341,6 +341,9 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 - [ ] Ouvrir un recueil contenant des tâches de **deux projets au moins**
 - [ ] ✅ **Attendu** : un **en-tête par projet**, avec son icône, sa couleur et son nom
+- [ ] Avec un projet dont l'icône est une **icône Lucide** (et pas un émoji) :
+      ✅ **Attendu** : l'icône est **dessinée**, pas écrite en toutes lettres (`lucide-toolbox`)
+- [ ] Avec un projet **sans icône** : ✅ **Attendu** : une **pastille de sa couleur**
 - [ ] ✅ **Attendu** : l'en-tête indique le **nombre de tâches** qu'il rassemble (« 3 tâches »)
 - [ ] Cliquer le **nom** du projet dans l'en-tête : ✅ **Attendu** : le projet s'ouvre
 - [ ] Cliquer le **chevron** : ✅ **Attendu** : le bloc se replie, l'en-tête reste visible

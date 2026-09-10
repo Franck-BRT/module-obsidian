@@ -34,8 +34,9 @@ export interface TableGroupRow {
   kind: 'group'
   projectPath: string
   title: string
-  icon: string
-  color: string
+  /** Both absent when the project could not be resolved: the glyph falls back to a dot. */
+  icon?: string
+  color?: string
   count: number
   collapsed: boolean
 }
@@ -466,8 +467,8 @@ function withProjectHeadings(rows: TableTaskRow[], ctx: TableContext, collection
       kind: 'group',
       projectPath: group.projectPath,
       title: ref?.title ?? t('collection.orphanGroup'),
-      icon: ref?.icon ?? '\u2753',
-      color: ref?.color ?? '#8a94a0',
+      icon: ref?.icon,
+      color: ref?.color,
       count: group.rows.length,
       collapsed
     })
