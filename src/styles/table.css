@@ -367,7 +367,9 @@ button.pm-chip-btn--active:hover {
 }
 .pm-table-row:hover .pm-icon-btn--hover-only,
 .pm-modal-subtask-row:hover .pm-icon-btn--hover-only,
-.pm-gantt-label-row:hover .pm-icon-btn--hover-only {
+.pm-gantt-label-row:hover .pm-icon-btn--hover-only,
+.pm-table-group-row:hover .pm-icon-btn--hover-only,
+.pm-kanban-lane-head:hover .pm-icon-btn--hover-only {
   opacity: 1;
 }
 .pm-icon-btn--hover-only:focus-visible {
@@ -483,12 +485,22 @@ button.pm-chip-rm {
    Sized like a task row on purpose — the virtual window measures task rows only, so a
    much taller heading would make the scrollbar lie. */
 .pm-table-group-cell {
-  /* A lot inside a lot steps in by the same indent a subtask row would. */
-  padding: 8px 10px 8px calc(var(--depth, 0) * var(--pm-tree-indent) + 10px);
+  /* A lot inside a lot steps in by the same indent a subtask row would. Nothing on the
+     right: the menu takes that space itself, so it lands under the actions column. */
+  padding: 8px 0 8px calc(var(--depth, 0) * var(--pm-tree-indent) + 10px);
   background: var(--background-secondary);
   border-top: 1px solid var(--background-modifier-border);
 }
-.pm-table-group-cell > * {
-  display: inline-flex;
-  vertical-align: middle;
+.pm-group-row-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* The heading's menu sits where every other row keeps its own: the actions column, whose
+   width and padding this reserves so the two line up down the table. */
+.pm-group-row-inner .pm-group-actions {
+  margin-left: auto;
+  /* The actions column's own padding rather than its width: both menus are the same
+     button, so sharing a right edge is what makes them share a centre line. */
+  padding-right: 10px;
 }

@@ -130,7 +130,10 @@ export function renderHeadingRow(parent: HTMLElement, heading: HeadingRow, handl
       })
   }
   if (handlers.onMenu) {
-    new IconButton(parent)
+    // Its own box so a view can place it: the table pushes it to the far right, under
+    // the actions column, where every other row keeps its menu.
+    const actions = parent.createDiv({ cls: 'pm-group-actions' })
+    new IconButton(actions)
       .setIcon('more-horizontal')
       .setTooltip(t('phase.menu'))
       .setRevealOnHover(true)

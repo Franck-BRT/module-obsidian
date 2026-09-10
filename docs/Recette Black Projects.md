@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.16.0
+version: 2.16.1
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.16.0
+# Recette — Black Projects 2.16.1
 
 Plan de test manuel pour le fork. Les **647 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -453,11 +453,19 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Y choisir « Lot 1 » : ✅ **Attendu** : la tâche passe **sous l'en-tête**, **sans indentation**
 - [ ] ✅ **Attendu** : son type **reste « Tâche »** — elle n'est pas devenue une sous-tâche
 - [ ] Cliquer le **+** de l'en-tête du lot : ✅ **Attendu** : le bouton **existe** (au survol) et la nouvelle
-      tâche est créée **dans le lot** *(il ne s'affichait pas avant la 2.16.0)*
-- [ ] **[N]** Survoler l'en-tête d'un lot : ✅ **Attendu** : un bouton **⋯** apparaît à droite
+      tâche est créée **dans le lot** *(il ne s'affichait pas avant la 2.16.1)*
+- [ ] **[N]** Survoler l'en-tête d'un lot **dans le tableur** : ✅ **Attendu** : le **+** apparaît à côté du
+      nom et un bouton **⋯** apparaît **tout à droite**, dans la colonne des actions
+- [ ] **[N]** ✅ **Attendu** : ce **⋯** est **aligné** avec celui des lignes de tâches en dessous —
+      même colonne, même axe *(les deux boutons étaient invisibles dans le tableur avant la 2.16.1)*
+- [ ] **[N]** Même survol dans la **vue Tableau (kanban)** : ✅ **Attendu** : le **⋯** apparaît, **à côté du
+      nom du lot** et non au bout de la bande — il reste visible quand on fait défiler les colonnes
+- [ ] **[N]** Même survol dans le **Gantt** : ✅ **Attendu** : le **⋯** apparaît après le nom, comme avant
 - [ ] **[N]** L'ouvrir : ✅ **Attendu** : Ouvrir la fiche · Ajouter une tâche · Replier · Archiver le lot,
       puis, après un séparateur, **le menu habituel d'un ticket** (statut, priorité, échéance, dupliquer, supprimer…)
 - [ ] **[N]** Chaque entrée fait ce qu'elle annonce
+- [ ] **[N]** Rétrécir la fenêtre : ✅ **Attendu** : dans le tableur le **⋯** reste collé à droite,
+      le titre du lot est ce qui se raccourcit
 - [ ] Une tâche du lot qui a ses **propres sous-tâches** : ✅ **Attendu** : elles s'indentent sous elle, comme d'habitude
 - [ ] Créer un **lot dans un lot** : ✅ **Attendu** : son en-tête est **décalé vers la droite**
 - [ ] ✅ **Attendu** : les tâches du lot 1 sont décalées d'un cran, celles du lot 2 d'un cran de plus —

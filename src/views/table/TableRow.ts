@@ -33,7 +33,13 @@ export function renderGroupRow(tbody: HTMLElement, group: TableGroupRow, colCoun
   row.toggleClass('is-collapsed', heading.collapsed)
   const cell = row.createEl('td', { cls: 'pm-table-group-cell', attr: { colspan: String(colCount) } })
   if (heading.depth) cell.setCssProps({ '--depth': String(heading.depth) })
-  renderHeadingRow(cell, heading, headingHandlers(heading, ctx.scope, ctx.plugin, ctx.onRefresh))
+  // The cell stays a real table cell so the row keeps a task row's height; the heading
+  // is this flex line inside it, which is what lets the menu reach the far right.
+  renderHeadingRow(
+    cell.createDiv('pm-group-row-inner'),
+    heading,
+    headingHandlers(heading, ctx.scope, ctx.plugin, ctx.onRefresh)
+  )
 }
 
 export function renderTaskRow(tbody: HTMLElement, flat: TableTaskRow, ctx: TableContext): void {

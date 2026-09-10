@@ -345,3 +345,10 @@
   font-size: var(--font-smallest);
   white-space: nowrap;
 }
+/* The heading's overflow menu. Where it lands is the view's business — the table pushes
+   it out to its actions column, a board or a Gantt leaves it beside the name. */
+.pm-group-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.16.1] - 2026-09-11
+
+### Fixed
+
+- The **⋯ menu and the + on a lot heading were invisible in the table and on the board**:
+  both buttons appear on hover, and the rule that reveals them named the task row, the
+  subtask row and the Gantt label row — never a heading row. So the menu shipped in 2.16.0
+  could only be reached in the Gantt. It now appears on hover wherever a heading is drawn
+- In the table, a lot's **⋯ now sits in the actions column**, on the same centre line as
+  every task's menu below it, instead of trailing after the dates. The **+** stays beside
+  the name, exactly where a task row keeps its own. On the board the menu stays next to
+  the lot's name: the band scrolls sideways, so a menu pinned to the right would leave the
+  screen
+
 ## [2.16.0] - 2026-09-11
 
 ### Added
