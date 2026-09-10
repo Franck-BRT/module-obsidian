@@ -441,6 +441,34 @@ describe('ProjectStore completion date', () => {
     expect(task.completed).toMatch(ISO_DATE)
   })
 
+  it('does not add a task the project already holds a second time', async () => {
+    const { store, vault } = newStore()
+    const project = await store.createProject('Twice', 'Projects')
+    const task = makeTask({ title: 'Plan de masse', type: 'document' })
+
+    // What an editor does when it saves once mid-edit and again on close. It used to
+    // leave the project holding the same ticket twice, and two notes on disk.
+    await store.insertTask(project, task)
+    await store.insertTask(project, task)
+
+    expect(flattenTasks(project.tasks).filter((f) => f.task.id === task.id)).toHaveLength(1)
+    const notes = vault
+      .getMarkdownFiles()
+      .filter((file) => file.path.includes('_tasks/') && file.basename.startsWith('plan-de-masse'))
+    expect(notes).toHaveLength(1)
+  })
+
+  it('writes the note as it now stands when a task is inserted twice', async () => {
+    const { store, app } = newStore()
+    const project = await store.createProject('Twice again', 'Projects')
+    const task = makeTask({ title: 'Note', status: 'todo' })
+    await store.insertTask(project, task)
+    task.status = 'in-progress'
+    await store.insertTask(project, task)
+    const path = expectDefined(flattenTasks(project.tasks).find((f) => f.task.id === task.id)).task.filePath
+    expect(await readStatus(app, expectDefined(path))).toBe('in-progress')
+  })
+
   it('does not bleed one task completion date onto another in a bulk update', async () => {
     const { store } = newStore()
     const project = await store.createProject('Bulk', 'Projects')

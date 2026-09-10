@@ -28,6 +28,9 @@ export async function saveDocument(
     const status = statusForState(next.state, plugin.store.configFor(project).statuses)
     if (status) patch.status = status
   }
+  // The caller's own copy is brought along: an editor holding a stale document would
+  // write it back over this one the next time it saves, losing the version just added.
+  Object.assign(task, patch)
   await plugin.store.updateTask(project, task.id, patch)
   await onRefresh()
 }

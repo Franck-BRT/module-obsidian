@@ -131,6 +131,19 @@ export class TaskEditor {
     return p
   }
 
+  /**
+   * Writes what the editor holds without closing it.
+   *
+   * For an action that goes on to edit the note itself — depositing a document version,
+   * say — which would otherwise be fighting an unsaved copy. Deliberately not
+   * `persistTask`: that one memoises, being the save that closes the editor, and reusing
+   * it here would make the real save a no-op.
+   */
+  async saveInPlace(): Promise<void> {
+    await this.persistPromise
+    await this.runPersist()
+  }
+
   private async insertAttachments(
     descArea: HTMLTextAreaElement,
     items: { blob: Blob; name: string }[],
@@ -168,6 +181,11 @@ export class TaskEditor {
   private async runPersist(): Promise<void> {
     if (this.isNew) {
       await this.plugin.store.insertTask(this.project, this.task, this.parentId)
+      // Written once. From here the editor is editing a task that exists, so anything
+      // saved later updates it — a second insert would be a second copy of the ticket.
+      this.isNew = false
+      this.original = JSON.parse(JSON.stringify(this.task)) as Task
+      this.originalParentId = this.parentId
     } else {
       const patch = this.changedFields()
       const moved = this.parentId !== this.originalParentId
@@ -590,7 +608,7 @@ export class TaskEditor {
         project: this.project,
         plugin: this.plugin,
         rerender: () => this.render(),
-        save: () => this.runPersist()
+        save: () => this.saveInPlace()
       })
     }
 

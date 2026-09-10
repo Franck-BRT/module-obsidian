@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Creating a document ticket could leave two or three of it. Depositing a file from the
+  editor saves the ticket first — the deposit writes the note, and would otherwise be
+  fighting an unsaved copy — but that save went straight past the guard the editor keeps
+  against saving twice, and left the editor still thinking its task was new. Clicking
+  Create then inserted it a second time, and every deposit added another. The editor now
+  stops being "new" the moment the task has been written once, its mid-edit save waits
+  for any save already running, and `insertTask` refuses to add a task the project
+  already holds — rewriting its note instead, which is what a caller saving twice wants
+- A deposit made from the editor is now carried back into the editor's own copy of the
+  ticket. Without it the next save would have written the pre-deposit document block back
+  over the version just added
+
 ## [2.13.0] - 2026-09-11
 
 ### Added

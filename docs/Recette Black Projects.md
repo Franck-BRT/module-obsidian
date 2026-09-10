@@ -536,6 +536,12 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 - [ ] Panneau Document → bouton **↑** → choisir le PDF → **« Copier le fichier dans le projet »**,
       saisir une note (« première diffusion »)
+- [ ] **[N]** Fermer l'éditeur, puis regarder le tableur et la bibliothèque
+      ✅ **Attendu** : le ticket n'existe **qu'une fois** *(un dépôt enregistre la fiche ; elle ne doit pas
+      être créée une seconde fois à la fermeture)*
+- [ ] **[N]** Recommencer en déposant **deux** versions avant de fermer : ✅ **Attendu** : toujours **un seul** ticket
+- [ ] **[N]** ✅ **Attendu** : la version déposée est **toujours là** après fermeture — elle n'a pas été
+      écrasée par l'état de la fiche à l'ouverture
 - [ ] ✅ **Attendu** : le fichier est **copié** dans `<projet>/_docs/`, l'original reste où il était
 - [ ] ✅ **Attendu** : l'état passe tout seul à **« Reçu »**, et le statut de la tâche suit
 - [ ] ✅ **Attendu** : la version **v1** apparaît dans le panneau et dans la bibliothèque

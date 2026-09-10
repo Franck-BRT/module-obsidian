@@ -884,6 +884,14 @@ export class ProjectStore implements TaskSource {
     if (!task.completed && isTerminalStatus(task.status, this.statusesFor(project))) {
       task.completed = today().toString()
     }
+    // Inserting a task the project already holds can only be a caller saving twice. What
+    // such a caller wants is the note written as it now stands; adding it again would put
+    // the same task in the tree twice and leave two notes behind.
+    if (findTaskById(project, task.id)) {
+      this.markDirty(project, [task.id], 'full')
+      await this.saveProject(project)
+      return
+    }
     this.hydratedBodies.add(task)
     addTaskToTree(project.tasks, task, parentId)
     indexAddSubtree(project, task, parentId)
