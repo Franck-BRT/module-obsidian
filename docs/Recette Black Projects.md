@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.11.0
+version: 2.11.1
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.11.0
+# Recette — Black Projects 2.11.1
 
 Plan de test manuel pour le fork. Les **586 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,

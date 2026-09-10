@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.11.1] - 2026-09-11
+
+### Fixed
+
+- A phase heading in the table sat flush against the left edge, and a lot inside a lot
+  did not step in at all. The indent it asked for was `var(--pm-tree-indent)`, a token
+  declared on the title cell — a different cell, so the heading could not see it. An
+  unreadable `var()` does not fall back to zero: the whole declaration is dropped, which
+  took the heading's own padding with it. The token now sits on the table, where every
+  cell in it can read it
+
 ## [2.11.0] - 2026-09-11
 
 ### Fixed

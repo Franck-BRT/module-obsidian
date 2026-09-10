@@ -94,6 +94,10 @@ button.pm-chip-btn--active:hover {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  /* On the table, not on the title cell: a phase heading is a different cell and has to
+     step in by the same amount. A var() the cell cannot see is not a fallback to zero —
+     the whole declaration is dropped, which is how the heading lost its padding too. */
+  --pm-tree-indent: 20px;
 }
 
 .pm-table thead th {
@@ -154,7 +158,6 @@ button.pm-chip-btn--active:hover {
   vertical-align: middle;
 }
 .pm-table-cell-title {
-  --pm-tree-indent: 20px;
   position: relative;
   padding: 8px 10px 8px calc(var(--depth, 0) * var(--pm-tree-indent) + 8px);
   vertical-align: middle;
@@ -480,15 +483,12 @@ button.pm-chip-rm {
    Sized like a task row on purpose — the virtual window measures task rows only, so a
    much taller heading would make the scrollbar lie. */
 .pm-table-group-cell {
-  padding: 8px 10px;
+  /* A lot inside a lot steps in by the same indent a subtask row would. */
+  padding: 8px 10px 8px calc(var(--depth, 0) * var(--pm-tree-indent) + 10px);
   background: var(--background-secondary);
   border-top: 1px solid var(--background-modifier-border);
 }
 .pm-table-group-cell > * {
   display: inline-flex;
   vertical-align: middle;
-}
-/* A lot inside a lot steps in, like a task row would. */
-.pm-table-group-cell {
-  padding-left: calc(var(--depth, 0) * var(--pm-tree-indent) + 10px);
 }
