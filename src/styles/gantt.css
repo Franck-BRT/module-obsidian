@@ -290,3 +290,20 @@
   fill: var(--background-secondary);
   opacity: 0.5;
 }
+
+/* A phase's row and its summary bar. The bracket is deliberately not a task bar: a
+   flat rule with its ends turned down, so it never reads as work of its own. */
+.pm-gantt-phase-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pm-gantt-phase-bracket {
+  fill: var(--text-muted);
+}
+.pm-gantt-phase-actual {
+  fill: var(--text-faint);
+}
+.pm-gantt-phase-overrun {
+  fill: var(--text-error, var(--color-red));
+}

@@ -7,7 +7,7 @@ import type { TableContext, TableGroupRow, TableState, TableTaskRow } from './Ta
 import { openTaskModal } from '../../ui/ModalFactory'
 import { buildTaskContextMenu } from '../../ui/TaskContextMenu'
 import { TaskRow } from '../../ui/composites/TaskRow'
-import { renderProjectHeading, toggleProjectHeading } from '../projectGroups'
+import { headingHandlers, renderHeadingRow } from '../headings'
 import { ActionsCell } from '../../ui/composites/cells/ActionsCell'
 import { AssigneesCell } from '../../ui/composites/cells/AssigneesCell'
 import { linkedRefs } from '../linkedRefs'
@@ -32,13 +32,8 @@ export function renderGroupRow(tbody: HTMLElement, group: TableGroupRow, colCoun
   const row = tbody.createEl('tr', { cls: 'pm-table-group-row' })
   row.toggleClass('is-collapsed', heading.collapsed)
   const cell = row.createEl('td', { cls: 'pm-table-group-cell', attr: { colspan: String(colCount) } })
-  renderProjectHeading(cell, heading, {
-    onToggle: async () => {
-      await toggleProjectHeading(heading, ctx.scope, ctx.plugin)
-      await ctx.onRefresh()
-    },
-    onOpen: () => ctx.plugin.router.openProjectLink(heading.projectPath)
-  })
+  if (group.depth > 0) cell.setCssProps({ '--depth': String(group.depth) })
+  renderHeadingRow(cell, heading, headingHandlers(heading, ctx.scope, ctx.plugin, ctx.onRefresh))
 }
 
 export function renderTaskRow(tbody: HTMLElement, flat: TableTaskRow, ctx: TableContext): void {

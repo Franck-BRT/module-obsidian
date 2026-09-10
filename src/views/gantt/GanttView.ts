@@ -26,14 +26,19 @@ import { svgEl } from '../../utils'
 import { Temporal, today } from '../../dates'
 import type { RendererContext } from './GanttRenderer'
 import { renderTaskLabel } from './TaskLabelRenderer'
-import { collectionBlocks, renderProjectHeading, toggleProjectHeading, type ProjectHeading } from '../projectGroups'
+import { collectionBlocks, headingHandlers, phaseHeading, renderHeadingRow, type HeadingRow } from '../headings'
+import { isPhase, phaseSpan } from '../../store/Phase'
+import { phaseBracket } from './GanttPhaseBar'
 import { t } from '../../i18n'
 
 /**
  * One line of the chart. A project heading occupies a row of its own so the label
  * column and the bars stay on the same grid — the two are drawn from this one list.
  */
-type GanttRow = { kind: 'task'; task: Task; depth: number } | { kind: 'group'; heading: ProjectHeading }
+type GanttRow =
+  | { kind: 'task'; task: Task; depth: number }
+  | { kind: 'group'; heading: HeadingRow }
+  | { kind: 'phase'; task: Task; heading: HeadingRow; depth: number }
 
 export class GanttView implements SubView {
   private granularity: GanttGranularity
@@ -282,8 +287,16 @@ export class GanttView implements SubView {
    */
   private buildRows(roots: Task[]): GanttRow[] {
     const out: GanttRow[] = []
+    const statuses = this.scope.config.statuses
     const walk = (tasks: Task[], depth: number) => {
       for (const task of tasks) {
+        if (isPhase(task)) {
+          // A phase gets a row of its own with a summary bar, and what it holds keeps
+          // the depth it had: those tasks are in the lot, not under it.
+          out.push({ kind: 'phase', task, heading: phaseHeading(task, statuses), depth })
+          if (!task.collapsed && task.subtasks.length) walk(task.subtasks, depth)
+          continue
+        }
         out.push({ kind: 'task', task, depth })
         if (!task.collapsed && task.subtasks.length) walk(task.subtasks, depth + 1)
       }
@@ -315,28 +328,55 @@ export class GanttView implements SubView {
         this.renderGroupRow(leftBody, barsGroup, row.heading, rowIndex)
         return
       }
+      if (row.kind === 'phase') {
+        this.renderPhaseRow(leftBody, barsGroup, row.task, row.heading, row.depth, rowIndex)
+        return
+      }
       renderTaskLabel(leftBody, row.task, row.depth, rowIndex, labelCtx)
       renderTaskBar(barsGroup, row.task, rowIndex, row.depth, ctx)
     })
   }
 
-  /** The heading, plus a band across the timeline so the eye keeps the row. */
-  private renderGroupRow(
+  /**
+   * A phase: its heading in the label column, and a summary bracket over the span of
+   * what it holds. When the phase declares its own dates the bracket draws those, and
+   * the work that falls outside them is drawn under it — the overrun is the reason to
+   * have declared dates at all.
+   */
+  private renderPhaseRow(
     leftBody: HTMLElement,
     barsGroup: SVGGElement,
-    heading: ProjectHeading,
+    phase: Task,
+    heading: HeadingRow,
+    depth: number,
     rowIndex: number
   ): void {
+    const el = leftBody.createDiv('pm-gantt-label-row pm-gantt-phase-row')
+    el.style.height = `${ROW_HEIGHT}px`
+    el.style.paddingLeft = `${depth * 18 + 4}px`
+    el.toggleClass('is-collapsed', phase.collapsed)
+    renderHeadingRow(
+      el,
+      heading,
+      headingHandlers(heading, this.scope, this.plugin, () => this.refresh())
+    )
+
+    const span = phaseSpan(phase, this.scope.config.statuses)
+    if (!span.start || !span.due) return
+    const y = HEADER_HEIGHT + rowIndex * ROW_HEIGHT
+    barsGroup.appendChild(phaseBracket(this.cfg, span, y))
+  }
+
+  /** The heading, plus a band across the timeline so the eye keeps the row. */
+  private renderGroupRow(leftBody: HTMLElement, barsGroup: SVGGElement, heading: HeadingRow, rowIndex: number): void {
     const el = leftBody.createDiv('pm-gantt-label-row pm-gantt-group-row')
     el.style.height = `${ROW_HEIGHT}px`
     el.toggleClass('is-collapsed', heading.collapsed)
-    renderProjectHeading(el, heading, {
-      onToggle: async () => {
-        await toggleProjectHeading(heading, this.scope, this.plugin)
-        this.refresh()
-      },
-      onOpen: () => this.plugin.router.openProjectLink(heading.projectPath)
-    })
+    renderHeadingRow(
+      el,
+      heading,
+      headingHandlers(heading, this.scope, this.plugin, () => this.refresh())
+    )
 
     barsGroup.appendChild(
       svgEl('rect', {
@@ -359,7 +399,8 @@ export class GanttView implements SubView {
       statuses: this.scope.config.statuses,
       flatTasks: this.flatTasks,
       rowOf: new Map(
-        this.rows.flatMap((row, i) => (row.kind === 'task' ? [[row.task.id, i] as [string, number]] : []))
+        // Phases included: a dependency drawn to a lot should land on its summary bar.
+        this.rows.flatMap((row, i) => (row.kind === 'group' ? [] : [[row.task.id, i] as [string, number]]))
       ),
       totalRows: this.rows.length,
       drag: this.drag,

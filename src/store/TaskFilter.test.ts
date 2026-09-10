@@ -278,3 +278,51 @@ describe('assignee matching by person key', () => {
     expect(kept.map((t) => t.id)).toEqual(['a'])
   })
 })
+
+describe('a phase under a filter', () => {
+  const lot = (id: string, subtasks: Task[]): Task => makeTask({ id, type: 'phase', subtasks })
+
+  it('survives as long as something it holds does', () => {
+    const tree = [lot('lot1', [task({ id: 'a', tags: ['keep'] }), task({ id: 'b' })])]
+    const kept = applyTaskFilterFlat(flattenTasks(tree), filter({ tags: ['keep'] }), DEFAULT_STATUSES)
+    expect(kept.map((f) => f.task.id)).toEqual(['lot1', 'a'])
+  })
+
+  it('goes when nothing it holds survives, rather than heading an empty block', () => {
+    const tree = [lot('lot1', [task({ id: 'a' })]), lot('lot2', [task({ id: 'b', tags: ['keep'] })])]
+    const kept = applyTaskFilterFlat(flattenTasks(tree), filter({ tags: ['keep'] }), DEFAULT_STATUSES)
+    expect(kept.map((f) => f.task.id)).toEqual(['lot2', 'b'])
+  })
+
+  it('survives on a task nested deeper inside it', () => {
+    const tree = [lot('lot1', [task({ id: 'a', subtasks: [task({ id: 'deep', tags: ['keep'] })] })])]
+    const kept = applyTaskFilterFlat(flattenTasks(tree), filter({ tags: ['keep'] }), DEFAULT_STATUSES)
+    expect(kept.map((f) => f.task.id)).toContain('lot1')
+  })
+
+  it('never matches on its own fields: a lot tagged "keep" holding nothing tagged goes', () => {
+    const tree = [lot('lot1', [task({ id: 'a' })])]
+    tree[0].tags = ['keep']
+    const kept = applyTaskFilterFlat(flattenTasks(tree), filter({ tags: ['keep'] }), DEFAULT_STATUSES)
+    expect(kept).toEqual([])
+  })
+
+  it('stays visible while empty when no filter is on, so tasks can be put in it', () => {
+    const tree = [lot('lot1', [])]
+    const kept = applyTaskFilterFlat(flattenTasks(tree), filter(), DEFAULT_STATUSES)
+    expect(kept.map((f) => f.task.id)).toEqual(['lot1'])
+  })
+
+  it('keeps its tasks inside it rather than promoting them out', () => {
+    const tree = [lot('lot1', [task({ id: 'a', tags: ['keep'] }), task({ id: 'b' })])]
+    const promoted = applyTaskFilterPromote(tree, filter({ tags: ['keep'] }), DEFAULT_STATUSES)
+    expect(promoted).toHaveLength(1)
+    expect(promoted[0].id).toBe('lot1')
+    expect(promoted[0].subtasks.map((s) => s.id)).toEqual(['a'])
+  })
+
+  it('drops out of the promoted tree when it is left holding nothing', () => {
+    const tree = [lot('lot1', [task({ id: 'a' })])]
+    expect(applyTaskFilterPromote(tree, filter({ tags: ['keep'] }), DEFAULT_STATUSES)).toEqual([])
+  })
+})

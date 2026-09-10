@@ -17,6 +17,7 @@ it rather than diverging: our changes ride on top and upstream releases are merg
 | French translation, and the machinery for any other | Every string was hard-coded English |
 | Collections gathering chosen tasks across projects | No way to see tasks from several projects as one named set |
 | A collection groups its tasks under the project they come from, in all three views | A gathered task said nothing about where it lived |
+| Phases ("lots") gathering tasks inside a project | The only grouping was the parent/subtask tree, which makes a container out of a task |
 
 Each is one commit, kept self-contained so a conflict during a merge is confined to it.
 
@@ -130,7 +131,7 @@ convenience for installing by hand.
 
 ```sh
 pnpm install
-pnpm test          # 556 tests
+pnpm test          # 580 tests
 pnpm run check     # lint, format, types, submission lint
 pnpm run build     # main.js + styles.css
 VAULT_PATH=/path/to/vault pnpm run dev   # builds straight into the vault's plugin folder

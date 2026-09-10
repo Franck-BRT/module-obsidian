@@ -1,7 +1,8 @@
 import { type App, ButtonComponent, Modal } from 'obsidian'
 import type PMPlugin from '../main'
-import type { Project, Task } from '../types'
+import type { Project, StatusConfig, Task } from '../types'
 import { flattenTasks, type CollectionRef, type ProjectRef } from '../store'
+import { isPhase, phaseSpan } from '../store/Phase'
 import { TaskModal } from '../modals/TaskModal'
 import { CollectionPickerModal, PersonLookupModal, ProjectPickerModal, TaskPickerModal } from '../modals/PickerModals'
 import { ImportModal } from '../modals/ImportModal'
@@ -215,6 +216,18 @@ export interface OpenTaskModalOpts {
   parentId?: string | null
   defaults?: Partial<Task>
   onSave: (task: Task) => void | Promise<void>
+}
+
+/**
+ * The question asked before a task goes. A phase takes everything it holds with it, so
+ * it says how much that is: "delete lot 1" is not a small decision when lot 1 is where
+ * fifteen tasks live.
+ */
+export async function confirmTaskDelete(app: App, task: Task, statuses: StatusConfig[] = []): Promise<boolean> {
+  const message = isPhase(task)
+    ? t('task.deletePhaseConfirm', { title: task.title, count: phaseSpan(task, statuses).count })
+    : t('task.deleteConfirm', { title: task.title })
+  return confirmDialog(app, message)
 }
 
 export function openTaskModal(plugin: PMPlugin, project: Project, opts: OpenTaskModalOpts): void {

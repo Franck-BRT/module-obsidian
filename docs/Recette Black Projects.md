@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.9.0
+version: 2.10.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.9.0
+# Recette — Black Projects 2.10.0
 
-Plan de test manuel pour le fork. Les **556 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **580 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -412,6 +412,66 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ---
 
+## 7ter. Lots [N]
+
+> **Nouveau en 2.10.0** : un **lot** est un quatrième type de ticket. Il rassemble des
+> tâches **dans** un projet — lot 1, lot 2 — sans en faire des sous-tâches.
+
+### Création et remplissage
+
+- [ ] Dans un projet, barre d'outils → **« + lot »**, le nommer « Lot 1 »
+- [ ] ✅ **Attendu** : une note est créée comme pour une tâche, avec `type: phase` dans son frontmatter
+- [ ] ✅ **Attendu** : dans le tableur, le lot est un **en-tête sur toute la largeur**, pas une ligne de tâche
+- [ ] Ouvrir une tâche existante : ✅ **Attendu** : le champ **« Lot »** est proposé (il n'apparaît que si le projet a des lots)
+- [ ] Y choisir « Lot 1 » : ✅ **Attendu** : la tâche passe **sous l'en-tête**, **sans indentation**
+- [ ] ✅ **Attendu** : son type **reste « Tâche »** — elle n'est pas devenue une sous-tâche
+- [ ] Cliquer le **+** de l'en-tête du lot : ✅ **Attendu** : la nouvelle tâche est créée **dans le lot**
+- [ ] Une tâche du lot qui a ses **propres sous-tâches** : ✅ **Attendu** : elles s'indentent sous elle, comme d'habitude
+- [ ] Créer un **lot dans un lot** : ✅ **Attendu** : son en-tête est décalé vers la droite
+- [ ] Le **chevron** de l'en-tête plie le lot ; rouvrir le projet : ✅ **Attendu** : il est **toujours plié**
+
+### Dates et avancement
+
+- [ ] Laisser les dates du lot **vides**, dater ses tâches
+      ✅ **Attendu** : l'en-tête annonce la **période couverte** (première date de début → dernière échéance)
+- [ ] ✅ **Attendu** : le pourcentage de l'en-tête est la **moyenne** de ses tâches, une tâche terminée comptant pour 100
+- [ ] Marquer une tâche **Terminé** : ✅ **Attendu** : le pourcentage du lot monte
+- [ ] Vue **Gantt** : ✅ **Attendu** : le lot a une **barre récapitulative** (un crochet plat) qui couvre ses tâches
+- [ ] Saisir des dates **sur le lot** (ex. janvier → février) alors que ses tâches vont jusqu'en mars
+      ✅ **Attendu** : le crochet suit **les dates saisies**, et un **trait fin** dessous montre la période réelle
+- [ ] ✅ **Attendu** : la partie qui **déborde** des dates annoncées est marquée à part (en rouge)
+- [ ] Effacer les dates du lot : ✅ **Attendu** : on revient à la période calculée, sans marque de dépassement
+- [ ] Un lot **vide** : ✅ **Attendu** : « 0 tâche », aucune barre, et rien qui plante
+
+### Filtres et vues
+
+- [ ] Filtrer sur une étiquette que porte **une seule** tâche du lot
+      ✅ **Attendu** : l'en-tête du lot **reste**, avec cette tâche dessous — on voit toujours de quel lot elle est
+- [ ] Filtrer sur quelque chose qu'**aucune** tâche du lot ne porte : ✅ **Attendu** : **l'en-tête disparaît aussi**
+- [ ] ✅ **Attendu** : une tâche filtrée n'est **jamais sortie de son lot** pour être remontée à la racine
+- [ ] Vue **Tableau** (kanban) : ✅ **Attendu** : dans chaque colonne, les cartes sont groupées sous l'en-tête de leur lot
+- [ ] ✅ **Attendu** : les tâches **sans lot** sont **en haut**, sans en-tête
+- [ ] ✅ **Attendu** : le lot **n'a pas de carte à lui** dans le kanban
+- [ ] ✅ **Attendu** : dans le kanban, le compteur de l'en-tête compte les cartes **de cette colonne**
+- [ ] Plier un lot dans le kanban : ✅ **Attendu** : ses cartes disparaissent de **toutes** les colonnes
+- [ ] Cocher **« tout sélectionner »** dans le tableur : ✅ **Attendu** : les lots ne sont **pas** sélectionnés
+- [ ] Naviguer au clavier (`j` / `k`) : ✅ **Attendu** : la sélection **saute** les en-têtes de lot
+
+### Dépendances et suppression
+
+- [ ] Faire dépendre une tâche **du lot** (dépendance vers le lot)
+      ✅ **Attendu** : elle est repoussée après la **fin réelle** du lot
+- [ ] Décaler une tâche **dans** le lot : ✅ **Attendu** : le lot n'est **jamais déplacé** par l'ordonnanceur,
+      sa barre suit simplement ses tâches
+- [ ] **Supprimer un lot** qui contient des tâches
+      ✅ **Attendu** : la confirmation est **en français** et dit **combien de tâches** partent avec lui
+- [ ] Refuser : ✅ **Attendu** : rien n'est supprimé
+- [ ] Supprimer une **tâche** ordinaire : ✅ **Attendu** : la confirmation est aussi en français
+
+**Constaté :**
+
+---
+
 ## 8. Robustesse
 
 - [ ] Créer deux tâches portant **exactement le même titre** dans un même projet
@@ -438,6 +498,10 @@ Ce sont des manques identifiés, pas des régressions.
       Obsidian, vérifiés une fois par heure, et seulement si Obsidian est ouvert.
 - [ ] *Vérifié* : la fenêtre d'**annulation** est limitée à 20 actions et se vide au rechargement.
 - [ ] *Vérifié* : l'ordonnanceur n'a **ni chemin critique, ni marge, ni nivellement de charge**.
+- [ ] *Vérifié* : on ne peut pas **glisser-déposer** une tâche dans un lot ; on passe par le champ
+      **« Lot »** de son éditeur, ou par le **+** de l'en-tête du lot.
+- [ ] *Vérifié* : dans le tableur, un tri (par échéance, par statut…) **réordonne aussi les lots**
+      entre eux, d'après les dates que le lot déclare — pas d'après la période de ses tâches.
 
 ---
 
@@ -454,6 +518,7 @@ Ce sont des manques identifiés, pas des régressions.
 | 6. Dépendances typées | | |
 | 7. Français | | |
 | 7bis. Recueils | | |
+| 7ter. Lots | | |
 | 8. Robustesse | | |
 
 **Anomalies bloquantes :**
@@ -469,5 +534,5 @@ Ce sont des manques identifiés, pas des régressions.
 Dupliquez cette note, mettez à jour `version` dans le frontmatter, videz les cases et
 les champs « Constaté ». Les sections 1 et 8 sont le **socle de non-régression** : à
 repasser à chaque version, y compris après chaque fusion avec l'upstream. Les sections
-2 à 7bis ne concernent que les nouveautés — elles deviennent à leur tour des tests de
+2 à 7ter ne concernent que les nouveautés — elles deviennent à leur tour des tests de
 non-régression pour les versions suivantes.

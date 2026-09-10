@@ -2,6 +2,7 @@ import { parsePlainDate, Temporal, today } from '../dates'
 import type { DueDateFilter, FilterState, StatusConfig, Task } from '../types'
 import { displayName, isTerminalStatus } from '../utils'
 import type { FlatTask } from './TaskTreeOps'
+import { isPhase } from './Phase'
 
 export function isFilterActive(filter: FilterState): boolean {
   return !!(
@@ -89,6 +90,13 @@ export function applyTaskFilterPromote(
   const result: Task[] = []
   for (const t of tasks) {
     const filteredSubs = t.subtasks.length ? applyTaskFilterPromote(t.subtasks, filter, statuses, keyOf) : []
+    // A phase is kept for what it still holds, never for itself: an empty one would be a
+    // heading over nothing, and promoting its tasks out of it would lose which lot they
+    // are in — the one thing the heading is there to say.
+    if (isPhase(t)) {
+      if (filteredSubs.length || !isFilterActive(filter)) result.push({ ...t, subtasks: filteredSubs })
+      continue
+    }
     if (matchesFilter(t, filter, statuses, keyOf)) {
       result.push({ ...t, subtasks: filteredSubs })
     } else {
@@ -98,13 +106,30 @@ export function applyTaskFilterPromote(
   return result
 }
 
+/**
+ * A phase holds work rather than being work, so it has nothing of its own to match: it
+ * survives a filter exactly as long as something it holds does. Filtering a board down
+ * to one assignee should still say which lot their tasks belong to.
+ */
+function phaseSurvives(phase: Task, filter: FilterState, kept: (task: Task) => boolean): boolean {
+  if (phase.archived && !filter.showArchived) return false
+  if (!isFilterActive(filter)) return true
+  const holds = (task: Task): boolean => task.subtasks.some((sub) => (!isPhase(sub) && kept(sub)) || holds(sub))
+  return holds(phase)
+}
+
 export function applyTaskFilterFlat(
   flat: FlatTask[],
   filter: FilterState,
   statuses: StatusConfig[] = [],
   keyOf?: (raw: string) => string
 ): FlatTask[] {
-  return flat.filter(({ task }) => matchesFilter(task, filter, statuses, keyOf))
+  const kept = new Set(
+    flat.filter(({ task }) => !isPhase(task) && matchesFilter(task, filter, statuses, keyOf)).map(({ task }) => task.id)
+  )
+  return flat.filter(({ task }) =>
+    isPhase(task) ? phaseSurvives(task, filter, (sub) => kept.has(sub.id)) : kept.has(task.id)
+  )
 }
 
 function matchDueDateFilter(task: FilterableTask, filter: DueDateFilter, statuses: StatusConfig[]): boolean {

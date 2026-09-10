@@ -332,3 +332,8 @@
   font-size: var(--font-smallest);
   white-space: nowrap;
 }
+.pm-group-detail {
+  color: var(--text-faint);
+  font-size: var(--font-smallest);
+  white-space: nowrap;
+}

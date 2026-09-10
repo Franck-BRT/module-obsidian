@@ -14,10 +14,11 @@ import {
 } from 'obsidian'
 import type PMPlugin from '../main'
 import { type Project, type Task, makeTask } from '../types'
-import { flattenTasks } from '../store/TaskTreeOps'
+import { isPhase } from '../store/Phase'
+import { findTask, flattenTasks } from '../store/TaskTreeOps'
 import { TaskFileNameConflictError } from '../store'
 import { safeAsync, getDefaultStatusId, getDefaultPriorityId, getPriorityConfig, saveShortcutLabel } from '../utils'
-import { confirmDialog, openTaskByPath } from '../ui/ModalFactory'
+import { confirmTaskDelete, openTaskByPath } from '../ui/ModalFactory'
 import { renderGlyph } from '../ui/composites/properties'
 import { renderTaskFormFields } from './TaskFormFields'
 import { renderTimeTrackingPanel } from './TimeTrackingPanel'
@@ -71,7 +72,8 @@ export class TaskEditor {
       this.task = makeTask({
         status: getDefaultStatusId(config.statuses),
         priority: getDefaultPriorityId(config.priorities),
-        type: parentId ? 'subtask' : 'task',
+        // A ticket dropped into a lot is a task in that lot, not a subtask of it.
+        type: parentId && !isPhase(findTask(project.tasks, parentId) ?? { type: 'phase' }) ? 'subtask' : 'task',
         ...defaults
       })
       this.isNew = true
@@ -268,7 +270,7 @@ export class TaskEditor {
         .setWarning(true)
         .onClick(
           safeAsync(async () => {
-            if (await confirmDialog(this.app, `Delete "${this.task.title}"?`)) {
+            if (await confirmTaskDelete(this.app, this.task, this.plugin.store.configFor(this.project).statuses)) {
               await this.plugin.store.deleteTask(this.project, this.task.id)
               await this.onSave(this.task)
               this.cancelled = true

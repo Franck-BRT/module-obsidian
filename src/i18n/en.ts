@@ -82,6 +82,7 @@ export const en = {
   // Task properties, as labelled in the editor.
   'task.type.task': 'Task',
   'task.type.subtask': 'Subtask',
+  'task.type.phase': 'Phase',
   'task.type.milestone': 'Milestone',
   'task.recurring': 'Recurring',
   'task.repeat': 'Repeat',
@@ -94,6 +95,9 @@ export const en = {
   'task.blocks': 'Blocks',
   'task.customFields': 'Custom fields',
   'task.assignees': 'Assignees',
+  'task.selectPhase': 'Select phase',
+  'task.noPhase': 'No phase',
+  'task.addToPhase': 'Add a task to this phase',
   'task.selectParent': 'Select parent',
   'task.assign': 'Assign',
   'task.addTags': 'Add tags',
@@ -209,6 +213,7 @@ export const en = {
   'project.overdueCount': { one: '{count} overdue', other: '{count} overdue' },
   'project.addTaskButton': '+ add task',
   'project.addMilestoneButton': '+ milestone',
+  'project.addPhaseButton': '+ phase',
   'project.newButton': '+ new project',
   'project.behindCount': { one: '{count} with tasks past due', other: '{count} with tasks past due' },
   'project.members': 'Members',
@@ -245,6 +250,11 @@ export const en = {
   'menu.editTask': 'Edit task',
   'menu.duplicateTask': 'Duplicate task',
   'menu.moveToProject': 'Move to project',
+  'task.deleteConfirm': 'Delete "{title}"?',
+  'task.deletePhaseConfirm': {
+    one: 'Delete the phase "{title}"? It holds {count} task, which goes with it.',
+    other: 'Delete the phase "{title}"? It holds {count} tasks, which go with it.'
+  },
   'menu.deleteTask': 'Delete task',
   'menu.noOtherProject': 'There is no other project to move this task to.',
   'menu.movedTask': 'Moved "{task}" to {project}',
@@ -328,6 +338,7 @@ export const en = {
 
   // Field labels in the task and project editors.
   'field.type': 'Type',
+  'field.phase': 'Phase',
   'field.parentTask': 'Parent task',
   'field.date': 'Date',
   'field.start': 'Start',

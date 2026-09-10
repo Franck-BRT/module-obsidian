@@ -1,6 +1,7 @@
 import type { Task } from '../types'
 import { makeId } from '../types'
 import { dedupePeople } from '../utils'
+import { isPhase } from './Phase'
 
 export interface FlatTask {
   task: Task
@@ -20,7 +21,10 @@ export function flattenTasks(
     const visible = !ancestorCollapsed
     result.push({ task, depth, parentId, visible })
     if (task.subtasks.length > 0) {
-      result.push(...flattenTasks(task.subtasks, depth + 1, task.id, ancestorCollapsed || task.collapsed))
+      // A phase does not indent what it holds: it is a heading over those rows, not a
+      // parent of them, and a task in a lot is not a subtask of it.
+      const childDepth = isPhase(task) ? depth : depth + 1
+      result.push(...flattenTasks(task.subtasks, childDepth, task.id, ancestorCollapsed || task.collapsed))
     }
   }
   return result

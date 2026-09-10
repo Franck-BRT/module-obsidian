@@ -1,6 +1,7 @@
 import { Temporal } from '../dates'
 import { DEFAULT_DEPENDENCY_OPTION, type StatusConfig, type Task } from '../types'
 import { isTerminalStatus } from '../utils'
+import { isPhase, phaseSpan } from './Phase'
 import { flattenTasks } from './TaskTreeOps'
 import {
   addWorkingDays,
@@ -169,8 +170,11 @@ export function computeSchedule(
   // Days by which a task's finish beat the date it was planned for.
   const daysSavedBy = new Map<string, number>()
   for (const t of flat) {
-    startOf.set(t.id, t.start)
-    dueOf.set(t.id, t.due)
+    // A phase anchors its dependents on the span of what it holds, which is the only
+    // range it really has: the dates on the phase note itself are often empty.
+    const span = isPhase(t) ? phaseSpan(t, statuses) : null
+    startOf.set(t.id, span ? span.start : t.start)
+    dueOf.set(t.id, span ? span.due : t.due)
     if (!pullForward || !t.completed || !t.due || t.completed >= t.due) continue
     // An external's completion date was stamped against its own project's palette, not
     // the one passed here, so its status can't be re-checked from this side.
@@ -186,6 +190,9 @@ export function computeSchedule(
     if (!task) continue
 
     if (externalIds.has(id)) continue
+    // A phase is never moved: its dates are read from its tasks, so shifting them here
+    // would be overwritten by the next roll-up, and silently disagree until then.
+    if (isPhase(task)) continue
     if (isTerminalStatus(task.status, statuses)) continue
 
     const deps = predecessorsOf.get(id) ?? []

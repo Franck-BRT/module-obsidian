@@ -407,3 +407,32 @@ describe('computeSchedule with typed dependencies and lag', () => {
     expect(patches[0].start).toBe('2026-04-08')
   })
 })
+
+describe('a phase in a dependency chain', () => {
+  it('is never moved: its dates belong to the tasks it holds', () => {
+    const lot = makeTask({
+      id: 'lot',
+      type: 'phase',
+      start: '',
+      due: '',
+      dependencies: ['before'],
+      subtasks: [makeTask({ id: 'inside', start: '2026-03-02', due: '2026-03-06' })]
+    })
+    const before = makeTask({ id: 'before', start: '2026-04-01', due: '2026-04-10' })
+    const { patches } = computeSchedule([before, lot], 'before', DEFAULT_STATUSES)
+    expect(patches.find((p) => p.taskId === 'lot')).toBeUndefined()
+  })
+
+  it('still holds back what waits on it, using the span of its tasks', () => {
+    const lot = makeTask({
+      id: 'lot',
+      type: 'phase',
+      start: '',
+      due: '',
+      subtasks: [makeTask({ id: 'inside', start: '2026-03-02', due: '2026-03-06' })]
+    })
+    const after = makeTask({ id: 'after', start: '2026-01-05', due: '2026-01-09', dependencies: ['lot'] })
+    const { patches } = computeSchedule([lot, after], 'lot', DEFAULT_STATUSES)
+    expect(patches.find((p) => p.taskId === 'after')?.start).toBe('2026-03-07')
+  })
+})

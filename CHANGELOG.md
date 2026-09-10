@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-09-10
+
+### Added
+
+- **Phases** — "lot 1", "lot 2" — a fourth ticket type that gathers tasks inside a
+  project. A phase is not a parent task: what it holds is not indented under it and is
+  not turned into subtasks, because a task in a lot is still a task of the project
+- A phase's dates and progress are read from the tasks it holds, at any depth. Declaring
+  a date on the phase itself wins over that, and the Gantt then draws what the work
+  actually spans underneath, the part running past the declaration marked apart — a lot
+  that says it ends in February while its tasks run into March is the one thing worth
+  seeing
+- Each view shows a phase the way it can: a folding heading in the table and on the
+  board, a summary bracket over its span in the Gantt. Folding is the phase's own
+  collapsed state, so it agrees across the three
+- The task editor gained a **Phase** picker, and the toolbar a **+ phase** button. A
+  ticket created from a phase's heading lands in that phase
+
+### Fixed
+
+- Deleting a task asked its question in English. It is translated now, and deleting a
+  phase says how many tasks go with it rather than presenting itself as a small change
+
+### Changed
+
+- A filter no longer strands a phase's tasks: a phase is kept as long as anything it
+  holds survives the filter, and its tasks stay inside it instead of being promoted out
+  of the lot that names them
+- A phase is never scheduled. Its dates come from its tasks, so moving them would be
+  overwritten by the next roll-up; it still holds back whatever depends on it, using the
+  span of what it holds
+
 ## [2.9.0] - 2026-09-10
 
 ### Added

@@ -10,8 +10,15 @@ import { buildTaskContextMenu } from '../ui/TaskContextMenu'
 import { KanbanColumn, type KanbanCardData, type KanbanEntry } from '../ui/composites/KanbanColumn'
 import { renderProjectChip } from '../ui/composites/projectChip'
 import { linkedRefs } from './linkedRefs'
-import { collectionBlocks, renderProjectHeading, toggleProjectHeading } from './projectGroups'
+import { collectionBlocks, headingHandlers, phaseHeading, renderHeadingRow, type HeadingRow } from './headings'
+import { isPhase } from '../store/Phase'
 import type { SubView } from './SubView'
+
+/** A run of cards under one heading, or the leading run that has none. */
+interface CardBlock {
+  heading: HeadingRow | null
+  rows: Task[]
+}
 
 export class KanbanView implements SubView {
   private dragTask: Task | null = null
@@ -62,28 +69,86 @@ export class KanbanView implements SubView {
   }
 
   /**
+   * Which phase each task sits in, innermost first — a task inside a sub-lot belongs to
+   * the sub-lot. Empty when the project declares no phase at all, which is the ordinary
+   * case: a board carrying one heading over everything would only take up room.
+   */
+  private phaseOf(): Map<string, Task> {
+    const owner = new Map<string, Task>()
+    const walk = (tasks: Task[], phase: Task | null): void => {
+      for (const task of tasks) {
+        if (isPhase(task)) {
+          walk(task.subtasks, task)
+          continue
+        }
+        if (phase) owner.set(task.id, phase)
+        walk(task.subtasks, phase)
+      }
+    }
+    walk(this.scope.tasks(), null)
+    return owner
+  }
+
+  /** The phases a project declares, in the order it declares them. */
+  private phases(): Task[] {
+    return flattenTasks(this.scope.tasks())
+      .map((ft) => ft.task)
+      .filter(isPhase)
+  }
+
+  /** A column's cards, split into the blocks the headings sit above. */
+  private phaseBlocks(tasks: Task[]): CardBlock[] | null {
+    const phases = this.phases()
+    if (!phases.length) return null
+    const owner = this.phaseOf()
+    const byPhase = new Map<string, Task[]>()
+    const loose: Task[] = []
+    for (const task of tasks) {
+      const phase = owner.get(task.id)
+      if (!phase) {
+        loose.push(task)
+        continue
+      }
+      const bucket = byPhase.get(phase.id)
+      if (bucket) bucket.push(task)
+      else byPhase.set(phase.id, [task])
+    }
+    const blocks: CardBlock[] = []
+    // Tasks in no lot lead, unheaded: they are not a lot called "everything else".
+    if (loose.length) blocks.push({ heading: null, rows: loose })
+    for (const phase of phases) {
+      const rows = byPhase.get(phase.id)
+      // Counted per column, not over the whole lot: the heading appears once in each
+      // column, and "lot 1 · 12 tasks" above two cards would be counting elsewhere.
+      if (rows) blocks.push({ heading: { ...phaseHeading(phase, this.config.statuses), count: rows.length }, rows })
+    }
+    return blocks
+  }
+
+  /**
    * A column's contents. In a collection the cards are stacked under a heading per
    * project, folded with the same state the table and the Gantt use — one collection,
    * one answer to "is this project folded". Anywhere else the cards stand alone.
    */
   private entriesFor(tasks: Task[]): KanbanEntry[] {
-    const blocks = collectionBlocks(tasks, (task) => task.id, this.scope, this.plugin)
+    const blocks: CardBlock[] | null =
+      collectionBlocks(tasks, (task) => task.id, this.scope, this.plugin) ?? this.phaseBlocks(tasks)
     if (!blocks) return tasks.map((task) => ({ kind: 'card', card: this.buildCardData(task) }))
     const entries: KanbanEntry[] = []
     for (const { heading, rows } of blocks) {
-      entries.push({
-        kind: 'group',
-        collapsed: heading.collapsed,
-        render: (parent) =>
-          renderProjectHeading(parent, heading, {
-            onToggle: async () => {
-              await toggleProjectHeading(heading, this.scope, this.plugin)
-              this.render()
-            },
-            onOpen: () => this.plugin.router.openProjectLink(heading.projectPath)
-          })
-      })
-      if (heading.collapsed) continue
+      if (heading) {
+        entries.push({
+          kind: 'group',
+          collapsed: heading.collapsed,
+          render: (parent) =>
+            renderHeadingRow(
+              parent,
+              heading,
+              headingHandlers(heading, this.scope, this.plugin, () => this.render())
+            )
+        })
+        if (heading.collapsed) continue
+      }
       for (const task of rows) entries.push({ kind: 'card', card: this.buildCardData(task) })
     }
     return entries
@@ -106,8 +171,9 @@ export class KanbanView implements SubView {
     const candidates = this.config.kanbanShowSubtasks
       ? flattenTasks(this.scope.tasks()).map((ft) => ft.task)
       : this.scope.tasks()
+    // A phase is never a card: it holds cards, and says so as a heading in each column.
     return candidates.filter(
-      (t) => t.status === status && matchesFilter(t, this.filter, this.config.statuses, this.personKey)
+      (t) => !isPhase(t) && t.status === status && matchesFilter(t, this.filter, this.config.statuses, this.personKey)
     )
   }
 

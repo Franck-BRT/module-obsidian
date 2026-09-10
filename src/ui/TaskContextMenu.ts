@@ -2,7 +2,7 @@ import { Menu, Notice } from 'obsidian'
 import type PMPlugin from '../main'
 import type { Task, Project } from '../types'
 import { safeAsync } from '../utils'
-import { openTaskModal, confirmDialog, confirmDuplicateSubtasks, openProjectPicker } from './ModalFactory'
+import { openTaskModal, confirmTaskDelete, confirmDuplicateSubtasks, openProjectPicker } from './ModalFactory'
 import { t } from '../i18n'
 
 export interface TaskMenuContext {
@@ -137,7 +137,7 @@ export function buildTaskContextMenu(menu: Menu, task: Task, ctx: TaskMenuContex
       .setIcon('trash')
       .onClick(
         safeAsync(async () => {
-          if (await confirmDialog(ctx.plugin.app, `Delete "${task.title}"?`)) {
+          if (await confirmTaskDelete(ctx.plugin.app, task, ctx.plugin.settings.statuses)) {
             await ctx.plugin.store.deleteTask(ctx.project, task.id)
             await ctx.onRefresh()
           }

@@ -8,7 +8,8 @@ import { openTaskModal } from '../../ui/ModalFactory'
 import { renderAddButton } from '../../ui/composites/addButton'
 import { childTreeGuides } from '../../ui/composites/treeGuides'
 import { openAddTask } from '../addTask'
-import { collectionBlocks, type ProjectHeading } from '../projectGroups'
+import { collectionBlocks, phaseHeading, type HeadingRow } from '../headings'
+import { isPhase } from '../../store/Phase'
 import { compareTask } from './TableFilters'
 import { renderGroupRow, renderTaskRow, updateSelectedRow, updateSelectAllCheckbox } from './TableRow'
 import { t } from '../../i18n'
@@ -33,7 +34,9 @@ export interface TableTaskRow extends FlatTask {
  */
 export interface TableGroupRow {
   kind: 'group'
-  heading: ProjectHeading
+  heading: HeadingRow
+  /** Nesting, for a lot inside a lot. A collection's project headings sit at zero. */
+  depth: number
 }
 
 export type TableTreeRow = TableTaskRow | TableGroupRow
@@ -249,7 +252,7 @@ function fillTableBody(ctx: TableContext): void {
 
   // When filtering, show all matches regardless of collapsed parent.
   const visible = hasActiveFilter ? sorted : sorted.filter((f) => f.visible)
-  ctx.state.visibleRows = withProjectHeadings(visible, ctx)
+  ctx.state.visibleRows = withPhaseHeadings(withProjectHeadings(visible, ctx), ctx)
   ctx.state.renderWindow = () => renderWindowRows(ctx)
   // The data changed, so repaint even if the window bounds happen to match.
   ctx.state.windowStart = -1
@@ -456,10 +459,23 @@ function withProjectHeadings(rows: TableTaskRow[], ctx: TableContext): TableTree
   if (!blocks) return rows
   const out: TableTreeRow[] = []
   for (const { heading, rows: block } of blocks) {
-    out.push({ kind: 'group', heading })
+    out.push({ kind: 'group', heading, depth: 0 })
     if (!heading.collapsed) out.push(...block)
   }
   return out
+}
+
+/**
+ * Turns a phase into the heading it is. It keeps the place the sort gave it and the
+ * rows it holds keep theirs, so a lot reads as a band across the table rather than as a
+ * task with a strange set of cells.
+ */
+function withPhaseHeadings(rows: TableTreeRow[], ctx: TableContext): TableTreeRow[] {
+  return rows.map((row) =>
+    row.kind === 'task' && isPhase(row.task)
+      ? { kind: 'group' as const, heading: phaseHeading(row.task, ctx.statuses), depth: row.depth }
+      : row
+  )
 }
 
 async function deleteTask(id: string, ctx: TableContext): Promise<void> {

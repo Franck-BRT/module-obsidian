@@ -80,12 +80,17 @@ export function hydrateSavedViews(raw: unknown[]): SavedView[] {
     })
 }
 
+/** An unknown type reads as a plain task rather than breaking the note. */
+function readType(raw: unknown): Task['type'] {
+  return raw === 'milestone' || raw === 'subtask' || raw === 'phase' ? raw : 'task'
+}
+
 export function mapRawToTask(r: Record<string, unknown>, overrides?: Partial<Task>): Task {
   return makeTask({
     id: r.id as string,
     title: (r.title as string) ?? 'Untitled',
     description: (r.description as string) ?? '',
-    type: (r.type as string) === 'milestone' ? 'milestone' : (r.type as string) === 'subtask' ? 'subtask' : 'task',
+    type: readType(r.type),
     status: (r.status as Task['status']) ?? 'todo',
     priority: (r.priority as Task['priority']) ?? 'medium',
     start: (r.start as string) ?? '',

@@ -1,7 +1,8 @@
 import type PMPlugin from '../main'
 import type { Project, Task, TaskType, Recurrence } from '../types'
 import { DEFAULT_DEPENDENCY_OPTION } from '../types'
-import { collectAllAssignees, collectAllTags, flattenTasks } from '../store/TaskTreeOps'
+import { collectAllAssignees, collectAllTags, findTask, flattenTasks } from '../store/TaskTreeOps'
+import { isPhase } from '../store/Phase'
 import { reaches } from '../store/Scheduler'
 import { renderPropRow } from '../ui/FormField'
 import { isTerminalStatus, priorityIcon, stringToColor } from '../utils'
@@ -46,7 +47,8 @@ function typeOptions(): SelectItem[] {
   return [
     { id: 'task', label: t('task.type.task'), icon: 'square-check-big' },
     { id: 'subtask', label: t('task.type.subtask'), icon: 'git-branch' },
-    { id: 'milestone', label: t('task.type.milestone'), icon: 'diamond' }
+    { id: 'milestone', label: t('task.type.milestone'), icon: 'diamond' },
+    { id: 'phase', label: t('task.type.phase'), icon: 'layers' }
   ]
 }
 
@@ -85,7 +87,11 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
             task.start = ''
             task.progress = 0
           }
-          if (id !== 'subtask') ctx.setParentId(null)
+          // The two parents mean different things: a subtask hangs off a task, anything
+          // else sits in a lot. Switching keeps the parent only if it still makes sense.
+          const parent = ctx.parentId ? findTask(project.tasks, ctx.parentId) : null
+          const inPhase = !!parent && isPhase(parent)
+          if (id === 'subtask' ? inPhase : !inPhase) ctx.setParentId(null)
           rerender()
         }
       })
@@ -94,8 +100,13 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
     'shapes'
   )
 
-  // The parent picker shares the type row and shows only for subtasks; an empty cell holds
-  // the column otherwise, so switching type never reflows the grid.
+  const phases = flattenTasks(project.tasks)
+    .map((f) => f.task)
+    .filter((candidate) => isPhase(candidate) && candidate.id !== task.id)
+
+  // The parent picker shares the type row: a subtask picks the task it hangs off, and
+  // anything else picks the lot it sits in. An empty cell holds the column when there is
+  // neither, so switching type never reflows the grid.
   if (task.type === 'subtask') {
     renderPropRow(
       grid,
@@ -104,7 +115,7 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
         const cell = createDiv('pm-prop-value')
         const parents = flattenTasks(project.tasks)
           .map((f) => f.task)
-          .filter((t) => t.id !== task.id)
+          .filter((candidate) => candidate.id !== task.id && !isPhase(candidate))
         renderSelectControl({
           container: cell,
           value: ctx.parentId,
@@ -121,6 +132,29 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
         return cell
       },
       'corner-up-right'
+    )
+  } else if (phases.length) {
+    renderPropRow(
+      grid,
+      t('field.phase'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        renderSelectControl({
+          container: cell,
+          value: ctx.parentId,
+          options: [{ id: '', label: t('task.noPhase') }, ...phases.map((p) => ({ id: p.id, label: p.title }))],
+          placeholder: t('task.selectPhase'),
+          search: true,
+          searchPlaceholder: t('task.searchTasks'),
+          width: 230,
+          onChange: (id) => {
+            ctx.setParentId(id || null)
+            rerender()
+          }
+        })
+        return cell
+      },
+      'layers'
     )
   } else {
     grid.createDiv()

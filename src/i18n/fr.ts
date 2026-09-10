@@ -76,6 +76,7 @@ export const fr: Catalog = {
 
   'task.type.task': 'Tâche',
   'task.type.subtask': 'Sous-tâche',
+  'task.type.phase': 'Lot',
   'task.type.milestone': 'Jalon',
   'task.recurring': 'Récurrente',
   'task.repeat': 'Répétition',
@@ -88,6 +89,9 @@ export const fr: Catalog = {
   'task.blocks': 'Bloque',
   'task.customFields': 'Champs personnalisés',
   'task.assignees': 'Assignés',
+  'task.selectPhase': 'Choisir un lot',
+  'task.noPhase': 'Aucun lot',
+  'task.addToPhase': 'Ajouter une tâche à ce lot',
   'task.selectParent': 'Choisir le parent',
   'task.assign': 'Assigner',
   'task.addTags': 'Ajouter des étiquettes',
@@ -196,6 +200,7 @@ export const fr: Catalog = {
   'project.overdueCount': { one: '{count} en retard', other: '{count} en retard' },
   'project.addTaskButton': '+ ajouter une tâche',
   'project.addMilestoneButton': '+ jalon',
+  'project.addPhaseButton': '+ lot',
   'project.newButton': '+ nouveau projet',
   'project.behindCount': { one: '{count} en retard', other: '{count} en retard' },
   'project.members': 'Membres',
@@ -230,6 +235,11 @@ export const fr: Catalog = {
   'menu.editTask': 'Modifier la tâche',
   'menu.duplicateTask': 'Dupliquer la tâche',
   'menu.moveToProject': 'Déplacer vers un projet',
+  'task.deleteConfirm': 'Supprimer « {title} » ?',
+  'task.deletePhaseConfirm': {
+    one: 'Supprimer le lot « {title} » ? Il contient {count} tâche, qui sera supprimée avec lui.',
+    other: 'Supprimer le lot « {title} » ? Il contient {count} tâches, qui seront supprimées avec lui.'
+  },
   'menu.deleteTask': 'Supprimer la tâche',
   'menu.noOtherProject': 'Aucun autre projet où déplacer cette tâche.',
   'menu.movedTask': '« {task} » déplacée vers {project}',
@@ -307,6 +317,7 @@ export const fr: Catalog = {
   'picker.select': 'Sélectionner',
 
   'field.type': 'Type',
+  'field.phase': 'Lot',
   'field.parentTask': 'Tâche parente',
   'field.date': 'Date',
   'field.start': 'Début',

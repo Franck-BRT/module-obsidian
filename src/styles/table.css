@@ -488,3 +488,7 @@ button.pm-chip-rm {
   display: inline-flex;
   vertical-align: middle;
 }
+/* A lot inside a lot steps in, like a task row would. */
+.pm-table-group-cell {
+  padding-left: calc(var(--depth, 0) * var(--pm-tree-indent) + 10px);
+}

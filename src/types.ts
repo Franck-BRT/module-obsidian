@@ -11,7 +11,7 @@ export type GanttWeekLabel = 'weekNumber' | 'dateRange' | 'both'
 export type ViewMode = 'table' | 'gantt' | 'kanban'
 export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
-export type TaskType = 'task' | 'milestone' | 'subtask'
+export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase'
 
 export interface Recurrence {
   interval: 'daily' | 'weekly' | 'monthly' | 'yearly'
