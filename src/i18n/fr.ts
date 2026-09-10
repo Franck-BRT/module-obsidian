@@ -398,6 +398,7 @@ export const fr: Catalog = {
   'view.vaultSettings': 'réglages du coffre',
   'view.mergeFieldConfirm':
     'Reporter les valeurs {own} de ce projet sur le champ {target} venant de {source}, et cesser de le définir ici ?',
+  'view.noPhaseLane': 'Hors lot',
   'view.milestones': 'Jalons',
   'view.subProjects': 'Sous-projets',
   'view.properties': 'Propriétés',

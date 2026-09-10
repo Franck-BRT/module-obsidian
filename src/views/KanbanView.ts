@@ -7,17 +7,20 @@ import { matchesFilter } from '../store/TaskFilter'
 import { displayName, dueUrgency, getPriorityConfig, safeAsync } from '../utils'
 import { openTaskModal } from '../ui/ModalFactory'
 import { buildTaskContextMenu } from '../ui/TaskContextMenu'
-import { KanbanColumn, type KanbanCardData, type KanbanEntry } from '../ui/composites/KanbanColumn'
+import { KanbanColumn, renderColumnHeader, type KanbanCardData } from '../ui/composites/KanbanColumn'
 import { renderProjectChip } from '../ui/composites/projectChip'
 import { linkedRefs } from './linkedRefs'
 import { collectionBlocks, headingHandlers, phaseHeading, renderHeadingRow, type HeadingRow } from './headings'
 import { isPhase } from '../store/Phase'
 import type { SubView } from './SubView'
+import { t } from '../i18n'
 
-/** A run of cards under one heading, or the leading run that has none. */
-interface CardBlock {
+/** A band across the board: one lot, one project in a collection, or what is in neither. */
+interface Lane {
+  /** A phase id, a project path, or '' for the lane of what belongs to no lot. */
+  key: string
   heading: HeadingRow | null
-  rows: Task[]
+  tasks: Task[]
 }
 
 export class KanbanView implements SubView {
@@ -25,6 +28,8 @@ export class KanbanView implements SubView {
   /** Resolved once per board render. */
   private config!: ResolvedProjectConfig
   private personKey: (raw: string) => string = displayName
+  /** What the lanes stand for, which decides what dropping a card across them means. */
+  private laneKind: 'phase' | 'project' | null = null
 
   constructor(
     private container: HTMLElement,
@@ -48,13 +53,19 @@ export class KanbanView implements SubView {
     this.container.addClass('pm-kanban-view')
 
     const board = this.container.createDiv('pm-kanban-board')
+    const lanes = this.lanes()
+    if (lanes) this.renderLanes(board, lanes)
+    else this.renderColumns(board, this.visibleTasks(), true, null)
+  }
 
+  /** The ordinary board: one full-height column per status, each carrying its own header. */
+  private renderColumns(parent: HTMLElement, tasks: Task[], header: boolean, laneKey: string | null): void {
     for (const status of this.config.statuses) {
-      const tasks = this.getTasksForStatus(status.id)
-      new KanbanColumn(board, {
+      new KanbanColumn(parent, {
         status,
-        entries: this.entriesFor(tasks),
-        count: tasks.length,
+        cards: tasks.filter((task) => task.status === status.id).map((task) => this.buildCardData(task)),
+        header,
+        laneKey,
         onCardClick: (task) => this.openTask(task),
         onCardContextMenu: (task, e) => this.openContextMenu(task, e),
         onCardDragStart: (task) => {
@@ -63,8 +74,45 @@ export class KanbanView implements SubView {
         onCardDragEnd: () => {
           this.dragTask = null
         },
-        onDrop: (taskId, newStatus) => this.handleDrop(taskId, newStatus)
+        onDrop: (taskId, newStatus, lane) => this.handleDrop(taskId, newStatus, lane)
       })
+    }
+  }
+
+  /**
+   * A board split into swimlanes: the statuses named once across the top, then a band
+   * per lot — or per project in a collection — holding that lot's cards in every column
+   * at once. Everything about a lot is then on one line of the board, which a heading
+   * repeated inside each column could never show.
+   */
+  private renderLanes(board: HTMLElement, lanes: Lane[]): void {
+    board.addClass('pm-kanban-board--lanes')
+
+    const headRow = board.createDiv('pm-kanban-headrow')
+    for (const status of this.config.statuses) {
+      const cell = headRow.createDiv('pm-kanban-headcell')
+      renderColumnHeader(cell, status, this.visibleTasks().filter((task) => task.status === status.id).length)
+    }
+
+    for (const lane of lanes) {
+      const laneEl = board.createDiv('pm-kanban-lane')
+      const head = laneEl.createDiv('pm-kanban-lane-head')
+      // Sticky inside its own band, so the name stays put as the board scrolls sideways.
+      const headInner = head.createDiv('pm-kanban-lane-head-inner')
+      if (lane.heading) {
+        renderHeadingRow(
+          headInner,
+          lane.heading,
+          headingHandlers(lane.heading, this.scope, this.plugin, () => this.render())
+        )
+      } else {
+        headInner.createSpan({ cls: 'pm-group-title pm-kanban-lane-loose', text: t('view.noPhaseLane') })
+      }
+      if (lane.heading?.collapsed) {
+        laneEl.addClass('is-collapsed')
+        continue
+      }
+      this.renderColumns(laneEl.createDiv('pm-kanban-lane-cols'), lane.tasks, false, lane.key)
     }
   }
 
@@ -94,10 +142,22 @@ export class KanbanView implements SubView {
     return flattenTasks(this.scope.tasks()).filter((ft) => isPhase(ft.task))
   }
 
-  /** A column's cards, split into the blocks the headings sit above. */
-  private phaseBlocks(tasks: Task[]): CardBlock[] | null {
+  /**
+   * The lanes to draw, or null to leave the board as one plain row of columns — a
+   * project with no lot has nothing to split, and a lane over everything would only
+   * take up room.
+   */
+  private lanes(): Lane[] | null {
+    const tasks = this.visibleTasks()
+    const byProject = collectionBlocks(tasks, (task) => task.id, this.scope, this.plugin)
+    if (byProject) {
+      this.laneKind = 'project'
+      return byProject.map(({ heading, rows }) => ({ key: heading.key, heading, tasks: rows }))
+    }
     const phases = this.phases()
     if (!phases.length) return null
+    this.laneKind = 'phase'
+
     const owner = this.phaseOf()
     const byPhase = new Map<string, Task[]>()
     const loose: Task[] = []
@@ -111,51 +171,16 @@ export class KanbanView implements SubView {
       if (bucket) bucket.push(task)
       else byPhase.set(phase.id, [task])
     }
-    const blocks: CardBlock[] = []
-    // Tasks in no lot lead, unheaded: they are not a lot called "everything else".
-    if (loose.length) blocks.push({ heading: null, rows: loose })
-    for (const { task: phase, depth } of phases) {
-      const rows = byPhase.get(phase.id)
-      // Counted per column, not over the whole lot: the heading appears once in each
-      // column, and "lot 1 · 12 tasks" above two cards would be counting elsewhere.
-      if (rows) {
-        blocks.push({
-          heading: { ...phaseHeading(phase, this.config.statuses, depth), count: rows.length },
-          rows
-        })
-      }
-    }
-    return blocks
-  }
 
-  /**
-   * A column's contents. In a collection the cards are stacked under a heading per
-   * project, folded with the same state the table and the Gantt use — one collection,
-   * one answer to "is this project folded". Anywhere else the cards stand alone.
-   */
-  private entriesFor(tasks: Task[]): KanbanEntry[] {
-    const blocks: CardBlock[] | null =
-      collectionBlocks(tasks, (task) => task.id, this.scope, this.plugin) ?? this.phaseBlocks(tasks)
-    if (!blocks) return tasks.map((task) => ({ kind: 'card', card: this.buildCardData(task) }))
-    const entries: KanbanEntry[] = []
-    for (const { heading, rows } of blocks) {
-      if (heading) {
-        entries.push({
-          kind: 'group',
-          collapsed: heading.collapsed,
-          depth: heading.depth ?? 0,
-          render: (parent) =>
-            renderHeadingRow(
-              parent,
-              heading,
-              headingHandlers(heading, this.scope, this.plugin, () => this.render())
-            )
-        })
-        if (heading.collapsed) continue
-      }
-      for (const task of rows) entries.push({ kind: 'card', card: this.buildCardData(task) })
+    const lanes: Lane[] = []
+    // The lane for what is in no lot leads, and is a real drop target: dragging a card
+    // into it is how a task leaves its lot.
+    if (loose.length || byPhase.size) lanes.push({ key: '', heading: null, tasks: loose })
+    for (const { task: phase, depth } of phases) {
+      const rows = byPhase.get(phase.id) ?? []
+      lanes.push({ key: phase.id, heading: phaseHeading(phase, this.config.statuses, depth), tasks: rows })
     }
-    return entries
+    return lanes
   }
 
   /** Descriptions load lazily from the note body, so previews fill in on a second render. */
@@ -171,13 +196,14 @@ export class KanbanView implements SubView {
     if (pending.some((t) => t.description)) this.renderBoard()
   }
 
-  private getTasksForStatus(status: TaskStatus): Task[] {
+  /** Every card the board will show, before it is split by status or by lane. */
+  private visibleTasks(): Task[] {
     const candidates = this.config.kanbanShowSubtasks
       ? flattenTasks(this.scope.tasks()).map((ft) => ft.task)
       : this.scope.tasks()
-    // A phase is never a card: it holds cards, and says so as a heading in each column.
+    // A phase is never a card: it holds cards, and says so as the lane they sit in.
     return candidates.filter(
-      (t) => !isPhase(t) && t.status === status && matchesFilter(t, this.filter, this.config.statuses, this.personKey)
+      (task) => !isPhase(task) && matchesFilter(task, this.filter, this.config.statuses, this.personKey)
     )
   }
 
@@ -259,12 +285,26 @@ export class KanbanView implements SubView {
     menu.showAtMouseEvent(e)
   }
 
-  private async handleDrop(taskId: string, newStatus: TaskStatus): Promise<void> {
+  /**
+   * A card dropped on a lane board answers two questions at once: the column it landed
+   * in is its status, and the lane is the lot it belongs to. Both are applied, either
+   * alone if only one of them changed.
+   *
+   * Only lots are moved this way. A collection's lanes are projects, and dragging a task
+   * between them would move its note to another project's folder — too much to happen
+   * from a drag, so there the lane is read as scenery and only the status changes.
+   */
+  private async handleDrop(taskId: string, newStatus: TaskStatus, laneKey: string | null): Promise<void> {
     if (!this.dragTask || this.dragTask.id !== taskId) return
-    if (newStatus === this.dragTask.status) return
+    const task = this.dragTask
     const owner = this.scope.projectOf(taskId)
     if (!owner) return
-    await this.plugin.store.updateTask(owner, this.dragTask.id, { status: newStatus })
+
+    const movesLot = this.laneKind === 'phase' && laneKey !== null && laneKey !== (this.phaseOf().get(taskId)?.id ?? '')
+    if (newStatus === task.status && !movesLot) return
+
+    if (newStatus !== task.status) await this.plugin.store.updateTask(owner, task.id, { status: newStatus })
+    if (movesLot) await this.plugin.store.moveTask(owner, task.id, laneKey || null)
     await this.onRefresh()
   }
 }

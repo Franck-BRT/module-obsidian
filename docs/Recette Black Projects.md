@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.11.1
+version: 2.12.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.11.1
+# Recette — Black Projects 2.12.0
 
 Plan de test manuel pour le fork. Les **586 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -399,12 +399,14 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Avec des **dépendances** entre tâches : ✅ **Attendu** : les flèches pointent toujours sur la bonne barre
 - [ ] Avec un **jalon** : ✅ **Attendu** : son trait pointillé et son étiquette sont à la bonne date ;
       une fois son projet **plié**, le trait **disparaît** *(il ne montrerait plus rien)*
-- [ ] Basculer en vue **Tableau** (kanban) : ✅ **Attendu** : dans chaque colonne, un en-tête par projet
-      au-dessus de ses cartes
-- [ ] ✅ **Attendu** : le compteur en haut de colonne compte **toutes** ses cartes, y compris celles repliées
-- [ ] Plier un projet dans le Tableau : ✅ **Attendu** : ses cartes disparaissent de **toutes** les colonnes
-- [ ] **Glisser une carte** d'une colonne à l'autre : ✅ **Attendu** : le statut change et la carte se replace
-      sous l'en-tête de **son** projet
+- [ ] Basculer en vue **Tableau** (kanban) : ✅ **Attendu** : les statuts sont nommés **une seule fois**, en haut,
+      puis **une bande par projet** traversant toute la largeur
+- [ ] ✅ **Attendu** : les colonnes d'une bande sont **alignées** avec les en-têtes de statut du haut
+- [ ] Plier un projet dans le Tableau : ✅ **Attendu** : toute sa bande se referme
+- [ ] **Glisser une carte** d'une colonne à l'autre **dans sa bande** : ✅ **Attendu** : le statut change
+- [ ] **Glisser une carte dans la bande d'un autre projet**
+      ✅ **Attendu** : seul le **statut** change, la carte **revient dans son projet** *(un déplacement entre
+      projets déplace des fichiers : c'est trop pour un glisser-déposer)*
 - [ ] **Cohérence entre vues** : plier un projet dans le tableur, passer au Gantt puis au Tableau
       ✅ **Attendu** : il y est **plié aussi** — c'est un seul recueil
 - [ ] Dans un **projet normal** (pas un recueil), Gantt et Tableau : ✅ **Attendu** : **aucun** en-tête de ce type
@@ -455,8 +457,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       l'imbrication se lit à l'indentation
 - [ ] ✅ **Attendu** : une **sous-tâche** d'une tâche du lot 2 est décalée d'un cran encore
 - [ ] Vue **Gantt** : ✅ **Attendu** : même escalier dans la colonne des libellés
-- [ ] Vue **Tableau** : ✅ **Attendu** : l'en-tête du lot 2 est décalé sous celui du lot 1
-      *(les cartes, elles, gardent la largeur de la colonne)*
+- [ ] Vue **Tableau** : ✅ **Attendu** : la bande du lot 2 est décalée sous celle du lot 1
 - [ ] Le **chevron** de l'en-tête plie le lot ; rouvrir le projet : ✅ **Attendu** : il est **toujours plié**
 
 ### Dates et avancement
@@ -478,11 +479,24 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       ✅ **Attendu** : l'en-tête du lot **reste**, avec cette tâche dessous — on voit toujours de quel lot elle est
 - [ ] Filtrer sur quelque chose qu'**aucune** tâche du lot ne porte : ✅ **Attendu** : **l'en-tête disparaît aussi**
 - [ ] ✅ **Attendu** : une tâche filtrée n'est **jamais sortie de son lot** pour être remontée à la racine
-- [ ] Vue **Tableau** (kanban) : ✅ **Attendu** : dans chaque colonne, les cartes sont groupées sous l'en-tête de leur lot
-- [ ] ✅ **Attendu** : les tâches **sans lot** sont **en haut**, sans en-tête
-- [ ] ✅ **Attendu** : le lot **n'a pas de carte à lui** dans le kanban
-- [ ] ✅ **Attendu** : dans le kanban, le compteur de l'en-tête compte les cartes **de cette colonne**
-- [ ] Plier un lot dans le kanban : ✅ **Attendu** : ses cartes disparaissent de **toutes** les colonnes
+- [ ] Vue **Tableau** (kanban) : ✅ **Attendu** : les statuts sont nommés **une seule fois en haut**,
+      puis **une bande par lot** qui traverse toutes les colonnes
+- [ ] ✅ **Attendu** : les colonnes des bandes sont **alignées** avec les en-têtes du haut, y compris après
+      un défilement horizontal
+- [ ] ✅ **Attendu** : le nom du lot **reste visible** quand on fait défiler la planche vers la droite
+- [ ] ✅ **Attendu** : la première bande, **« Hors lot »**, rassemble les tâches qui ne sont dans aucun lot
+- [ ] ✅ **Attendu** : le lot **n'a pas de carte à lui**
+- [ ] ✅ **Attendu** : le compteur d'une bande compte **tout le lot** ; celui d'un en-tête de statut, en haut,
+      compte cette colonne **toutes bandes confondues**
+- [ ] ✅ **Attendu** : une colonne **vide** d'une bande reste assez haute pour y déposer une carte
+- [ ] Plier un lot dans le kanban : ✅ **Attendu** : **toute sa bande** se referme, l'en-tête restant visible
+- [ ] **Glisser une carte vers une autre colonne de sa bande** : ✅ **Attendu** : seul le **statut** change
+- [ ] **[N]** **Glisser une carte dans la bande d'un autre lot**
+      ✅ **Attendu** : elle **change de lot** — et de statut si la colonne diffère aussi
+- [ ] **[N]** **Glisser une carte dans la bande « Hors lot »** : ✅ **Attendu** : elle **quitte son lot**
+- [ ] **[N]** Vérifier dans le **tableur** : ✅ **Attendu** : elle est bien sous le nouveau lot
+- [ ] **[N]** Un **projet sans aucun lot** : ✅ **Attendu** : le kanban est **inchangé** — colonnes pleine hauteur,
+      chacune avec son propre en-tête, aucune bande
 - [ ] Cocher **« tout sélectionner »** dans le tableur : ✅ **Attendu** : les lots ne sont **pas** sélectionnés
 - [ ] Naviguer au clavier (`j` / `k`) : ✅ **Attendu** : la sélection **saute** les en-têtes de lot
 

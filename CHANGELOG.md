@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.12.0] - 2026-09-11
+
+### Changed
+
+- The board draws a lot as a **swimlane** rather than as a heading repeated inside every
+  column: the statuses are named once across the top, then one band per lot holds that
+  lot's cards in every column at once. Everything about a lot is on one line of the
+  board, which a heading repeated per column could never show. A collection's projects
+  become lanes the same way
+- Dragging a card into another lot's lane **moves it into that lot**, and into the
+  "No phase" lane takes it out of one — the column it lands in still sets its status, so
+  a single drag can answer both. Project lanes stay scenery: moving a task between
+  projects moves its note between folders, which is too much to happen from a drag
+- A board with no lot is untouched — full-height columns, each with its own header
+
 ## [2.11.1] - 2026-09-11
 
 ### Fixed

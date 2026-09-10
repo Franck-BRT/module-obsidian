@@ -23,25 +23,41 @@ export interface KanbanCardData {
   showTagColors: boolean
 }
 
-/**
- * What a column stacks: cards, and — in a collection — a heading above each project's
- * cards. A heading is its own entry rather than a flag on a card, so a column with
- * every project folded still shows what it holds.
- */
-export type KanbanEntry =
-  | { kind: 'card'; card: KanbanCardData }
-  | { kind: 'group'; render: (parent: HTMLElement) => void; collapsed: boolean; depth: number }
-
 export interface KanbanColumnProps {
   status: KanbanColumnStatus
-  entries: KanbanEntry[]
-  /** Cards the column holds, folded ones included: the count in its header. */
-  count: number
+  cards: KanbanCardData[]
+  /** Drawn in the column itself. A board split into lanes heads its columns once, above. */
+  header: boolean
+  /** Which lane this column belongs to, handed back on a drop. Null when there are none. */
+  laneKey: string | null
   onCardClick: (task: Task) => void
   onCardContextMenu: (task: Task, e: MouseEvent) => void
   onCardDragStart: (task: Task) => void
   onCardDragEnd: () => void
-  onDrop: (taskId: string, newStatus: string) => Promise<void>
+  onDrop: (taskId: string, newStatus: string, laneKey: string | null) => Promise<void>
+}
+
+/** The status band: its colour, its name and how many cards sit under it. */
+export function renderColumnHeader(parent: HTMLElement, status: KanbanColumnStatus, count: number): HTMLElement {
+  const header = parent.createDiv('pm-kanban-col-header')
+  header.style.setProperty('--col-color', status.color)
+
+  const topBar = header.createDiv('pm-kanban-col-topbar')
+  topBar.setCssStyles({ background: status.color })
+
+  const titleRow = header.createDiv('pm-kanban-col-title-row')
+  const badge = titleRow.createSpan({ cls: 'pm-kanban-col-badge' })
+  if (status.icon && isIconName(status.icon)) {
+    setIcon(badge.createSpan({ cls: 'pm-kanban-col-badge-icon' }), status.icon)
+    badge.appendText(status.label)
+  } else {
+    badge.setText(formatBadgeText(status.icon, status.label))
+  }
+  badge.style.color = status.color
+
+  const headerRight = titleRow.createDiv('pm-kanban-col-header-right')
+  headerRight.createSpan({ text: String(count), cls: 'pm-kanban-col-count' })
+  return header
 }
 
 export class KanbanColumn {
@@ -52,40 +68,12 @@ export class KanbanColumn {
     col.dataset.status = props.status.id
     this.el = col
 
-    const header = col.createDiv('pm-kanban-col-header')
-    header.style.setProperty('--col-color', props.status.color)
-
-    const topBar = header.createDiv('pm-kanban-col-topbar')
-    topBar.setCssStyles({ background: props.status.color })
-
-    const titleRow = header.createDiv('pm-kanban-col-title-row')
-    const badge = titleRow.createSpan({ cls: 'pm-kanban-col-badge' })
-    if (props.status.icon && isIconName(props.status.icon)) {
-      setIcon(badge.createSpan({ cls: 'pm-kanban-col-badge-icon' }), props.status.icon)
-      badge.appendText(props.status.label)
-    } else {
-      badge.setText(formatBadgeText(props.status.icon, props.status.label))
-    }
-    badge.style.color = props.status.color
-
-    const headerRight = titleRow.createDiv('pm-kanban-col-header-right')
-    headerRight.createSpan({
-      text: String(props.count),
-      cls: 'pm-kanban-col-count'
-    })
+    if (props.header) renderColumnHeader(col, props.status, props.cards.length)
 
     const cardsEl = col.createDiv('pm-kanban-cards')
     cardsEl.dataset.status = props.status.id
 
-    for (const entry of props.entries) {
-      if (entry.kind === 'group') {
-        const groupEl = cardsEl.createDiv('pm-kanban-group')
-        groupEl.toggleClass('is-collapsed', entry.collapsed)
-        if (entry.depth) groupEl.setCssProps({ '--depth': String(entry.depth) })
-        entry.render(groupEl)
-        continue
-      }
-      const card = entry.card
+    for (const card of props.cards) {
       new KanbanCard(cardsEl, {
         task: card.task,
         people: card.people,
@@ -128,7 +116,7 @@ export class KanbanColumn {
         cardsEl.removeClass('pm-kanban-drop-target')
         const taskId = e.dataTransfer?.getData('text/plain') ?? ''
         if (!taskId) return
-        await props.onDrop(taskId, props.status.id)
+        await props.onDrop(taskId, props.status.id, props.laneKey)
       })
     )
   }

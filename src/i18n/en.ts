@@ -422,6 +422,7 @@ export const en = {
   'view.vaultSettings': 'vault settings',
   'view.mergeFieldConfirm':
     "Move this project's {own} values onto the {target} from {source}, and stop defining it here?",
+  'view.noPhaseLane': 'No phase',
   'view.milestones': 'Milestones',
   'view.subProjects': 'Sub-projects',
   'view.properties': 'Properties',

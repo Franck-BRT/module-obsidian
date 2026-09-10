@@ -162,17 +162,74 @@
   white-space: nowrap;
 }
 
-/* The board groups by status first, so a collection's project heading sits inside each
-   column, above that project's cards. */
-.pm-kanban-group {
+/* A board split into swimlanes: statuses named once across the top, then a band per lot
+   holding its cards in every column at once. The board itself is the only scroller, so
+   the head row and every lane scroll together sideways. */
+.pm-kanban-board--lanes {
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  align-items: flex-start;
+}
+
+.pm-kanban-headrow {
+  display: flex;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding-bottom: 8px;
+  background: var(--background-primary);
+}
+.pm-kanban-headcell {
+  width: 280px;
+  min-width: 280px;
+  background: var(--background-secondary);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+.pm-kanban-lane {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+.pm-kanban-lane-head {
+  position: sticky;
+  left: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  margin: 4px 0 6px;
   padding: 4px 2px;
-  /* A lot inside a lot steps in here too, though the cards keep the column's width. */
   padding-left: calc(var(--depth, 0) * 12px + 2px);
   border-bottom: 1px solid var(--background-modifier-border);
 }
-.pm-kanban-group:not(:first-child) {
-  margin-top: 8px;
+.pm-kanban-lane-head-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* The board scrolls under it, so the lot's name stays readable at any offset. */
+  position: sticky;
+  left: 0;
+}
+.pm-kanban-lane-loose {
+  color: var(--text-muted);
+  font-weight: var(--font-normal);
+}
+.pm-kanban-lane-cols {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 10px;
+}
+/* In a lane a column is as tall as its cards, with room left to drop one into an empty
+   status; height and its own scrolling belong to the plain board's full-height columns. */
+.pm-kanban-lane .pm-kanban-col {
+  height: auto;
+  background: transparent;
+}
+.pm-kanban-lane .pm-kanban-cards {
+  min-height: 72px;
+  overflow: visible;
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
 }
