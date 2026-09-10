@@ -35,6 +35,7 @@ export const en = {
   'common.clear': 'Clear',
   'common.close': 'Close',
   'common.delete': 'Delete',
+  'common.taskCount': { one: '{count} task', other: '{count} tasks' },
   'common.description': 'Description',
   'common.done': 'Done',
   'common.due': 'Due',
@@ -150,6 +151,10 @@ export const en = {
   'table.movedToTopLevel': 'Moved {tasks} to top level',
   'table.archivedTasks': 'Archived {tasks}',
   'table.unarchivedTasks': 'Unarchived {tasks}',
+  'table.deleteConfirm': {
+    one: 'Delete {count} task? This cannot be undone.',
+    other: 'Delete {count} tasks? This cannot be undone.'
+  },
   'table.bulkFailed': 'Bulk action failed. Please try again.',
 
   'gantt.clickToSetDates': 'Click to set dates',
@@ -414,7 +419,6 @@ export const en = {
   'collection.removed': 'Removed from {name}',
   'collection.noneYet': 'No collection yet. Create one first.',
   'collection.orphanGroup': 'Project not found',
-  'collection.groupCount': { one: '{count} task', other: '{count} tasks' },
   'collection.pick': 'Pick a collection…',
   'collection.empty': 'This collection is empty. Add tasks to it from their own project.',
   'collection.open': 'Open collection',

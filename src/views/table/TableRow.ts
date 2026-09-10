@@ -54,7 +54,7 @@ export function renderGroupRow(tbody: HTMLElement, group: TableGroupRow, colCoun
       safeAsync(() => ctx.plugin.router.openProjectLink(group.projectPath))
     )
   }
-  label.createSpan({ cls: 'pm-table-group-count', text: t('collection.groupCount', { count: group.count }) })
+  label.createSpan({ cls: 'pm-table-group-count', text: t('common.taskCount', { count: group.count }) })
 }
 
 export function renderTaskRow(tbody: HTMLElement, flat: TableTaskRow, ctx: TableContext): void {

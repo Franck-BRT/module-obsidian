@@ -32,6 +32,7 @@ export const fr: Catalog = {
   'common.clear': 'Effacer',
   'common.close': 'Fermer',
   'common.delete': 'Supprimer',
+  'common.taskCount': { one: '{count} tâche', other: '{count} tâches' },
   'common.description': 'Description',
   'common.done': 'Terminé',
   'common.due': 'Échéance',
@@ -141,6 +142,10 @@ export const fr: Catalog = {
   'table.movedToTopLevel': '{tasks} déplacée(s) au premier niveau',
   'table.archivedTasks': '{tasks} archivée(s)',
   'table.unarchivedTasks': '{tasks} désarchivée(s)',
+  'table.deleteConfirm': {
+    one: 'Supprimer {count} tâche ? C’est définitif.',
+    other: 'Supprimer {count} tâches ? C’est définitif.'
+  },
   'table.bulkFailed': "Échec de l'action groupée. Veuillez réessayer.",
 
   'gantt.clickToSetDates': 'Cliquer pour définir les dates',
@@ -389,7 +394,6 @@ export const fr: Catalog = {
   'collection.removed': 'Retirée de {name}',
   'collection.noneYet': "Aucun recueil pour l'instant. Créez-en un d'abord.",
   'collection.orphanGroup': 'Projet introuvable',
-  'collection.groupCount': { one: '{count} tâche', other: '{count} tâches' },
   'collection.pick': 'Choisir un recueil…',
   'collection.empty': 'Ce recueil est vide. Ajoutez-y des tâches depuis leur propre projet.',
   'collection.open': 'Ouvrir le recueil',

@@ -241,6 +241,9 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 ### Là où il faut vraiment regarder
 
 - [ ] **Palette de commandes** : toutes les commandes Black Projects sont en français
+- [ ] **[N]** Sélectionner **plusieurs tâches** puis **Supprimer** : ✅ **Attendu** : la confirmation est en français,
+      avec le bon accord (« 1 tâche » / « 3 tâches »)
+- [ ] **[N]** Sélection multiple → **Archiver**, puis **Désarchiver** : ✅ **Attendu** : la notification compte en français
 - [ ] **Éditeur de tâche** : tous les libellés de champs, y compris les propriétés à ajouter
 - [ ] **Menu contextuel** d'une tâche (clic droit)
 - [ ] **Barre d'actions groupées** (sélectionner plusieurs tâches dans le tableur)
@@ -295,7 +298,9 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] ✅ **Attendu** : la tâche apparaît modifiée dans son projet
 - [ ] ✅ **Attendu** : le frontmatter de la tâche ne mentionne **aucun** recueil — l'appartenance vit côté recueil
 - [ ] Le Gantt et le tableau (kanban) du recueil fonctionnent aussi
-- [ ] ✅ **Attendu** : **pas de bouton « Ajouter une tâche »** dans un recueil (elle n'aurait pas de projet)
+- [ ] ✅ **Attendu** : **pas de bouton « + ajouter une tâche »** dans un recueil, ni dans la barre d'outils,
+      ni en bas du tableau *(elle n'aurait pas de projet, et n'entrerait même pas dans le recueil)*
+- [ ] Dans la vue **Gantt** d'un recueil : ✅ **Attendu** : pas de bouton « + jalon » non plus
 
 ### Règle — création depuis une vue filtrée
 

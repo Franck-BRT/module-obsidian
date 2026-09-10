@@ -427,15 +427,19 @@ export class ProjectView extends ItemView {
     })
 
     const right = this.toolbarEl.createDiv('pm-toolbar-right')
-    new ButtonComponent(right)
-      .setButtonText(t('project.addTaskButton'))
-      .setCta()
-      .onClick((e) => this.addTask(e))
-
-    if (this.currentView === 'gantt') {
+    // A collection has no project of its own, so a task added here would land in
+    // whichever source happened to come first — and not even join the collection.
+    if (scope.canAddTask) {
       new ButtonComponent(right)
-        .setButtonText(t('project.addMilestoneButton'))
-        .onClick((e) => this.addTask(e, { type: 'milestone' }))
+        .setButtonText(t('project.addTaskButton'))
+        .setCta()
+        .onClick((e) => this.addTask(e))
+
+      if (this.currentView === 'gantt') {
+        new ButtonComponent(right)
+          .setButtonText(t('project.addMilestoneButton'))
+          .onClick((e) => this.addTask(e, { type: 'milestone' }))
+      }
     }
 
     if (!scope.isMulti) {
@@ -449,7 +453,7 @@ export class ProjectView extends ItemView {
   /** With several projects in view, a new task has to say which one it belongs to. */
   private addTask(e: MouseEvent, defaults?: Parameters<typeof openTaskModal>[2]['defaults']): void {
     const scope = this.projectScope
-    if (!scope?.primary) return
+    if (!scope?.primary || !scope.canAddTask) return
     const open = (project: Project): void => {
       openTaskModal(this.plugin, project, {
         defaults,

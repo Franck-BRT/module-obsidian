@@ -12,7 +12,7 @@ import { renderBulkActionBar } from './BulkActionBar'
 import type { BulkAction } from './BulkActionBar'
 import { t } from '../../i18n'
 
-const taskCount = (n: number) => `${n} task${n === 1 ? '' : 's'}`
+const taskCount = (n: number) => t('common.taskCount', { count: n })
 
 export interface TableViewState {
   sortKey: SortKey
@@ -124,7 +124,7 @@ export class TableView implements SubView {
     const groups = this.scope.groupByProject(ids)
     try {
       if (action.type === 'delete') {
-        if (!(await confirmDialog(this.plugin.app, `Delete ${taskCount(ids.length)}? This cannot be undone.`))) {
+        if (!(await confirmDialog(this.plugin.app, t('table.deleteConfirm', { count: ids.length })))) {
           return
         }
       }

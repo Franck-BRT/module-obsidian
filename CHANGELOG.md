@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A collection offered an "Add task" button in its toolbar. A collection owns no
+  project, so the task landed in whichever source project happened to come first, and
+  did not even join the collection. The table's own add row already knew better; the
+  toolbar now does too
+- Two strings the French sweep missed: the bulk-delete confirmation was English
+  throughout, and the "Moved 3 tasks…" notices counted in English inside an otherwise
+  French sentence
+
 ### Changed
 
 - The plugin is now called **Black Projects**, and its id is `black-projects`
