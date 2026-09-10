@@ -1,7 +1,7 @@
 {
   "id": "black-projects",
   "name": "Black Projects",
-  "version": "2.14.1",
+  "version": "2.15.0",
   "minAppVersion": "1.13.0",
   "description": "Project management in your vault: Gantt charts, boards, tables, phases, collections gathering chosen tasks across projects, and a versioned document library per project. French interface, working-day scheduling, typed dependencies and working recurring tasks.",
   "author": "Black Room Technologies (fork of dotpm, by Stepan Kropachev)",

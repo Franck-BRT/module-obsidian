@@ -17,6 +17,8 @@ export interface LabelContext {
   scope: ProjectScope
   statuses: StatusConfig[]
   onRefresh: () => Promise<void>
+  /** False while a sort is on: the order a drag would write is not the one on screen. */
+  reorderable: boolean
 }
 
 export function renderTaskLabel(
@@ -34,7 +36,7 @@ export function renderTaskLabel(
   el.style.paddingLeft = `${depth * 18 + 8}px`
   el.dataset.taskId = task.id
 
-  el.draggable = true
+  el.draggable = ctx.reorderable
   el.addEventListener('dragstart', (e: DragEvent) => {
     e.dataTransfer?.setData('text/plain', task.id)
     el.addClass('pm-gantt-label-row--dragging')
@@ -44,6 +46,7 @@ export function renderTaskLabel(
   })
   let dropPosition: 'before' | 'after' = 'before'
   el.addEventListener('dragover', (e: DragEvent) => {
+    if (!ctx.reorderable) return
     e.preventDefault()
     const rect = el.getBoundingClientRect()
     const midY = rect.top + rect.height / 2
@@ -59,6 +62,7 @@ export function renderTaskLabel(
     safeAsync(async (e: DragEvent) => {
       e.preventDefault()
       el.removeClass('pm-gantt-label-row--drop-before', 'pm-gantt-label-row--drop-after')
+      if (!ctx.reorderable) return
       const draggedId = e.dataTransfer?.getData('text/plain')
       if (!draggedId || draggedId === task.id) return
       await ctx.plugin.store.reorderTask(project, draggedId, task.id, dropPosition)

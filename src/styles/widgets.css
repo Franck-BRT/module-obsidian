@@ -313,7 +313,13 @@
   border-left: 3px solid var(--pm-group-color, var(--text-muted));
   padding-left: 8px;
 }
+/* The title gives way first, with an ellipsis, down to a floor of a few characters — a
+   heading with no name at all is not a heading. The count and the dates never squeeze:
+   half a word is worse than no word, so a container too narrow for them hides them
+   whole (see `--tight` and `--cramped` in gantt.css). */
 .pm-group-title {
+  flex: 1 1 auto;
+  min-width: 4ch;
   font-weight: var(--font-semibold);
   color: var(--text-normal);
   overflow: hidden;
@@ -328,11 +334,13 @@
   text-decoration: underline;
 }
 .pm-group-count {
+  flex: 0 0 auto;
   color: var(--text-muted);
   font-size: var(--font-smallest);
   white-space: nowrap;
 }
 .pm-group-detail {
+  flex: 0 0 auto;
   color: var(--text-faint);
   font-size: var(--font-smallest);
   white-space: nowrap;

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.15.0] - 2026-09-11
+
+### Added
+
+- The Gantt can be **ordered**, which only the table could do: project order (the one the
+  drag handle writes) or by title, status, priority, due date, assignee or progress,
+  either way round, remembered between sessions. The order applies at every level, so a
+  lot's tasks sort among themselves rather than being scattered up the chart — and a lot
+  is placed by the work it holds when it declares no dates of its own
+- While a sort is on, rows can no longer be dragged to reorder: the order a drag writes
+  is not the one on screen, so the handle would be lying
+
+### Fixed
+
+- A phase heading in the Gantt lost its title when the label column was too narrow — the
+  count and the dates would not give way, so the name was squeezed to nothing and the
+  heading read "3 tasks · 10 Sept → 1 Oct". The title now gives way first, with an
+  ellipsis, down to a floor of a few characters, and the count and the dates hide
+  themselves whole when the column is dragged narrow rather than being clipped mid-word
+
 ## [2.14.1] - 2026-09-11
 
 ### Fixed

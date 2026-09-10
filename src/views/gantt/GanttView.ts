@@ -1,4 +1,4 @@
-import { ButtonComponent, type Scope } from 'obsidian'
+import { ButtonComponent, Menu, type Scope } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Task, GanttGranularity, FilterState } from '../../types'
 import { personKeyer, type ProjectScope } from '../../store'
@@ -22,11 +22,12 @@ import {
   renderDependencyArrows,
   renderMilestoneLabels
 } from './GanttRenderer'
-import { svgEl } from '../../utils'
+import { safeAsync, svgEl } from '../../utils'
 import { Temporal, today } from '../../dates'
 import type { RendererContext } from './GanttRenderer'
 import { renderTaskLabel } from './TaskLabelRenderer'
 import { collectionBlocks, headingHandlers, phaseHeading, renderHeadingRow, type HeadingRow } from '../headings'
+import { GANTT_SORT_KEYS, orderTasks, sortKeyLabel, type GanttOrder } from './GanttSort'
 import { isPhase, phaseSpan } from '../../store/Phase'
 import { phaseBracket } from './GanttPhaseBar'
 import { t } from '../../i18n'
@@ -131,18 +132,76 @@ export class GanttView implements SubView {
     })
 
     bar.createSpan({ cls: 'pm-gantt-sep' })
+    this.renderSortControl(bar)
     new ButtonComponent(bar).setButtonText(t('common.today')).onClick(() => this.scrollToToday())
 
     new ButtonComponent(bar).setButtonText(t('gantt.expandAll')).onClick(() => this.setAllCollapsed(false))
     new ButtonComponent(bar).setButtonText(t('gantt.collapseAll')).onClick(() => this.setAllCollapsed(true))
   }
 
+  /**
+   * Which order the rows are in. Manual is the order the project stores — the one the
+   * drag handle writes — and any other is a reading order, applied at every level so a
+   * lot's tasks sort among themselves rather than being scattered up the chart.
+   */
+  private renderSortControl(bar: HTMLElement): void {
+    const settings = this.plugin.settings
+    const label = sortKeyLabel(settings.ganttSortKey)
+    const arrow = settings.ganttSortKey === 'manual' ? '' : settings.ganttSortDir === 'asc' ? ' \u2191' : ' \u2193'
+    new ButtonComponent(bar).setButtonText(`${t('gantt.sortBy')} ${label}${arrow}`).onClick((e) => {
+      const menu = new Menu()
+      for (const key of GANTT_SORT_KEYS) {
+        menu.addItem((item) =>
+          item
+            .setTitle(sortKeyLabel(key))
+            .setChecked(key === settings.ganttSortKey)
+            .onClick(
+              safeAsync(async () => {
+                settings.ganttSortKey = key
+                await this.plugin.saveSettings()
+                this.render()
+              })
+            )
+        )
+      }
+      if (settings.ganttSortKey !== 'manual') {
+        menu.addSeparator()
+        for (const dir of ['asc', 'desc'] as const) {
+          menu.addItem((item) =>
+            item
+              .setTitle(dir === 'asc' ? t('gantt.sortAsc') : t('gantt.sortDesc'))
+              .setChecked(dir === settings.ganttSortDir)
+              .onClick(
+                safeAsync(async () => {
+                  settings.ganttSortDir = dir
+                  await this.plugin.saveSettings()
+                  this.render()
+                })
+              )
+          )
+        }
+      }
+      menu.showAtMouseEvent(e)
+    })
+  }
+
+  /** The order the chart is in, as the settings hold it. */
+  private order(): GanttOrder {
+    return { sortKey: this.plugin.settings.ganttSortKey, sortDir: this.plugin.settings.ganttSortDir }
+  }
+
   private renderGantt(): void {
     const wrapper = this.container.createDiv('pm-gantt-wrapper')
 
     const leftPanel = wrapper.createDiv('pm-gantt-left')
-    leftPanel.style.width = `${this.labelWidth}px`
-    leftPanel.style.minWidth = `${this.labelWidth}px`
+    const sizeLeftPanel = (width: number): void => {
+      leftPanel.style.width = `${width}px`
+      leftPanel.style.minWidth = `${width}px`
+      // What a phase heading can spare, dropped whole rather than clipped letter by letter.
+      leftPanel.toggleClass('pm-gantt-left--tight', width < 300)
+      leftPanel.toggleClass('pm-gantt-left--cramped', width < 220)
+    }
+    sizeLeftPanel(this.labelWidth)
     const leftHeader = leftPanel.createDiv('pm-gantt-left-header')
     leftHeader.style.height = `${HEADER_HEIGHT}px`
     leftHeader.createSpan({ text: t('common.task'), cls: 'pm-gantt-left-header-label' })
@@ -163,8 +222,7 @@ export class GanttView implements SubView {
       if (!resizing) return
       const newWidth = Math.max(150, Math.min(600, startWidth + (e.clientX - startX)))
       this.labelWidth = newWidth
-      leftPanel.style.width = `${newWidth}px`
-      leftPanel.style.minWidth = `${newWidth}px`
+      sizeLeftPanel(newWidth)
     }
     const onMouseUp = () => {
       if (!resizing) return
@@ -289,7 +347,7 @@ export class GanttView implements SubView {
     const out: GanttRow[] = []
     const statuses = this.scope.config.statuses
     const walk = (tasks: Task[], depth: number) => {
-      for (const task of tasks) {
+      for (const task of orderTasks(tasks, this.order(), statuses, this.scope.config.priorities)) {
         if (isPhase(task)) {
           // A phase gets a row of its own with a summary bar, and what it holds steps in
           // under it — a lot inside a lot has to be readable as one.
@@ -321,7 +379,9 @@ export class GanttView implements SubView {
       plugin: this.plugin,
       scope: this.scope,
       statuses: this.scope.config.statuses,
-      onRefresh: this.onRefresh
+      onRefresh: this.onRefresh,
+      // Dragging a row writes the project's own order, which a sort would then hide.
+      reorderable: this.plugin.settings.ganttSortKey === 'manual'
     }
     this.rows.forEach((row, rowIndex) => {
       if (row.kind === 'group') {

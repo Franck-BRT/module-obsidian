@@ -1,16 +1,22 @@
 import type { Task, TaskPriority, StatusConfig, PriorityConfig } from '../../types'
-import type { TableState } from './TableRenderer'
+import type { SortDir, SortKey } from './TableRenderer'
 import { displayName, statusSortOrder } from '../../utils'
+
+/** What a sort is: which field, which way. Named so anything can ask for one. */
+export interface TaskOrder {
+  sortKey: SortKey
+  sortDir: SortDir
+}
 
 export function compareTask(
   a: Task,
   b: Task,
-  state: TableState,
+  order: TaskOrder,
   statuses: StatusConfig[] = [],
   priorities: PriorityConfig[] = []
 ): number {
-  const dir = state.sortDir === 'asc' ? 1 : -1
-  switch (state.sortKey) {
+  const dir = order.sortDir === 'asc' ? 1 : -1
+  switch (order.sortKey) {
     case 'title':
       return dir * a.title.localeCompare(b.title)
     case 'status':

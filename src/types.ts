@@ -377,6 +377,9 @@ export interface PMSettings {
   collapsedCollectionGroups: Record<string, string[]>
   /** How the library shows documents: as a register, or as thumbnails. */
   libraryMode: 'list' | 'cards'
+  /** How the Gantt orders rows. 'manual' keeps the order the project stores. */
+  ganttSortKey: 'manual' | 'title' | 'status' | 'priority' | 'due' | 'assignees' | 'progress'
+  ganttSortDir: 'asc' | 'desc'
 }
 
 export const DEFAULT_STATUSES: StatusConfig[] = [
@@ -460,7 +463,9 @@ export const DEFAULT_SETTINGS: PMSettings = {
   collapsedTasks: {},
   collapsedProjects: [],
   collapsedCollectionGroups: {},
-  libraryMode: 'cards'
+  libraryMode: 'cards',
+  ganttSortKey: 'manual',
+  ganttSortDir: 'asc'
 }
 
 export function makeId(): string {

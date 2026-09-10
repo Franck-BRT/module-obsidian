@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.14.1
+version: 2.15.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.14.1
+# Recette — Black Projects 2.15.0
 
-Plan de test manuel pour le fork. Les **633 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **641 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -461,6 +461,28 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Vue **Gantt** : ✅ **Attendu** : même escalier dans la colonne des libellés
 - [ ] Vue **Tableau** : ✅ **Attendu** : la bande du lot 2 est décalée sous celle du lot 1
 - [ ] Le **chevron** de l'en-tête plie le lot ; rouvrir le projet : ✅ **Attendu** : il est **toujours plié**
+
+### Gantt : ordre et libellés [N]
+
+- [ ] Vue **Gantt** → bouton **« Ordre : … »** dans la barre du haut
+- [ ] Choisir **Échéance**, puis **Croissant** : ✅ **Attendu** : les lignes se rangent par date
+- [ ] Choisir **Décroissant** : ✅ **Attendu** : l'ordre s'inverse, la flèche du bouton aussi
+- [ ] ✅ **Attendu** : les tâches **d'un lot** se trient **entre elles**, sous leur lot — elles ne
+      remontent pas se mêler aux autres
+- [ ] Un **lot sans dates propres** : ✅ **Attendu** : il se place d'après la période de ses tâches
+- [ ] Le même lot avec des **dates saisies** : ✅ **Attendu** : c'est la date annoncée qui décide
+- [ ] Revenir à **« Ordre du projet »** : ✅ **Attendu** : on retrouve l'ordre d'origine
+- [ ] Changer de vue puis revenir, et rouvrir Obsidian : ✅ **Attendu** : l'ordre choisi est **retenu**
+- [ ] En **Ordre du projet**, glisser une ligne pour la déplacer : ✅ **Attendu** : ça marche
+- [ ] Avec un **tri actif**, essayer de glisser une ligne : ✅ **Attendu** : le glisser est **désactivé**
+      *(l'ordre qu'il écrirait n'est pas celui affiché)*
+- [ ] **Rétrécir la colonne des libellés** (poignée entre les deux panneaux) sur un lot au nom long
+      ✅ **Attendu** : le **titre reste toujours lisible**, coupé par des points de suspension
+- [ ] ✅ **Attendu** : en dessous d'environ 300 px, les **dates et le pourcentage disparaissent** d'un coup ;
+      en dessous de 220 px, le **compteur** aussi — jamais coupés au milieu d'un mot
+- [ ] ✅ **Attendu** : à aucune largeur le titre ne disparaît complètement
+
+**Constaté :**
 
 ### Dates et avancement
 

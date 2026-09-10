@@ -307,3 +307,13 @@
 .pm-gantt-phase-overrun {
   fill: var(--text-error, var(--color-red));
 }
+
+/* A label column dragged narrow drops what it can spare, whole, rather than clipping
+   every field by a few letters: first the dates and the percentage, then the count. The
+   name always stays. */
+.pm-gantt-left--tight .pm-group-detail {
+  display: none;
+}
+.pm-gantt-left--cramped .pm-group-count {
+  display: none;
+}
