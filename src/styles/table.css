@@ -488,24 +488,3 @@ button.pm-chip-rm {
   display: inline-flex;
   vertical-align: middle;
 }
-.pm-table-group-label {
-  align-items: center;
-  gap: 6px;
-  border-left: 3px solid var(--pm-group-color, var(--text-muted));
-  padding-left: 8px;
-}
-.pm-table-group-title {
-  font-weight: var(--font-semibold);
-  color: var(--text-normal);
-}
-.pm-table-group-title--link {
-  cursor: pointer;
-}
-.pm-table-group-title--link:hover {
-  color: var(--text-accent);
-  text-decoration: underline;
-}
-.pm-table-group-count {
-  color: var(--text-muted);
-  font-size: var(--font-smallest);
-}

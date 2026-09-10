@@ -26,7 +26,14 @@ import { svgEl } from '../../utils'
 import { Temporal, today } from '../../dates'
 import type { RendererContext } from './GanttRenderer'
 import { renderTaskLabel } from './TaskLabelRenderer'
+import { collectionBlocks, renderProjectHeading, toggleProjectHeading, type ProjectHeading } from '../projectGroups'
 import { t } from '../../i18n'
+
+/**
+ * One line of the chart. A project heading occupies a row of its own so the label
+ * column and the bars stay on the same grid — the two are drawn from this one list.
+ */
+type GanttRow = { kind: 'task'; task: Task; depth: number } | { kind: 'group'; heading: ProjectHeading }
 
 export class GanttView implements SubView {
   private granularity: GanttGranularity
@@ -34,6 +41,7 @@ export class GanttView implements SubView {
   private svgEl!: SVGSVGElement
   private headerSvgEl!: SVGSVGElement
   private flatTasks: FlatTask[] = []
+  private rows: GanttRow[] = []
   private cfg!: TimelineCfg
   private drag: DragState = makeDragState()
   private link: LinkState = makeLinkState()
@@ -88,6 +96,7 @@ export class GanttView implements SubView {
 
     const activeTasks = this.getVisibleTasks()
     this.flatTasks = flattenTasks(activeTasks).filter((f) => f.visible || f.depth === 0)
+    this.rows = this.buildRows(activeTasks)
     this.cfg = buildTimelineConfig(activeTasks, this.granularity)
 
     this.renderGranularityControls()
@@ -184,8 +193,7 @@ export class GanttView implements SubView {
     // Tuck the body's top band (still drawn at y=HEADER_HEIGHT) under the sticky header.
     svgContainer.style.marginTop = `-${HEADER_HEIGHT}px`
 
-    const totalRows = this.flatTasks.filter((f) => f.visible || f.depth === 0).length
-    const svgHeight = HEADER_HEIGHT + (totalRows + 1) * ROW_HEIGHT // +1 for add-task row
+    const svgHeight = HEADER_HEIGHT + (this.rows.length + 1) * ROW_HEIGHT // +1 for add-task row
 
     this.svgEl = svgEl('svg', {
       width: this.cfg.totalWidth,
@@ -218,7 +226,7 @@ export class GanttView implements SubView {
 
     const ctx = this.makeRendererContext()
     renderTimelineHeader(ctx)
-    renderGridLines(ctx, totalRows)
+    renderGridLines(ctx)
     renderTodayLine(ctx, svgHeight)
     this.renderTaskRows(leftBody, ctx)
     renderDependencyArrows(ctx)
@@ -267,6 +275,31 @@ export class GanttView implements SubView {
     })
   }
 
+  /**
+   * The rows to draw, in order. For a collection that means a heading above each
+   * project's block, folded ones keeping their tasks out; for every other scope it is
+   * the visible tree, exactly as before.
+   */
+  private buildRows(roots: Task[]): GanttRow[] {
+    const out: GanttRow[] = []
+    const walk = (tasks: Task[], depth: number) => {
+      for (const task of tasks) {
+        out.push({ kind: 'task', task, depth })
+        if (!task.collapsed && task.subtasks.length) walk(task.subtasks, depth + 1)
+      }
+    }
+    const blocks = collectionBlocks(roots, (task) => task.id, this.scope, this.plugin)
+    if (!blocks) {
+      walk(roots, 0)
+      return out
+    }
+    for (const { heading, rows } of blocks) {
+      out.push({ kind: 'group', heading })
+      if (!heading.collapsed) walk(rows, 0)
+    }
+    return out
+  }
+
   private renderTaskRows(leftBody: HTMLElement, ctx: RendererContext): void {
     const barsGroup = svgEl('g', { class: 'pm-gantt-bars' })
     this.svgEl.appendChild(barsGroup)
@@ -277,18 +310,43 @@ export class GanttView implements SubView {
       statuses: this.scope.config.statuses,
       onRefresh: this.onRefresh
     }
-    let rowIndex = 0
-    const renderFlatList = (tasks: Task[], depth: number) => {
-      for (const task of tasks) {
-        renderTaskLabel(leftBody, task, depth, rowIndex, labelCtx)
-        renderTaskBar(barsGroup, task, rowIndex, depth, ctx)
-        rowIndex++
-        if (!task.collapsed && task.subtasks.length) {
-          renderFlatList(task.subtasks, depth + 1)
-        }
+    this.rows.forEach((row, rowIndex) => {
+      if (row.kind === 'group') {
+        this.renderGroupRow(leftBody, barsGroup, row.heading, rowIndex)
+        return
       }
-    }
-    renderFlatList(this.getVisibleTasks(), 0)
+      renderTaskLabel(leftBody, row.task, row.depth, rowIndex, labelCtx)
+      renderTaskBar(barsGroup, row.task, rowIndex, row.depth, ctx)
+    })
+  }
+
+  /** The heading, plus a band across the timeline so the eye keeps the row. */
+  private renderGroupRow(
+    leftBody: HTMLElement,
+    barsGroup: SVGGElement,
+    heading: ProjectHeading,
+    rowIndex: number
+  ): void {
+    const el = leftBody.createDiv('pm-gantt-label-row pm-gantt-group-row')
+    el.style.height = `${ROW_HEIGHT}px`
+    el.toggleClass('is-collapsed', heading.collapsed)
+    renderProjectHeading(el, heading, {
+      onToggle: async () => {
+        await toggleProjectHeading(heading, this.scope, this.plugin)
+        this.refresh()
+      },
+      onOpen: () => this.plugin.router.openProjectLink(heading.projectPath)
+    })
+
+    barsGroup.appendChild(
+      svgEl('rect', {
+        x: 0,
+        y: HEADER_HEIGHT + rowIndex * ROW_HEIGHT,
+        width: this.cfg.totalWidth,
+        height: ROW_HEIGHT,
+        class: 'pm-gantt-group-band'
+      })
+    )
   }
 
   private makeRendererContext(): RendererContext {
@@ -300,6 +358,10 @@ export class GanttView implements SubView {
       scope: this.scope,
       statuses: this.scope.config.statuses,
       flatTasks: this.flatTasks,
+      rowOf: new Map(
+        this.rows.flatMap((row, i) => (row.kind === 'task' ? [[row.task.id, i] as [string, number]] : []))
+      ),
+      totalRows: this.rows.length,
       drag: this.drag,
       link: this.link,
       onRefresh: this.onRefresh,

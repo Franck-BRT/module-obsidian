@@ -21,15 +21,21 @@ export interface RendererContext {
   /** Resolved once per render pass. */
   statuses: StatusConfig[]
   flatTasks: FlatTask[]
+  /** Which row each task was laid out on. Project headings take rows too, so a task's
+   *  index in `flatTasks` is not its row. */
+  rowOf: Map<string, number>
+  /** Rows drawn, headings included: how far down the grid and the milestone lines go. */
+  totalRows: number
   drag: DragState
   link: LinkState
   onRefresh: () => Promise<void>
   cleanupFns: (() => void)[]
 }
 
-export function renderGridLines(ctx: RendererContext, totalRows: number): void {
+export function renderGridLines(ctx: RendererContext): void {
   const g = svgEl('g', { class: 'pm-gantt-grid' })
 
+  const totalRows = ctx.totalRows
   const totalHeight = HEADER_HEIGHT + totalRows * ROW_HEIGHT
   const { startDate, totalDays, dayWidth, granularity } = ctx.cfg
 

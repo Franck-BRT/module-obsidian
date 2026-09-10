@@ -302,3 +302,33 @@
   gap: 6px;
   --pm-glyph-size: 15px;
 }
+
+/* Project heading, shared by the table, the board and the Gantt: one look wherever a
+   collection groups its tasks by the project they came from. */
+.pm-group-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border-left: 3px solid var(--pm-group-color, var(--text-muted));
+  padding-left: 8px;
+}
+.pm-group-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-group-title--link {
+  cursor: pointer;
+}
+.pm-group-title--link:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+.pm-group-count {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  white-space: nowrap;
+}

@@ -7,9 +7,10 @@ import { matchesFilter } from '../store/TaskFilter'
 import { displayName, dueUrgency, getPriorityConfig, safeAsync } from '../utils'
 import { openTaskModal } from '../ui/ModalFactory'
 import { buildTaskContextMenu } from '../ui/TaskContextMenu'
-import { KanbanColumn, type KanbanCardData } from '../ui/composites/KanbanColumn'
+import { KanbanColumn, type KanbanCardData, type KanbanEntry } from '../ui/composites/KanbanColumn'
 import { renderProjectChip } from '../ui/composites/projectChip'
 import { linkedRefs } from './linkedRefs'
+import { collectionBlocks, renderProjectHeading, toggleProjectHeading } from './projectGroups'
 import type { SubView } from './SubView'
 
 export class KanbanView implements SubView {
@@ -43,10 +44,10 @@ export class KanbanView implements SubView {
 
     for (const status of this.config.statuses) {
       const tasks = this.getTasksForStatus(status.id)
-      const cards = tasks.map((task) => this.buildCardData(task))
       new KanbanColumn(board, {
         status,
-        cards,
+        entries: this.entriesFor(tasks),
+        count: tasks.length,
         onCardClick: (task) => this.openTask(task),
         onCardContextMenu: (task, e) => this.openContextMenu(task, e),
         onCardDragStart: (task) => {
@@ -58,6 +59,34 @@ export class KanbanView implements SubView {
         onDrop: (taskId, newStatus) => this.handleDrop(taskId, newStatus)
       })
     }
+  }
+
+  /**
+   * A column's contents. In a collection the cards are stacked under a heading per
+   * project, folded with the same state the table and the Gantt use — one collection,
+   * one answer to "is this project folded". Anywhere else the cards stand alone.
+   */
+  private entriesFor(tasks: Task[]): KanbanEntry[] {
+    const blocks = collectionBlocks(tasks, (task) => task.id, this.scope, this.plugin)
+    if (!blocks) return tasks.map((task) => ({ kind: 'card', card: this.buildCardData(task) }))
+    const entries: KanbanEntry[] = []
+    for (const { heading, rows } of blocks) {
+      entries.push({
+        kind: 'group',
+        collapsed: heading.collapsed,
+        render: (parent) =>
+          renderProjectHeading(parent, heading, {
+            onToggle: async () => {
+              await toggleProjectHeading(heading, this.scope, this.plugin)
+              this.render()
+            },
+            onOpen: () => this.plugin.router.openProjectLink(heading.projectPath)
+          })
+      })
+      if (heading.collapsed) continue
+      for (const task of rows) entries.push({ kind: 'card', card: this.buildCardData(task) })
+    }
+    return entries
   }
 
   /** Descriptions load lazily from the note body, so previews fill in on a second render. */

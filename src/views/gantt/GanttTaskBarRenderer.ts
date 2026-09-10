@@ -310,7 +310,11 @@ function renderMilestoneDiamond(g: SVGGElement, task: Task, row: number, color: 
 }
 
 export function renderMilestoneLabels(ctx: RendererContext): void {
-  const milestones = ctx.flatTasks.filter((f) => f.task.type === 'milestone' && (f.task.due || f.task.start))
+  // Only milestones that were actually laid out: a task inside a folded project heading
+  // has no row, and a dashed line down the chart for it would point at nothing.
+  const milestones = ctx.flatTasks.filter(
+    (f) => f.task.type === 'milestone' && (f.task.due || f.task.start) && ctx.rowOf.has(f.task.id)
+  )
   if (!milestones.length) return
 
   const linesG = svgEl('g', { class: 'pm-gantt-milestone-labels' })
@@ -322,7 +326,7 @@ export function renderMilestoneLabels(ctx: RendererContext): void {
     const statusConfig = getStatusConfig(ctx.statuses, task.status)
     const color = statusConfig?.color ?? getComputedStyle(ctx.svgEl).getPropertyValue('--interactive-accent').trim()
 
-    const totalH = HEADER_HEIGHT + ctx.flatTasks.filter((f) => f.visible || f.depth === 0).length * ROW_HEIGHT
+    const totalH = HEADER_HEIGHT + ctx.totalRows * ROW_HEIGHT
     linesG.appendChild(
       svgEl('line', {
         x1: x,
@@ -352,8 +356,7 @@ export function renderMilestoneLabels(ctx: RendererContext): void {
 }
 
 export function renderDependencyArrows(ctx: RendererContext): void {
-  const indexMap = new Map<string, number>()
-  ctx.flatTasks.forEach((f, i) => indexMap.set(f.task.id, i))
+  const indexMap = ctx.rowOf
 
   const arrowGroup = svgEl('g', { class: 'pm-gantt-arrows' })
 

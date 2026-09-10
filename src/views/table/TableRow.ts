@@ -7,9 +7,7 @@ import type { TableContext, TableGroupRow, TableState, TableTaskRow } from './Ta
 import { openTaskModal } from '../../ui/ModalFactory'
 import { buildTaskContextMenu } from '../../ui/TaskContextMenu'
 import { TaskRow } from '../../ui/composites/TaskRow'
-import { CollapseToggle } from '../../ui/primitives/CollapseToggle'
-import { renderGlyph } from '../../ui/composites/properties'
-import { t } from '../../i18n'
+import { renderProjectHeading, toggleProjectHeading } from '../projectGroups'
 import { ActionsCell } from '../../ui/composites/cells/ActionsCell'
 import { AssigneesCell } from '../../ui/composites/cells/AssigneesCell'
 import { linkedRefs } from '../linkedRefs'
@@ -30,34 +28,17 @@ import { TitleCell } from '../../ui/composites/cells/TitleCell'
  * walks the selection or the tree can pick it up by mistake.
  */
 export function renderGroupRow(tbody: HTMLElement, group: TableGroupRow, colCount: number, ctx: TableContext): void {
-  const collectionPath = ctx.scope.spec.kind === 'collection' ? ctx.scope.spec.path : ''
+  const { heading } = group
   const row = tbody.createEl('tr', { cls: 'pm-table-group-row' })
-  row.toggleClass('is-collapsed', group.collapsed)
+  row.toggleClass('is-collapsed', heading.collapsed)
   const cell = row.createEl('td', { cls: 'pm-table-group-cell', attr: { colspan: String(colCount) } })
-
-  new CollapseToggle(cell, {
-    collapsed: group.collapsed,
-    subject: group.title,
-    onToggle: safeAsync(async () => {
-      await ctx.plugin.toggleCollectionGroupCollapsed(collectionPath, group.projectPath)
+  renderProjectHeading(cell, heading, {
+    onToggle: async () => {
+      await toggleProjectHeading(heading, ctx.scope, ctx.plugin)
       await ctx.onRefresh()
-    })
+    },
+    onOpen: () => ctx.plugin.router.openProjectLink(heading.projectPath)
   })
-
-  const label = cell.createDiv({ cls: 'pm-table-group-label' })
-  if (group.color) label.setCssProps({ '--pm-group-color': group.color })
-  // Through the shared glyph, so a project's Lucide icon renders as an icon rather than
-  // as the literal `lucide-toolbox` its setting holds.
-  renderGlyph(label, { icon: group.icon, color: group.color })
-  const title = label.createSpan({ cls: 'pm-table-group-title', text: group.title })
-  if (group.projectPath) {
-    title.addClass('pm-table-group-title--link')
-    title.addEventListener(
-      'click',
-      safeAsync(() => ctx.plugin.router.openProjectLink(group.projectPath))
-    )
-  }
-  label.createSpan({ cls: 'pm-table-group-count', text: t('common.taskCount', { count: group.count }) })
 }
 
 export function renderTaskRow(tbody: HTMLElement, flat: TableTaskRow, ctx: TableContext): void {

@@ -1,6 +1,6 @@
 import type PMPlugin from '../../main'
 import type { FilterState, LineBorders, PriorityConfig, PriorityIconSet, StatusConfig } from '../../types'
-import { groupRowsByProject, personKeyer, type ProjectScope } from '../../store'
+import { personKeyer, type ProjectScope } from '../../store'
 import { type FlatTask, flattenTasks } from '../../store/TaskTreeOps'
 import { findTaskById } from '../../store/TaskIndex'
 import { applyTaskFilterFlat, isFilterActive } from '../../store/TaskFilter'
@@ -8,6 +8,7 @@ import { openTaskModal } from '../../ui/ModalFactory'
 import { renderAddButton } from '../../ui/composites/addButton'
 import { childTreeGuides } from '../../ui/composites/treeGuides'
 import { openAddTask } from '../addTask'
+import { collectionBlocks, type ProjectHeading } from '../projectGroups'
 import { compareTask } from './TableFilters'
 import { renderGroupRow, renderTaskRow, updateSelectedRow, updateSelectAllCheckbox } from './TableRow'
 import { t } from '../../i18n'
@@ -32,13 +33,7 @@ export interface TableTaskRow extends FlatTask {
  */
 export interface TableGroupRow {
   kind: 'group'
-  projectPath: string
-  title: string
-  /** Both absent when the project could not be resolved: the glyph falls back to a dot. */
-  icon?: string
-  color?: string
-  count: number
-  collapsed: boolean
+  heading: ProjectHeading
 }
 
 export type TableTreeRow = TableTaskRow | TableGroupRow
@@ -254,8 +249,7 @@ function fillTableBody(ctx: TableContext): void {
 
   // When filtering, show all matches regardless of collapsed parent.
   const visible = hasActiveFilter ? sorted : sorted.filter((f) => f.visible)
-  ctx.state.visibleRows =
-    ctx.scope.spec.kind === 'collection' ? withProjectHeadings(visible, ctx, ctx.scope.spec.path) : visible
+  ctx.state.visibleRows = withProjectHeadings(visible, ctx)
   ctx.state.renderWindow = () => renderWindowRows(ctx)
   // The data changed, so repaint even if the window bounds happen to match.
   ctx.state.windowStart = -1
@@ -457,22 +451,13 @@ export function getVisibleTaskIds(state: TableState): string[] {
  * A folded heading keeps its own rows out of the list but still counts them, so folding
  * a project never makes a collection look emptier than it is.
  */
-function withProjectHeadings(rows: TableTaskRow[], ctx: TableContext, collectionPath: string): TableTreeRow[] {
-  const folded = new Set(ctx.plugin.settings.collapsedCollectionGroups[collectionPath] ?? [])
+function withProjectHeadings(rows: TableTaskRow[], ctx: TableContext): TableTreeRow[] {
+  const blocks = collectionBlocks(rows, (row) => row.task.id, ctx.scope, ctx.plugin)
+  if (!blocks) return rows
   const out: TableTreeRow[] = []
-  for (const group of groupRowsByProject(rows, (row) => ctx.scope.projectOf(row.task.id)?.filePath ?? null)) {
-    const ref = group.projectPath ? ctx.plugin.index.projectRef(group.projectPath) : null
-    const collapsed = folded.has(group.projectPath)
-    out.push({
-      kind: 'group',
-      projectPath: group.projectPath,
-      title: ref?.title ?? t('collection.orphanGroup'),
-      icon: ref?.icon,
-      color: ref?.color,
-      count: group.rows.length,
-      collapsed
-    })
-    if (!collapsed) out.push(...group.rows)
+  for (const { heading, rows: block } of blocks) {
+    out.push({ kind: 'group', heading })
+    if (!heading.collapsed) out.push(...block)
   }
   return out
 }

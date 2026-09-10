@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.8.0
+version: 2.9.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.8.0
+# Recette — Black Projects 2.9.0
 
 Plan de test manuel pour le fork. Les **556 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -25,7 +25,7 @@ cassé de ce qui marchait. Les **[N]** portent sur les **nouveautés**.
 
 ## 0. Installation et reprise des données
 
-> **Nouveau en 2.8.0** : le module change de nom **et de dossier** — `black-documents`
+> **Nouveau en 2.8.0** (livré avec la 2.9.0) : le module change de nom **et de dossier** — `black-documents`
 > devient `black-projects`. Cette fois la reprise des réglages est **automatique** :
 > rien à recopier à la main.
 
@@ -364,6 +364,28 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Vérifier dans un **projet normal** (pas un recueil) : ✅ **Attendu** : **aucun** en-tête de ce type
 - [ ] Recueil avec **beaucoup** de tâches (50+) : ✅ **Attendu** : le défilement reste fluide et
       la barre de défilement ne saute pas
+
+#### Gantt et Tableau [N]
+
+> **Nouveau en 2.9.0** : les mêmes en-têtes pliables dans les trois vues.
+
+- [ ] Basculer le recueil en vue **Gantt** : ✅ **Attendu** : un en-tête par projet, sur **sa propre ligne**,
+      avec une bande discrète en travers de la frise
+- [ ] ✅ **Attendu** : les barres restent **alignées** avec leurs libellés, en-têtes comprises
+- [ ] Plier un projet dans le Gantt : ✅ **Attendu** : ses barres disparaissent, les lignes du dessous **remontent**
+      et restent alignées
+- [ ] Avec des **dépendances** entre tâches : ✅ **Attendu** : les flèches pointent toujours sur la bonne barre
+- [ ] Avec un **jalon** : ✅ **Attendu** : son trait pointillé et son étiquette sont à la bonne date ;
+      une fois son projet **plié**, le trait **disparaît** *(il ne montrerait plus rien)*
+- [ ] Basculer en vue **Tableau** (kanban) : ✅ **Attendu** : dans chaque colonne, un en-tête par projet
+      au-dessus de ses cartes
+- [ ] ✅ **Attendu** : le compteur en haut de colonne compte **toutes** ses cartes, y compris celles repliées
+- [ ] Plier un projet dans le Tableau : ✅ **Attendu** : ses cartes disparaissent de **toutes** les colonnes
+- [ ] **Glisser une carte** d'une colonne à l'autre : ✅ **Attendu** : le statut change et la carte se replace
+      sous l'en-tête de **son** projet
+- [ ] **Cohérence entre vues** : plier un projet dans le tableur, passer au Gantt puis au Tableau
+      ✅ **Attendu** : il y est **plié aussi** — c'est un seul recueil
+- [ ] Dans un **projet normal** (pas un recueil), Gantt et Tableau : ✅ **Attendu** : **aucun** en-tête de ce type
 
 ### Pièges à vérifier
 

@@ -23,9 +23,20 @@ export interface KanbanCardData {
   showTagColors: boolean
 }
 
+/**
+ * What a column stacks: cards, and — in a collection — a heading above each project's
+ * cards. A heading is its own entry rather than a flag on a card, so a column with
+ * every project folded still shows what it holds.
+ */
+export type KanbanEntry =
+  | { kind: 'card'; card: KanbanCardData }
+  | { kind: 'group'; render: (parent: HTMLElement) => void; collapsed: boolean }
+
 export interface KanbanColumnProps {
   status: KanbanColumnStatus
-  cards: KanbanCardData[]
+  entries: KanbanEntry[]
+  /** Cards the column holds, folded ones included: the count in its header. */
+  count: number
   onCardClick: (task: Task) => void
   onCardContextMenu: (task: Task, e: MouseEvent) => void
   onCardDragStart: (task: Task) => void
@@ -59,14 +70,21 @@ export class KanbanColumn {
 
     const headerRight = titleRow.createDiv('pm-kanban-col-header-right')
     headerRight.createSpan({
-      text: String(props.cards.length),
+      text: String(props.count),
       cls: 'pm-kanban-col-count'
     })
 
     const cardsEl = col.createDiv('pm-kanban-cards')
     cardsEl.dataset.status = props.status.id
 
-    for (const card of props.cards) {
+    for (const entry of props.entries) {
+      if (entry.kind === 'group') {
+        const groupEl = cardsEl.createDiv('pm-kanban-group')
+        groupEl.toggleClass('is-collapsed', entry.collapsed)
+        entry.render(groupEl)
+        continue
+      }
+      const card = entry.card
       new KanbanCard(cardsEl, {
         task: card.task,
         people: card.people,

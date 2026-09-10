@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-09-10
+
+### Added
+
+- The Gantt and the board group a collection by project too, with the same folding
+  headings the table has. What is folded is one answer per collection, not one per view:
+  fold a project in the table and it is folded in the board and the Gantt as well
+- In the Gantt a heading takes a row of its own and carries a band across the timeline,
+  so the label column and the bars stay on the same grid. The board, which already
+  groups by status, puts the heading inside each column above that project's cards
+
+### Fixed
+
+- A dependency arrow found its row by counting entries in the flattened task list, which
+  stopped being the row number the moment anything else could take a row. It now reads
+  the layout the chart was actually drawn from, so arrows and milestone lines land on
+  their bars whatever else is on screen. A milestone inside a folded project no longer
+  draws a dashed line down a chart it is not in
+
 ## [2.8.0] - 2026-09-10
 
 ### Fixed

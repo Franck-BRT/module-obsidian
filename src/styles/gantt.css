@@ -275,3 +275,18 @@
   fill: var(--interactive-accent);
   opacity: 0.5;
 }
+
+/* A project heading takes a whole row of the chart, so the label column and the bars
+   stay on the same grid. The band across the timeline carries the eye over to it. */
+.pm-gantt-group-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 4px;
+  background: var(--background-secondary);
+  border-top: 1px solid var(--background-modifier-border);
+}
+.pm-gantt-group-band {
+  fill: var(--background-secondary);
+  opacity: 0.5;
+}

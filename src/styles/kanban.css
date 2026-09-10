@@ -161,3 +161,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The board groups by status first, so a collection's project heading sits inside each
+   column, above that project's cards. */
+.pm-kanban-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 2px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.pm-kanban-group:not(:first-child) {
+  margin-top: 8px;
+}
