@@ -120,3 +120,161 @@
 .pm-clickable {
   cursor: pointer;
 }
+
+/* The wall of documents: what have we got, answered with the eyes. */
+.pm-doc-wall {
+  padding: 12px 16px 24px;
+}
+.pm-doc-wall-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 14px 0 8px;
+}
+.pm-doc-wall-heading:first-child {
+  margin-top: 0;
+}
+.pm-doc-wall-state {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+.pm-doc-wall-count {
+  background: var(--background-modifier-hover);
+  border-radius: 99px;
+  padding: 0 7px;
+  font-size: var(--font-smallest);
+  color: var(--text-muted);
+}
+
+.pm-doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.pm-doc-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-primary);
+  border: 1px solid var(--pm-ghost-border);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+.pm-doc-card:hover {
+  box-shadow: 0 2px 12px var(--pm-shadow-ambient);
+  border-color: var(--background-modifier-border);
+}
+.pm-doc-card[data-state='obsolete'] {
+  opacity: 0.55;
+}
+
+.pm-doc-card-pick {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.pm-doc-card:hover .pm-doc-card-pick,
+.pm-doc-card-pick:checked {
+  opacity: 1;
+}
+
+/* A fixed shape whatever the file is, so the grid stays a grid. */
+.pm-doc-card-preview {
+  position: relative;
+  height: 132px;
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pm-doc-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pm-doc-card-pdf,
+.pm-doc-card-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+/* The reader inside is scenery: the click belongs to the card. */
+.pm-doc-card-frame {
+  pointer-events: none;
+  background: var(--background-primary);
+}
+.pm-doc-card-icon {
+  --icon-size: 32px;
+  color: var(--text-faint);
+}
+.pm-doc-card-ext {
+  position: absolute;
+  bottom: 8px;
+  font-size: var(--font-smallest);
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.pm-doc-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 10px;
+}
+.pm-doc-card-title {
+  font-size: 13px;
+  font-weight: var(--font-medium);
+  line-height: 1.35;
+  cursor: pointer;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.pm-doc-card-title:hover {
+  color: var(--text-accent);
+}
+.pm-doc-card-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--font-smallest);
+  color: var(--text-muted);
+}
+.pm-doc-card-ref {
+  font-family: var(--font-monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-doc-card-version {
+  margin-left: auto;
+  color: var(--text-accent);
+  font-family: var(--font-monospace);
+}
+.pm-doc-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: var(--font-smallest);
+  color: var(--text-muted);
+}
+.pm-doc-card-issuer {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}

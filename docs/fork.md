@@ -1,8 +1,8 @@
 # This fork
 
-**Black Projects** (`Franck-BRT/module-obsidian`) is a fork of
-[`dotpm/obsidian-pm`](https://github.com/dotpm/obsidian-pm), MIT-licensed, forked at
-**2.3.1**. Upstream is actively developed, so this fork tracks
+**Black Projects**, by **Black Room Technologies** (`Franck-BRT/module-obsidian`), is a
+fork of [`dotpm/obsidian-pm`](https://github.com/dotpm/obsidian-pm) by Stepan Kropachev,
+MIT-licensed, forked at **2.3.1**. Upstream is actively developed, so this fork tracks
 it rather than diverging: our changes ride on top and upstream releases are merged in.
 
 ## What this fork adds
@@ -88,6 +88,11 @@ Adding a locale means one file, one entry in `LOCALES`, and nothing else.
 
 ## Installing it
 
+The plugin's author reads **Black Room Technologies**, naming the fork it came from.
+Upstream's `fundingUrl` is deliberately gone: a donation button under someone else's
+name would send money to the wrong place. The credit that matters stays where it is
+binding — `LICENSE`, unchanged, and the copyright in it.
+
 The plugin id is **`black-projects`**, not upstream's `project-manager`. That is
 deliberate: sharing the id means sharing the folder, and Obsidian would eventually
 overwrite this build with an upstream release without saying anything.
@@ -134,7 +139,7 @@ convenience for installing by hand.
 
 ```sh
 pnpm install
-pnpm test          # 628 tests
+pnpm test          # 630 tests
 pnpm run check     # lint, format, types, submission lint
 pnpm run build     # main.js + styles.css
 VAULT_PATH=/path/to/vault pnpm run dev   # builds straight into the vault's plugin folder

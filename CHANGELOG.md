@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.14.0] - 2026-09-11
+
+### Added
+
+- The library shows documents as a **wall of cards** as well as a register, with a
+  Cards / List switch that is remembered. A card is a thumbnail — the image itself, a
+  PDF's first page, its file type otherwise — with the title, the reference and issue,
+  the version, the state and the date. Grouped by state. The register answers "what is
+  the issue of PL-002 and who signed it"; the wall answers "what have we got", which is
+  a question you settle with your eyes rather than by reading a table
+- A PDF's preview loads only once its card is on screen: a hundred embedded readers
+  opening at once is not worth the picture
+
+### Changed
+
+- The plugin is by **Black Room Technologies**, naming the fork it came from — "fork of
+  dotpm, by Stepan Kropachev". Upstream's donation link is gone rather than sitting
+  under another name and sending money to the wrong place; the credit that binds is in
+  `LICENSE`, untouched
+- The plugin's description mentions phases and the document library, which it had not
+  caught up with
+
 ### Fixed
 
 - Creating a document ticket could leave two or three of it. Depositing a file from the

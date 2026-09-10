@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.13.0
+version: 2.14.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.13.0
+# Recette — Black Projects 2.14.0
 
-Plan de test manuel pour le fork. Les **628 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **630 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -46,6 +46,8 @@ cassé de ce qui marchait. Les **[N]** portent sur les **nouveautés**.
       ⚠️ dans cet ordre : la reprise lit le `data.json` de l'ancien dossier au premier démarrage
 - [ ] Le nom **Black Projects** apparaît bien dans : la liste des modules, l'info-bulle du ruban,
       l'en-tête des réglages, et le préfixe des notifications
+- [ ] **[N]** Dans la liste des modules, l'auteur affiché est **Black Room Technologies (fork of dotpm, by
+      Stepan Kropachev)** — et il n'y a **plus de bouton de don** vers l'auteur amont
 - [ ] **[R]** Les projets et tâches existants apparaissent — ils n'ont eu besoin d'aucune migration
 - [ ] L'icône dans le ruban ouvre le tableau de bord
 
@@ -585,6 +587,25 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       référence / titre / indice / version / date / destinataire
 - [ ] ✅ **Attendu** : les lignes sont **triées par référence**
 - [ ] Sans rien cocher : ✅ **Attendu** : un message demande d'en choisir au moins un
+
+### Vue en cartes [N]
+
+- [ ] Dans la bibliothèque, le sélecteur **Cartes / Liste** en haut à droite
+- [ ] **Cartes** : ✅ **Attendu** : une vignette par document, **groupées par état**, l'état en titre de groupe
+- [ ] Avec une **image** (png, jpg) : ✅ **Attendu** : l'image s'affiche dans la vignette
+- [ ] Avec un **PDF** : ✅ **Attendu** : sa première page s'affiche
+- [ ] Avec un **Word** ou un plan : ✅ **Attendu** : une icône de type et l'extension en toutes lettres
+- [ ] Un document **sans fichier** : ✅ **Attendu** : une vignette vide, cliquer dessus ouvre **la fiche**
+- [ ] Cliquer la **vignette** d'un document qui a un fichier : ✅ **Attendu** : le fichier s'ouvre
+- [ ] Cliquer le **titre** : ✅ **Attendu** : la fiche s'ouvre
+- [ ] **Clic droit** sur une carte : ✅ **Attendu** : le même menu que sur une ligne de la liste
+- [ ] Survoler une carte : ✅ **Attendu** : une **case à cocher** apparaît, et le **bordereau** fonctionne
+      avec les cartes cochées
+- [ ] Un document **obsolète** : ✅ **Attendu** : sa carte est estompée
+- [ ] Basculer en **Liste**, changer de vue, revenir : ✅ **Attendu** : le mode choisi est **retenu**
+- [ ] Avec **beaucoup** de documents PDF (20+) : ✅ **Attendu** : l'ouverture reste rapide — les aperçus
+      ne se chargent qu'en arrivant à l'écran
+- [ ] Rétrécir la fenêtre : ✅ **Attendu** : les cartes se réorganisent en colonnes, sans débordement
 
 ### Filtres, états et pièges
 

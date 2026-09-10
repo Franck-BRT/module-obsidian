@@ -10,7 +10,8 @@
 
 </div>
 
-> **Black Projects is a fork of [dotpm](https://github.com/dotpm/obsidian-pm).**
+> **Black Projects is by Black Room Technologies, a fork of
+> [dotpm](https://github.com/dotpm/obsidian-pm) by Stepan Kropachev.**
 > [`Franck-BRT/module-obsidian`](https://github.com/Franck-BRT/module-obsidian) tracks
 > upstream and adds a French interface, working-day scheduling, typed dependencies,
 > working recurring tasks, and collections gathering chosen tasks across projects.

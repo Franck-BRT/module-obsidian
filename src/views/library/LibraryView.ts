@@ -12,6 +12,8 @@ import { openTaskModal } from '../../ui/ModalFactory'
 import { buildTaskContextMenu } from '../../ui/TaskContextMenu'
 import { Chip } from '../../ui/primitives/Chip'
 import { ChipButton } from '../../ui/primitives/ChipButton'
+import { SegmentedControl } from '../../ui/primitives/SegmentedControl'
+import { renderDocumentCards } from './LibraryCards'
 import { t } from '../../i18n'
 import { docStateLabel } from './docStateLabel'
 import type { SubView } from '../SubView'
@@ -59,6 +61,29 @@ export class LibraryView implements SubView {
 
     const shown = this.stateFilter ? docs.filter((task) => documentOf(task).state === this.stateFilter) : docs
     const wrapper = this.container.createDiv('pm-library-wrapper')
+    if (this.plugin.settings.libraryMode === 'cards') {
+      renderDocumentCards(wrapper, shown, {
+        plugin: this.plugin,
+        projectOf: (id) => this.scope.projectOf(id),
+        picked: this.picked,
+        openTicket: (task) => {
+          const project = this.scope.projectOf(task.id)
+          if (project) openTaskModal(this.plugin, project, { task, onSave: () => this.onRefresh() })
+        },
+        openMenu: (e, task) => {
+          const project = this.scope.projectOf(task.id)
+          if (!project) return
+          e.preventDefault()
+          const menu = new Menu()
+          this.addDocumentItems(menu, project, task)
+          menu.addSeparator()
+          buildTaskContextMenu(menu, task, { plugin: this.plugin, project, onRefresh: this.onRefresh })
+          menu.showAtMouseEvent(e)
+        },
+        onRefresh: this.onRefresh
+      })
+      return
+    }
     const table = wrapper.createEl('table', { cls: 'pm-table pm-library-table' })
     const head = table.createEl('thead').createEl('tr')
     for (const label of [
@@ -123,6 +148,18 @@ export class LibraryView implements SubView {
     }
 
     const right = bar.createDiv('pm-library-bar-right')
+    new SegmentedControl<'list' | 'cards'>(right, {
+      options: [
+        { id: 'cards', label: t('view.libraryCards') },
+        { id: 'list', label: t('view.libraryList') }
+      ],
+      active: this.plugin.settings.libraryMode,
+      onChange: (mode) => {
+        this.plugin.settings.libraryMode = mode
+        void this.plugin.saveSettings()
+        this.render()
+      }
+    })
     const late = docs.filter((task) => isAwaited(task, today().toString()))
     if (late.length) {
       new Chip(right)

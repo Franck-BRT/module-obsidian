@@ -1,11 +1,10 @@
 {
   "id": "black-projects",
   "name": "Black Projects",
-  "version": "2.13.0",
+  "version": "2.14.0",
   "minAppVersion": "1.13.0",
-  "description": "Project management in your vault: Gantt charts, boards, tables, custom fields, and collections gathering chosen tasks across projects. French interface, working-day scheduling, typed dependencies and working recurring tasks.",
-  "author": "Stepan Kropachev and dotpm contributors; fork by Franck-BRT",
+  "description": "Project management in your vault: Gantt charts, boards, tables, phases, collections gathering chosen tasks across projects, and a versioned document library per project. French interface, working-day scheduling, typed dependencies and working recurring tasks.",
+  "author": "Black Room Technologies (fork of dotpm, by Stepan Kropachev)",
   "authorUrl": "https://github.com/Franck-BRT/module-obsidian",
-  "fundingUrl": "https://buymeacoffee.com/kropachev",
   "isDesktopOnly": false
 }

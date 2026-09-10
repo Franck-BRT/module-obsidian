@@ -375,6 +375,8 @@ export interface PMSettings {
   collapsedProjects: string[]
   /** Collection path -> the project headings folded shut inside it. */
   collapsedCollectionGroups: Record<string, string[]>
+  /** How the library shows documents: as a register, or as thumbnails. */
+  libraryMode: 'list' | 'cards'
 }
 
 export const DEFAULT_STATUSES: StatusConfig[] = [
@@ -457,7 +459,8 @@ export const DEFAULT_SETTINGS: PMSettings = {
   scopeViews: {},
   collapsedTasks: {},
   collapsedProjects: [],
-  collapsedCollectionGroups: {}
+  collapsedCollectionGroups: {},
+  libraryMode: 'cards'
 }
 
 export function makeId(): string {
