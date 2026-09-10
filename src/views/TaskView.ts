@@ -83,7 +83,7 @@ export class TaskView extends ItemView {
     if (filePath) {
       task = flattenTasks(project.tasks).find((f) => f.task.filePath === filePath)?.task ?? null
       if (!task) {
-        this.showMissing(`This note is not a task in ${project.title}.`)
+        this.showMissing(t('view.notATaskIn', { project: project.title }))
         return
       }
       await this.plugin.store.loadTaskBody(task)

@@ -12,7 +12,7 @@ import { renderBulkActionBar } from './BulkActionBar'
 import type { BulkAction } from './BulkActionBar'
 import { t } from '../../i18n'
 
-const taskCount = (n: number) => t('common.taskCount', { count: n })
+const taskCount = (n: number) => t('count.tasks', { count: n })
 
 export interface TableViewState {
   sortKey: SortKey

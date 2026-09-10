@@ -56,7 +56,10 @@ export function renderCustomFieldInput(
       renderSelectControl({
         container: wrap,
         value: stringifyCustomValue(value) || null,
-        options: [{ id: '', label: 'None' }, ...(cf.options ?? []).map((option) => ({ id: option, label: option }))],
+        options: [
+          { id: '', label: t('common.none') },
+          ...(cf.options ?? []).map((option) => ({ id: option, label: option }))
+        ],
         onChange: commit
       })
       break

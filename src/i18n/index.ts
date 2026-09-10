@@ -26,6 +26,7 @@ const IS_SINGULAR: Record<Locale, (n: number) => boolean> = {
 }
 
 let locale: Locale = 'en'
+let requested: LanguageSetting = 'auto'
 
 /** Obsidian's own UI language when the setting is 'auto', falling back to English. */
 export function resolveLocale(setting: LanguageSetting): Locale {
@@ -35,7 +36,20 @@ export function resolveLocale(setting: LanguageSetting): Locale {
 }
 
 export function setLocale(setting: LanguageSetting): void {
+  requested = setting
   locale = resolveLocale(setting)
+}
+
+/**
+ * The locale for dates and month names, or undefined to let the host decide.
+ *
+ * Undefined is what 'auto' means: follow Obsidian, including into a language this
+ * plugin does not translate — a German vault should keep German month names rather
+ * than be dragged to English because our catalogue falls back there. Once someone
+ * picks a language explicitly, dates follow it too.
+ */
+export function dateLocale(): Locale | undefined {
+  return requested === 'auto' ? undefined : requested
 }
 
 export function currentLocale(): Locale {

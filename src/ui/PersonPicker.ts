@@ -57,10 +57,10 @@ export function renderPersonPicker(opts: PersonPickerOpts): void {
     moreHeading: t('picker.peopleInVault'),
     add: opts.add,
     remove: opts.remove,
-    createLabel: (name) => `Add "${name}"`,
+    createLabel: (name) => t('picker.addNamed', { name }),
     create: opts.add,
     createAlt: {
-      label: (name) => `Create person note "${name}"`,
+      label: (name) => t('picker.createPersonNote', { name }),
       icon: 'user-plus',
       run: async (name) => {
         opts.add(await createPersonLink(plugin.app, plugin.settings.peopleFolder, name, opts.sourcePath))

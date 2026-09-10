@@ -1,25 +1,26 @@
 import type { RendererContext } from './GanttRenderer'
 import { HEADER_HEIGHT, dateToX, getWeekNumber } from './TimelineConfig'
 import { svgEl } from '../../utils'
+import { dateLocale, t } from '../../i18n'
 import { Temporal } from '../../dates'
 
 import type { GanttWeekLabel } from '../../types'
 
 function formatDateRange(weekStart: Temporal.PlainDate, days: number): string {
   const end = weekStart.add({ days: days - 1 })
-  const startMonth = weekStart.toLocaleString(undefined, { month: 'short' })
+  const startMonth = weekStart.toLocaleString(dateLocale(), { month: 'short' })
   if (weekStart.month === end.month) {
     return `${startMonth} ${weekStart.day}–${end.day}`
   }
-  const endMonth = end.toLocaleString(undefined, { month: 'short' })
+  const endMonth = end.toLocaleString(dateLocale(), { month: 'short' })
   return `${startMonth} ${weekStart.day} – ${endMonth} ${end.day}`
 }
 
 function formatWeekLabel(weekStart: Temporal.PlainDate, days: number, weekNum: number, mode: GanttWeekLabel): string {
-  if (mode === 'weekNumber') return `W${weekNum}`
+  if (mode === 'weekNumber') return t('gantt.weekLabel', { week: weekNum })
   const range = formatDateRange(weekStart, days)
   if (mode === 'dateRange') return range
-  return `W${weekNum}: ${range}`
+  return t('gantt.weekLabelRange', { week: weekNum, range })
 }
 
 export function renderTimelineHeader(ctx: RendererContext): void {
@@ -136,7 +137,7 @@ function renderMonthHeader(g: SVGGElement, ctx: RendererContext): void {
       y: 44,
       class: 'pm-gantt-header-month'
     })
-    text.textContent = monthStart.toLocaleString(undefined, { month: 'short' })
+    text.textContent = monthStart.toLocaleString(dateLocale(), { month: 'short' })
     g.appendChild(text)
     g.appendChild(
       svgEl('line', {
@@ -169,7 +170,7 @@ function renderQuarterHeader(g: SVGGElement, ctx: RendererContext): void {
       y: 44,
       class: 'pm-gantt-header-quarter'
     })
-    text.textContent = `Q${q} ${date.year}`
+    text.textContent = t('gantt.quarterYearLabel', { quarter: q, year: date.year })
     g.appendChild(text)
     date = nextQStart
   }
@@ -193,7 +194,7 @@ function renderYearHeader(g: SVGGElement, ctx: RendererContext): void {
       y: 44,
       class: 'pm-gantt-header-quarter'
     })
-    text.textContent = `Q${q}`
+    text.textContent = t('gantt.quarterLabel', { quarter: q })
     g.appendChild(text)
     g.appendChild(
       svgEl('line', {
@@ -229,7 +230,7 @@ function renderMonthBands(g: SVGGElement, y: number, h: number, ctx: RendererCon
       y: y + h - 6,
       class: 'pm-gantt-header-month-top'
     })
-    text.textContent = monthStart.toLocaleString(undefined, { month: 'short', year: '2-digit' })
+    text.textContent = monthStart.toLocaleString(dateLocale(), { month: 'short', year: '2-digit' })
     g.appendChild(text)
     monthStart = nextMonthStart
   }

@@ -1,5 +1,5 @@
 import { Temporal } from 'temporal-polyfill'
-import { t } from './i18n'
+import { dateLocale, t } from './i18n'
 
 export { Temporal }
 
@@ -21,19 +21,19 @@ export function parsePlainDate(s: string): Temporal.PlainDate | null {
 /** "Jun 15, 2026", or '' when empty or invalid. */
 export function formatDate(iso: string): string {
   const d = parsePlainDate(iso)
-  return d ? d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : ''
+  return d ? d.toLocaleString(dateLocale(), { year: 'numeric', month: 'short', day: 'numeric' }) : ''
 }
 
 /** "Mar 28", or '' when empty or invalid. */
 export function formatDateShort(iso: string): string {
   const d = parsePlainDate(iso)
-  return d ? d.toLocaleString(undefined, { month: 'short', day: 'numeric' }) : ''
+  return d ? d.toLocaleString(dateLocale(), { month: 'short', day: 'numeric' }) : ''
 }
 
 /** "Mar 28, 26", or '' when empty or invalid. */
 export function formatDateLong(iso: string): string {
   const d = parsePlainDate(iso)
-  return d ? d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: '2-digit' }) : ''
+  return d ? d.toLocaleString(dateLocale(), { month: 'short', day: 'numeric', year: '2-digit' }) : ''
 }
 
 export type DueTone = 'overdue' | 'today' | 'soon' | 'outcome'

@@ -12,7 +12,8 @@ export function renderTimeTrackingPanel(container: HTMLElement, task: Task): voi
   const timeHeader = timeSection.createDiv('pm-modal-section-header')
   const logged = totalLoggedHours(task)
   const est = task.timeEstimate ?? 0
-  const timeLabel = est > 0 ? `Time tracking (${logged}h / ${est}h)` : `Time tracking (${logged}h logged)`
+  const timeLabel =
+    est > 0 ? t('task.timeTrackingOfEstimate', { logged, estimate: est }) : t('task.timeTracking', { logged })
   timeHeader.createEl('h4', { text: timeLabel, cls: 'pm-modal-section-title' })
 
   const estRow = timeSection.createDiv('pm-time-est-row')

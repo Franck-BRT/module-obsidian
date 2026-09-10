@@ -248,7 +248,9 @@ export class ProjectCreateModal extends Modal {
 
     new ButtonComponent(footer).setButtonText(t('dialog.cancel')).onClick(() => this.close())
     this.submit = new ButtonComponent(footer)
-      .setButtonText(`Create project (${saveShortcutLabel(this.plugin.settings.editorSaveModifier)})`)
+      .setButtonText(
+        t('project.createWithShortcut', { shortcut: saveShortcutLabel(this.plugin.settings.editorSaveModifier) })
+      )
       .setCta()
       .onClick(() => this.create())
   }

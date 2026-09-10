@@ -112,7 +112,7 @@ export function renderHeadingRow(parent: HTMLElement, heading: HeadingRow, handl
       })
     )
   }
-  label.createSpan({ cls: 'pm-group-count', text: t('common.taskCount', { count: heading.count }) })
+  label.createSpan({ cls: 'pm-group-count', text: t('count.tasks', { count: heading.count }) })
   if (heading.detail) label.createSpan({ cls: 'pm-group-detail', text: heading.detail })
   if (handlers.onAdd) {
     new IconButton(parent)

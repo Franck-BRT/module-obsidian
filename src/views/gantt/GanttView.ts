@@ -112,7 +112,7 @@ export class GanttView implements SubView {
     const bar = this.container.createDiv('pm-gantt-controls')
     const levels: GanttGranularity[] = ['day', 'week', 'month', 'quarter', 'year']
     const labels: Record<GanttGranularity, string> = {
-      day: 'Day',
+      day: t('settings.granularity.day'),
       week: t('settings.granularity.week'),
       month: t('settings.granularity.month'),
       quarter: t('settings.granularity.quarter'),

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Twenty-odd strings the French sweep had missed, found by re-reading every call that
+  puts text on screen rather than by eye:
+  - the Gantt's **Day** button, its **W35** week numbers (now **S35**) and its **Q3**
+    quarters (**T3**)
+  - the milestone tooltip, which read "(milestone)" and "Date:" whatever the language
+  - the project page's whole metrics band — "3 of 12 tasks done", "2 sub-projects",
+    "4 members", "tasks past due", "logged / estimate"
+  - the **M** badge on a milestone card, now **J** for jalon
+  - "Set value", "None", "OK", "Archive", "Add \"{name}\"", "Create person note",
+    "Sort by", "Filter by", "Time tracking (2h logged)", "Create project (Ctrl+S)",
+    "This note is not a task in …", and the confirmation for folding a custom field
+    into an inherited one
+- Dates follow the plugin's own language once one is chosen explicitly, instead of the
+  host's. On **auto** they still follow Obsidian, including into a language this plugin
+  does not translate: a German vault keeps German month names rather than being dragged
+  to English because our catalogue falls back there
+
 ### Changed
 
 - Every ticket is created from **+ add task**, whatever it turns out to be: the editor

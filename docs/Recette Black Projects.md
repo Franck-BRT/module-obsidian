@@ -241,6 +241,23 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 ### Là où il faut vraiment regarder
 
 - [ ] **Palette de commandes** : toutes les commandes Black Projects sont en français
+- [ ] **[N]** Vue **Gantt** : le bouton de granularité dit **« Jour »**, pas « Day »
+- [ ] **[N]** ✅ **Attendu** : les colonnes de semaine s'écrivent **S35**, **S36**… (pas W35)
+- [ ] **[N]** Passer en granularité **Trimestre** : ✅ **Attendu** : **T3 2026**, pas Q3
+- [ ] **[N]** Survoler un **jalon** dans le Gantt : ✅ **Attendu** : l'infobulle dit « (jalon) » et « Date : »
+- [ ] **[N]** Carte d'un jalon dans le **Tableau** : ✅ **Attendu** : la pastille est **J**, pas M
+- [ ] **[N]** Ouvrir la **page d'un projet** (clic sur son titre) : ✅ **Attendu** : tout l'encart de chiffres
+      est en français — « 3 tâches terminées sur 12 », « 2 sous-projets », « 4 membres »,
+      « tâches en retard », « passé / estimé »
+- [ ] **[N]** Un champ personnalisé de type **liste** : ✅ **Attendu** : l'option vide dit « Aucun »
+- [ ] **[N]** Une propriété vide dans l'éditeur de tâche : ✅ **Attendu** : « Définir une valeur »
+- [ ] **[N]** Barre de sélection multiple : ✅ **Attendu** : le bouton dit **« Archiver »**
+- [ ] **[N]** Ajouter un assigné inconnu : ✅ **Attendu** : « Ajouter « nom » » et « Créer la note de personne « nom » »
+- [ ] **[N]** Section **Suivi du temps** d'une tâche : ✅ **Attendu** : le titre est en français
+- [ ] **[N]** Bouton de création d'un projet : ✅ **Attendu** : « Créer le projet (Ctrl+S) »
+- [ ] **[N]** Réglage **Langue → Français** sur un Obsidian en **anglais**
+      ✅ **Attendu** : les **dates** passent aussi en français (« 6 mars » et non « Mar 6 »)
+- [ ] **[N]** Réglage **Langue → Automatique** : ✅ **Attendu** : les dates suivent Obsidian
 - [ ] **[N]** Sélectionner **plusieurs tâches** puis **Supprimer** : ✅ **Attendu** : la confirmation est en français,
       avec le bon accord (« 1 tâche » / « 3 tâches »)
 - [ ] **[N]** Sélection multiple → **Archiver**, puis **Désarchiver** : ✅ **Attendu** : la notification compte en français

@@ -401,7 +401,7 @@ export class ProjectEditView extends ItemView {
   private inheritedFields(project: Project): { field: CustomFieldDef; source: string }[] {
     const ancestors = this.plugin.index.ancestorRefs(project.filePath)
     return mergeById([
-      this.plugin.settings.customFields.map((field) => ({ id: field.id, field, source: 'vault settings' })),
+      this.plugin.settings.customFields.map((field) => ({ id: field.id, field, source: t('view.vaultSettings') })),
       ...ancestors.map((ref) => ref.customFields.map((field) => ({ id: field.id, field, source: ref.title })))
     ])
   }
@@ -445,7 +445,7 @@ export class ProjectEditView extends ItemView {
     async (project: Project, own: CustomFieldDef, target: CustomFieldDef, source: string) => {
       const ok = await confirmDialog(
         this.app,
-        `Move this project's ${own.name} values onto the ${target.name} from ${source}, and stop defining it here?`,
+        t('view.mergeFieldConfirm', { own: own.name, target: target.name, source }),
         t('view.merge')
       )
       if (!ok) return

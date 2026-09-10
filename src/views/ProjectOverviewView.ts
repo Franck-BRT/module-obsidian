@@ -156,9 +156,9 @@ export class ProjectOverviewView extends ItemView {
     const identity = header.createDiv('pm-overview-identity')
     identity.createDiv({ cls: 'pm-overview-title', text: project.title })
     const children = this.plugin.index.childRefs(project.filePath).length
-    const bits = [`${rollup.done} of ${rollup.total} tasks done`]
-    if (children) bits.push(children === 1 ? '1 sub-project' : `${children} sub-projects`)
-    if (project.teamMembers.length) bits.push(`${project.teamMembers.length} members`)
+    const bits = [t('view.tasksDone', { done: rollup.done, total: rollup.total })]
+    if (children) bits.push(t('count.subProjects', { count: children }))
+    if (project.teamMembers.length) bits.push(t('count.members', { count: project.teamMembers.length }))
     identity.createDiv({ cls: 'pm-overview-subline', text: bits.join(' · ') })
 
     new ButtonComponent(header)
@@ -202,17 +202,21 @@ export class ProjectOverviewView extends ItemView {
       {
         label: t('common.progress'),
         value: `${Math.round(percent)}%`,
-        sub: `of ${rollup.total} ${rollup.total === 1 ? 'task' : 'tasks'}`,
+        sub: t('view.ofTasks', { count: rollup.total }),
         extra: (el) => {
           new ProgressBar(el).setSize('sm').setValue(percent).setColor(project.color)
         }
       },
-      { label: t('common.tasks'), value: `${rollup.done} of ${rollup.total}`, sub: 'done' },
-      { label: t('common.overdue'), value: String(rollup.overdue), sub: 'tasks past due', alert: rollup.overdue > 0 },
+      {
+        label: t('common.tasks'),
+        value: t('view.doneOfTotal', { done: rollup.done, total: rollup.total }),
+        sub: t('view.doneLabel')
+      },
+      { label: t('common.overdue'), value: String(rollup.overdue), sub: t('view.pastDue'), alert: rollup.overdue > 0 },
       {
         label: t('common.time'),
         value: rollup.logged || rollup.estimate ? '' : '—',
-        sub: 'logged / estimate',
+        sub: t('view.loggedEstimate'),
         extra: (el) => {
           renderTimeChip(el, rollup.logged, rollup.estimate)
         }
@@ -251,7 +255,7 @@ export class ProjectOverviewView extends ItemView {
     dated.sort((a, b) => Temporal.PlainDate.compare(a.date, b.date))
 
     const done = dated.filter((entry) => isTerminalStatus(entry.task.status, config.statuses)).length
-    const note = dated.length ? `${done} of ${dated.length} done` : ''
+    const note = dated.length ? t('view.milestonesDone', { done, total: dated.length }) : ''
     const section = this.section(parent, t('view.milestones'), note)
     if (dated.length === 0) {
       section.createDiv({ cls: 'pm-overview-muted', text: t('project.noMilestones') })

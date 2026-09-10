@@ -50,7 +50,7 @@ export class KanbanCard {
     titleRow.createSpan({ text: task.title, cls: 'pm-kanban-card-title' })
     if (task.type === 'milestone') {
       new Chip(titleRow)
-        .setLabel('M')
+        .setLabel(t('common.milestoneBadge'))
         .setVariant('solid')
         .setSize('sm')
         .setColor('var(--color-purple)')
@@ -66,7 +66,7 @@ export class KanbanCard {
     }
     if (task.recurrence) {
       new Chip(titleRow)
-        .setLabel('R')
+        .setLabel(t('common.recurringBadge'))
         .setVariant('solid')
         .setSize('sm')
         .setColor('var(--color-blue)')

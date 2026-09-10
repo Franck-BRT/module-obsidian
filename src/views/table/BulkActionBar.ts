@@ -201,7 +201,7 @@ function updateBarContent(bar: HTMLElement, ctx: TableContext, onAction: (a: Bul
   const hasNonArchived = selectedTasks.some((t) => !t.archived)
 
   if (hasNonArchived) {
-    new ButtonComponent(left).setButtonText('Archive').onClick(() => onAction({ type: 'archive' }))
+    new ButtonComponent(left).setButtonText(t('common.archive')).onClick(() => onAction({ type: 'archive' }))
   }
   if (hasArchived) {
     new ButtonComponent(left).setButtonText(t('common.unarchive')).onClick(() => onAction({ type: 'unarchive' }))

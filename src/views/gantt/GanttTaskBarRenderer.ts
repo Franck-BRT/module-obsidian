@@ -301,7 +301,9 @@ function renderMilestoneDiamond(g: SVGGElement, task: Task, row: number, color: 
   g.appendChild(diamond)
 
   const tt = svgEl('title', {})
-  tt.textContent = `${task.title} (milestone)\nDate: ${task.due || task.start || '\u2014'}`
+  tt.textContent =
+    `${t('gantt.tooltipMilestone', { title: task.title })}\n` +
+    `${t('gantt.tooltipDate')}: ${task.due || task.start || '\u2014'}`
   diamond.appendChild(tt)
 
   diamond.addEventListener('click', () => {

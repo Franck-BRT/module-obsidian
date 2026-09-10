@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { en } from './en'
 import { fr } from './fr'
-import { LOCALES, resolveLocale, setLocale, t, type TranslationKey } from './index'
+import { dateLocale, LOCALES, resolveLocale, setLocale, t, type TranslationKey } from './index'
 
 const KEYS = Object.keys(en) as TranslationKey[]
 
@@ -85,5 +85,19 @@ describe('resolveLocale', () => {
   it('falls back to English for a language with no catalogue', () => {
     // The stub reports 'en'; anything unlisted resolves the same way.
     expect(resolveLocale('auto')).toBe('en')
+  })
+})
+
+describe('dateLocale', () => {
+  it('defers to the host on auto, so an untranslated vault keeps its own month names', () => {
+    setLocale('auto')
+    expect(dateLocale()).toBeUndefined()
+  })
+
+  it('follows an explicit choice, so dates match the language that was picked', () => {
+    setLocale('fr')
+    expect(dateLocale()).toBe('fr')
+    setLocale('en')
+    expect(dateLocale()).toBe('en')
   })
 })

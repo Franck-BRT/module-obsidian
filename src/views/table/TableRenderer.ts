@@ -149,7 +149,7 @@ export function renderTable(ctx: TableContext): void {
     if (col.key) {
       th.addClass('pm-table-th-sortable')
       th.setAttribute('role', 'button')
-      th.setAttribute('aria-label', `Sort by ${col.label}`)
+      th.setAttribute('aria-label', t('filter.sortBy', { label: col.label }))
       th.createSpan({ text: col.label })
       sortableHeaders.push({ key: col.key, th })
       th.addEventListener('click', () => {

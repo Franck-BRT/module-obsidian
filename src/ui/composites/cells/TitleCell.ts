@@ -50,7 +50,7 @@ export class TitleCell {
 
     if (task.type === 'milestone') {
       new Chip(inner)
-        .setLabel('M')
+        .setLabel(t('common.milestoneBadge'))
         .setVariant('solid')
         .setSize('sm')
         .setColor('var(--color-purple)')
@@ -66,7 +66,7 @@ export class TitleCell {
     }
     if (task.recurrence) {
       new Chip(inner)
-        .setLabel('R')
+        .setLabel(t('common.recurringBadge'))
         .setVariant('solid')
         .setSize('sm')
         .setColor('var(--color-blue)')
