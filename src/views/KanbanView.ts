@@ -12,6 +12,8 @@ import { renderProjectChip } from '../ui/composites/projectChip'
 import { linkedRefs } from './linkedRefs'
 import { collectionBlocks, headingHandlers, phaseHeading, renderHeadingRow, type HeadingRow } from './headings'
 import { isPhase } from '../store/Phase'
+import { KANBAN_SORT_KEYS, orderTasks, type TaskOrder } from './sortOrder'
+import { renderSortControl } from './SortControl'
 import type { SubView } from './SubView'
 import { t } from '../i18n'
 
@@ -52,18 +54,49 @@ export class KanbanView implements SubView {
     this.container.empty()
     this.container.addClass('pm-kanban-view')
 
+    this.renderControls()
     const board = this.container.createDiv('pm-kanban-board')
     const lanes = this.lanes()
     if (lanes) this.renderLanes(board, lanes)
     else this.renderColumns(board, this.visibleTasks(), true, null)
   }
 
+  /**
+   * Which order the cards inside a column are in. Manual is the order the project
+   * stores; any other key is a reading order, and it applies inside every column of
+   * every lane at once — a board read by due date should read that way throughout.
+   */
+  private renderControls(): void {
+    const bar = this.container.createDiv('pm-kanban-controls')
+    renderSortControl(bar, {
+      keys: KANBAN_SORT_KEYS,
+      order: this.order(),
+      onPick: async (order) => {
+        this.plugin.settings.kanbanSortKey = order.sortKey
+        this.plugin.settings.kanbanSortDir = order.sortDir
+        await this.plugin.saveSettings()
+        this.renderBoard()
+      }
+    })
+  }
+
+  private order(): TaskOrder {
+    return { sortKey: this.plugin.settings.kanbanSortKey, sortDir: this.plugin.settings.kanbanSortDir }
+  }
+
   /** The ordinary board: one full-height column per status, each carrying its own header. */
   private renderColumns(parent: HTMLElement, tasks: Task[], header: boolean, laneKey: string | null): void {
+    const order = this.order()
     for (const status of this.config.statuses) {
+      const inColumn = orderTasks(
+        tasks.filter((task) => task.status === status.id),
+        order,
+        this.config.statuses,
+        this.config.priorities
+      )
       new KanbanColumn(parent, {
         status,
-        cards: tasks.filter((task) => task.status === status.id).map((task) => this.buildCardData(task)),
+        cards: inColumn.map((task) => this.buildCardData(task)),
         header,
         laneKey,
         onCardClick: (task) => this.openTask(task),

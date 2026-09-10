@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_STATUSES, makeTask, type Task } from '../../types'
-import { orderTasks } from './GanttSort'
+import { DEFAULT_PRIORITIES, DEFAULT_STATUSES, makeTask, type Task } from '../types'
+import { GANTT_SORT_KEYS, KANBAN_SORT_KEYS, orderTasks } from './sortOrder'
 
 const task = (title: string, over: Partial<Task> = {}): Task => makeTask({ title, start: '', ...over })
 const phase = (title: string, subtasks: Task[], over: Partial<Task> = {}): Task =>
   makeTask({ title, type: 'phase', start: '', subtasks, ...over })
 
-describe('the order the Gantt draws siblings in', () => {
+describe('the order a view draws its rows in', () => {
   it('hands back the project’s own order when nothing is sorted', () => {
     const rows = [task('Zèbre'), task('Alpha')]
     expect(orderTasks(rows, { sortKey: 'manual', sortDir: 'asc' }).map((t) => t.title)).toEqual(['Zèbre', 'Alpha'])
@@ -73,5 +73,46 @@ describe('the order the Gantt draws siblings in', () => {
   it('does not touch a lot the sort has nothing to say about', () => {
     const rows = [phase('Lot vide', []), task('Tâche')]
     expect(orderTasks(rows, { sortKey: 'progress', sortDir: 'asc' }, DEFAULT_STATUSES)).toHaveLength(2)
+  })
+})
+
+describe('what each view offers to sort by', () => {
+  it('gives the board every order but status', () => {
+    expect(KANBAN_SORT_KEYS).not.toContain('status')
+    // A board answers status with the column a card sits in: sorting a column by it
+    // would order every card in it by the one thing they all share.
+    expect(KANBAN_SORT_KEYS).toEqual(GANTT_SORT_KEYS.filter((key) => key !== 'status'))
+  })
+
+  it('leads with the project’s own order in both', () => {
+    expect(GANTT_SORT_KEYS[0]).toBe('manual')
+    expect(KANBAN_SORT_KEYS[0]).toBe('manual')
+  })
+})
+
+describe('the cards of one board column', () => {
+  // Ascending walks the palette from the top, as the table has always done: the most
+  // important first, not the alphabetical order of the labels.
+  it('sorts by priority within the column, the palette’s order', () => {
+    const cards = [
+      task('Basse', { priority: 'low' }),
+      task('Critique', { priority: 'critical' }),
+      task('Moyenne', { priority: 'medium' })
+    ]
+    const asc = orderTasks(cards, { sortKey: 'priority', sortDir: 'asc' }, DEFAULT_STATUSES, DEFAULT_PRIORITIES)
+    expect(asc.map((t) => t.title)).toEqual(['Critique', 'Moyenne', 'Basse'])
+    const desc = orderTasks(cards, { sortKey: 'priority', sortDir: 'desc' }, DEFAULT_STATUSES, DEFAULT_PRIORITIES)
+    expect(desc.map((t) => t.title)).toEqual(['Basse', 'Moyenne', 'Critique'])
+  })
+
+  it('sorts by due date, the undated last', () => {
+    const cards = [task('Sans date'), task('Mars', { due: '2026-03-10' }), task('Février', { due: '2026-02-10' })]
+    const sorted = orderTasks(cards, { sortKey: 'due', sortDir: 'asc' }, DEFAULT_STATUSES)
+    expect(sorted.map((t) => t.title)).toEqual(['Février', 'Mars', 'Sans date'])
+  })
+
+  it('keeps the project’s order when nothing is sorted, which is what a board did before', () => {
+    const cards = [task('Zèbre'), task('Alpha')]
+    expect(orderTasks(cards, { sortKey: 'manual', sortDir: 'asc' }, DEFAULT_STATUSES)).toBe(cards)
   })
 })

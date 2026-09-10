@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.17.0] - 2026-09-11
+
+### Added
+
+- The **board can be ordered**, which only the table and the Gantt could do: a button in
+  its own toolbar, offering the project's order (the one the drag handle writes) or by
+  title, priority, due date, assignee or progress, either way round, remembered between
+  sessions. The order applies **inside each column**, in every lane at once, so a board
+  read by due date reads that way throughout
+- The board does **not** offer to sort by status: a column already answers that question,
+  and sorting one by status would order every card in it by the one thing they all share
+- The board keeps **its own order**, separate from the Gantt's. A chart read by date and a
+  board read by priority are two ways of looking at the same project, and choosing one
+  should not disturb the other
+
+### Changed
+
+- The order button and the code behind it are now **shared** by the Gantt and the board
+  rather than written twice, so the two cannot drift apart
+
 ## [2.16.1] - 2026-09-11
 
 ### Fixed

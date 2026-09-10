@@ -10,6 +10,19 @@
   height: 100%;
 }
 
+/* The board's own toolbar, built like the Gantt's so switching between the two views
+   does not move the controls. It must not shrink: the board below takes what is left. */
+.pm-kanban-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
 .pm-kanban-board {
   display: flex;
   gap: 14px;

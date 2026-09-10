@@ -380,6 +380,13 @@ export interface PMSettings {
   /** How the Gantt orders rows. 'manual' keeps the order the project stores. */
   ganttSortKey: 'manual' | 'title' | 'status' | 'priority' | 'due' | 'assignees' | 'progress'
   ganttSortDir: 'asc' | 'desc'
+  /**
+   * How the board orders the cards inside a column — its own setting, not the Gantt's: a
+   * chart read by date and a board read by priority are two ways of looking at the same
+   * project, and choosing one should not disturb the other.
+   */
+  kanbanSortKey: PMSettings['ganttSortKey']
+  kanbanSortDir: 'asc' | 'desc'
 }
 
 export const DEFAULT_STATUSES: StatusConfig[] = [
@@ -465,7 +472,9 @@ export const DEFAULT_SETTINGS: PMSettings = {
   collapsedCollectionGroups: {},
   libraryMode: 'cards',
   ganttSortKey: 'manual',
-  ganttSortDir: 'asc'
+  ganttSortDir: 'asc',
+  kanbanSortKey: 'manual',
+  kanbanSortDir: 'asc'
 }
 
 export function makeId(): string {

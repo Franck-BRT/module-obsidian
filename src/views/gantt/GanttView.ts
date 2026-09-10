@@ -1,4 +1,4 @@
-import { ButtonComponent, Menu, type Scope } from 'obsidian'
+import { ButtonComponent, type Scope } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Task, GanttGranularity, FilterState } from '../../types'
 import { personKeyer, type ProjectScope } from '../../store'
@@ -22,12 +22,13 @@ import {
   renderDependencyArrows,
   renderMilestoneLabels
 } from './GanttRenderer'
-import { safeAsync, svgEl } from '../../utils'
+import { svgEl } from '../../utils'
 import { Temporal, today } from '../../dates'
 import type { RendererContext } from './GanttRenderer'
 import { renderTaskLabel } from './TaskLabelRenderer'
 import { collectionBlocks, headingHandlers, phaseHeading, renderHeadingRow, type HeadingRow } from '../headings'
-import { GANTT_SORT_KEYS, orderTasks, sortKeyLabel, type GanttOrder } from './GanttSort'
+import { GANTT_SORT_KEYS, orderTasks, type TaskOrder } from '../sortOrder'
+import { renderSortControl } from '../SortControl'
 import { isPhase, phaseSpan } from '../../store/Phase'
 import { phaseBracket } from './GanttPhaseBar'
 import { t } from '../../i18n'
@@ -132,61 +133,26 @@ export class GanttView implements SubView {
     })
 
     bar.createSpan({ cls: 'pm-gantt-sep' })
-    this.renderSortControl(bar)
+    // Manual is the order the project stores — the one the drag handle writes — and any
+    // other is a reading order, applied at every level so a lot's tasks sort among
+    // themselves rather than being scattered up the chart.
+    renderSortControl(bar, {
+      keys: GANTT_SORT_KEYS,
+      order: this.order(),
+      onPick: async (order) => {
+        this.plugin.settings.ganttSortKey = order.sortKey
+        this.plugin.settings.ganttSortDir = order.sortDir
+        await this.plugin.saveSettings()
+        this.render()
+      }
+    })
     new ButtonComponent(bar).setButtonText(t('common.today')).onClick(() => this.scrollToToday())
 
     new ButtonComponent(bar).setButtonText(t('gantt.expandAll')).onClick(() => this.setAllCollapsed(false))
     new ButtonComponent(bar).setButtonText(t('gantt.collapseAll')).onClick(() => this.setAllCollapsed(true))
   }
 
-  /**
-   * Which order the rows are in. Manual is the order the project stores — the one the
-   * drag handle writes — and any other is a reading order, applied at every level so a
-   * lot's tasks sort among themselves rather than being scattered up the chart.
-   */
-  private renderSortControl(bar: HTMLElement): void {
-    const settings = this.plugin.settings
-    const label = sortKeyLabel(settings.ganttSortKey)
-    const arrow = settings.ganttSortKey === 'manual' ? '' : settings.ganttSortDir === 'asc' ? ' \u2191' : ' \u2193'
-    new ButtonComponent(bar).setButtonText(`${t('gantt.sortBy')} ${label}${arrow}`).onClick((e) => {
-      const menu = new Menu()
-      for (const key of GANTT_SORT_KEYS) {
-        menu.addItem((item) =>
-          item
-            .setTitle(sortKeyLabel(key))
-            .setChecked(key === settings.ganttSortKey)
-            .onClick(
-              safeAsync(async () => {
-                settings.ganttSortKey = key
-                await this.plugin.saveSettings()
-                this.render()
-              })
-            )
-        )
-      }
-      if (settings.ganttSortKey !== 'manual') {
-        menu.addSeparator()
-        for (const dir of ['asc', 'desc'] as const) {
-          menu.addItem((item) =>
-            item
-              .setTitle(dir === 'asc' ? t('gantt.sortAsc') : t('gantt.sortDesc'))
-              .setChecked(dir === settings.ganttSortDir)
-              .onClick(
-                safeAsync(async () => {
-                  settings.ganttSortDir = dir
-                  await this.plugin.saveSettings()
-                  this.render()
-                })
-              )
-          )
-        }
-      }
-      menu.showAtMouseEvent(e)
-    })
-  }
-
-  /** The order the chart is in, as the settings hold it. */
-  private order(): GanttOrder {
+  private order(): TaskOrder {
     return { sortKey: this.plugin.settings.ganttSortKey, sortDir: this.plugin.settings.ganttSortDir }
   }
 

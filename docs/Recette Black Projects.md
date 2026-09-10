@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.16.1
+version: 2.17.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.16.1
+# Recette — Black Projects 2.17.0
 
-Plan de test manuel pour le fork. Les **647 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **652 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -494,6 +494,28 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] ✅ **Attendu** : en dessous d'environ 300 px, les **dates et le pourcentage disparaissent** d'un coup ;
       en dessous de 220 px, le **compteur** aussi — jamais coupés au milieu d'un mot
 - [ ] ✅ **Attendu** : à aucune largeur le titre ne disparaît complètement
+
+**Constaté :**
+
+### Tableau (kanban) : ordre des cartes [N]
+
+- [ ] Vue **Tableau** : ✅ **Attendu** : une **barre d'outils** apparaît au-dessus du tableau,
+      avec un bouton **« Ordre : … »** — comme dans le Gantt
+- [ ] ✅ **Attendu** : les colonnes gardent toute la hauteur, la barre ne les écrase pas
+- [ ] Ouvrir le menu : ✅ **Attendu** : Ordre du projet · Tâche · Priorité · Échéance · Personnes · Avancement
+- [ ] ✅ **Attendu** : **« Statut » n'est pas proposé** — une colonne, c'est déjà un statut
+- [ ] Choisir **Échéance**, **Croissant** : ✅ **Attendu** : dans **chaque colonne**, les cartes se rangent
+      par date, les **sans date en dernier**
+- [ ] ✅ **Attendu** : la flèche du bouton indique le sens ; **Décroissant** l'inverse
+- [ ] Choisir **Priorité**, **Croissant** : ✅ **Attendu** : les plus importantes en haut de chaque colonne
+      *(l'ordre est celui de la palette, comme dans le tableur)*
+- [ ] Sur un projet **avec des lots** : ✅ **Attendu** : le tri s'applique dans **chaque bande**, colonne par colonne
+- [ ] Revenir à **« Ordre du projet »** : ✅ **Attendu** : on retrouve l'ordre d'origine
+- [ ] Changer de vue puis revenir, et rouvrir Obsidian : ✅ **Attendu** : l'ordre choisi est **retenu**
+- [ ] Régler le **Gantt** sur un autre ordre : ✅ **Attendu** : les deux vues gardent **chacune le sien**
+- [ ] Avec un tri actif, **glisser une carte** dans une autre colonne : ✅ **Attendu** : le statut change,
+      la carte se range à sa place dans le nouvel ordre
+- [ ] Idem vers une **autre bande** : ✅ **Attendu** : la tâche change de lot, comme avant
 
 **Constaté :**
 
