@@ -134,7 +134,7 @@ convenience for installing by hand.
 
 ```sh
 pnpm install
-pnpm test          # 586 tests
+pnpm test          # 628 tests
 pnpm run check     # lint, format, types, submission lint
 pnpm run build     # main.js + styles.css
 VAULT_PATH=/path/to/vault pnpm run dev   # builds straight into the vault's plugin folder

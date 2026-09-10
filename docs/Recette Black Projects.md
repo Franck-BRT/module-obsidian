@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.12.0
+version: 2.13.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.12.0
+# Recette — Black Projects 2.13.0
 
-Plan de test manuel pour le fork. Les **586 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **628 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -517,7 +517,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ## 7quater. Bibliothèque documentaire [N]
 
-> **Nouveau** : un cinquième type de ticket, **Document**. Une note qui porte un
+> **Nouveau en 2.13.0** : un cinquième type de ticket, **Document**. Une note qui porte un
 > fichier (Word, PDF, plan), ses versions et ses visas. Elle vit à la fois dans le
 > **plan** (tableur, Gantt, tableau) et dans la nouvelle vue **Bibliothèque**.
 
