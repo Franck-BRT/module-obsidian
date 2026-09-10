@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.14.1] - 2026-09-11
+
+### Fixed
+
+- A card kept showing a document whose file had been deleted, until something else
+  happened to redraw the view. The store only reloads a project when its note or a task
+  note changes — right, since deleting a PDF changes nothing the project says — but the
+  library is showing that PDF, so it now listens for files appearing, disappearing and
+  being renamed, and redraws. Debounced, so dropping a folder of drawings into the vault
+  is one redraw and not fifty
+
+### Added
+
+- The library says when files are sitting in a project's documents folder that no
+  document claims — what a deleted ticket leaves behind, since a note going away is no
+  reason to destroy a drawing. The chip lists them, opens any of them, and can move the
+  lot to the vault's trash. Counted over every document, filter or no filter: a file
+  whose document is merely hidden by a search is not loose
+
 ## [2.14.0] - 2026-09-11
 
 ### Added

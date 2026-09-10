@@ -1,4 +1,4 @@
-import { Menu, Notice } from 'obsidian'
+import { Menu, Notice, TFile, type EventRef, type TAbstractFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { DocState, FilterState, Project, Task } from '../../types'
 import { DOC_STATES } from '../../types'
@@ -8,7 +8,7 @@ import { matchesFilter } from '../../store/TaskFilter'
 import { documentOf, isAwaited, isDocument } from '../../store/Document'
 import { formatDateShort, today } from '../../dates'
 import { displayName, safeAsync } from '../../utils'
-import { openTaskModal } from '../../ui/ModalFactory'
+import { confirmDialog, openTaskModal } from '../../ui/ModalFactory'
 import { buildTaskContextMenu } from '../../ui/TaskContextMenu'
 import { Chip } from '../../ui/primitives/Chip'
 import { ChipButton } from '../../ui/primitives/ChipButton'
@@ -39,6 +39,8 @@ const STATE_COLORS: Record<DocState, string> = {
 export class LibraryView implements SubView {
   private stateFilter: DocState | null = null
   private picked = new Set<string>()
+  private watchers: EventRef[] = []
+  private pending: number | null = null
 
   constructor(
     private container: HTMLElement,
@@ -49,6 +51,7 @@ export class LibraryView implements SubView {
   ) {}
 
   render(): void {
+    this.watchFiles()
     this.container.empty()
     this.container.addClass('pm-library-view')
     const docs = this.documents()
@@ -105,6 +108,38 @@ export class LibraryView implements SubView {
 
   refresh(): void {
     this.render()
+  }
+
+  destroy(): void {
+    for (const ref of this.watchers) this.plugin.app.vault.offref(ref)
+    this.watchers = []
+    if (this.pending !== null) window.clearTimeout(this.pending)
+    this.pending = null
+  }
+
+  /**
+   * Watches the vault for the files behind the cards.
+   *
+   * The store only reloads a project when its note or a task note changes, which is
+   * right: deleting a PDF does not change what the project says. But the library is
+   * showing that PDF, so it has to hear about it — a card left displaying a file that
+   * is gone is a lie the view tells until something else happens to redraw it.
+   *
+   * Notes are ignored: those already come back through the store.
+   */
+  private watchFiles(): void {
+    if (this.watchers.length) return
+    const vault = this.plugin.app.vault
+    const touched = (file: TAbstractFile): void => {
+      if (file instanceof TFile && file.extension === 'md') return
+      // Debounced: dropping a folder of drawings into the vault is one redraw, not fifty.
+      if (this.pending !== null) window.clearTimeout(this.pending)
+      this.pending = window.setTimeout(() => {
+        this.pending = null
+        this.render()
+      }, 200)
+    }
+    this.watchers = [vault.on('create', touched), vault.on('delete', touched), vault.on('rename', touched)]
   }
 
   /** Every document in scope, in reference order: that is how a library is read. */
@@ -169,6 +204,7 @@ export class LibraryView implements SubView {
         .setColor('var(--text-error, var(--color-red))')
         .setTooltip(`${t('view.awaitedDocs')}\n${late.map((task) => task.title).join('\n')}`)
     }
+    this.renderOrphanChip(right)
     new ChipButton(right)
       .setLabel(t('view.bordereau'))
       .setShape('pill')
@@ -184,6 +220,66 @@ export class LibraryView implements SubView {
           new Notice(t('view.bordereauCreated', { path: await writeBordereau(this.plugin, project, chosen) }))
         })
       )
+  }
+
+  /**
+   * Files sitting in the project's documents folder that no document claims.
+   *
+   * Deleting a document's ticket deliberately leaves its files alone — they are the
+   * user's, and a note going away is no reason to destroy a drawing. But then nothing
+   * says they are still there, which is how a documents folder quietly fills up with
+   * things nobody can name. This chip is that missing sentence.
+   */
+  private renderOrphanChip(parent: HTMLElement): void {
+    const project = this.scope.primary
+    if (!project) return
+    // Every document, filter or no filter: a file whose document is merely hidden by the
+    // search is not loose, and calling it loose would invite deleting it.
+    const claimed = flattenTasks(this.scope.tasks())
+      .map((flat) => flat.task)
+      .filter(isDocument)
+    const orphans = this.plugin.documents.orphanFiles(project, claimed)
+    if (!orphans.length) return
+    const chip = new ChipButton(parent)
+      .setLabel(t('count.orphanFiles', { count: orphans.length }))
+      .setShape('pill')
+      .setAriaLabel(t('view.orphanFiles'))
+    chip.el.addEventListener('click', (e) => {
+      const menu = new Menu()
+      for (const path of orphans) {
+        const name = path.slice(path.lastIndexOf('/') + 1)
+        menu.addItem((item) =>
+          item
+            .setTitle(name)
+            .setIcon('file')
+            .onClick(
+              safeAsync(async () => {
+                const file = this.plugin.app.vault.getAbstractFileByPath(path)
+                if (file instanceof TFile) await this.plugin.app.workspace.getLeaf('tab').openFile(file)
+              })
+            )
+        )
+      }
+      menu.addSeparator()
+      menu.addItem((item) =>
+        item
+          .setTitle(t('view.orphanTrash'))
+          .setIcon('trash')
+          .onClick(
+            safeAsync(async () => {
+              if (!(await confirmDialog(this.plugin.app, t('view.orphanTrashConfirm', { count: orphans.length })))) {
+                return
+              }
+              for (const path of orphans) {
+                const file = this.plugin.app.vault.getAbstractFileByPath(path)
+                if (file) await this.plugin.app.fileManager.trashFile(file)
+              }
+              this.render()
+            })
+          )
+      )
+      menu.showAtMouseEvent(e)
+    })
   }
 
   private renderRow(body: HTMLElement, task: Task): void {

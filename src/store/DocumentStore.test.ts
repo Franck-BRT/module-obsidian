@@ -163,3 +163,31 @@ describe('what the document says it holds', () => {
     expect(documentOf(doc({ document: meta })).versions).toHaveLength(1)
   })
 })
+
+describe('what counts as loose', () => {
+  it('does not count a file a document points at, wherever the document sits', async () => {
+    const meta = await store.deposit(project, doc(), await incoming('plan.pdf'), { move: false, by: 'A', note: '' })
+    const linked = await vault.create('Ailleurs/notice.pdf', 'bytes')
+    const linkedMeta = await store.link(doc(), linked, { by: 'A', note: '' })
+    expect(store.orphanFiles(project, [doc({ document: meta }), doc({ document: linkedMeta })])).toEqual([])
+  })
+
+  it('ignores what sits in the versions folder, which belongs to the log', async () => {
+    const first = await store.deposit(project, doc(), await incoming('plan.pdf'), { move: false, by: 'A', note: '' })
+    await store.deposit(project, doc({ document: first }), await incoming('plan2.pdf'), {
+      move: false,
+      by: 'A',
+      note: ''
+    })
+    // Even told about no documents at all, an archived version is not loose: it is not
+    // in the documents folder itself.
+    expect(store.orphanFiles(project, [])).toEqual(['Projets/Tour/_docs/plan.pdf'])
+  })
+
+  it('counts what is left behind when a document’s ticket is deleted', async () => {
+    const meta = await store.deposit(project, doc(), await incoming('plan.pdf'), { move: false, by: 'A', note: '' })
+    expect(meta.file).toBe('Projets/Tour/_docs/plan.pdf')
+    // The ticket is gone; the file is deliberately not.
+    expect(store.orphanFiles(project, [])).toEqual(['Projets/Tour/_docs/plan.pdf'])
+  })
+})

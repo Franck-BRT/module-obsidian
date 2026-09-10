@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.14.0
+version: 2.14.1
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.14.0
+# Recette — Black Projects 2.14.1
 
-Plan de test manuel pour le fork. Les **630 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **633 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -616,6 +616,15 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       ✅ **Attendu** : la pastille dit **« Fichier introuvable »**, barrée — rien ne plante
 - [ ] **Supprimer la tâche** d'un document : ✅ **Attendu** : la note part, **les fichiers restent**
       dans `_docs/` *(c'est voulu : ils vous appartiennent)*
+- [ ] **[N]** ✅ **Attendu** : une pastille **« N fichiers orphelins »** apparaît alors dans la barre
+- [ ] **[N]** Cliquer dessus : ✅ **Attendu** : la liste s'ouvre, chaque entrée ouvre le fichier,
+      et **« Tout mettre à la corbeille… »** demande confirmation avant d'agir
+- [ ] **[N]** Filtrer la bibliothèque (recherche ou état) : ✅ **Attendu** : le compte d'orphelins
+      **ne bouge pas** — un fichier dont le document est simplement masqué n'est pas orphelin
+- [ ] **[N]** **Supprimer le fichier** d'un document depuis l'explorateur Obsidian, **sans changer de vue**
+      ✅ **Attendu** : la vignette se met à jour **toute seule** en quelques instants
+- [ ] **[N]** Déposer un fichier dans `_docs/` depuis l'explorateur : ✅ **Attendu** : la pastille d'orphelins
+      apparaît sans qu'on ait à recharger
 - [ ] Éditer à la main le bloc `document:` d'une note (retirer des champs, écrire un état inconnu)
       ✅ **Attendu** : le document se relit sans erreur, l'état inconnu retombe sur **« Attendu »**
 - [ ] Un projet **sans aucun document** : ✅ **Attendu** : la bibliothèque explique comment en créer un
