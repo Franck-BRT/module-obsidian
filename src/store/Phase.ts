@@ -91,3 +91,20 @@ export function phaseSpan(phase: Task, statuses: StatusConfig[] = []): PhaseSpan
     overruns
   }
 }
+
+/**
+ * The tasks a phase holds that are not finished, at any depth.
+ *
+ * A nested phase is a container like its parent: what is open is inside it, never it.
+ */
+export function openTasksIn(phase: Task, statuses: StatusConfig[] = []): Task[] {
+  const out: Task[] = []
+  const walk = (tasks: Task[]): void => {
+    for (const task of tasks) {
+      if (!isPhase(task) && !isTerminalStatus(task.status, statuses)) out.push(task)
+      walk(task.subtasks)
+    }
+  }
+  walk(phase.subtasks)
+  return out
+}

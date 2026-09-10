@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.16.0] - 2026-09-11
+
+### Added
+
+- A phase heading carries a **⋯ menu** on the right, holding everything a lot can do:
+  open its ticket, add a task to it, fold it, archive it — then the ordinary ticket menu
+  below a separator, because a lot is still a ticket and renaming or re-dating it are the
+  same commands as anywhere else
+- **Archiving a lot** takes everything it holds with it, so a lot with work still open
+  asks first: it says how many tasks are still going, and offers to complete them and
+  archive, or to archive as it is. A lot already finished archives without a question,
+  archiving being reversible
+
+### Fixed
+
+- The **+** on a phase heading has never appeared: the button was drawn only when a
+  handler was supplied, and none ever was. Adding a task to a lot from its heading works
+  from this version, which is what the manual test plan has been asking testers to do
+  since phases landed
+
 ## [2.15.0] - 2026-09-11
 
 ### Added

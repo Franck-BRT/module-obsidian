@@ -3,13 +3,16 @@ import type { ProjectScope } from '../store'
 import type { StatusConfig, Task } from '../types'
 import { groupRowsByProject } from '../store'
 import { phaseSpan } from '../store/Phase'
+import { Menu } from 'obsidian'
 import { findTaskById } from '../store/TaskIndex'
+import { buildTaskContextMenu } from '../ui/TaskContextMenu'
+import { archivePhase } from './phaseActions'
+import { safeAsync } from '../utils'
 import { openTaskModal } from '../ui/ModalFactory'
 import { formatDateShort } from '../dates'
 import { CollapseToggle } from '../ui/primitives/CollapseToggle'
 import { IconButton } from '../ui/primitives/IconButton'
 import { renderGlyph } from '../ui/composites/properties'
-import { safeAsync } from '../utils'
 import { t } from '../i18n'
 
 /**
@@ -86,6 +89,8 @@ export interface ProjectHeadingHandlers {
   onOpen: () => void | Promise<void>
   /** Offered on a phase: the block is where its tasks go, so it can take a new one. */
   onAdd?: () => void
+  /** Everything else the heading can do, behind the overflow button. */
+  onMenu?: (e: MouseEvent) => void
 }
 
 /** The heading itself, identical in every view: chevron, glyph, name, count. */
@@ -122,6 +127,16 @@ export function renderHeadingRow(parent: HTMLElement, heading: HeadingRow, handl
       .onClick((e) => {
         e.stopPropagation()
         handlers.onAdd?.()
+      })
+  }
+  if (handlers.onMenu) {
+    new IconButton(parent)
+      .setIcon('more-horizontal')
+      .setTooltip(t('phase.menu'))
+      .setRevealOnHover(true)
+      .onClick((e) => {
+        e.stopPropagation()
+        handlers.onMenu?.(e)
       })
   }
 }
@@ -172,21 +187,54 @@ export function headingHandlers(
     }
   }
   const project = scope.projectOf(heading.key)
+  const phaseOf = (): Task | null => (project ? findTaskById(project, heading.key) : null)
+  const saved = async (): Promise<void> => {
+    await refresh()
+  }
+  const fold = async (): Promise<void> => {
+    if (!project) return
+    await plugin.toggleTaskCollapsed(project, heading.key)
+    await refresh()
+  }
+  const edit = (): void => {
+    const phase = phaseOf()
+    if (project && phase) openTaskModal(plugin, project, { task: phase, onSave: saved })
+  }
+  const addTask = (): void => {
+    if (project) openTaskModal(plugin, project, { parentId: heading.key, onSave: saved })
+  }
+
   return {
-    onToggle: async () => {
-      if (!project) return
-      await plugin.toggleTaskCollapsed(project, heading.key)
-      await refresh()
-    },
-    onOpen: () => {
-      const task = project ? findTaskById(project, heading.key) : null
-      if (!project || !task) return
-      openTaskModal(plugin, project, {
-        task,
-        onSave: async () => {
-          await refresh()
-        }
-      })
+    onToggle: fold,
+    onOpen: edit,
+    onAdd: addTask,
+    /**
+     * Everything a lot can do, in one place. Its own commands first — the ones that
+     * treat it as a container — then the ordinary ticket menu, because a lot is still a
+     * ticket: renaming it, re-dating it or deleting it are the same commands as anywhere
+     * else, and having two ways to spell them would be the mistake.
+     */
+    onMenu: (e) => {
+      const phase = phaseOf()
+      if (!project || !phase) return
+      const menu = new Menu()
+      menu.addItem((item) => item.setTitle(t('view.openTicket')).setIcon('pencil').onClick(edit))
+      menu.addItem((item) => item.setTitle(t('task.addToPhase')).setIcon('plus').onClick(addTask))
+      menu.addItem((item) =>
+        item
+          .setTitle(heading.collapsed ? t('phase.unfold') : t('phase.fold'))
+          .setIcon(heading.collapsed ? 'chevron-down' : 'chevron-right')
+          .onClick(safeAsync(fold))
+      )
+      menu.addItem((item) =>
+        item
+          .setTitle(t('phase.archive'))
+          .setIcon('archive')
+          .onClick(safeAsync(() => archivePhase(plugin, project, phase, saved)))
+      )
+      menu.addSeparator()
+      buildTaskContextMenu(menu, phase, { plugin, project, onRefresh: saved })
+      menu.showAtMouseEvent(e)
     }
   }
 }

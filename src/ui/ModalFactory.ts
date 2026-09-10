@@ -25,6 +25,69 @@ export function confirmDuplicateSubtasks(app: App, taskTitle: string): Promise<'
   })
 }
 
+export interface DialogChoice<T extends string> {
+  id: T
+  label: string
+  /** The one the dialog leads with. Exactly one should carry it. */
+  primary?: boolean
+}
+
+/**
+ * A question with more than two answers. Cancel is always there and always means null,
+ * so closing the dialog and refusing it are the same thing.
+ */
+export function chooseDialog<T extends string>(
+  app: App,
+  message: string,
+  choices: DialogChoice<T>[]
+): Promise<T | null> {
+  return new Promise((resolve) => {
+    new ChoiceModal<T>(app, message, choices, resolve).open()
+  })
+}
+
+class ChoiceModal<T extends string> extends Modal {
+  private resolved = false
+
+  constructor(
+    app: App,
+    private message: string,
+    private choices: DialogChoice<T>[],
+    private resolve: (value: T | null) => void
+  ) {
+    super(app)
+  }
+
+  private finish(value: T | null): void {
+    if (this.resolved) return
+    this.resolved = true
+    this.resolve(value)
+  }
+
+  onOpen(): void {
+    const { contentEl } = this
+    this.modalEl.addClass('pm-confirm-modal')
+    contentEl.createEl('p', { text: this.message, cls: 'pm-confirm-text' })
+    const btnRow = contentEl.createDiv('pm-modal-btn-row')
+    new ButtonComponent(btnRow).setButtonText(t('dialog.cancel')).onClick(() => {
+      this.finish(null)
+      this.close()
+    })
+    for (const choice of this.choices) {
+      const btn = new ButtonComponent(btnRow).setButtonText(choice.label).onClick(() => {
+        this.finish(choice.id)
+        this.close()
+      })
+      if (choice.primary) btn.setCta()
+    }
+  }
+
+  onClose(): void {
+    this.finish(null)
+    this.contentEl.empty()
+  }
+}
+
 /** Returns the trimmed string, or null if cancelled or empty. */
 export function promptText(app: App, label: string, placeholder = '', initial = ''): Promise<string | null> {
   return new Promise((resolve) => {

@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.15.0
+version: 2.16.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.15.0
+# Recette — Black Projects 2.16.0
 
-Plan de test manuel pour le fork. Les **641 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **647 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -452,7 +452,12 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Ouvrir une tâche existante : ✅ **Attendu** : le champ **« Lot »** est proposé (il n'apparaît que si le projet a des lots)
 - [ ] Y choisir « Lot 1 » : ✅ **Attendu** : la tâche passe **sous l'en-tête**, **sans indentation**
 - [ ] ✅ **Attendu** : son type **reste « Tâche »** — elle n'est pas devenue une sous-tâche
-- [ ] Cliquer le **+** de l'en-tête du lot : ✅ **Attendu** : la nouvelle tâche est créée **dans le lot**
+- [ ] Cliquer le **+** de l'en-tête du lot : ✅ **Attendu** : le bouton **existe** (au survol) et la nouvelle
+      tâche est créée **dans le lot** *(il ne s'affichait pas avant la 2.16.0)*
+- [ ] **[N]** Survoler l'en-tête d'un lot : ✅ **Attendu** : un bouton **⋯** apparaît à droite
+- [ ] **[N]** L'ouvrir : ✅ **Attendu** : Ouvrir la fiche · Ajouter une tâche · Replier · Archiver le lot,
+      puis, après un séparateur, **le menu habituel d'un ticket** (statut, priorité, échéance, dupliquer, supprimer…)
+- [ ] **[N]** Chaque entrée fait ce qu'elle annonce
 - [ ] Une tâche du lot qui a ses **propres sous-tâches** : ✅ **Attendu** : elles s'indentent sous elle, comme d'habitude
 - [ ] Créer un **lot dans un lot** : ✅ **Attendu** : son en-tête est **décalé vers la droite**
 - [ ] ✅ **Attendu** : les tâches du lot 1 sont décalées d'un cran, celles du lot 2 d'un cran de plus —
@@ -523,6 +528,24 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       chacune avec son propre en-tête, aucune bande
 - [ ] Cocher **« tout sélectionner »** dans le tableur : ✅ **Attendu** : les lots ne sont **pas** sélectionnés
 - [ ] Naviguer au clavier (`j` / `k`) : ✅ **Attendu** : la sélection **saute** les en-têtes de lot
+
+### Archiver un lot [N]
+
+- [ ] Un lot dont **toutes** les tâches sont terminées → **⋯ → Archiver le lot**
+      ✅ **Attendu** : il part **sans question**, avec toutes ses tâches, et une notification le confirme
+- [ ] ✅ **Attendu** : les notes sont bien dans `_tasks/Archive/`
+- [ ] Un lot dont **il reste des tâches ouvertes** → **Archiver le lot**
+      ✅ **Attendu** : une question dit **combien de tâches sur combien** restent ouvertes, et prévient que
+      l'archivage emporte tout le lot
+- [ ] Choisir **Annuler** : ✅ **Attendu** : rien n'est archivé, rien n'est modifié
+- [ ] Choisir **Archiver tel quel** : ✅ **Attendu** : le lot est archivé, les tâches **gardent leur statut**
+- [ ] Choisir **Terminer, puis archiver** : ✅ **Attendu** : les tâches ouvertes passent au statut terminé,
+      **puis** le lot est archivé
+- [ ] ✅ **Attendu** : les tâches **déjà terminées** ne sont pas retouchées (leur date d'achèvement ne bouge pas)
+- [ ] Un lot contenant un **sous-lot** avec des tâches ouvertes : ✅ **Attendu** : elles comptent aussi
+- [ ] ✅ **Attendu** : l'avancement du lot passe à **100 %** après « Terminer, puis archiver »
+
+**Constaté :**
 
 ### Dépendances et suppression
 

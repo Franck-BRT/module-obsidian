@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_STATUSES, makeTask, type Task } from '../types'
-import { isPhase, phaseHolds, phaseSpan } from './Phase'
+import { isPhase, openTasksIn, phaseHolds, phaseSpan } from './Phase'
 
 const task = (over: Partial<Task> = {}): Task => makeTask({ start: '', ...over })
 const phase = (subtasks: Task[], over: Partial<Task> = {}): Task =>
@@ -102,5 +102,37 @@ describe('membership', () => {
     const p = phase([task({ subtasks: [deep] })])
     expect(phaseHolds(p, 'deep')).toBe(true)
     expect(phaseHolds(p, 'elsewhere')).toBe(false)
+  })
+})
+
+describe('what a phase still has open', () => {
+  it('counts what is not in a complete status', () => {
+    const lot = phase([task({ title: 'à faire' }), task({ title: 'finie', status: 'done' })])
+    expect(openTasksIn(lot, DEFAULT_STATUSES).map((t) => t.title)).toEqual(['à faire'])
+  })
+
+  it('reaches subtasks, however deep', () => {
+    const lot = phase([task({ title: 'parente', status: 'done', subtasks: [task({ title: 'profonde' })] })])
+    expect(openTasksIn(lot, DEFAULT_STATUSES).map((t) => t.title)).toEqual(['profonde'])
+  })
+
+  it('looks through a nested phase without counting the phase itself', () => {
+    const lot = phase([phase([task({ title: 'dedans' })])])
+    expect(openTasksIn(lot, DEFAULT_STATUSES).map((t) => t.title)).toEqual(['dedans'])
+  })
+
+  it('says nothing of a finished phase, which is what lets it archive without a question', () => {
+    const lot = phase([task({ status: 'done' }), task({ status: 'cancelled' })])
+    expect(openTasksIn(lot, DEFAULT_STATUSES)).toEqual([])
+  })
+
+  it('says nothing of an empty phase either', () => {
+    expect(openTasksIn(phase([]), DEFAULT_STATUSES)).toEqual([])
+  })
+
+  it('counts everything when the palette has no complete status at all', () => {
+    const open = [{ id: 'todo', label: 'À faire', color: '#888', icon: 'circle', complete: false }]
+    const lot = phase([task({ status: 'todo' }), task({ status: 'done' })])
+    expect(openTasksIn(lot, open)).toHaveLength(2)
   })
 })
