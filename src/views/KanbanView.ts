@@ -2,7 +2,7 @@ import { Menu } from 'obsidian'
 import type PMPlugin from '../main'
 import type { Task, TaskStatus, FilterState, ResolvedProjectConfig } from '../types'
 import { personKeyer, type ProjectScope } from '../store'
-import { flattenTasks, totalLoggedHours } from '../store/TaskTreeOps'
+import { flattenTasks, totalLoggedHours, type FlatTask } from '../store/TaskTreeOps'
 import { matchesFilter } from '../store/TaskFilter'
 import { displayName, dueUrgency, getPriorityConfig, safeAsync } from '../utils'
 import { openTaskModal } from '../ui/ModalFactory'
@@ -90,10 +90,8 @@ export class KanbanView implements SubView {
   }
 
   /** The phases a project declares, in the order it declares them. */
-  private phases(): Task[] {
-    return flattenTasks(this.scope.tasks())
-      .map((ft) => ft.task)
-      .filter(isPhase)
+  private phases(): FlatTask[] {
+    return flattenTasks(this.scope.tasks()).filter((ft) => isPhase(ft.task))
   }
 
   /** A column's cards, split into the blocks the headings sit above. */
@@ -116,11 +114,16 @@ export class KanbanView implements SubView {
     const blocks: CardBlock[] = []
     // Tasks in no lot lead, unheaded: they are not a lot called "everything else".
     if (loose.length) blocks.push({ heading: null, rows: loose })
-    for (const phase of phases) {
+    for (const { task: phase, depth } of phases) {
       const rows = byPhase.get(phase.id)
       // Counted per column, not over the whole lot: the heading appears once in each
       // column, and "lot 1 · 12 tasks" above two cards would be counting elsewhere.
-      if (rows) blocks.push({ heading: { ...phaseHeading(phase, this.config.statuses), count: rows.length }, rows })
+      if (rows) {
+        blocks.push({
+          heading: { ...phaseHeading(phase, this.config.statuses, depth), count: rows.length },
+          rows
+        })
+      }
     }
     return blocks
   }
@@ -140,6 +143,7 @@ export class KanbanView implements SubView {
         entries.push({
           kind: 'group',
           collapsed: heading.collapsed,
+          depth: heading.depth ?? 0,
           render: (parent) =>
             renderHeadingRow(
               parent,

@@ -32,7 +32,7 @@ export function renderGroupRow(tbody: HTMLElement, group: TableGroupRow, colCoun
   const row = tbody.createEl('tr', { cls: 'pm-table-group-row' })
   row.toggleClass('is-collapsed', heading.collapsed)
   const cell = row.createEl('td', { cls: 'pm-table-group-cell', attr: { colspan: String(colCount) } })
-  if (group.depth > 0) cell.setCssProps({ '--depth': String(group.depth) })
+  if (heading.depth) cell.setCssProps({ '--depth': String(heading.depth) })
   renderHeadingRow(cell, heading, headingHandlers(heading, ctx.scope, ctx.plugin, ctx.onRefresh))
 }
 

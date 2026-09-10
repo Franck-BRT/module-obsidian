@@ -29,6 +29,8 @@ export interface HeadingRow {
   collapsed: boolean
   /** Read after the count, muted: a phase's dates and progress. */
   detail?: string
+  /** How deep the block sits. A lot inside a lot steps in, and so do its tasks. */
+  depth?: number
 }
 
 export interface ProjectBlock<T> {
@@ -129,7 +131,7 @@ export function renderHeadingRow(parent: HTMLElement, heading: HeadingRow, handl
  * its dates are whatever `phaseSpan` settles on — a declaration if it made one, the
  * roll-up otherwise — so the line always describes the work, never an intention alone.
  */
-export function phaseHeading(phase: Task, statuses: StatusConfig[]): HeadingRow {
+export function phaseHeading(phase: Task, statuses: StatusConfig[], depth = 0): HeadingRow {
   const span = phaseSpan(phase, statuses)
   const range =
     span.start === span.due
@@ -143,6 +145,7 @@ export function phaseHeading(phase: Task, statuses: StatusConfig[]): HeadingRow 
     icon: 'layers',
     count: span.count,
     collapsed: phase.collapsed,
+    depth,
     ...(detail ? { detail } : {})
   }
 }

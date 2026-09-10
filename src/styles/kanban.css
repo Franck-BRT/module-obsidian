@@ -169,6 +169,8 @@
   align-items: center;
   gap: 4px;
   padding: 4px 2px;
+  /* A lot inside a lot steps in here too, though the cards keep the column's width. */
+  padding-left: calc(var(--depth, 0) * 12px + 2px);
   border-bottom: 1px solid var(--background-modifier-border);
 }
 .pm-kanban-group:not(:first-child) {

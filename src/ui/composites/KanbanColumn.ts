@@ -30,7 +30,7 @@ export interface KanbanCardData {
  */
 export type KanbanEntry =
   | { kind: 'card'; card: KanbanCardData }
-  | { kind: 'group'; render: (parent: HTMLElement) => void; collapsed: boolean }
+  | { kind: 'group'; render: (parent: HTMLElement) => void; collapsed: boolean; depth: number }
 
 export interface KanbanColumnProps {
   status: KanbanColumnStatus
@@ -81,6 +81,7 @@ export class KanbanColumn {
       if (entry.kind === 'group') {
         const groupEl = cardsEl.createDiv('pm-kanban-group')
         groupEl.toggleClass('is-collapsed', entry.collapsed)
+        if (entry.depth) groupEl.setCssProps({ '--depth': String(entry.depth) })
         entry.render(groupEl)
         continue
       }

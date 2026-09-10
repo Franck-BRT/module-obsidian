@@ -291,10 +291,10 @@ export class GanttView implements SubView {
     const walk = (tasks: Task[], depth: number) => {
       for (const task of tasks) {
         if (isPhase(task)) {
-          // A phase gets a row of its own with a summary bar, and what it holds keeps
-          // the depth it had: those tasks are in the lot, not under it.
-          out.push({ kind: 'phase', task, heading: phaseHeading(task, statuses), depth })
-          if (!task.collapsed && task.subtasks.length) walk(task.subtasks, depth)
+          // A phase gets a row of its own with a summary bar, and what it holds steps in
+          // under it — a lot inside a lot has to be readable as one.
+          out.push({ kind: 'phase', task, heading: phaseHeading(task, statuses, depth), depth })
+          if (!task.collapsed && task.subtasks.length) walk(task.subtasks, depth + 1)
           continue
         }
         out.push({ kind: 'task', task, depth })

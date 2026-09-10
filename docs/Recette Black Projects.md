@@ -427,7 +427,13 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] ✅ **Attendu** : son type **reste « Tâche »** — elle n'est pas devenue une sous-tâche
 - [ ] Cliquer le **+** de l'en-tête du lot : ✅ **Attendu** : la nouvelle tâche est créée **dans le lot**
 - [ ] Une tâche du lot qui a ses **propres sous-tâches** : ✅ **Attendu** : elles s'indentent sous elle, comme d'habitude
-- [ ] Créer un **lot dans un lot** : ✅ **Attendu** : son en-tête est décalé vers la droite
+- [ ] Créer un **lot dans un lot** : ✅ **Attendu** : son en-tête est **décalé vers la droite**
+- [ ] ✅ **Attendu** : les tâches du lot 1 sont décalées d'un cran, celles du lot 2 d'un cran de plus —
+      l'imbrication se lit à l'indentation
+- [ ] ✅ **Attendu** : une **sous-tâche** d'une tâche du lot 2 est décalée d'un cran encore
+- [ ] Vue **Gantt** : ✅ **Attendu** : même escalier dans la colonne des libellés
+- [ ] Vue **Tableau** : ✅ **Attendu** : l'en-tête du lot 2 est décalé sous celui du lot 1
+      *(les cartes, elles, gardent la largeur de la colonne)*
 - [ ] Le **chevron** de l'en-tête plie le lot ; rouvrir le projet : ✅ **Attendu** : il est **toujours plié**
 
 ### Dates et avancement

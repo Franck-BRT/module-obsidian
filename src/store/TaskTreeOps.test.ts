@@ -32,6 +32,21 @@ describe('flattenTasks', () => {
     expect(flat[1]).toMatchObject({ depth: 1, parentId: 'a', visible: true })
   })
 
+  it('steps a lot and everything under it in, one level per lot', () => {
+    const tasks = [
+      makeTask({
+        id: 'lot1',
+        type: 'phase',
+        subtasks: [
+          task({ id: 'a' }),
+          makeTask({ id: 'lot2', type: 'phase', subtasks: [task({ id: 'b', subtasks: [task({ id: 'b1' })] })] })
+        ]
+      })
+    ]
+    const depths = Object.fromEntries(flattenTasks(tasks).map((f) => [f.task.id, f.depth]))
+    expect(depths).toEqual({ lot1: 0, a: 1, lot2: 1, b: 2, b1: 3 })
+  })
+
   it('marks descendants of a collapsed parent as invisible', () => {
     const tasks = [task({ id: 'a', collapsed: true, subtasks: [task({ id: 'a1' })] })]
     const flat = flattenTasks(tasks)

@@ -35,8 +35,6 @@ export interface TableTaskRow extends FlatTask {
 export interface TableGroupRow {
   kind: 'group'
   heading: HeadingRow
-  /** Nesting, for a lot inside a lot. A collection's project headings sit at zero. */
-  depth: number
 }
 
 export type TableTreeRow = TableTaskRow | TableGroupRow
@@ -459,7 +457,7 @@ function withProjectHeadings(rows: TableTaskRow[], ctx: TableContext): TableTree
   if (!blocks) return rows
   const out: TableTreeRow[] = []
   for (const { heading, rows: block } of blocks) {
-    out.push({ kind: 'group', heading, depth: 0 })
+    out.push({ kind: 'group', heading })
     if (!heading.collapsed) out.push(...block)
   }
   return out
@@ -473,7 +471,7 @@ function withProjectHeadings(rows: TableTaskRow[], ctx: TableContext): TableTree
 function withPhaseHeadings(rows: TableTreeRow[], ctx: TableContext): TableTreeRow[] {
   return rows.map((row) =>
     row.kind === 'task' && isPhase(row.task)
-      ? { kind: 'group' as const, heading: phaseHeading(row.task, ctx.statuses), depth: row.depth }
+      ? { kind: 'group' as const, heading: phaseHeading(row.task, ctx.statuses, row.depth) }
       : row
   )
 }

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A lot inside a lot steps in, and the tasks it holds step in with it: nesting is now
+  read from the indentation, in the table, the Gantt and the board's headings alike.
+  Tasks in a lot were kept flush left when phases landed, on the grounds that a task in
+  a lot is not a subtask of it — true of the data, but it left two levels of lots
+  looking like one
+
 ## [2.10.0] - 2026-09-10
 
 ### Added
