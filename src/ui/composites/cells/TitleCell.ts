@@ -1,5 +1,6 @@
 import type { Task } from '../../../types'
 import { Chip } from '../../primitives/Chip'
+import { renderDocumentBadge } from '../documentBadge'
 import { IconButton } from '../../primitives/IconButton'
 import { renderTagChip } from '../tagChip'
 import { renderTreeGuides } from '../treeGuides'
@@ -48,6 +49,7 @@ export class TitleCell {
         props.onAddSubtask()
       })
 
+    renderDocumentBadge(inner, task)
     if (task.type === 'milestone') {
       new Chip(inner)
         .setLabel(t('common.milestoneBadge'))

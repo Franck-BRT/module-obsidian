@@ -50,6 +50,18 @@ export {
   type CollectionMembership
 } from './Collection'
 export type { ScopeSpec } from './ProjectScope'
+export { DocumentStore, projectDocsFolder, projectVersionsFolder } from './DocumentStore'
+export {
+  bordereauRows,
+  documentOf,
+  isAwaited,
+  isDocument,
+  recordApproval,
+  recordDeposit,
+  reopen,
+  statusForState,
+  type BordereauRow
+} from './Document'
 export { readFormerSettings } from './formerSettings'
 export type { FormerSettings } from './formerSettings'
 export { VaultIndex } from './VaultIndex'

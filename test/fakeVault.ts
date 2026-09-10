@@ -166,6 +166,23 @@ export class FakeVault {
     return [...this.files.values()].map((e) => e.file).filter((f) => f.extension === 'md')
   }
 
+  getFiles(): TFile[] {
+    return [...this.files.values()].map((e) => e.file)
+  }
+
+  /** Obsidian copies bytes; here the content string stands in for them. */
+  async copy(file: TFile, newPath: string): Promise<TFile> {
+    const to = normalizePath(newPath)
+    if (this.getAbstractFileByPath(to)) throw new Error(`copy: ${to} already exists`)
+    const parent = this.ensureFolderForPath(to)
+    const copy = makeFile(to, parent)
+    this.files.set(to, { file: copy, content: this.files.get(file.path)?.content ?? '' })
+    parent.children.push(copy)
+    bump(this.createCount, to)
+    this.emit('create', copy)
+    return copy
+  }
+
   /** Obsidian's metadata cache is read synchronously; the fake one needs the same. */
   contentAt(path: string): string | null {
     return this.files.get(normalizePath(path))?.content ?? null

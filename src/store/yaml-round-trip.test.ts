@@ -530,3 +530,82 @@ describe('collection round-trip', () => {
     expect(md).not.toContain('## Tasks')
   })
 })
+
+describe('a document survives the round trip', () => {
+  const meta = {
+    state: 'in-review' as const,
+    file: 'Projects/Test_docs/plan-masse.pdf',
+    linked: false,
+    reference: 'PL-002',
+    issue: 'B',
+    issuer: 'Atelier Nord',
+    recipient: 'MOA',
+    phase: 'APS',
+    approvers: ['Ana', 'Bo'],
+    approvals: [{ by: 'Ana', at: '2026-03-02T09:00:00.000Z', verdict: 'approved' as const, note: 'RAS' }],
+    versions: [
+      {
+        version: 1,
+        file: 'Projects/Test_docs/_versions/plan-masse-v1.pdf',
+        at: '2026-02-01T09:00:00.000Z',
+        by: 'Ana',
+        note: 'première diffusion'
+      },
+      { version: 2, file: 'Projects/Test_docs/plan-masse.pdf', at: '2026-03-02T09:00:00.000Z', by: 'Ana', note: '' }
+    ]
+  }
+
+  it('keeps every field it was given', () => {
+    const { task } = roundTripTask(makeTask({ type: 'document', title: 'Plan de masse', document: meta }))
+    expect(task.type).toBe('document')
+    expect(task.document).toEqual(meta)
+  })
+
+  it('leaves an ordinary task without a document block at all', () => {
+    const { task } = roundTripTask(makeTask({ title: 'Poser les fondations' }))
+    expect(task.document).toBeUndefined()
+  })
+
+  it('does not swallow the generated section back into the description', () => {
+    const written = makeTask({
+      type: 'document',
+      title: 'Plan',
+      description: 'Ce que je note à la main.',
+      document: meta
+    })
+    const { task } = roundTripTask(written)
+    expect(task.description).toBe('Ce que je note à la main.')
+  })
+
+  it('reads a block a human trimmed by hand', () => {
+    const bare = { document: { state: 'expected' }, id: 'x', title: 'CCTP', type: 'document' }
+    const { task } = hydrateTaskFromFile(bare, '', 'Projects/Test_tasks/cctp.md')
+    expect(task.document?.state).toBe('expected')
+    expect(task.document?.versions).toEqual([])
+    expect(task.document?.approvers).toEqual([])
+  })
+
+  it('reads an unknown state as expected rather than trusting it', () => {
+    const { task } = hydrateTaskFromFile(
+      { document: { state: 'signé-par-le-chat' }, id: 'x', title: 'CCTP', type: 'document' },
+      '',
+      'Projects/Test_tasks/cctp.md'
+    )
+    expect(task.document?.state).toBe('expected')
+  })
+
+  it('writes the file and its history into the note body, for whoever opens it in Obsidian', () => {
+    const md = serializeTask(
+      makeTask({ type: 'document', title: 'Plan de masse', document: meta }),
+      makeProject('Test', 'Projects/Test.md'),
+      null,
+      [],
+      refs
+    )
+    expect(md).toContain('## Document')
+    expect(md).toContain('[[plan-masse.pdf|plan-masse.pdf]]')
+    // Newest first: the current issue is what someone opening the note is looking for.
+    expect(md.indexOf('- v2')).toBeLessThan(md.indexOf('- v1'))
+    expect(md).toContain('première diffusion')
+  })
+})

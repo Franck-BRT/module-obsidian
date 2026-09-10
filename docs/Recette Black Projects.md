@@ -515,6 +515,88 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ---
 
+## 7quater. Bibliothèque documentaire [N]
+
+> **Nouveau** : un cinquième type de ticket, **Document**. Une note qui porte un
+> fichier (Word, PDF, plan), ses versions et ses visas. Elle vit à la fois dans le
+> **plan** (tableur, Gantt, tableau) et dans la nouvelle vue **Bibliothèque**.
+
+### Créer un document
+
+- [ ] Déposer un PDF quelque part dans le coffre (hors projet), pour servir de matière
+- [ ] **« + ajouter une tâche »** → **Type → « Document »**, le nommer « Plan de masse », échéance dans le passé
+- [ ] ✅ **Attendu** : un panneau **« Document »** apparaît dans l'éditeur, sous le suivi du temps
+- [ ] Remplir **Référence** (PL-001), **Indice** (A), **Émetteur**, **Destinataire**, **Phase**
+- [ ] ✅ **Attendu** : la note de tâche contient un bloc `document:` dans son frontmatter, avec `type: document`
+- [ ] Quatrième icône de vue → **Bibliothèque** : ✅ **Attendu** : le document y est, état **« Attendu »**
+- [ ] ✅ **Attendu** : dans le **tableur**, la même tâche porte une pastille **D** grise
+- [ ] ✅ **Attendu** : son échéance passée s'affiche **en rouge** dans la bibliothèque
+
+### Déposer un fichier, et le versionner
+
+- [ ] Panneau Document → bouton **↑** → choisir le PDF → **« Copier le fichier dans le projet »**,
+      saisir une note (« première diffusion »)
+- [ ] ✅ **Attendu** : le fichier est **copié** dans `<projet>/_docs/`, l'original reste où il était
+- [ ] ✅ **Attendu** : l'état passe tout seul à **« Reçu »**, et le statut de la tâche suit
+- [ ] ✅ **Attendu** : la version **v1** apparaît dans le panneau et dans la bibliothèque
+- [ ] Déposer un **second** fichier sur le même document
+- [ ] ✅ **Attendu** : le fichier courant **garde le même chemin** — un lien vers lui reste bon
+- [ ] ✅ **Attendu** : l'ancien est déplacé dans `<projet>/_docs/_versions/` avec `-v1` dans son nom
+- [ ] ✅ **Attendu** : **aucun fichier n'a été écrasé** — ouvrir les deux pour le vérifier
+- [ ] Cliquer la pastille **v2** dans la bibliothèque → choisir **v1**
+- [ ] ✅ **Attendu** : v1 redevient le fichier courant, **en tant que v3** — l'historique dit ce qui s'est passé
+- [ ] Cliquer le nom du fichier : ✅ **Attendu** : un PDF s'ouvre dans un onglet ; un `.docx` part dans
+      l'application système *(et sur mobile, un message dit que ce n'est pas possible)*
+- [ ] **« Le référencer sur place »** sur un fichier hors du projet
+      ✅ **Attendu** : il **n'est pas déplacé**, et la pastille porte une icône de lien
+- [ ] Déposer ensuite une vraie version sur ce document
+      ✅ **Attendu** : le fichier référencé **n'a pas bougé** — il n'appartenait pas au projet
+
+### Cycle de vie et visas
+
+- [ ] Ajouter deux **approbateurs** dans le panneau Document
+- [ ] ✅ **Attendu** : la bibliothèque montre deux pastilles grises dans la colonne **Visas**
+- [ ] Clic sur la première → **Viser** : ✅ **Attendu** : elle passe au vert, l'état reste **« En revue »**
+- [ ] ✅ **Attendu** : le panneau indique **« En attente de … »** pour le second
+- [ ] Viser avec le second : ✅ **Attendu** : l'état passe à **« Validé »** et **le statut de la tâche
+      passe à terminé** *(l'avancement du projet en tient compte)*
+- [ ] Clic droit sur la ligne → **« Remettre en revue »**
+      ✅ **Attendu** : l'état revient à « En revue » et **les visas sont effacés** *(un visa signe une version)*
+- [ ] Refaire viser l'un des deux, puis **Refuser** avec l'autre, avec un motif
+      ✅ **Attendu** : l'état reste « En revue » — **un refus l'emporte**, et le motif se lit dans l'info-bulle
+- [ ] Clic droit → **« Marquer obsolète »** : ✅ **Attendu** : l'état passe à Obsolète et le statut suit
+      *(annulé, si votre palette a un statut d'abandon)*
+
+### Relances et bordereau
+
+- [ ] Avoir deux documents **attendus** dont la date est passée
+- [ ] ✅ **Attendu** : la bibliothèque affiche une pastille rouge comptant les documents en retard
+- [ ] **Palette de commandes → « Documents attendus »**
+      ✅ **Attendu** : la liste s'ouvre, **du plus ancien au plus récent** ; en choisir un ouvre sa fiche
+- [ ] Sans aucun retard : ✅ **Attendu** : la commande dit qu'il n'y a rien d'attendu
+- [ ] Cocher deux documents dans la bibliothèque → **« Bordereau »**
+- [ ] ✅ **Attendu** : une note est créée dans le dossier du projet, avec un tableau
+      référence / titre / indice / version / date / destinataire
+- [ ] ✅ **Attendu** : les lignes sont **triées par référence**
+- [ ] Sans rien cocher : ✅ **Attendu** : un message demande d'en choisir au moins un
+
+### Filtres, états et pièges
+
+- [ ] Les **pastilles d'état** en haut de la bibliothèque filtrent la liste ; recliquer la même la libère
+- [ ] La **barre de recherche** du projet filtre aussi la bibliothèque
+- [ ] Un document **dans un lot** : ✅ **Attendu** : il apparaît dans la bande du lot sur le tableau
+- [ ] **Supprimer le fichier** d'un document depuis l'explorateur Obsidian, revenir à la bibliothèque
+      ✅ **Attendu** : la pastille dit **« Fichier introuvable »**, barrée — rien ne plante
+- [ ] **Supprimer la tâche** d'un document : ✅ **Attendu** : la note part, **les fichiers restent**
+      dans `_docs/` *(c'est voulu : ils vous appartiennent)*
+- [ ] Éditer à la main le bloc `document:` d'une note (retirer des champs, écrire un état inconnu)
+      ✅ **Attendu** : le document se relit sans erreur, l'état inconnu retombe sur **« Attendu »**
+- [ ] Un projet **sans aucun document** : ✅ **Attendu** : la bibliothèque explique comment en créer un
+
+**Constaté :**
+
+---
+
 ## 8. Robustesse
 
 - [ ] Créer deux tâches portant **exactement le même titre** dans un même projet
@@ -543,6 +625,10 @@ Ce sont des manques identifiés, pas des régressions.
 - [ ] *Vérifié* : l'ordonnanceur n'a **ni chemin critique, ni marge, ni nivellement de charge**.
 - [ ] *Vérifié* : on ne peut pas **glisser-déposer** une tâche dans un lot ; on passe par le champ
       **« Lot »** de son éditeur, ou par le **+** de l'en-tête du lot.
+- [ ] *Vérifié* : la bibliothèque **ne lit pas l'intérieur** des fichiers : pas de recherche plein texte
+      dans un PDF ni dans un Word, seulement dans les champs du document.
+- [ ] *Vérifié* : le champ **« déposé par »** d'une version prend le premier membre de l'équipe du projet ;
+      sans équipe renseignée, il reste vide.
 - [ ] *Vérifié* : dans le tableur, un tri (par échéance, par statut…) **réordonne aussi les lots**
       entre eux, d'après les dates que le lot déclare — pas d'après la période de ses tâches.
 
@@ -562,6 +648,7 @@ Ce sont des manques identifiés, pas des régressions.
 | 7. Français | | |
 | 7bis. Recueils | | |
 | 7ter. Lots | | |
+| 7quater. Bibliothèque | | |
 | 8. Robustesse | | |
 
 **Anomalies bloquantes :**
@@ -577,5 +664,5 @@ Ce sont des manques identifiés, pas des régressions.
 Dupliquez cette note, mettez à jour `version` dans le frontmatter, videz les cases et
 les champs « Constaté ». Les sections 1 et 8 sont le **socle de non-régression** : à
 repasser à chaque version, y compris après chaque fusion avec l'upstream. Les sections
-2 à 7ter ne concernent que les nouveautés — elles deviennent à leur tour des tests de
+2 à 7quater ne concernent que les nouveautés — elles deviennent à leur tour des tests de
 non-régression pour les versions suivantes.

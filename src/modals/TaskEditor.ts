@@ -22,6 +22,8 @@ import { confirmTaskDelete, openTaskByPath } from '../ui/ModalFactory'
 import { renderGlyph } from '../ui/composites/properties'
 import { renderTaskFormFields } from './TaskFormFields'
 import { renderTimeTrackingPanel } from './TimeTrackingPanel'
+import { renderDocumentPanel } from './DocumentPanel'
+import { isDocument } from '../store/Document'
 import { renderSubtasksPanel } from './SubtasksPanel'
 import { NoteLinkSuggest } from './NoteLinkSuggest'
 import { t } from '../i18n'
@@ -581,6 +583,16 @@ export class TaskEditor {
     )
 
     renderTimeTrackingPanel(body, this.task)
+
+    if (isDocument(this.task)) {
+      renderDocumentPanel(body, {
+        task: this.task,
+        project: this.project,
+        plugin: this.plugin,
+        rerender: () => this.render(),
+        save: () => this.runPersist()
+      })
+    }
 
     const footer = contentEl.createDiv('pm-te-footer')
 

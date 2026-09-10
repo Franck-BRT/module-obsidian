@@ -18,6 +18,7 @@ it rather than diverging: our changes ride on top and upstream releases are merg
 | Collections gathering chosen tasks across projects | No way to see tasks from several projects as one named set |
 | A collection groups its tasks under the project they come from, in all three views | A gathered task said nothing about where it lived |
 | Phases ("lots") gathering tasks inside a project | The only grouping was the parent/subtask tree, which makes a container out of a task |
+| A document library per project, versioned, with sign-off and transmittals | Files lived in the vault with nothing saying which issue was current, who owed them, or who had signed |
 
 Each is one commit, kept self-contained so a conflict during a merge is confined to it.
 
@@ -56,6 +57,8 @@ to touch at the same time:
   `dependencyOptions` on a task and `respectWorkingDays` in a project's config.
 - `src/store/ProjectStore.ts` — `spawnNextOccurrence` and `reportCycles`, plus the
   body remainder passed to `serializeProject`.
+- `src/store/YamlSerializer.ts` / `YamlHydrator.ts` again — a `document` block on a task,
+  and a generated `## Document` section in its note body.
 - Any file holding interface text: its strings now read `t('some.key')` rather than
   sitting inline, so an upstream edit to a string conflicts with the `t()` call. The
   fix is always the same — put the new wording in `src/i18n/en.ts` and translate it

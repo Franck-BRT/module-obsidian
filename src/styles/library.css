@@ -1,0 +1,122 @@
+/* The document library: a project's documents as a register — one line per document,
+   its reference, its issue and where its sign-off stands. */
+.pm-library-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pm-library-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.pm-library-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.pm-library-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.pm-library-empty {
+  padding: 24px 16px;
+  color: var(--text-muted);
+}
+
+.pm-library-ref {
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.pm-library-title {
+  min-width: 220px;
+}
+.pm-library-title-text {
+  font-weight: var(--font-medium);
+  cursor: pointer;
+}
+.pm-library-title-text:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.pm-library-nofile,
+.pm-library-versions .pm-overview-muted {
+  color: var(--text-faint);
+  font-size: var(--font-smallest);
+}
+.pm-library-nofile {
+  margin-left: 8px;
+}
+.pm-library-missing .pm-chip-label {
+  text-decoration: line-through;
+}
+.pm-library-late {
+  color: var(--text-error, var(--color-red));
+  font-weight: var(--font-semibold);
+}
+.pm-library-visas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* The documentary panel in a ticket's editor. */
+.pm-doc-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.pm-doc-file-label {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  min-width: 84px;
+}
+.pm-doc-versions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+.pm-doc-version {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--font-smallest);
+}
+.pm-doc-version-no {
+  font-family: var(--font-monospace);
+  color: var(--text-accent);
+}
+.pm-doc-version-meta {
+  color: var(--text-muted);
+}
+.pm-doc-version-note {
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-doc-waiting {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+}
+
+.pm-clickable {
+  cursor: pointer;
+}

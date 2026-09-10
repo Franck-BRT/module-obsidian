@@ -13,6 +13,8 @@ import {
   addToCollection,
   collectionMemberIds,
   CollectionStore,
+  isAwaited,
+  DocumentStore,
   matchPersonNotes,
   personLink,
   ProjectStore,
@@ -46,12 +48,14 @@ import { AutoArchiver } from './components/AutoArchiver'
 import { IdRepair } from './components/IdRepair'
 import { migrateProjects, migrateProjectLayout } from './migration'
 import { dedupePeople, displayName, safeAsync } from './utils'
+import { today } from './dates'
 import { setLocale, t } from './i18n'
 
 export default class PMPlugin extends Plugin {
   settings: PMSettings = { ...DEFAULT_SETTINGS }
   store!: TaskSource
   collections!: CollectionStore
+  documents!: DocumentStore
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver
@@ -95,6 +99,7 @@ export default class PMPlugin extends Plugin {
     })
     this.store = new ProjectStore(this.app, () => this.settings, this.index)
     this.collections = new CollectionStore(this.app, this.index)
+    this.documents = new DocumentStore(this.app)
     this.store.registerVaultSync(this)
     this.notifier = new Notifier(this)
     this.autoArchiver = new AutoArchiver(this)
@@ -182,6 +187,14 @@ export default class PMPlugin extends Plugin {
       name: t('command.redo'),
       callback: () => {
         void this.redoLastAction()
+      }
+    })
+
+    this.addCommand({
+      id: 'awaited-documents',
+      name: t('command.awaitedDocuments'),
+      callback: () => {
+        this.showAwaitedDocuments()
       }
     })
 
@@ -486,6 +499,28 @@ export default class PMPlugin extends Plugin {
       return
     }
     await this.router.openProjectOverview(copy.filePath)
+  }
+
+  /**
+   * What the open project is still waiting for, past its date. Scoped to the view rather
+   * than to the vault: chasing a document is something you do inside one project, and
+   * reading every task note in the vault to answer it would cost more than it is worth.
+   */
+  private showAwaitedDocuments(): void {
+    const scope = this.app.workspace.getActiveViewOfType(ProjectView)?.projectScope
+    const now = today().toString()
+    const awaited = (scope?.tasks() ? flattenTasks(scope.tasks()) : [])
+      .map((flat) => flat.task)
+      .filter((task) => isAwaited(task, now))
+      .sort((a, b) => a.due.localeCompare(b.due))
+    if (!awaited.length) {
+      this.showNotice(t('view.awaitedNone'))
+      return
+    }
+    openTaskPicker(this, awaited, (task) => {
+      const owner = scope?.projectOf(task.id)
+      if (owner) openTaskModal(this, owner, { task, onSave: async () => {} })
+    })
   }
 
   /** A project with no window of its own archives everything it has finished. */

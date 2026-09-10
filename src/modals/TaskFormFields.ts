@@ -48,7 +48,8 @@ function typeOptions(): SelectItem[] {
     { id: 'task', label: t('task.type.task'), icon: 'square-check-big' },
     { id: 'subtask', label: t('task.type.subtask'), icon: 'git-branch' },
     { id: 'milestone', label: t('task.type.milestone'), icon: 'diamond' },
-    { id: 'phase', label: t('task.type.phase'), icon: 'layers' }
+    { id: 'phase', label: t('task.type.phase'), icon: 'layers' },
+    { id: 'document', label: t('task.type.document'), icon: 'file-text' }
   ]
 }
 

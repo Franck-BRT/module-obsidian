@@ -6,6 +6,7 @@ import {
   type Project,
   type ProjectConfig,
   type StatusConfig,
+  type DocumentMeta,
   type Task
 } from '../types'
 import { isTerminalStatus, sanitizeFileName } from '../utils'
@@ -67,6 +68,7 @@ export const TASK_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'timeEstimate',
   'timeLogs',
   'customFields',
+  'document',
   'collapsed'
 ])
 
@@ -220,6 +222,8 @@ export function buildTaskFrontmatter(
   if (task.timeEstimate !== undefined) fm.timeEstimate = task.timeEstimate
   if (task.timeLogs?.length) fm.timeLogs = task.timeLogs
   if (Object.keys(task.customFields).length) fm.customFields = task.customFields
+  const document = serializeDocument(task.document)
+  if (document) fm.document = document
   return fm
 }
 
@@ -237,6 +241,29 @@ function liveDependencyOptions(task: Task): Record<string, DependencyOption> | n
     live[id] = option
   }
   return Object.keys(live).length ? live : null
+}
+
+/** The file's own name, which is what a link to it should read as. */
+function fileNameOf(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1)
+}
+
+/**
+ * The documentary block, with anything still empty left out. A document only expected,
+ * with nothing filled in yet, then costs its note four lines rather than fifteen.
+ */
+function serializeDocument(meta: DocumentMeta | undefined): Record<string, unknown> | null {
+  if (!meta) return null
+  const out: Record<string, unknown> = { state: meta.state }
+  if (meta.file) out.file = meta.file
+  if (meta.linked) out.linked = true
+  for (const key of ['reference', 'issue', 'issuer', 'recipient', 'phase'] as const) {
+    if (meta[key]) out[key] = meta[key]
+  }
+  if (meta.approvers.length) out.approvers = meta.approvers
+  if (meta.approvals.length) out.approvals = meta.approvals
+  if (meta.versions.length) out.versions = meta.versions
+  return out
 }
 
 export function serializeTask(
@@ -273,6 +300,18 @@ export function serializeTask(
       const check = isTerminalStatus(sub.status, statuses) ? 'x' : ' '
       const link = sub.filePath ? refs.link(sub.filePath, sub.title) : `[[${taskSlug(sub.title)}|${sub.title}]]`
       yamlLines.push(`- [${check}] ${link}`)
+    }
+  }
+
+  // Last, and generated like the section above it: opening the note in Obsidian should
+  // reach the file and its history without the plugin having to be running.
+  if (task.document) {
+    yamlLines.push('')
+    yamlLines.push('## Document')
+    if (task.document.file) yamlLines.push(refs.link(task.document.file, fileNameOf(task.document.file)))
+    for (const version of [...task.document.versions].reverse()) {
+      const note = version.note ? ` — ${version.note}` : ''
+      yamlLines.push(`- v${version.version} · ${version.at.slice(0, 10)} · ${version.by}${note}`)
     }
   }
 

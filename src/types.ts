@@ -8,10 +8,10 @@ export type TaskStatus = string
 export type TaskPriority = string
 export type GanttGranularity = 'day' | 'week' | 'month' | 'quarter' | 'year'
 export type GanttWeekLabel = 'weekNumber' | 'dateRange' | 'both'
-export type ViewMode = 'table' | 'gantt' | 'kanban'
+export type ViewMode = 'table' | 'gantt' | 'kanban' | 'library'
 export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
-export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase'
+export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document'
 
 export interface Recurrence {
   interval: 'daily' | 'weekly' | 'monthly' | 'yearly'
@@ -63,6 +63,72 @@ export interface CustomFieldDef {
   icon?: string // emoji or lucide icon name
 }
 
+/**
+ * Where a document stands. The order is the life of a deliverable: it is expected, it
+ * arrives, someone reads it, someone signs it off — or a later issue makes it obsolete.
+ */
+export type DocState = 'expected' | 'received' | 'in-review' | 'approved' | 'obsolete'
+
+export const DOC_STATES: readonly DocState[] = ['expected', 'received', 'in-review', 'approved', 'obsolete']
+
+/** One deposit. Kept even once superseded: that is what an archive is for. */
+export interface DocVersion {
+  /** Counts deposits, never reused, so v3 means the third file that ever landed here. */
+  version: number
+  /** Where that file is now — the current one, or its place in the versions folder. */
+  file: string
+  at: string
+  by: string
+  note: string
+}
+
+export interface DocApproval {
+  by: string
+  at: string
+  verdict: 'approved' | 'rejected'
+  note: string
+}
+
+/**
+ * The documentary side of a ticket of type `document`. It sits beside the task fields
+ * rather than inside them, so everything that walks a task — the scheduler, the filters,
+ * the views — carries on unchanged and only the library has to know about any of it.
+ */
+export interface DocumentMeta {
+  state: DocState
+  /** The current file, or '' while the document is still only expected. */
+  file: string
+  /** The file lives outside the project and is referenced where it is, never moved. */
+  linked: boolean
+  /** Reference or code, as the trade uses it: PL-001, CCTP-03. */
+  reference: string
+  /** Revision mark, the letter or number a drawing carries: A, B, 02. */
+  issue: string
+  issuer: string
+  recipient: string
+  phase: string
+  approvers: string[]
+  approvals: DocApproval[]
+  versions: DocVersion[]
+}
+
+export function makeDocument(overrides: Partial<DocumentMeta> = {}): DocumentMeta {
+  return {
+    state: 'expected',
+    file: '',
+    linked: false,
+    reference: '',
+    issue: '',
+    issuer: '',
+    recipient: '',
+    phase: '',
+    approvers: [],
+    approvals: [],
+    versions: [],
+    ...overrides
+  }
+}
+
 export interface Task {
   id: string
   title: string
@@ -87,6 +153,9 @@ export interface Task {
   timeEstimate?: number // hours
   timeLogs?: TimeLog[]
   customFields: Record<string, unknown>
+  /** Set on a ticket of type `document`: its file, its versions, its approvals. */
+  // oxlint-disable-next-line obsidianmd/prefer-active-doc -- a field, not the global
+  document?: DocumentMeta
   /** UI state, persisted per project in plugin settings (data.json), not in frontmatter. */
   collapsed: boolean
   createdAt: string

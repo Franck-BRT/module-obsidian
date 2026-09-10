@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A document library, one per project.** A fifth ticket type, `document`: a note that
+  carries a file — Word, PDF, a drawing — its versions, and where its sign-off stands.
+  It is a ticket like any other, so a document expected on the 30th is an item in the
+  table, a bar in the Gantt and a card on the board; and it is a line in the project's
+  new **Library** view, which shows what a schedule cannot say about a document
+- **Versions that keep the file.** The current file holds one path for the life of the
+  document and superseded files move into `_docs/_versions/`, so a link never has to be
+  updated to stay on the latest issue and no version is ever overwritten. A file can
+  also be referenced where it already lives, in which case nothing is moved — it was
+  never ours to move
+- **A life of its own**: expected → received → in review → approved, or obsolete. The
+  ticket's status follows from it — approved is done — read off the project's own
+  palette rather than hard-coded, so a project with its own statuses still works
+- **Sign-off**: name the approvers, each signs or refuses with a word on why. One
+  refusal outweighs any number of signatures, and reopening an approved document drops
+  its visas: a visa signs a version, not a name
+- **Documentary metadata** — reference, issue, from, to, stage — filterable, and shown
+  as columns in the library
+- **What is still awaited**: a document past its date and not yet received is called
+  out in the library, and the command **Awaited documents** lists them oldest first
+- **Transmittals**: pick documents in the library and write a bordereau — reference,
+  issue, version, date, recipient — as a note in the project, which is a piece of
+  correspondence and will outlive any build of this plugin
+
 ## [2.12.0] - 2026-09-11
 
 ### Changed

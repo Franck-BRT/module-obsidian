@@ -18,6 +18,7 @@ import { TableView } from './table/TableView'
 import type { TableViewState } from './table/TableView'
 import { GanttView } from './gantt/GanttView'
 import { KanbanView } from './KanbanView'
+import { LibraryView } from './library/LibraryView'
 import { openTaskModal, promptText } from '../ui/ModalFactory'
 import { ChipButton } from '../ui/primitives/ChipButton'
 import { ViewSwitcher } from '../ui/primitives/ViewSwitcher'
@@ -417,7 +418,8 @@ export class ProjectView extends ItemView {
       options: [
         { id: 'table', icon: 'table', label: t('common.table') },
         { id: 'gantt', icon: 'git-fork', label: t('common.gantt') },
-        { id: 'kanban', icon: 'layout-dashboard', label: t('common.board') }
+        { id: 'kanban', icon: 'layout-dashboard', label: t('common.board') },
+        { id: 'library', icon: 'library', label: t('view.library') }
       ],
       active: this.currentView,
       onChange: (mode) => {
@@ -659,6 +661,9 @@ export class ProjectView extends ItemView {
       }
       case 'kanban':
         this.subview = new KanbanView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)
+        break
+      case 'library':
+        this.subview = new LibraryView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)
         break
     }
     this.bodyEl.toggleClass('pm-content--kanban', this.currentView === 'kanban')
