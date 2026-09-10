@@ -434,12 +434,6 @@ export class ProjectView extends ItemView {
         .setButtonText(t('project.addTaskButton'))
         .setCta()
         .onClick((e) => this.addTask(e))
-
-      if (this.currentView === 'gantt') {
-        new ButtonComponent(right)
-          .setButtonText(t('project.addMilestoneButton'))
-          .onClick((e) => this.addTask(e, { type: 'milestone' }))
-      }
     }
 
     if (!scope.isMulti) {
@@ -451,12 +445,11 @@ export class ProjectView extends ItemView {
   }
 
   /** With several projects in view, a new task has to say which one it belongs to. */
-  private addTask(e: MouseEvent, defaults?: Parameters<typeof openTaskModal>[2]['defaults']): void {
+  private addTask(e: MouseEvent): void {
     const scope = this.projectScope
     if (!scope?.primary || !scope.canAddTask) return
     const open = (project: Project): void => {
       openTaskModal(this.plugin, project, {
-        defaults,
         onSave: async () => {
           await this.refreshProject()
         }

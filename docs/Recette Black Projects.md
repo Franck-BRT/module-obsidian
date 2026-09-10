@@ -300,7 +300,6 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Le Gantt et le tableau (kanban) du recueil fonctionnent aussi
 - [ ] ✅ **Attendu** : **pas de bouton « + ajouter une tâche »** dans un recueil, ni dans la barre d'outils,
       ni en bas du tableau *(elle n'aurait pas de projet, et n'entrerait même pas dans le recueil)*
-- [ ] Dans la vue **Gantt** d'un recueil : ✅ **Attendu** : pas de bouton « + jalon » non plus
 
 ### Règle — création depuis une vue filtrée
 
@@ -420,7 +419,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 ### Création et remplissage
 
 - [ ] Dans un projet, barre d'outils → **« + ajouter une tâche »**, puis champ **Type → « Lot »**, le nommer « Lot 1 »
-- [ ] ✅ **Attendu** : il n'y a **pas** de bouton « + lot » séparé dans la barre d'outils
+- [ ] ✅ **Attendu** : la barre d'outils n'a **qu'un** bouton d'ajout — ni « + lot », ni « + jalon » séparés
 - [ ] ✅ **Attendu** : une note est créée comme pour une tâche, avec `type: phase` dans son frontmatter
 - [ ] ✅ **Attendu** : dans le tableur, le lot est un **en-tête sur toute la largeur**, pas une ligne de tâche
 - [ ] Ouvrir une tâche existante : ✅ **Attendu** : le champ **« Lot »** est proposé (il n'apparaît que si le projet a des lots)
