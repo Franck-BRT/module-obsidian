@@ -258,6 +258,12 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] **[N]** Réglage **Langue → Français** sur un Obsidian en **anglais**
       ✅ **Attendu** : les **dates** passent aussi en français (« 6 mars » et non « Mar 6 »)
 - [ ] **[N]** Réglage **Langue → Automatique** : ✅ **Attendu** : les dates suivent Obsidian
+- [ ] **[N]** Dans la **recherche des réglages** d'Obsidian, taper **« jours ouvrés »**
+      ✅ **Attendu** : les réglages de planification remontent
+- [ ] **[N]** Chercher **« raccourci »**, **« dépendances »**, **« jours fériés »**, **« archivage »**
+      ✅ **Attendu** : chacun trouve son réglage
+- [ ] **[N]** Chercher **« kanban »** ou **« gantt »** : ✅ **Attendu** : ça marche aussi — les mots
+      anglais restent volontairement dans la liste française
 - [ ] **[N]** Sélectionner **plusieurs tâches** puis **Supprimer** : ✅ **Attendu** : la confirmation est en français,
       avec le bon accord (« 1 tâche » / « 3 tâches »)
 - [ ] **[N]** Sélection multiple → **Archiver**, puis **Désarchiver** : ✅ **Attendu** : la notification compte en français

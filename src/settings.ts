@@ -13,7 +13,7 @@ import {
 import { renderPaletteFields, renderStatusDoneToggle } from './ui/PaletteListEditor'
 import { renderCustomFieldFields, renderCustomFieldOptions } from './ui/CustomFieldListEditor'
 import { renderPersonPicker } from './ui/PersonPicker'
-import { LOCALES, t } from './i18n'
+import { LOCALES, searchAliases, t } from './i18n'
 import { invalidHolidays, renderHolidays, renderWorkingWeekdays } from './ui/WorkCalendarEditor'
 
 export type { PMSettings }
@@ -47,7 +47,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.language.name'),
             desc: t('settings.language.desc'),
-            aliases: ['language', 'langue', 'i18n', 'traduction', 'français'],
+            aliases: searchAliases('settings.aliases.language'),
             control: {
               type: 'dropdown',
               key: 'language',
@@ -60,7 +60,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.projectsFolder.name'),
             desc: t('settings.projectsFolder.desc'),
-            aliases: ['projects folder', 'location'],
+            aliases: searchAliases('settings.aliases.projectsFolder'),
             control: {
               type: 'folder',
               key: 'projectsFolder',
@@ -72,7 +72,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.projectSurface.name'),
             desc: t('settings.projectSurface.desc'),
-            aliases: ['click', 'project list', 'overview'],
+            aliases: searchAliases('settings.aliases.projectSurface'),
             control: {
               type: 'dropdown',
               key: 'projectSurface',
@@ -82,7 +82,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.defaultView.name'),
             desc: t('settings.defaultView.desc'),
-            aliases: ['default view'],
+            aliases: searchAliases('settings.aliases.defaultView'),
             control: {
               type: 'dropdown',
               key: 'defaultView',
@@ -106,7 +106,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.saveShortcut.name'),
             desc: t('settings.saveShortcut.desc'),
-            aliases: ['hotkey', 'keyboard'],
+            aliases: searchAliases('settings.aliases.saveShortcut'),
             control: {
               type: 'dropdown',
               key: 'editorSaveModifier',
@@ -122,13 +122,13 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.tagColors.name'),
             desc: t('settings.tagColors.desc'),
-            aliases: ['appearance'],
+            aliases: searchAliases('settings.aliases.tagColors'),
             control: { type: 'toggle', key: 'showTagColors' }
           },
           {
             name: t('settings.priorityIcons.name'),
             desc: t('settings.priorityIcons.desc'),
-            aliases: ['appearance', 'chevrons', 'signal'],
+            aliases: searchAliases('settings.aliases.priorityIcons'),
             control: {
               type: 'dropdown',
               key: 'priorityIcons',
@@ -144,13 +144,13 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.subtreeConnections.name'),
             desc: t('settings.subtreeConnections.desc'),
-            aliases: ['tree', 'indent', 'subtask'],
+            aliases: searchAliases('settings.aliases.subtreeConnections'),
             control: { type: 'toggle', key: 'showSubtreeConnections' }
           },
           {
             name: t('settings.lineBorders.name'),
             desc: t('settings.lineBorders.desc'),
-            aliases: ['grid', 'lines'],
+            aliases: searchAliases('settings.aliases.lineBorders'),
             control: {
               type: 'dropdown',
               key: 'lineBorders',
@@ -171,7 +171,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.granularity.name'),
             desc: t('settings.granularity.desc'),
-            aliases: ['timeline', 'zoom'],
+            aliases: searchAliases('settings.aliases.granularity'),
             control: {
               type: 'dropdown',
               key: 'ganttGranularity',
@@ -187,7 +187,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.weekLabel.name'),
             desc: t('settings.weekLabel.desc'),
-            aliases: ['timeline'],
+            aliases: searchAliases('settings.aliases.weekLabel'),
             control: {
               type: 'dropdown',
               key: 'ganttWeekLabel',
@@ -207,13 +207,13 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.kanbanSubtasks.name'),
             desc: t('settings.kanbanSubtasks.desc'),
-            aliases: ['kanban'],
+            aliases: searchAliases('settings.aliases.kanbanSubtasks'),
             control: { type: 'toggle', key: 'kanbanShowSubtasks' }
           },
           {
             name: t('settings.kanbanPreview.name'),
             desc: t('settings.kanbanPreview.desc'),
-            aliases: ['kanban'],
+            aliases: searchAliases('settings.aliases.kanbanPreview'),
             control: { type: 'toggle', key: 'kanbanShowDescriptionPreview' }
           }
         ]
@@ -225,13 +225,13 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.autoSchedule.name'),
             desc: t('settings.autoSchedule.desc'),
-            aliases: ['dependencies'],
+            aliases: searchAliases('settings.aliases.autoSchedule'),
             control: { type: 'toggle', key: 'autoSchedule' }
           },
           {
             name: t('settings.pullForward.name'),
             desc: t('settings.pullForward.desc'),
-            aliases: ['dependencies'],
+            aliases: searchAliases('settings.aliases.pullForward'),
             control: {
               type: 'toggle',
               key: 'pullForwardOnEarlyFinish',
@@ -241,7 +241,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.workingDays.name'),
             desc: t('settings.workingDays.desc'),
-            aliases: ['working days', 'weekend', 'holidays', 'business days'],
+            aliases: searchAliases('settings.aliases.workingDays'),
             control: {
               type: 'toggle',
               key: 'respectWorkingDays',
@@ -251,7 +251,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.workingWeek.name'),
             desc: t('settings.workingWeek.desc'),
-            aliases: ['weekdays', 'working days'],
+            aliases: searchAliases('settings.aliases.workingWeek'),
             render: (setting: Setting) => {
               renderWorkingWeekdays(setting.controlEl, this.plugin.settings, () => this.persist())
             }
@@ -259,7 +259,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.holidays.name'),
             desc: this.holidayDesc(),
-            aliases: ['bank holidays', 'shutdown', 'time off'],
+            aliases: searchAliases('settings.aliases.holidays'),
             render: (setting: Setting) => {
               renderHolidays(setting.controlEl, this.plugin.settings, () => {
                 this.persist()
@@ -276,7 +276,7 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.autoArchive.name'),
             desc: t('settings.autoArchive.desc'),
-            aliases: ['archive', 'cleanup', 'done'],
+            aliases: searchAliases('settings.aliases.autoArchive'),
             control: {
               type: 'slider',
               key: 'autoArchiveDays',
@@ -294,13 +294,13 @@ export class PMSettingTab extends PluginSettingTab {
           {
             name: t('settings.notifications.name'),
             desc: t('settings.notifications.desc'),
-            aliases: ['notifications', 'banner'],
+            aliases: searchAliases('settings.aliases.notifications'),
             control: { type: 'toggle', key: 'notificationsEnabled' }
           },
           {
             name: t('settings.leadDays.name'),
             desc: t('settings.leadDays.desc'),
-            aliases: ['notifications', 'reminders', 'lead time'],
+            aliases: searchAliases('settings.aliases.leadDays'),
             control: {
               type: 'slider',
               key: 'notificationLeadDays',
@@ -562,7 +562,7 @@ export class PMSettingTab extends PluginSettingTab {
         {
           name: t('settings.peopleFolder.name'),
           desc: t('settings.peopleFolder.desc'),
-          aliases: ['people', 'person notes'],
+          aliases: searchAliases('settings.aliases.peopleFolder'),
           control: {
             type: 'folder',
             key: 'peopleFolder',

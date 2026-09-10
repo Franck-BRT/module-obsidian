@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     "Sort by", "Filter by", "Time tracking (2h logged)", "Create project (Ctrl+S)",
     "This note is not a task in …", and the confirmation for folding a custom field
     into an inherited one
+- The settings search only answered to English. Its keywords now come from the
+  catalogue — "jours ouvrés", "raccourci", "dépendances", "jours fériés" — each locale
+  keeping the English words beside its own, since someone typing "kanban" or "gantt"
+  means the same thing in either language
 - Dates follow the plugin's own language once one is chosen explicitly, instead of the
   host's. On **auto** they still follow Obsidian, including into a language this plugin
   does not translate: a German vault keeps German month names rather than being dragged

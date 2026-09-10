@@ -74,3 +74,16 @@ export function t(key: TranslationKey, vars?: Record<string, string | number>): 
     return value === undefined ? whole : String(value)
   })
 }
+
+/**
+ * A settings entry's search keywords. Obsidian matches them as plain strings, so they
+ * live in the catalogue as one comma-separated list per entry rather than as a key per
+ * word — and a locale is free to keep the English words beside its own, since someone
+ * typing "kanban" or "gantt" means the same thing in either language.
+ */
+export function searchAliases(key: TranslationKey): string[] {
+  return t(key)
+    .split(',')
+    .map((word) => word.trim())
+    .filter(Boolean)
+}

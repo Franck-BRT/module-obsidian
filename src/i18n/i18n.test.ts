@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { en } from './en'
 import { fr } from './fr'
-import { dateLocale, LOCALES, resolveLocale, setLocale, t, type TranslationKey } from './index'
+import { dateLocale, LOCALES, resolveLocale, searchAliases, setLocale, t, type TranslationKey } from './index'
 
 const KEYS = Object.keys(en) as TranslationKey[]
 
@@ -99,5 +99,33 @@ describe('dateLocale', () => {
     expect(dateLocale()).toBe('fr')
     setLocale('en')
     expect(dateLocale()).toBe('en')
+  })
+})
+
+describe('settings search aliases', () => {
+  const ALIAS_KEYS = KEYS.filter((key) => key.startsWith('settings.aliases.'))
+
+  it('are declared for every setting that had them', () => {
+    expect(ALIAS_KEYS.length).toBe(22)
+  })
+
+  it('split into real words in both locales, with nothing empty', () => {
+    for (const locale of LOCALES) {
+      setLocale(locale)
+      for (const key of ALIAS_KEYS) {
+        const words = searchAliases(key)
+        expect(words.length, `${key} in ${locale}`).toBeGreaterThan(0)
+        expect(words.every((word) => word.length > 0)).toBe(true)
+        expect(words.every((word) => word === word.trim())).toBe(true)
+      }
+    }
+  })
+
+  it('say something different in French, or the translation was skipped', () => {
+    setLocale('en')
+    const english = ALIAS_KEYS.map((key) => searchAliases(key).join('|'))
+    setLocale('fr')
+    const french = ALIAS_KEYS.map((key) => searchAliases(key).join('|'))
+    expect(french.filter((words, i) => words === english[i])).toEqual([])
   })
 })
