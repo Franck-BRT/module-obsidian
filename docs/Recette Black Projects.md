@@ -419,7 +419,8 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 ### Création et remplissage
 
-- [ ] Dans un projet, barre d'outils → **« + lot »**, le nommer « Lot 1 »
+- [ ] Dans un projet, barre d'outils → **« + ajouter une tâche »**, puis champ **Type → « Lot »**, le nommer « Lot 1 »
+- [ ] ✅ **Attendu** : il n'y a **pas** de bouton « + lot » séparé dans la barre d'outils
 - [ ] ✅ **Attendu** : une note est créée comme pour une tâche, avec `type: phase` dans son frontmatter
 - [ ] ✅ **Attendu** : dans le tableur, le lot est un **en-tête sur toute la largeur**, pas une ligne de tâche
 - [ ] Ouvrir une tâche existante : ✅ **Attendu** : le champ **« Lot »** est proposé (il n'apparaît que si le projet a des lots)

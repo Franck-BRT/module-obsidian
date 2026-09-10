@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A lot is created from **+ add task**, by setting the new ticket's type to Phase.
+  The separate **+ phase** button is gone: two buttons for one modal, differing only in
+  a field the modal itself offers, is a choice made twice
 - A lot inside a lot steps in, and the tasks it holds step in with it: nesting is now
   read from the indentation, in the table, the Gantt and the board's headings alike.
   Tasks in a lot were kept flush left when phases landed, on the grounds that a task in

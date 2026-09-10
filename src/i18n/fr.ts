@@ -200,7 +200,6 @@ export const fr: Catalog = {
   'project.overdueCount': { one: '{count} en retard', other: '{count} en retard' },
   'project.addTaskButton': '+ ajouter une tâche',
   'project.addMilestoneButton': '+ jalon',
-  'project.addPhaseButton': '+ lot',
   'project.newButton': '+ nouveau projet',
   'project.behindCount': { one: '{count} en retard', other: '{count} en retard' },
   'project.members': 'Membres',

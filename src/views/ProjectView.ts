@@ -435,10 +435,6 @@ export class ProjectView extends ItemView {
         .setCta()
         .onClick((e) => this.addTask(e))
 
-      new ButtonComponent(right)
-        .setButtonText(t('project.addPhaseButton'))
-        .onClick((e) => this.addTask(e, { type: 'phase', start: '', progress: 0 }))
-
       if (this.currentView === 'gantt') {
         new ButtonComponent(right)
           .setButtonText(t('project.addMilestoneButton'))
