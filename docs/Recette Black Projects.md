@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.22.0
+version: 2.23.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.22.0
+# Recette — Black Projects 2.23.0
 
-Plan de test manuel pour le fork. Les **713 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **715 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -479,6 +479,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 > **Nouveau en 2.22.0** : « En revue » et « Terminé » ont changé de couleur, dans la palette
 > des **statuts** et dans celle des **priorités** (Élevée / Basse — c'étaient les mêmes codes).
+> **2.23.0** : « Annulé » aussi, qui était un violet trop proche de celui d'« En cours ».
 
 - [ ] Réglages → **Statuts** : ✅ **Attendu** : « En revue » est `#b76b1c` (orange brûlé)
       et « Terminé » `#06915f` (vert émeraude)
@@ -492,6 +493,12 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Remettre volontairement `#79b58d` sur « Terminé », fermer et rouvrir Obsidian
       ✅ **Attendu** : elle est **conservée** — la reprise ne se fait qu'une fois
 - [ ] Un **nouveau coffre** : ✅ **Attendu** : il démarre directement avec les nouvelles couleurs
+- [ ] **[N]** Réglages → Statuts → **« Annulé »** : ✅ **Attendu** : `#367794` (bleu ardoise)
+- [ ] **[N]** ✅ **Attendu** : on ne le confond plus avec « En cours » — ce n'est plus un violet
+- [ ] **[N]** ✅ **Attendu** : il reste **discret** : un ticket annulé ne doit pas attirer l'œil
+      autant qu'un ticket actif
+- [ ] **[N]** Un coffre déjà passé en **2.22.0** : ✅ **Attendu** : il reçoit quand même cette
+      nouvelle couleur *(les reprises sont comptées, pas un simple drapeau)*
 
 **Constaté :**
 

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.23.0] - 2026-09-12
+
+### Changed
+
+- **"Cancelled" re-stepped** too: it was a grey-purple **ΔE 8.0** from the "In Progress"
+  purple — two states that mean opposite things, told apart by a shade. It is now a slate
+  blue at **ΔE 13.2**, and deliberately still quiet: a cancelled ticket should read
+  retired, and every louder colour that measured better looked active
+- Palette corrections are now **counted rather than flagged**, so a vault that already
+  took the 2.22.0 pass gets this one too. Each pass still touches only a colour still
+  carrying the old default
+
+### Notes
+
+- The next-closest pair is now "In Review" and "Blocked" — orange and red at ΔE 9.2 — and
+  green and red stay close under protanopia. With six colours across red, amber, green,
+  purple and grey, each fix uncovers the next; which is why no status is ever told by its
+  colour alone
+
 ## [2.22.0] - 2026-09-12
 
 ### Changed

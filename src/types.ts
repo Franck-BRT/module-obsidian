@@ -407,27 +407,35 @@ export interface PMSettings {
   tableSortKey: PMSettings['ganttSortKey']
   tableSortDir: 'asc' | 'desc'
   /**
-   * Whether the two re-stepped colours have been offered to this vault yet. Once, and
-   * only to a palette still carrying the old value: a colour someone has chosen since
-   * is theirs, including the old one chosen back again.
+   * How many of the palette corrections this vault has had. Counted rather than a flag,
+   * so a later correction reaches a vault that already took the earlier ones.
    */
-  paletteRestepped: boolean
+  paletteRestep: number
 }
 
 /**
- * The two colours re-stepped in 2.22.0, old value to new.
+ * Colour corrections to the default palettes, oldest first. A vault is walked forward
+ * through the passes it has not had, once each.
  *
- * The amber and the green they replace sat at ΔE 9.1 for ordinary colour vision and 4.5
- * under deuteranopia — below the distance at which two colours can be told apart at all
- * — and both read washed out, under the chroma floor. They also carried almost the same
- * lightness, which is the channel colour blindness leaves intact, so nothing separated
- * them. The new pair is a step darker on the green and a step stronger on the amber:
- * ΔE 19.8 and 10.8.
+ * A default is a starting point, so a pass only ever touches a colour still carrying the
+ * old default; anything chosen since is the user's, including an old value chosen back
+ * again — which is why the passes are counted in settings rather than re-run on load.
+ *
+ * 2.22.0 — "In Review" and "Done", which the priority palette also used for "High" and
+ * "Low". They sat ΔE 9.1 apart for ordinary colour vision and 4.5 under deuteranopia,
+ * below the distance at which two colours can be told apart at all, at nearly the same
+ * lightness — the one channel colour blindness leaves intact — and both under the chroma
+ * floor, which is why they read washed out. Now ΔE 19.9 and 8.2.
+ *
+ * 2.23.0 — "Cancelled", a grey-purple ΔE 8.0 from the "In Progress" purple: two states
+ * that mean opposite things, told apart by a shade. Now a slate blue at ΔE 13.2, and
+ * still quiet, because a cancelled ticket should read retired rather than like a sixth
+ * accent — the loud colours that measured better all looked active.
  */
-export const RESTEPPED_COLORS: Record<string, string> = {
-  '#b8a06b': '#b76b1c',
-  '#79b58d': '#06915f'
-}
+export const PALETTE_RESTEPS: Record<string, string>[] = [
+  { '#b8a06b': '#b76b1c', '#79b58d': '#06915f' },
+  { '#767491': '#367794' }
+]
 
 export const DEFAULT_STATUSES: StatusConfig[] = [
   { id: 'todo', label: 'To Do', color: '#8a94a0', icon: '', complete: false },
@@ -435,7 +443,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
   { id: 'blocked', label: 'Blocked', color: '#c47070', icon: '', complete: false },
   { id: 'review', label: 'In Review', color: '#b76b1c', icon: '', complete: false },
   { id: 'done', label: 'Done', color: '#06915f', icon: '', complete: true },
-  { id: 'cancelled', label: 'Cancelled', color: '#767491', icon: '', complete: true }
+  { id: 'cancelled', label: 'Cancelled', color: '#367794', icon: '', complete: true }
 ]
 
 export const DEFAULT_PRIORITIES: PriorityConfig[] = [
@@ -520,8 +528,8 @@ export const DEFAULT_SETTINGS: PMSettings = {
   // Status, which is what the table has always opened in: an upgrade reorders nothing.
   tableSortKey: 'status',
   tableSortDir: 'asc',
-  // A fresh install already has them; only a vault that predates them needs the pass.
-  paletteRestepped: true
+  // A fresh install already has every correction; only an older vault needs the passes.
+  paletteRestep: PALETTE_RESTEPS.length
 }
 
 export function makeId(): string {

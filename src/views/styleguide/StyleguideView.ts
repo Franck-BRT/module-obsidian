@@ -514,7 +514,7 @@ export class StyleguideView extends ItemView {
     new ProjectRow(tbody, {
       title: 'Internal tools',
       icon: '🛠',
-      color: '#767491',
+      color: '#367794',
       depth: 0,
       treeGuides: [],
       isLastChild: true,

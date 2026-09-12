@@ -2,6 +2,7 @@ import { MarkdownView, Plugin, Notice } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
   makeDefaultFilter,
+  PALETTE_RESTEPS,
   seedPriorities,
   seedStatuses,
   type PMSettings,
@@ -358,8 +359,11 @@ export default class PMPlugin extends Plugin {
     // Cloned: a shallow merge would hand the live settings the very arrays and objects
     // DEFAULT_SETTINGS holds, and the first edit would write into the defaults.
     this.settings = Object.assign(structuredClone(DEFAULT_SETTINGS), saved ?? {})
-    // A vault that predates the flag has not had the pass, whatever the default says.
-    if (saved && saved.paletteRestepped === undefined) this.settings.paletteRestepped = false
+    // A vault that predates the counter has had only what its old flag says it had.
+    if (saved && saved.paletteRestep === undefined) {
+      const flagged = (saved as { paletteRestepped?: boolean }).paletteRestepped
+      this.settings.paletteRestep = flagged ? 1 : 0
+    }
     // Before anything reads a string: the palettes seeded just below are localized.
     setLocale(this.settings.language)
     if (!saved?.statuses?.length) this.settings.statuses = seedStatuses()
@@ -386,13 +390,14 @@ export default class PMPlugin extends Plugin {
       }
     }
 
-    // The two colours re-stepped in 2.22.0. A vault that predates them is offered them
-    // once, and only where the palette still carries the old default.
-    if (!this.settings.paletteRestepped) {
-      restepPalette(this.settings.statuses)
-      restepPalette(this.settings.priorities)
-      // Written back even when nothing moved, so the pass is spent either way.
-      this.settings.paletteRestepped = true
+    // Palette corrections the vault has not had yet, in order and once each.
+    if (this.settings.paletteRestep < PALETTE_RESTEPS.length) {
+      for (const restep of PALETTE_RESTEPS.slice(this.settings.paletteRestep)) {
+        restepPalette(this.settings.statuses, restep)
+        restepPalette(this.settings.priorities, restep)
+      }
+      // Written back even when nothing moved, so the passes are spent either way.
+      this.settings.paletteRestep = PALETTE_RESTEPS.length
       migrated = true
     }
 
