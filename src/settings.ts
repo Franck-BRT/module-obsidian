@@ -86,7 +86,13 @@ export class PMSettingTab extends PluginSettingTab {
             control: {
               type: 'dropdown',
               key: 'defaultView',
-              options: { table: t('common.table'), gantt: t('common.gantt'), kanban: t('common.board') }
+              options: {
+                table: t('common.table'),
+                gantt: t('common.gantt'),
+                kanban: t('common.board'),
+                library: t('view.library'),
+                dashboard: t('kpi.title')
+              }
             }
           },
           {

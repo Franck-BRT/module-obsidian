@@ -239,8 +239,9 @@ function fillTableBody(ctx: TableContext): void {
     list.push(f)
   }
   // Siblings are ordered within their parent, so the tree survives whatever the sort is.
-  // Entries snapshotted first: the ordered list replaces the one being read.
-  for (const [parent, list] of [...childrenByParent]) {
+  // Replacing a value under a key the map already holds leaves the iteration alone: no
+  // entry is added, so nothing is visited twice and nothing is missed.
+  for (const [parent, list] of childrenByParent) {
     childrenByParent.set(
       parent,
       orderRows(list, (row) => row.task, ctx.state, ctx.statuses, ctx.priorities)

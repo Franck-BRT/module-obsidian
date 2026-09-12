@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.21.0] - 2026-09-12
+
+### Added
+
+- A fifth view: the **dashboard**. One page saying where the project stands — its
+  advancement as a figure, what is late, what falls due this week, what nobody has dated,
+  the plan against the work as a curve, the breakdown by status and priority, each phase's
+  progress, who carries what, the milestones and the documents still awaited
+- **Every figure is a way in.** "Seven late" is not a number to look at, it is a list to
+  open: clicking a tile or a bar narrows the filter to exactly what was counted and lands
+  on the view that shows tickets one by one, with the filter bar saying what happened so
+  the reader can undo it
+- A **status report** button writes the whole page to a note in the project's folder —
+  a Markdown table that can be sent to someone with no Obsidian at all, and the chart's
+  table view at the same time
+- The **default-view setting** now offers the library and the dashboard, which it should
+  have offered the library all along
+
+### Notes
+
+- The figures are computed in one tested place rather than in the drawing, so what the
+  page says is checked by 38 tests rather than by looking at it
+- Colour never carries a value on its own here: every bar sits on a labelled row with its
+  count in text. Two colours of the default status palette — In Review and Done — are
+  close enough that a reader with ordinary colour vision has trouble telling them apart,
+  which is a reason never to let a breakdown rest on hue
 ## [2.20.1] - 2026-09-12
 
 ### Fixed

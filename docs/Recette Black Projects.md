@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.20.1
+version: 2.21.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.20.1
+# Recette — Black Projects 2.21.0
 
-Plan de test manuel pour le fork. Les **669 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **707 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -474,6 +474,78 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Vue **Gantt** : ✅ **Attendu** : même escalier dans la colonne des libellés
 - [ ] Vue **Tableau** : ✅ **Attendu** : la bande du lot 2 est décalée sous celle du lot 1
 - [ ] Le **chevron** de l'en-tête plie le lot ; rouvrir le projet : ✅ **Attendu** : il est **toujours plié**
+
+## 7quinquies. Tableau de bord [N]
+
+> **Nouveau en 2.21.0** : une cinquième vue, l'icône **jauge** dans le sélecteur. Une page
+> qui dit où en est le projet, et qu'on peut montrer en réunion.
+
+### Ce que la page annonce
+
+- [ ] Cinquième icône de vue → ✅ **Attendu** : la page s'ouvre avec le nom du projet,
+      sa **période** et un bandeau d'état : **Dans les temps** / **À surveiller** / **En retard**
+- [ ] ✅ **Attendu** : l'état porte une **icône et des mots**, jamais la couleur seule
+- [ ] Mettre une tâche ouverte en retard : ✅ **Attendu** : le bandeau passe **En retard** et dit combien
+- [ ] Tout terminer : ✅ **Attendu** : le bandeau repasse **Dans les temps**
+- [ ] Faire déborder un lot de ses dates annoncées : ✅ **Attendu** : **À surveiller**
+- [ ] ✅ **Attendu** : le grand cercle affiche l'**avancement** et, dessous, « n terminés sur m »
+- [ ] ✅ **Attendu** : une tâche **terminée** compte pour 100 %, même si son avancement est resté à 0
+- [ ] ✅ **Attendu** : les six tuiles — En retard, Cette semaine, En cours, Sans date,
+      Documents attendus, Heures passées — tiennent sur **deux rangées**, à la hauteur du cercle
+
+### Cliquer sur un chiffre
+
+- [ ] Cliquer la tuile **En retard** : ✅ **Attendu** : on arrive dans le **tableur**, filtré sur
+      les tâches en retard, et **la barre de filtres le dit** — on peut l'annuler
+- [ ] Idem **Cette semaine**, **Sans date**, **En cours**
+- [ ] Cliquer **Documents attendus** : ✅ **Attendu** : on arrive dans la **bibliothèque**
+- [ ] Cliquer une ligne de **statut** puis une de **priorité** : ✅ **Attendu** : le tableur filtré sur elle
+- [ ] Cliquer une personne dans « Qui porte quoi » : ✅ **Attendu** : le tableur filtré sur elle
+- [ ] Cliquer un **lot** ou un **jalon** : ✅ **Attendu** : sa fiche s'ouvre
+- [ ] Revenir au tableau de bord : ✅ **Attendu** : il se recalcule avec le filtre en cours
+
+### La courbe
+
+- [ ] ✅ **Attendu** : deux lignes — **Terminé** (couleur d'accent) et **Attendu à cette date** (gris)
+- [ ] ✅ **Attendu** : les deux **montent** seulement, jamais ne redescendent
+- [ ] ✅ **Attendu** : une **légende** nomme les deux lignes avec leur dernier chiffre
+- [ ] ✅ **Attendu** : les points aux extrémités sont **ronds**, pas ovales, et les dates ne sont pas étirées
+- [ ] Élargir puis rétrécir le volet : ✅ **Attendu** : la courbe se **redessine** à la bonne largeur
+- [ ] Un projet **sans aucune date** : ✅ **Attendu** : un message, pas une courbe vide
+- [ ] Une tâche terminée **sans date de fin** : ✅ **Attendu** : une phrase sous la courbe le dit
+      *(elle n'est pas dessinée un jour où elle n'a pas eu lieu)*
+- [ ] Des tâches ouvertes **sans échéance** : ✅ **Attendu** : une phrase sous la courbe le dit aussi
+
+### Le reste de la page
+
+- [ ] ✅ **Attendu** : chaque barre porte **son nom et son chiffre en toutes lettres** —
+      la couleur ne fait que confirmer une ligne déjà lisible sans elle
+- [ ] ✅ **Attendu** : les statuts et priorités **non utilisés** ne sont pas dessinés à zéro
+- [ ] ✅ **Attendu** : les lots affichent un **pourcentage**, et « déborde » quand ils ne tiennent plus
+- [ ] ✅ **Attendu** : les tâches **sans personne** forment une ligne « Personne encore », en dernier
+- [ ] Avec **plus de huit** personnes : ✅ **Attendu** : une neuvième ligne les regroupe, rien n'est perdu
+- [ ] ✅ **Attendu** : les jalons sont **triés par date** et dits tenus / ratés / imminents / à venir
+- [ ] Un projet **sans lot**, **sans jalon** ou **sans document** : ✅ **Attendu** : la carte correspondante
+      n'apparaît pas — pas de carte vide
+
+### Le rapport d'état
+
+- [ ] Bouton **« Rapport d'état »** : ✅ **Attendu** : une note est créée dans le dossier du projet,
+      et un message donne son chemin
+- [ ] L'ouvrir : ✅ **Attendu** : l'avancement, les compteurs, les statuts, les priorités, les lots,
+      les jalons et la charge par personne, en **tableaux Markdown**
+- [ ] ✅ **Attendu** : son frontmatter porte `progress:` et `health:`
+- [ ] Recliquer : ✅ **Attendu** : une seconde note « (2) », la première n'est pas écrasée
+
+### Thème et affichage
+
+- [ ] Basculer Obsidian en **thème clair puis sombre** : ✅ **Attendu** : la page suit, rien ne devient illisible
+- [ ] Changer la **couleur d'un statut** dans les réglages : ✅ **Attendu** : la barre correspondante suit
+- [ ] Rétrécir la fenêtre : ✅ **Attendu** : les cartes passent sur une colonne, rien ne déborde
+- [ ] Ouvrir le tableau de bord sur un **recueil** ou une vue multi-projets : ✅ **Attendu** : il agrège l'ensemble
+- [ ] Réglages → **Vue par défaut** : ✅ **Attendu** : « Bibliothèque » et « Tableau de bord » y sont proposés
+
+**Constaté :**
 
 ### Tableur : ordre des lignes [N]
 

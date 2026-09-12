@@ -8,7 +8,14 @@ export type TaskStatus = string
 export type TaskPriority = string
 export type GanttGranularity = 'day' | 'week' | 'month' | 'quarter' | 'year'
 export type GanttWeekLabel = 'weekNumber' | 'dateRange' | 'both'
-export type ViewMode = 'table' | 'gantt' | 'kanban' | 'library'
+/**
+ * The views a project can be looked at through, in the order their switcher offers them.
+ * A list rather than a bare union, so the places that have to recognise every view —
+ * the saved-view reader, the default-view setting — are derived from it and cannot be
+ * left a view behind.
+ */
+export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'dashboard'] as const
+export type ViewMode = (typeof VIEW_MODES)[number]
 export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
 export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document'

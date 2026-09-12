@@ -1,0 +1,444 @@
+/* The dashboard: a project at a glance, and something to put on a screen in a meeting.
+   Everything here takes its colour from the theme or from the palettes the user has
+   already set, so the page reads the same in light, in dark and in a community theme. */
+.pm-kpi-view {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+.pm-kpi-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* The line read first: the project, its window, and whether it is on time. */
+.pm-kpi-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pm-kpi-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.pm-kpi-project {
+  font-size: 1.4em;
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-kpi-window {
+  font-size: var(--font-smallest);
+  color: var(--text-muted);
+}
+.pm-kpi-header-actions {
+  margin-left: auto;
+}
+
+/* State is never colour alone: an icon and the words carry it, colour only agrees. */
+.pm-kpi-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--pm-kpi-state) 12%, transparent);
+  color: var(--pm-kpi-state);
+  --pm-kpi-state: var(--text-muted);
+}
+.pm-kpi-health--on-track {
+  --pm-kpi-state: var(--color-green, #79b58d);
+}
+.pm-kpi-health--at-risk {
+  --pm-kpi-state: var(--color-orange, #b8a06b);
+}
+.pm-kpi-health--late {
+  --pm-kpi-state: var(--text-error, var(--color-red));
+}
+.pm-kpi-health-icon {
+  display: inline-flex;
+  --icon-size: 18px;
+}
+.pm-kpi-health-text {
+  font-weight: var(--font-semibold);
+}
+.pm-kpi-health-why {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+}
+
+/* The advancement, large, and the numbers a weekly review asks for beside it. */
+.pm-kpi-hero {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+.pm-kpi-meter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 22px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  flex: 0 0 auto;
+}
+.pm-kpi-ring {
+  width: 132px;
+  height: 132px;
+}
+.pm-kpi-ring-track {
+  stroke: var(--background-modifier-border);
+}
+.pm-kpi-ring-fill {
+  stroke: var(--interactive-accent);
+}
+/* The figure sits in the ring rather than under it: the number is the point, the ring
+   only gives it a shape. Proportional figures — tabular ones read loose this large. */
+.pm-kpi-ring-figure {
+  position: absolute;
+  top: 16px;
+  height: 132px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+/* The number and its unit are one line, sat on a shared baseline, and that line is what
+   gets centred in the ring — centring them separately floats the % to the top. */
+.pm-kpi-ring-inner {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+}
+.pm-kpi-ring-value {
+  font-size: 42px;
+  line-height: 1;
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+.pm-kpi-ring-unit {
+  font-size: 18px;
+  color: var(--text-muted);
+}
+.pm-kpi-meter-caption {
+  font-size: var(--font-smallest);
+  color: var(--text-muted);
+}
+
+.pm-kpi-tiles {
+  flex: 1 1 380px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 10px;
+}
+/* Three across rather than six: two rows then stand as tall as the ring beside them,
+   instead of one row of half-empty boxes stretched to its height. */
+@media (min-width: 880px) {
+  .pm-kpi-tiles {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.pm-kpi-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+.pm-kpi-tile--link {
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.pm-kpi-tile--link:hover,
+.pm-kpi-tile--link:focus-visible {
+  border-color: var(--interactive-accent);
+}
+.pm-kpi-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  min-width: 0;
+}
+.pm-kpi-tile-icon {
+  display: inline-flex;
+  --icon-size: 14px;
+}
+.pm-kpi-tile-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-kpi-tile-value {
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+/* A tile whose number is a problem says so in the status colour, next to its own icon
+   and label — never the colour on its own. */
+.pm-kpi-tile--bad .pm-kpi-tile-value,
+.pm-kpi-tile--bad .pm-kpi-tile-head {
+  color: var(--text-error, var(--color-red));
+}
+
+.pm-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 14px;
+}
+.pm-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  min-width: 0;
+}
+.pm-kpi-card--wide {
+  grid-column: 1 / -1;
+}
+.pm-kpi-card-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+.pm-kpi-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.pm-kpi-subtitle {
+  margin-top: 4px;
+  font-size: var(--font-smallest);
+  color: var(--text-muted);
+}
+.pm-kpi-note {
+  font-size: var(--font-smallest);
+  color: var(--text-muted);
+}
+.pm-kpi-empty {
+  padding: 12px 0;
+  color: var(--text-faint);
+  font-size: var(--font-smallest);
+}
+
+/* A breakdown is a list of labelled bars: the name and the count are text on every row,
+   so the colour beside them reinforces a row that already reads without it. */
+.pm-kpi-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pm-kpi-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: var(--radius-s);
+}
+.pm-kpi-bar-row--link {
+  cursor: pointer;
+}
+.pm-kpi-bar-row--link:hover .pm-kpi-bar-label,
+.pm-kpi-bar-row--link:focus-visible .pm-kpi-bar-label {
+  color: var(--text-accent);
+}
+.pm-kpi-bar-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--font-smallest);
+}
+.pm-kpi-bar-label {
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-kpi-bar-detail {
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.pm-kpi-bar-value {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Thin marks, rounded at the data end, square at the baseline. */
+.pm-kpi-bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--background-modifier-border);
+  overflow: hidden;
+}
+.pm-kpi-bar-fill {
+  height: 100%;
+  width: var(--pm-kpi-share, 0%);
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+  background: var(--pm-kpi-color, var(--interactive-accent));
+}
+.pm-kpi-swatch {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  background: var(--pm-kpi-color, var(--interactive-accent));
+}
+
+/* The curve. Hairline solid grid, 2px lines, a wash under the series that matters. */
+.pm-kpi-chart {
+  display: block;
+  width: 100%;
+  height: 220px;
+}
+.pm-kpi-grid-line,
+.pm-kpi-grid {
+  stroke: var(--background-modifier-border);
+  stroke-width: 1;
+}
+.pm-kpi-tick {
+  fill: var(--text-faint);
+  font-size: 10px;
+}
+.pm-kpi-line-done {
+  stroke: var(--interactive-accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.pm-kpi-line-planned {
+  stroke: var(--text-faint);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.pm-kpi-area {
+  fill: var(--interactive-accent);
+  opacity: 0.1;
+}
+/* A 2px ring in the surface colour keeps an end dot legible where the lines cross. */
+.pm-kpi-dot-done {
+  fill: var(--interactive-accent);
+  stroke: var(--background-secondary);
+  stroke-width: 2;
+}
+.pm-kpi-dot-planned {
+  fill: var(--text-faint);
+  stroke: var(--background-secondary);
+  stroke-width: 2;
+}
+.pm-kpi-plot {
+  min-width: 0;
+}
+.pm-kpi-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pm-kpi-legend-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-smallest);
+  color: var(--text-muted);
+}
+.pm-kpi-key-done {
+  --pm-kpi-color: var(--interactive-accent);
+}
+.pm-kpi-key-planned {
+  --pm-kpi-color: var(--text-faint);
+}
+.pm-kpi-legend-value {
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-kpi-milestones {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pm-kpi-milestone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  font-size: var(--font-smallest);
+  min-width: 0;
+}
+.pm-kpi-milestone:hover,
+.pm-kpi-milestone:focus-visible {
+  background: var(--background-modifier-hover);
+}
+.pm-kpi-milestone-icon {
+  display: inline-flex;
+  --icon-size: 13px;
+  color: var(--pm-kpi-state, var(--text-muted));
+}
+.pm-kpi-milestone--done {
+  --pm-kpi-state: var(--color-green, #79b58d);
+}
+.pm-kpi-milestone--late {
+  --pm-kpi-state: var(--text-error, var(--color-red));
+}
+.pm-kpi-milestone--soon {
+  --pm-kpi-state: var(--color-orange, #b8a06b);
+}
+.pm-kpi-milestone-title {
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-kpi-milestone-date {
+  margin-left: auto;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.pm-kpi-milestone-state {
+  color: var(--pm-kpi-state, var(--text-faint));
+  white-space: nowrap;
+}
+.pm-kpi-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Shown on a screen in a meeting: one column, bigger type, no hover affordances to
+   explain. The page is the slide. */
+@media print {
+  .pm-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .pm-kpi-card,
+  .pm-kpi-tile,
+  .pm-kpi-meter {
+    break-inside: avoid;
+  }
+}
