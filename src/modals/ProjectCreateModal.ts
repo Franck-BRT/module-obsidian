@@ -37,9 +37,18 @@ export class ProjectCreateModal extends Modal {
 
   constructor(
     app: App,
-    private plugin: PMPlugin
+    private plugin: PMPlugin,
+    /**
+     * Creating a programme rather than a project. The form is the same one — a
+     * programme is a project that holds projects — so only what it is called changes,
+     * and the parent it offers.
+     */
+    private program = false,
+    /** Preset when the form is opened from the thing the new project belongs to. */
+    parentPath = ''
   ) {
     super(app)
+    this.draft.parentPath = parentPath
   }
 
   onOpen(): void {
@@ -83,7 +92,7 @@ export class ProjectCreateModal extends Modal {
     this.crumbFolder = crumb.createSpan({ cls: 'pm-te-crumb-name', text: this.targetFolder() })
     const sep = crumb.createSpan({ cls: 'pm-te-crumb-sep' })
     setIcon(sep, 'chevron-right')
-    crumb.createSpan({ text: t('project.new') })
+    crumb.createSpan({ text: this.program ? t('program.new') : t('project.new') })
 
     this.header.createDiv('pm-te-header-spacer')
 
@@ -100,7 +109,7 @@ export class ProjectCreateModal extends Modal {
     const wrap = parent.createDiv('pm-te-title-wrap')
     this.titleInput = wrap.createEl('textarea', { cls: 'pm-te-title' })
     this.titleInput.rows = 1
-    this.titleInput.placeholder = t('project.name')
+    this.titleInput.placeholder = this.program ? t('program.name') : t('project.name')
     this.titleInput.spellcheck = false
     this.titleError = wrap.createDiv({ cls: 'pm-modal-title-error', attr: { hidden: '' } })
 
@@ -177,9 +186,14 @@ export class ProjectCreateModal extends Modal {
             value: this.draft.parentPath,
             placeholder: t('common.noParent'),
             search: true,
+            // A project's parent may be a programme or another project; a programme's
+            // parent can only be another programme, never a project underneath it.
             options: [
               { id: '', label: t('common.noParent') },
-              ...this.plugin.index.projectRefs().map((ref) => ({ id: ref.path, label: ref.title, color: ref.color }))
+              ...this.plugin.index
+                .projectRefs()
+                .filter((ref) => !this.program || ref.program)
+                .map((ref) => ({ id: ref.path, label: ref.title, color: ref.color }))
             ],
             onChange: (path) => {
               this.draft.parentPath = path
@@ -294,7 +308,8 @@ export class ProjectCreateModal extends Modal {
       color: this.draft.color,
       description: this.draft.description,
       teamMembers: this.draft.teamMembers,
-      parentPath: this.draft.parentPath || undefined
+      parentPath: this.draft.parentPath || undefined,
+      ...(this.program ? { program: true } : {})
     })
     this.close()
     await this.plugin.router.openProjectLink(project.filePath)

@@ -24,14 +24,16 @@ export function openAddTask(plugin: PMPlugin, scope: ProjectScope, opts: AddTask
       onSave: () => opts.onSave()
     })
   }
-  const primary = scope.primary
+  // A programme is never a destination: the ticket goes to a project underneath it.
+  const candidates = scope.addableProjects
+  const primary = candidates[0]
   if (!primary) return
-  if (!scope.isMulti || !opts.event) {
+  if (candidates.length === 1 || !opts.event) {
     open(primary)
     return
   }
   const menu = new Menu()
-  for (const project of scope.projects) {
+  for (const project of candidates) {
     menu.addItem((item) =>
       item
         .setTitle(project.title)

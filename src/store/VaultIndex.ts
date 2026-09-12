@@ -3,7 +3,12 @@ import { TFile, normalizePath } from 'obsidian'
 import type { CustomFieldDef, FilterState, PMSettings, StatusConfig } from '../types'
 import { today } from '../dates'
 import { reaches } from './Scheduler'
-import { COLLECTION_FRONTMATTER_KEY, FRONTMATTER_KEY, TASK_FRONTMATTER_KEY } from './YamlParser'
+import {
+  COLLECTION_FRONTMATTER_KEY,
+  FRONTMATTER_KEY,
+  PROGRAM_FRONTMATTER_KEY,
+  TASK_FRONTMATTER_KEY
+} from './YamlParser'
 import { customFieldList, stringList } from './YamlHydrator'
 import { projectPathForTaskPath, resolveVaultLink } from './vaultFs'
 import { isRefLink, refToId, refToPath } from './refs'
@@ -21,6 +26,8 @@ export interface ProjectRef {
   customFields: CustomFieldDef[]
   /** Where its `parent` link points, before cycles are taken out. Use `parentOf`. */
   parentPath: string | undefined
+  /** A programme: it groups projects and holds no work of its own. */
+  program: boolean
   /** Status ids the project's own palette defines. Null inherits the global palette. */
   ownStatusIds: string[] | null
   /** Which of those its own palette marks complete. Null inherits the global palette. */
@@ -451,6 +458,7 @@ export class VaultIndex {
       teamMembers: stringList(frontmatter.teamMembers),
       customFields: customFieldList(frontmatter.customFields),
       parentPath: resolveVaultLink(this.app, frontmatter.parent, path),
+      program: frontmatter[PROGRAM_FRONTMATTER_KEY] === true,
       ownStatusIds: own ? own.map((entry) => entry.id as string) : null,
       completeStatusIds: own ? own.filter((entry) => entry.complete === true).map((entry) => entry.id as string) : null,
       autoArchiveDays: ownAutoArchiveDays(frontmatter)

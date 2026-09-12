@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.25.0
+version: 2.26.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.25.0
+# Recette — Black Projects 2.26.0
 
-Plan de test manuel pour le fork. Les **717 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **723 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -517,6 +517,65 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] **[N]** ✅ **Attendu** : « En cours » ne se confond plus ni avec « À faire » ni avec « Annulé »
 - [ ] **[N]** Ajouter un **nouveau statut** dans les réglages : ✅ **Attendu** : il démarre sur le
       nouveau gris neutre
+
+**Constaté :**
+
+## 7septies. Programmes [N]
+
+> **Nouveau en 2.26.0** : un **programme** regroupe plusieurs projets. Il ne contient que
+> des projets — jamais de tickets — et son tableau de bord additionne les leurs.
+
+### Créer un programme
+
+- [ ] Première page → ✅ **Attendu** : un bouton **« + nouveau programme »** à côté de
+      « + nouveau projet »
+- [ ] Le cliquer : ✅ **Attendu** : le même formulaire, intitulé **« Nouveau programme »**
+- [ ] ✅ **Attendu** : le champ **Parent** ne propose que des **programmes** (un programme ne se
+      range pas sous un projet)
+- [ ] Le créer, l'appeler « Ligne 6 » : ✅ **Attendu** : sa note porte `pm-program: true` dans son frontmatter
+- [ ] ✅ **Attendu** : dans la liste, sa ligne porte l'étiquette **« Programme · 0 projet »**
+- [ ] ✅ **Attendu** : un projet ordinaire **ne porte pas** d'étiquette
+
+### Y mettre des projets
+
+- [ ] Le programme vide s'ouvre : ✅ **Attendu** : il s'ouvre **sur son tableau de bord**
+- [ ] ✅ **Attendu** : une carte dit qu'il n'a **aucun projet**, et rappelle qu'un programme
+      contient des projets et pas des tickets
+- [ ] ✅ **Attendu** : **aucun bouton d'ajout de ticket** dans la barre d'outils
+- [ ] Cliquer **« Ajouter un projet »** : ✅ **Attendu** : le formulaire projet s'ouvre avec le
+      **programme déjà choisi comme parent**
+- [ ] Créer deux projets ainsi, y mettre des tâches
+- [ ] Revenir au programme : ✅ **Attendu** : son étiquette dit **« Programme · 2 projets »**
+- [ ] ✅ **Attendu** : les deux projets apparaissent **sous lui** dans l'arbre de la première page
+- [ ] Mettre un projet existant dans le programme via **Réglages du projet → Parent**
+      ✅ **Attendu** : il rejoint le programme
+
+### Le tableau de bord du programme
+
+- [ ] Ouvrir le programme : ✅ **Attendu** : l'avancement, les tuiles et la courbe portent sur
+      **tous les projets réunis**
+- [ ] ✅ **Attendu** : une carte **« Où en est chaque projet »** liste les projets, un par ligne,
+      avec avancement, terminés/total, retard éventuel et une barre
+- [ ] ✅ **Attendu** : l'état de chaque ligne (icône) dit si ce projet est dans les temps,
+      à surveiller ou en retard
+- [ ] Cliquer une ligne : ✅ **Attendu** : ce projet s'ouvre
+- [ ] Mettre une tâche en retard dans un seul projet : ✅ **Attendu** : sa ligne passe en retard,
+      et le bandeau du programme aussi
+- [ ] **« Rapport d'état »** sur un programme : ✅ **Attendu** : la note est écrite avec les chiffres cumulés
+- [ ] Les autres vues (tableur, Gantt, tableau, bibliothèque) : ✅ **Attendu** : elles montrent
+      les tickets **de tous les projets** du programme
+- [ ] Dans ces vues, **ajouter une tâche** : ✅ **Attendu** : on demande **dans quel projet**,
+      et le **programme n'est pas proposé**
+- [ ] Un programme avec **un seul** projet : ✅ **Attendu** : l'ajout va directement dans ce projet,
+      sans question
+
+### Pièges
+
+- [ ] Un projet **sans programme** : ✅ **Attendu** : rien ne change pour lui
+- [ ] Un programme **dans un programme** : ✅ **Attendu** : accepté, les niveaux s'empilent
+- [ ] Supprimer un projet d'un programme : ✅ **Attendu** : le programme se recalcule
+- [ ] Le **recueil** et les autres vues multi-projets : ✅ **Attendu** : elles aussi montrent la carte
+      « Où en est chaque projet » quand elles couvrent plusieurs projets
 
 **Constaté :**
 

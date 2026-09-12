@@ -186,6 +186,15 @@ export interface Project {
   savedViews: SavedView[]
   /** The project this one sits under, resolved from its `parent` link. */
   parentPath?: string
+  /**
+   * A programme: it groups projects and carries no work of its own.
+   *
+   * A flag on a project rather than a type of its own, because everything a programme
+   * needs — a note, a parent link, a palette, saved views, a folder — a project already
+   * has. What the flag changes is that no ticket is ever added to it: its figures are
+   * the figures of the projects underneath.
+   */
+  program?: boolean
   /** Per-project overrides for the global settings. Absent fields inherit. */
   config?: ProjectConfig
   /** Not serialized. Rebuilt on load, maintained by the store's mutators. */
@@ -196,7 +205,16 @@ export interface Project {
 export type ProjectPatch = Partial<
   Pick<
     Project,
-    'title' | 'description' | 'color' | 'icon' | 'customFields' | 'teamMembers' | 'savedViews' | 'config' | 'parentPath'
+    | 'title'
+    | 'description'
+    | 'color'
+    | 'icon'
+    | 'customFields'
+    | 'teamMembers'
+    | 'savedViews'
+    | 'config'
+    | 'parentPath'
+    | 'program'
   >
 >
 

@@ -29,7 +29,7 @@
   gap: 2px;
   min-width: 0;
 }
-.pm-kpi-project {
+.pm-kpi-scopename {
   font-size: 1.4em;
   font-weight: var(--font-semibold);
   color: var(--text-normal);
@@ -374,6 +374,79 @@
 .pm-kpi-legend-value {
   color: var(--text-normal);
   font-variant-numeric: tabular-nums;
+}
+
+/* One line per project, in a programme's dashboard: where it stands, and a way in. */
+.pm-kpi-projects {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pm-kpi-project {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 8px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+.pm-kpi-project:hover,
+.pm-kpi-project:focus-visible {
+  background: var(--background-modifier-hover);
+}
+.pm-kpi-project-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: var(--font-smallest);
+}
+.pm-kpi-project-state {
+  display: inline-flex;
+  --icon-size: 14px;
+  color: var(--pm-kpi-state, var(--text-muted));
+}
+.pm-kpi-project--on-track {
+  --pm-kpi-state: var(--color-green, #06915f);
+}
+.pm-kpi-project--at-risk {
+  --pm-kpi-state: var(--color-orange, #b16a08);
+}
+.pm-kpi-project--late {
+  --pm-kpi-state: var(--text-error, var(--color-red));
+}
+.pm-kpi-project-title {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-kpi-project-count {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.pm-kpi-project-late {
+  color: var(--text-error, var(--color-red));
+  white-space: nowrap;
+}
+.pm-kpi-project-value {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A programme's row in the project list says what it is and how many it holds. */
+.pm-project-row-badge {
+  flex: 0 0 auto;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  white-space: nowrap;
 }
 
 .pm-kpi-milestones {

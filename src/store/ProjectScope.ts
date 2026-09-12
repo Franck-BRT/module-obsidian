@@ -115,8 +115,26 @@ export class ProjectScope {
    * A collection gathers tasks that already belong somewhere else, so there is no
    * sensible project for a new one to land in.
    */
+  /**
+   * The projects a new ticket could go into: everything in scope that is not a
+   * programme. A programme groups projects and holds no work of its own, so a ticket
+   * added while looking at one belongs to a project underneath it, never to it.
+   */
+  get addableProjects(): Project[] {
+    return this.projects.filter((project) => !project.program)
+  }
+
+  /**
+   * A collection has no project of its own to add to, and a programme on its own has
+   * nothing underneath it yet — in both cases the button would have nowhere to write.
+   */
   get canAddTask(): boolean {
-    return this.spec.kind !== 'collection'
+    return this.spec.kind !== 'collection' && this.addableProjects.length > 0
+  }
+
+  /** Whether what this scope is looking at is a programme rather than a project. */
+  get isProgram(): boolean {
+    return (this.spec.kind === 'project' || this.spec.kind === 'subtree') && !!this.primary?.program
   }
 
   /**

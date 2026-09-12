@@ -23,6 +23,8 @@ export interface ProjectRowProps {
   tasksTotal: number
   overdue: number
   members: AvatarPerson[]
+  /** Said beside the name when the row is not an ordinary project: a programme. */
+  badge?: string
   /** Formatted by the caller; empty when nothing in the project has a date. */
   dueLabel: string
   dueUrgency: DueUrgency
@@ -55,6 +57,7 @@ export class ProjectRow {
     const inner = title.createDiv('pm-table-title-inner')
     renderGlyph(inner.createSpan({ cls: 'pm-project-row-icon' }), { icon: props.icon, color: props.color })
     inner.createSpan({ text: props.title, cls: 'pm-task-title-text' })
+    if (props.badge) inner.createSpan({ text: props.badge, cls: 'pm-project-row-badge' })
 
     const progress = this.el.createEl('td', { cls: 'pm-table-cell pm-table-cell-progress' })
     new ProgressBar(progress)

@@ -213,7 +213,9 @@ export class ProjectView extends ItemView {
     for (const project of projects) this.plugin.applyCollapsedState(project)
     if (this.defaultViewAppliedFor !== this.projectScope.key) {
       this.defaultViewAppliedFor = this.projectScope.key
-      this.currentView = this.projectScope.config.defaultView
+      // A programme opens on its dashboard: it has no work of its own to list, and
+      // where its projects stand is the whole reason to look at one.
+      this.currentView = this.projectScope.isProgram ? 'dashboard' : this.projectScope.config.defaultView
     }
     this.loadFilterFromSettings()
     ;(this.leaf as WorkspaceLeaf & { updateHeader?: () => void }).updateHeader?.()
@@ -479,7 +481,8 @@ export class ProjectView extends ItemView {
    */
   private addTask(e: MouseEvent, defaults?: Partial<Task>): void {
     const scope = this.projectScope
-    if (!scope?.primary || !scope.canAddTask) return
+    if (!scope?.canAddTask) return
+    const candidates = scope.addableProjects
     const open = (project: Project): void => {
       openTaskModal(this.plugin, project, {
         ...(defaults ? { defaults } : {}),
@@ -488,12 +491,14 @@ export class ProjectView extends ItemView {
         }
       })
     }
-    if (!scope.isMulti) {
-      open(scope.primary)
+    const first = candidates[0]
+    if (!first) return
+    if (candidates.length === 1) {
+      open(first)
       return
     }
     const menu = new Menu()
-    for (const project of scope.projects) {
+    for (const project of candidates) {
       menu.addItem((item) =>
         item
           .setTitle(project.title)

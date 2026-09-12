@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.26.0] - 2026-09-12
+
+### Added
+
+- **Programmes**: a container that groups projects, created from the first page beside
+  "+ new project". A programme **holds projects, never tickets** — the add buttons are
+  simply not drawn on one, and while a scope covers a programme a new ticket goes to a
+  project underneath it, never to the programme
+- **Its dashboard is its projects' dashboards, added up and then taken apart again**:
+  the same advancement, late count, curve and breakdowns as a project's, computed across
+  everything it holds, plus a card with **one line per project** — where that project
+  stands, how many of its tickets are late, and a click to open it
+- A programme **opens on its dashboard**, and on everything it holds rather than on
+  itself: it has no work of its own to list
+- An empty programme says so and offers the one thing it takes: a project, with the
+  programme already filled in as its parent
+
+### Notes
+
+- A programme is a project note carrying `pm-program: true`, not a new kind of file.
+  Everything it needs — a parent link, a palette, saved views, a folder — a project
+  already had, and a project's `parent` is how it joins one. So a programme can sit
+  inside another programme, and none of this changes an existing note
+- The per-project card appears in any view covering several projects, not only in a
+  programme: a folder or the whole vault reads the same way
+
 ## [2.25.0] - 2026-09-12
 
 ### Changed

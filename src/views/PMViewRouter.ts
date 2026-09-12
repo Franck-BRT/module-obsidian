@@ -23,7 +23,7 @@ export class PMViewRouter {
   }
 
   async openProject(file: TFile): Promise<void> {
-    await this.openScope({ kind: 'project', path: file.path })
+    await this.openProjectLink(file.path)
   }
 
   async openScope(scope: ScopeSpec, leaf?: WorkspaceLeaf): Promise<void> {
@@ -34,9 +34,15 @@ export class PMViewRouter {
     await this.open(PM_PROJECT_OVERVIEW_VIEW_TYPE, { filePath: path }, leaf)
   }
 
-  /** Where a project link lands, per the open projects in setting. */
+  /**
+   * Where a project link lands, per the open projects in setting.
+   *
+   * A programme is the exception, wherever it is clicked from: it has no work of its
+   * own to read, so it opens on everything it holds — itself and the projects under it.
+   */
   async openProjectLink(path: string, leaf?: WorkspaceLeaf): Promise<void> {
-    if (this.plugin.settings.projectSurface === 'tasks') await this.openScope({ kind: 'project', path }, leaf)
+    if (this.plugin.index.projectRef(path)?.program) await this.openScope({ kind: 'subtree', path }, leaf)
+    else if (this.plugin.settings.projectSurface === 'tasks') await this.openScope({ kind: 'project', path }, leaf)
     else await this.openProjectOverview(path, leaf)
   }
 

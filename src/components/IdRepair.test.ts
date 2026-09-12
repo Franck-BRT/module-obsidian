@@ -40,6 +40,7 @@ function projectRef(id: string, path: string): ProjectRef {
     icon: '',
     color: '',
     teamMembers: [],
+    program: false,
     customFields: [],
     parentPath: undefined,
     ownStatusIds: null,

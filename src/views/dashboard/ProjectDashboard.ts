@@ -9,8 +9,8 @@ import { projectMetrics, type MetricSlice, type ProjectMetrics } from '../../sto
 import { isPhase } from '../../store/Phase'
 import { findTaskById } from '../../store/TaskIndex'
 import { today, formatDateShort } from '../../dates'
-import { safeAsync } from '../../utils'
-import { openTaskModal } from '../../ui/ModalFactory'
+import { makeActivatable, safeAsync } from '../../utils'
+import { openProjectCreate, openTaskModal } from '../../ui/ModalFactory'
 import { Chip } from '../../ui/primitives/Chip'
 import { ChipButton } from '../../ui/primitives/ChipButton'
 import { docStateLabel } from '../library/docStateLabel'
@@ -63,6 +63,7 @@ export class ProjectDashboard implements SubView {
     this.renderHeader(page, this.metrics)
     this.renderHero(page, this.metrics)
     const grid = page.createDiv('pm-kpi-grid')
+    this.renderProjects(grid)
     this.renderBurn(grid, this.metrics)
     this.renderStatuses(grid, this.metrics)
     this.renderPhases(grid, this.metrics)
@@ -98,7 +99,7 @@ export class ProjectDashboard implements SubView {
   private renderHeader(parent: HTMLElement, m: ProjectMetrics): void {
     const bar = parent.createDiv('pm-kpi-header')
     const title = bar.createDiv('pm-kpi-header-title')
-    title.createSpan({ cls: 'pm-kpi-project', text: this.scope.primary?.title ?? t('view.library') })
+    title.createSpan({ cls: 'pm-kpi-scopename', text: this.scope.primary?.title ?? t('view.library') })
     const span = m.span.start
       ? `${formatDateShort(m.span.start)} → ${formatDateShort(m.span.due || m.span.start)}`
       : t('kpi.noDates')
@@ -212,6 +213,60 @@ export class ProjectDashboard implements SubView {
     this.observer.observe(plot)
     if (m.burn.unplanned) {
       body.createDiv({ cls: 'pm-kpi-note', text: t('kpi.unplanned', { count: m.burn.unplanned }) })
+    }
+  }
+
+  /**
+   * One line per project, when the view covers more than one — a programme above all,
+   * but a folder or the whole vault read the same way.
+   *
+   * The figures are each project's own, computed by the same function that computed the
+   * total above: a programme's dashboard is its projects' dashboards added up, and this
+   * card is where they come back apart. A line says where that project stands and opens
+   * it, because the answer to "which one is late" is that project's own page.
+   */
+  private renderProjects(parent: HTMLElement): void {
+    const projects = this.scope.projects.filter((project) => !project.program)
+    if (this.scope.isProgram && !projects.length) {
+      const empty = this.card(parent, t('program.projects'), true)
+      empty.createDiv({ cls: 'pm-kpi-empty', text: t('program.noProjects') })
+      empty.createDiv({ cls: 'pm-kpi-note', text: t('program.holdsNoTasks') })
+      const host = this.scope.primary
+      if (host) {
+        new ChipButton(empty.createDiv('pm-kpi-chips'))
+          .setLabel(t('program.addProject'))
+          .setShape('pill')
+          .onClick(() => openProjectCreate(this.plugin, false, host.filePath))
+      }
+      return
+    }
+    if (projects.length < 2) return
+    const body = this.card(parent, this.scope.isProgram ? t('program.projects') : t('kpi.projects'), true)
+    const at = today().toString()
+    const keyOf = personKeyer(this.plugin.app)
+    const rows = projects.map((project) => {
+      const config = this.plugin.store.configFor(project)
+      const tasks = flattenTasks(project.tasks)
+        .map((flat) => flat.task)
+        .filter((task) => isPhase(task) || matchesFilter(task, this.filter, config.statuses, keyOf))
+      return {
+        project,
+        m: projectMetrics({ tasks, statuses: config.statuses, priorities: config.priorities, today: at, keyOf })
+      }
+    })
+
+    const list = body.createDiv('pm-kpi-projects')
+    for (const { project, m } of rows) {
+      const row = list.createDiv(`pm-kpi-project pm-kpi-project--${m.health.level}`)
+      makeActivatable(row, () => void this.plugin.router.openProjectLink(project.filePath))
+      const head = row.createDiv('pm-kpi-project-head')
+      setIcon(head.createSpan({ cls: 'pm-kpi-project-state' }), HEALTH_ICON[m.health.level])
+      head.createSpan({ cls: 'pm-kpi-project-title', text: project.title })
+      head.createSpan({ cls: 'pm-kpi-project-count', text: t('kpi.doneOf', { done: m.done, total: m.total }) })
+      if (m.late) head.createSpan({ cls: 'pm-kpi-project-late', text: t('kpi.lateCount', { count: m.late }) })
+      head.createSpan({ cls: 'pm-kpi-project-value', text: `${m.progress} %` })
+      const track = row.createDiv('pm-kpi-bar-track')
+      track.createDiv('pm-kpi-bar-fill').setCssProps({ '--pm-kpi-share': `${m.progress}%` })
     }
   }
 

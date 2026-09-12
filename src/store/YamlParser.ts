@@ -3,6 +3,8 @@ import { parseYaml } from 'obsidian'
 export const FRONTMATTER_KEY = 'pm-project'
 export const TASK_FRONTMATTER_KEY = 'pm-task'
 export const COLLECTION_FRONTMATTER_KEY = 'pm-collection'
+/** Marks a project note as a programme: it groups projects and holds no work itself. */
+export const PROGRAM_FRONTMATTER_KEY = 'pm-program'
 
 export function parseFrontmatter(content: string): {
   frontmatter: Record<string, unknown> | null

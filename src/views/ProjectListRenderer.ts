@@ -39,6 +39,10 @@ export function renderProjectListToolbar(ctx: ProjectListContext): void {
     .setButtonText(t('project.newButton'))
     .setCta()
     .onClick(() => openProjectCreate(ctx.plugin))
+  // The same form, for the container a project can sit in.
+  new ButtonComponent(ctx.toolbarEl)
+    .setButtonText(t('program.newButton'))
+    .onClick(() => openProjectCreate(ctx.plugin, true))
 }
 
 function countLine(ctx: ProjectListContext): string {
@@ -46,7 +50,9 @@ function countLine(ctx: ProjectListContext): string {
   if (refs.length === 0) return ''
 
   const behind = refs.filter((ref) => ctx.plugin.index.dueSummary(ref).overdue > 0).length
-  const bits = [t('count.projects', { count: refs.length })]
+  const programs = refs.filter((ref) => ref.program).length
+  const bits = [t('count.projects', { count: refs.length - programs })]
+  if (programs) bits.push(t('count.programs', { count: programs }))
   const collections = ctx.plugin.index.collectionRefs().length
   if (collections) bits.push(t('count.collections', { count: collections }))
   if (behind) bits.push(t('project.behindCount', { count: behind }))
@@ -176,6 +182,7 @@ function renderRows(ctx: ProjectListContext, tbody: HTMLElement, refs: ProjectRe
       tasksTotal: total,
       overdue,
       members: linkedRefs(ctx.plugin.app, ref.teamMembers, ref.path),
+      ...(ref.program ? { badge: `${t('program.one')} · ${t('count.projectsIn', { count: children.length })}` } : {}),
       dueLabel: formatDateShort(latestDue),
       dueUrgency: dateUrgency(latestDue, overdue > 0),
       onToggleCollapsed: safeAsync(async () => {
