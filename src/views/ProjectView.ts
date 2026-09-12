@@ -1,4 +1,4 @@
-import { ButtonComponent, ExtraButtonComponent, ItemView, Menu, Scope, WorkspaceLeaf } from 'obsidian'
+import { ButtonComponent, ExtraButtonComponent, ItemView, Menu, Scope, setIcon, WorkspaceLeaf } from 'obsidian'
 import type PMPlugin from '../main'
 import {
   type Project,
@@ -447,10 +447,17 @@ export class ProjectView extends ItemView {
         .setButtonText(t('project.addTaskButton'))
         .setCta()
         .onClick((e) => this.addTask(e))
-      new ButtonComponent(right)
+      const addDoc = new ButtonComponent(right)
         .setButtonText(t('project.addDocButton'))
         .setCta()
         .onClick((e) => this.addTask(e, { type: 'document' }))
+      // A document icon rather than a second plus: with two add buttons side by side, a
+      // plus says only "add", and what it adds is the whole point of the shortcut.
+      // Prepended, because setButtonText has already replaced the button's contents.
+      addDoc.buttonEl.addClass('pm-btn-icon-text')
+      const docIcon = addDoc.buttonEl.createSpan({ cls: 'pm-glyph-icon' })
+      setIcon(docIcon, 'file-text')
+      addDoc.buttonEl.prepend(docIcon)
     }
 
     if (!scope.isMulti) {

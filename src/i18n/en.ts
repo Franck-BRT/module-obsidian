@@ -284,7 +284,7 @@ export const en = {
   'project.dueFilter': 'Due: {label}',
   'project.overdueCount': { one: '{count} overdue', other: '{count} overdue' },
   'project.addTaskButton': '+ add task',
-  'project.addDocButton': '+ add document',
+  'project.addDocButton': 'add document',
   'project.newButton': '+ new project',
   'project.behindCount': { one: '{count} with tasks past due', other: '{count} with tasks past due' },
   'project.members': 'Members',

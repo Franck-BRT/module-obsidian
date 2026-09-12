@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.20.0
+version: 2.20.1
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.20.0
+# Recette — Black Projects 2.20.1
 
 Plan de test manuel pour le fork. Les **669 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -628,8 +628,10 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 ### Créer un document
 
 - [ ] Déposer un PDF quelque part dans le coffre (hors projet), pour servir de matière
-- [ ] **[N]** Barre d'outils du projet : ✅ **Attendu** : un bouton **« + ajouter un document »**
+- [ ] **[N]** Barre d'outils du projet : ✅ **Attendu** : un bouton **« ajouter un document »**
       à côté de **« + ajouter une tâche »**
+- [ ] **[N]** ✅ **Attendu** : il porte une **icône de document**, pas un **+** — et l'icône est
+      **blanche** sur le fond violet, lisible *(elle était grise et absente avant la 2.20.1)*
 - [ ] **[N]** Cliquer dessus : ✅ **Attendu** : l'éditeur s'ouvre avec le **Type déjà sur « Document »**
       et le panneau **« Document »** déjà présent — aucun passage par le champ Type
 - [ ] **[N]** Dans un **recueil** : ✅ **Attendu** : aucun des deux boutons *(un recueil n'a pas de projet

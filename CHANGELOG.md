@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.20.1] - 2026-09-12
+
+### Fixed
+
+- The toolbar's **"add document" button showed a plus**, like the button beside it: its
+  label began with one and it carried no icon, so the two call-to-actions differed only
+  in their words. It now leads with the **document icon** the add rows already use, in
+  the button's own colour rather than the muted grey a glyph defaults to — on a filled
+  button, muted is invisible
+
 ## [2.20.0] - 2026-09-12
 
 ### Added

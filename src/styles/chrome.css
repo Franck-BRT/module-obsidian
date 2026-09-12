@@ -89,6 +89,16 @@
   flex-shrink: 0;
 }
 
+/* A button that leads with an icon. The icon takes the button's own colour rather than
+   the muted grey a glyph defaults to: on a filled call-to-action, muted is invisible. */
+.pm-btn-icon-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  --pm-glyph-size: 16px;
+  --pm-glyph-color: currentColor;
+}
+
 .pm-toolbar-icon {
   display: inline-flex;
   align-items: center;
