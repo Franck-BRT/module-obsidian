@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.22.0] - 2026-09-12
+
+### Changed
+
+- **Two default colours re-stepped**: "In Review" and "Done" — the same two hexes the
+  priority palette used for "High" and "Low", which is why both palettes had the same
+  defect. They sat **ΔE 9.1 apart for ordinary colour vision** and **4.5 under
+  deuteranopia**, below the distance at which two colours can be told apart at all; they
+  carried almost the same lightness, which is the one channel colour blindness leaves
+  intact; and both read washed out, under the chroma floor. They are now **ΔE 19.9 and
+  8.2**, above both floors
+- The new pair also reads at better than **3.6:1 against a light and a dark background
+  alike**. The old pair was tuned for a dark theme and sat near 2.2:1 on a light one —
+  the theme Obsidian opens in. In dark mode **all six status colours now clear 3:1**,
+  where three of them did not
+- A vault that predates this gets the two colours **once, and only where the palette
+  still carries the old default**. A colour you have chosen is yours and is left alone,
+  including the old one chosen back again
+
+### Notes
+
+- Two limits remain, in colours this release did not touch: green and red stay close
+  under protanopia (ΔE 4.5 — inherent to red/green meaning any tracker uses), and
+  "In Progress" and "Cancelled" are two purples ΔE 8.0 apart. Both are reasons the tool
+  never lets colour carry a status on its own: every status ships with its name, and in
+  the dashboard with its count
+
 ## [2.21.0] - 2026-09-12
 
 ### Added

@@ -406,22 +406,43 @@ export interface PMSettings {
    */
   tableSortKey: PMSettings['ganttSortKey']
   tableSortDir: 'asc' | 'desc'
+  /**
+   * Whether the two re-stepped colours have been offered to this vault yet. Once, and
+   * only to a palette still carrying the old value: a colour someone has chosen since
+   * is theirs, including the old one chosen back again.
+   */
+  paletteRestepped: boolean
+}
+
+/**
+ * The two colours re-stepped in 2.22.0, old value to new.
+ *
+ * The amber and the green they replace sat at ΔE 9.1 for ordinary colour vision and 4.5
+ * under deuteranopia — below the distance at which two colours can be told apart at all
+ * — and both read washed out, under the chroma floor. They also carried almost the same
+ * lightness, which is the channel colour blindness leaves intact, so nothing separated
+ * them. The new pair is a step darker on the green and a step stronger on the amber:
+ * ΔE 19.8 and 10.8.
+ */
+export const RESTEPPED_COLORS: Record<string, string> = {
+  '#b8a06b': '#b76b1c',
+  '#79b58d': '#06915f'
 }
 
 export const DEFAULT_STATUSES: StatusConfig[] = [
   { id: 'todo', label: 'To Do', color: '#8a94a0', icon: '', complete: false },
   { id: 'in-progress', label: 'In Progress', color: '#8b72be', icon: '', complete: false },
   { id: 'blocked', label: 'Blocked', color: '#c47070', icon: '', complete: false },
-  { id: 'review', label: 'In Review', color: '#b8a06b', icon: '', complete: false },
-  { id: 'done', label: 'Done', color: '#79b58d', icon: '', complete: true },
+  { id: 'review', label: 'In Review', color: '#b76b1c', icon: '', complete: false },
+  { id: 'done', label: 'Done', color: '#06915f', icon: '', complete: true },
   { id: 'cancelled', label: 'Cancelled', color: '#767491', icon: '', complete: true }
 ]
 
 export const DEFAULT_PRIORITIES: PriorityConfig[] = [
   { id: 'critical', label: 'Critical', color: '#c47070', icon: '' },
-  { id: 'high', label: 'High', color: '#b8a06b', icon: '' },
+  { id: 'high', label: 'High', color: '#b76b1c', icon: '' },
   { id: 'medium', label: 'Medium', color: '#8a94a0', icon: '' },
-  { id: 'low', label: 'Low', color: '#79b58d', icon: '' }
+  { id: 'low', label: 'Low', color: '#06915f', icon: '' }
 ]
 
 /**
@@ -498,7 +519,9 @@ export const DEFAULT_SETTINGS: PMSettings = {
   librarySortDir: 'asc',
   // Status, which is what the table has always opened in: an upgrade reorders nothing.
   tableSortKey: 'status',
-  tableSortDir: 'asc'
+  tableSortDir: 'asc',
+  // A fresh install already has them; only a vault that predates them needs the pass.
+  paletteRestepped: true
 }
 
 export function makeId(): string {

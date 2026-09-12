@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.21.0
+version: 2.22.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.21.0
+# Recette — Black Projects 2.22.0
 
-Plan de test manuel pour le fork. Les **707 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **713 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -474,6 +474,26 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Vue **Gantt** : ✅ **Attendu** : même escalier dans la colonne des libellés
 - [ ] Vue **Tableau** : ✅ **Attendu** : la bande du lot 2 est décalée sous celle du lot 1
 - [ ] Le **chevron** de l'en-tête plie le lot ; rouvrir le projet : ✅ **Attendu** : il est **toujours plié**
+
+## 7sexies. Couleurs par défaut [N]
+
+> **Nouveau en 2.22.0** : « En revue » et « Terminé » ont changé de couleur, dans la palette
+> des **statuts** et dans celle des **priorités** (Élevée / Basse — c'étaient les mêmes codes).
+
+- [ ] Réglages → **Statuts** : ✅ **Attendu** : « En revue » est `#b76b1c` (orange brûlé)
+      et « Terminé » `#06915f` (vert émeraude)
+- [ ] Réglages → **Priorités** : ✅ **Attendu** : « Élevée » et « Basse » portent les mêmes deux codes
+- [ ] ✅ **Attendu** : les deux se distinguent **nettement** l'une de l'autre, ce qui n'était pas le cas avant
+- [ ] Basculer en **thème clair** : ✅ **Attendu** : les deux pastilles sont lisibles
+      *(avant, elles étaient très pâles sur fond clair)*
+- [ ] Basculer en **thème sombre** : ✅ **Attendu** : elles restent lisibles
+- [ ] ✅ **Attendu** : le tableau de bord, le kanban et les pastilles du tableur suivent les nouvelles couleurs
+- [ ] **Si tu avais personnalisé une couleur** : ✅ **Attendu** : elle est **intacte**
+- [ ] Remettre volontairement `#79b58d` sur « Terminé », fermer et rouvrir Obsidian
+      ✅ **Attendu** : elle est **conservée** — la reprise ne se fait qu'une fois
+- [ ] Un **nouveau coffre** : ✅ **Attendu** : il démarre directement avec les nouvelles couleurs
+
+**Constaté :**
 
 ## 7quinquies. Tableau de bord [N]
 

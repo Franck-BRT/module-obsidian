@@ -9,6 +9,7 @@ import {
   type Task
 } from './types'
 import { flattenTasks, findTask } from './store/TaskTreeOps'
+import { restepPalette } from './store/paletteRestep'
 import {
   addToCollection,
   collectionMemberIds,
@@ -357,6 +358,8 @@ export default class PMPlugin extends Plugin {
     // Cloned: a shallow merge would hand the live settings the very arrays and objects
     // DEFAULT_SETTINGS holds, and the first edit would write into the defaults.
     this.settings = Object.assign(structuredClone(DEFAULT_SETTINGS), saved ?? {})
+    // A vault that predates the flag has not had the pass, whatever the default says.
+    if (saved && saved.paletteRestepped === undefined) this.settings.paletteRestepped = false
     // Before anything reads a string: the palettes seeded just below are localized.
     setLocale(this.settings.language)
     if (!saved?.statuses?.length) this.settings.statuses = seedStatuses()
@@ -381,6 +384,16 @@ export default class PMPlugin extends Plugin {
         s.complete = s.id === 'done' || s.id === 'cancelled'
         migrated = true
       }
+    }
+
+    // The two colours re-stepped in 2.22.0. A vault that predates them is offered them
+    // once, and only where the palette still carries the old default.
+    if (!this.settings.paletteRestepped) {
+      restepPalette(this.settings.statuses)
+      restepPalette(this.settings.priorities)
+      // Written back even when nothing moved, so the pass is spent either way.
+      this.settings.paletteRestepped = true
+      migrated = true
     }
 
     // ganttHideDone was a global toggle, now expressed as a per-project status filter.
