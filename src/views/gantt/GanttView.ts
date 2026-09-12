@@ -1,4 +1,4 @@
-import { ButtonComponent, type Scope } from 'obsidian'
+import { ButtonComponent, setTooltip, type Scope } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Task, GanttGranularity, FilterState } from '../../types'
 import { personKeyer, type ProjectScope } from '../../store'
@@ -278,6 +278,20 @@ export class GanttView implements SubView {
       renderAddButton(addRow, t('gantt.addTask'), (e) => {
         openAddTask(this.plugin, this.scope, { event: e, onSave: () => this.onRefresh() })
       })
+      const addDoc = renderAddButton(
+        addRow,
+        t('gantt.addDocument'),
+        (e) => {
+          openAddTask(this.plugin, this.scope, {
+            event: e,
+            defaults: { type: 'document' },
+            onSave: () => this.onRefresh()
+          })
+        },
+        'file-text'
+      )
+      addDoc.addClass('pm-add-document')
+      setTooltip(addDoc, t('gantt.addDocument'))
     }
 
     // The right panel's horizontal scrollbar eats into its viewport height, letting it

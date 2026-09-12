@@ -1,6 +1,14 @@
 import { ButtonComponent, ExtraButtonComponent, ItemView, Menu, Scope, WorkspaceLeaf } from 'obsidian'
 import type PMPlugin from '../main'
-import { type Project, type ViewMode, type FilterState, type SavedView, makeDefaultFilter, makeId } from '../types'
+import {
+  type Project,
+  type Task,
+  type ViewMode,
+  type FilterState,
+  type SavedView,
+  makeDefaultFilter,
+  makeId
+} from '../types'
 import {
   collectionMemberIds,
   folderOf,
@@ -439,6 +447,10 @@ export class ProjectView extends ItemView {
         .setButtonText(t('project.addTaskButton'))
         .setCta()
         .onClick((e) => this.addTask(e))
+      new ButtonComponent(right)
+        .setButtonText(t('project.addDocButton'))
+        .setCta()
+        .onClick((e) => this.addTask(e, { type: 'document' }))
     }
 
     if (!scope.isMulti) {
@@ -449,12 +461,19 @@ export class ProjectView extends ItemView {
     }
   }
 
-  /** With several projects in view, a new task has to say which one it belongs to. */
-  private addTask(e: MouseEvent): void {
+  /**
+   * With several projects in view, a new ticket has to say which one it belongs to.
+   *
+   * `defaults` is what separates the two buttons: a document is an ordinary ticket with
+   * its type already chosen, not a second kind of thing. The shortcut saves the trip
+   * through the type field and says out loud that the tool keeps documents.
+   */
+  private addTask(e: MouseEvent, defaults?: Partial<Task>): void {
     const scope = this.projectScope
     if (!scope?.primary || !scope.canAddTask) return
     const open = (project: Project): void => {
       openTaskModal(this.plugin, project, {
+        ...(defaults ? { defaults } : {}),
         onSave: async () => {
           await this.refreshProject()
         }

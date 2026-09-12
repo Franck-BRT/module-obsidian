@@ -185,3 +185,28 @@ describe('reading a ticket', () => {
     expect(documentOf(makeTask({ type: 'document' })).state).toBe('expected')
   })
 })
+
+/**
+ * The "+ add document" shortcut creates an ordinary ticket with nothing set but its
+ * type. These pin what that alone is enough for — if a document ever needed its meta
+ * filled in to count as one, the shortcut would produce a ticket the library cannot see.
+ */
+describe('a ticket created straight as a document', () => {
+  const shortcut = (over: Partial<Task> = {}): Task => makeTask({ type: 'document', ...over })
+
+  it('is a document before a single field is filled in', () => {
+    const fresh = shortcut()
+    expect(isDocument(fresh)).toBe(true)
+    expect(fresh.document).toBeUndefined()
+    expect(documentOf(fresh).state).toBe('expected')
+    expect(documentOf(fresh).file).toBe('')
+    expect(documentOf(fresh).versions).toEqual([])
+  })
+
+  it('is chased on its due date like any other awaited document', () => {
+    expect(isAwaited(shortcut({ due: '2026-03-01' }), '2026-03-05')).toBe(true)
+    expect(isAwaited(shortcut({ due: '2026-03-10' }), '2026-03-05')).toBe(false)
+    // Without the type it is a plain task, and nothing chases it.
+    expect(isAwaited(makeTask({ type: 'task', due: '2026-03-01' }), '2026-03-05')).toBe(false)
+  })
+})

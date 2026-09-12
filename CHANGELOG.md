@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.20.0] - 2026-09-12
+
+### Added
+
+- A **"+ add document" button** beside "+ add task", in the project toolbar and at the
+  foot of the table and the Gantt. It creates the same document ticket the type field
+  always could — this is a shortcut past that trip, and it says out loud that the tool
+  keeps documents
+- In the add rows the document button carries a **file icon rather than a second plus**,
+  so two buttons side by side still say which is which once a narrow label column has
+  taken their labels away. Dragged narrower still, the Gantt drops the button whole
+  rather than clipping it — the toolbar above keeps offering it
+
 ## [2.19.0] - 2026-09-12
 
 ### Added

@@ -241,7 +241,10 @@ function fillTableBody(ctx: TableContext): void {
   // Siblings are ordered within their parent, so the tree survives whatever the sort is.
   // Entries snapshotted first: the ordered list replaces the one being read.
   for (const [parent, list] of [...childrenByParent]) {
-    childrenByParent.set(parent, orderRows(list, (row) => row.task, ctx.state, ctx.statuses, ctx.priorities))
+    childrenByParent.set(
+      parent,
+      orderRows(list, (row) => row.task, ctx.state, ctx.statuses, ctx.priorities)
+    )
   }
 
   const sorted: TableTaskRow[] = []
@@ -322,6 +325,21 @@ function renderWindowRows(ctx: TableContext): void {
     renderAddButton(addCell, t('gantt.addTask'), (e) => {
       openAddTask(ctx.plugin, ctx.scope, { event: e, onSave: () => ctx.onRefresh() })
     })
+    // A document is an ordinary ticket whose type is already chosen. The shortcut spares
+    // the trip through the type field, and says out loud that the tool keeps documents.
+    const addDoc = renderAddButton(
+      addCell,
+      t('gantt.addDocument'),
+      (e) => {
+        openAddTask(ctx.plugin, ctx.scope, {
+          event: e,
+          defaults: { type: 'document' },
+          onSave: () => ctx.onRefresh()
+        })
+      },
+      'file-text'
+    )
+    addDoc.addClass('pm-add-document')
   }
 
   calibrateRowHeight(ctx)

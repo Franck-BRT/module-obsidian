@@ -317,3 +317,12 @@
 .pm-gantt-left--cramped .pm-group-count {
   display: none;
 }
+/* The add row offers two things now. The same rule applies to it: the second button's
+   label goes whole rather than clipped, its icon and tooltip carrying it, and the button
+   itself goes when even that will not fit — the toolbar above still offers it. */
+.pm-gantt-left--tight .pm-add-document .pm-prop-add-label {
+  display: none;
+}
+.pm-gantt-left--cramped .pm-add-document {
+  display: none;
+}
