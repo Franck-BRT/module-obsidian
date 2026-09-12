@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.18.0
+version: 2.19.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.18.0
+# Recette — Black Projects 2.19.0
 
-Plan de test manuel pour le fork. Les **662 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **667 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -474,6 +474,33 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Vue **Gantt** : ✅ **Attendu** : même escalier dans la colonne des libellés
 - [ ] Vue **Tableau** : ✅ **Attendu** : la bande du lot 2 est décalée sous celle du lot 1
 - [ ] Le **chevron** de l'en-tête plie le lot ; rouvrir le projet : ✅ **Attendu** : il est **toujours plié**
+
+### Tableur : ordre des lignes [N]
+
+- [ ] Vue **Tableur** : ✅ **Attendu** : un bouton **« Ordre : Statut ↑ »** au-dessus des colonnes
+- [ ] ✅ **Attendu** : le tableau garde toute la hauteur et défile normalement sous la barre
+- [ ] Ouvrir le menu : ✅ **Attendu** : Ordre du projet · Tâche · Statut · Priorité · Échéance · Personnes · Avancement
+- [ ] Cliquer l'en-tête de colonne **Échéance** : ✅ **Attendu** : la flèche apparaît dans l'en-tête **et**
+      le bouton affiche « Ordre : Échéance ↑ » — les deux disent la même chose
+- [ ] Recliquer le même en-tête : ✅ **Attendu** : le sens s'inverse des deux côtés
+- [ ] Choisir **Ordre du projet** dans le menu : ✅ **Attendu** : **aucune flèche** dans les en-têtes,
+      et les lignes reprennent l'ordre du projet — celui que le glisser du Gantt écrit
+      *(cet ordre était inatteignable dans le tableur avant la 2.19.0)*
+- [ ] Glisser une ligne dans le **Gantt** pour la déplacer, revenir au tableur en **Ordre du projet**
+      ✅ **Attendu** : le tableur montre le déplacement
+- [ ] **Échéance, Décroissant** : ✅ **Attendu** : les tâches **sans date restent en dernier**
+      *(avant la 2.19.0 elles remontaient en tête)*
+- [ ] **Personnes, Décroissant** : ✅ **Attendu** : les tâches **sans personne restent en dernier**
+- [ ] Un **lot sans dates propres**, trié par **Échéance** : ✅ **Attendu** : il se place d'après la période
+      de ses tâches, comme dans le Gantt
+- [ ] ✅ **Attendu** : les **sous-tâches** restent sous leur tâche, quel que soit le tri —
+      c'est l'arbre qui est trié, niveau par niveau
+- [ ] Fermer puis rouvrir Obsidian : ✅ **Attendu** : l'ordre choisi est **retenu**
+      *(les flèches des en-têtes ne survivaient à aucun redémarrage avant la 2.19.0)*
+- [ ] Régler le **Gantt**, le **Tableau** et la **Bibliothèque** autrement : ✅ **Attendu** : les quatre vues
+      gardent **chacune la sienne**
+
+**Constaté :**
 
 ### Gantt : ordre et libellés [N]
 

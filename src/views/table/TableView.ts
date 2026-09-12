@@ -10,6 +10,8 @@ import type { SortKey, SortDir, TableState } from './TableRenderer'
 import { updateSelectAllCheckbox } from './TableRow'
 import { renderBulkActionBar } from './BulkActionBar'
 import type { BulkAction } from './BulkActionBar'
+import { renderSortControl } from '../SortControl'
+import { TASK_SORT_KEYS, sortKeyLabel } from '../sortOrder'
 import { t } from '../../i18n'
 
 const taskCount = (n: number) => t('count.tasks', { count: n })
@@ -36,8 +38,8 @@ export class TableView implements SubView {
     initialState?: TableViewState
   ) {
     this.state = {
-      sortKey: initialState?.sortKey ?? 'status',
-      sortDir: initialState?.sortDir ?? 'asc',
+      sortKey: initialState?.sortKey ?? plugin.settings.tableSortKey,
+      sortDir: initialState?.sortDir ?? plugin.settings.tableSortDir,
       filter,
       selectedTaskId: null,
       selectedTaskIds: new Set(),
@@ -80,6 +82,7 @@ export class TableView implements SubView {
     this.container.empty()
     this.container.addClass('pm-table-view')
 
+    this.renderControls()
     const ctx = this.makeTableContext()
     renderTable(ctx)
     renderBulkActionBar({ ctx, onAction: safeAsync((a) => this.handleBulkAction(a)) })
@@ -93,6 +96,38 @@ export class TableView implements SubView {
       }
       this.pendingScrollTop = null
     }
+  }
+
+  /**
+   * The order the rows are in, said once above the table. The column headers say it too,
+   * with their arrow, but no header can ask for the project's own order — and that is
+   * the one order the drag handle writes and the table could never show until now.
+   */
+  private renderControls(): void {
+    this.container.querySelector('.pm-table-controls')?.remove()
+    const bar = this.container.createDiv('pm-table-controls')
+    // Before the table, wherever the table already is: a re-render puts it back on top.
+    const wrapper = this.container.querySelector('.pm-table-wrapper')
+    if (wrapper) this.container.insertBefore(bar, wrapper)
+    renderSortControl(bar, {
+      keys: TASK_SORT_KEYS,
+      label: sortKeyLabel,
+      unordered: 'manual',
+      order: { sortKey: this.state.sortKey, sortDir: this.state.sortDir },
+      onPick: (order) => {
+        this.rememberOrder(order.sortKey, order.sortDir)
+        this.render()
+      }
+    })
+  }
+
+  /** One order, in three places: this view, the settings, and the next render. */
+  private rememberOrder(sortKey: SortKey, sortDir: SortDir): void {
+    this.state.sortKey = sortKey
+    this.state.sortDir = sortDir
+    this.plugin.settings.tableSortKey = sortKey
+    this.plugin.settings.tableSortDir = sortDir
+    void this.plugin.saveSettings()
   }
 
   destroy(): void {
@@ -240,7 +275,11 @@ export class TableView implements SubView {
         updateSelectAllCheckbox(this.state)
         this.updateBulkBar()
       },
-      onBulkDelete: safeAsync(() => this.handleBulkAction({ type: 'delete' }))
+      onBulkDelete: safeAsync(() => this.handleBulkAction({ type: 'delete' })),
+      onSortChange: (sortKey: SortKey, sortDir: SortDir) => {
+        this.rememberOrder(sortKey, sortDir)
+        this.renderControls()
+      }
     }
   }
 }

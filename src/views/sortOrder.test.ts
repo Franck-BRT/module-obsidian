@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PRIORITIES, DEFAULT_STATUSES, makeTask, type Task } from '../types'
-import { GANTT_SORT_KEYS, KANBAN_SORT_KEYS, orderTasks } from './sortOrder'
+import { TASK_SORT_KEYS, KANBAN_SORT_KEYS, orderRows, orderTasks } from './sortOrder'
 
 const task = (title: string, over: Partial<Task> = {}): Task => makeTask({ title, start: '', ...over })
 const phase = (title: string, subtasks: Task[], over: Partial<Task> = {}): Task =>
@@ -81,11 +81,11 @@ describe('what each view offers to sort by', () => {
     expect(KANBAN_SORT_KEYS).not.toContain('status')
     // A board answers status with the column a card sits in: sorting a column by it
     // would order every card in it by the one thing they all share.
-    expect(KANBAN_SORT_KEYS).toEqual(GANTT_SORT_KEYS.filter((key) => key !== 'status'))
+    expect(KANBAN_SORT_KEYS).toEqual(TASK_SORT_KEYS.filter((key) => key !== 'status'))
   })
 
   it('leads with the project’s own order in both', () => {
-    expect(GANTT_SORT_KEYS[0]).toBe('manual')
+    expect(TASK_SORT_KEYS[0]).toBe('manual')
     expect(KANBAN_SORT_KEYS[0]).toBe('manual')
   })
 })
@@ -114,5 +114,60 @@ describe('the cards of one board column', () => {
   it('keeps the project’s order when nothing is sorted, which is what a board did before', () => {
     const cards = [task('Zèbre'), task('Alpha')]
     expect(orderTasks(cards, { sortKey: 'manual', sortDir: 'asc' }, DEFAULT_STATUSES)).toBe(cards)
+  })
+})
+
+describe('what a sort does with a field nobody filled in', () => {
+  it('puts the undated last, whichever way the list is read', () => {
+    const rows = [task('Sans date'), task('Mars', { due: '2026-03-10' }), task('Février', { due: '2026-02-10' })]
+    expect(orderTasks(rows, { sortKey: 'due', sortDir: 'asc' }).map((t) => t.title)).toEqual([
+      'Février',
+      'Mars',
+      'Sans date'
+    ])
+    // A blank is an absent value, not a small one: reversing must not parade it first.
+    expect(orderTasks(rows, { sortKey: 'due', sortDir: 'desc' }).map((t) => t.title)).toEqual([
+      'Mars',
+      'Février',
+      'Sans date'
+    ])
+  })
+
+  it('puts the unassigned last both ways too', () => {
+    const rows = [task('Personne'), task('Zoé', { assignees: ['Zoé'] }), task('Ana', { assignees: ['Ana'] })]
+    expect(orderTasks(rows, { sortKey: 'assignees', sortDir: 'asc' }).map((t) => t.title)).toEqual([
+      'Ana',
+      'Zoé',
+      'Personne'
+    ])
+    expect(orderTasks(rows, { sortKey: 'assignees', sortDir: 'desc' }).map((t) => t.title)).toEqual([
+      'Zoé',
+      'Ana',
+      'Personne'
+    ])
+  })
+})
+
+describe('the rows a table sorts', () => {
+  // The table sorts rows that carry their task along with a depth and tree guides, so
+  // the comparator has to reach through the wrapper rather than take the task itself.
+  const row = (t: Task, depth = 0) => ({ task: t, depth })
+
+  it('orders the wrappers by the task inside them', () => {
+    const rows = [row(task('Zèbre')), row(task('Alpha'))]
+    expect(orderRows(rows, (r) => r.task, { sortKey: 'title', sortDir: 'asc' }).map((r) => r.task.title)).toEqual([
+      'Alpha',
+      'Zèbre'
+    ])
+  })
+
+  it('hands back the very list it was given when nothing is sorted', () => {
+    const rows = [row(task('Zèbre')), row(task('Alpha'))]
+    expect(orderRows(rows, (r) => r.task, { sortKey: 'manual', sortDir: 'asc' })).toBe(rows)
+  })
+
+  it('offers the table the project’s own order, which no column header can ask for', () => {
+    expect(TASK_SORT_KEYS).toContain('manual')
+    expect(TASK_SORT_KEYS[0]).toBe('manual')
   })
 })

@@ -85,8 +85,22 @@ button.pm-chip-btn--active:hover {
   box-shadow: inset 3px 0 0 var(--interactive-accent);
 }
 
+/* The table's own toolbar, built like the Gantt's and the board's so switching views
+   does not move the controls. It must not shrink: the table below takes what is left. */
+.pm-table-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
 .pm-table-wrapper {
   flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 

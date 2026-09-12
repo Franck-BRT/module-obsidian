@@ -10,11 +10,12 @@ import { childTreeGuides } from '../../ui/composites/treeGuides'
 import { openAddTask } from '../addTask'
 import { collectionBlocks, phaseHeading, type HeadingRow } from '../headings'
 import { isPhase } from '../../store/Phase'
-import { compareTask } from './TableFilters'
+import { orderRows } from '../sortOrder'
 import { renderGroupRow, renderTaskRow, updateSelectedRow, updateSelectAllCheckbox } from './TableRow'
 import { t } from '../../i18n'
 
-type SortKey = 'title' | 'status' | 'priority' | 'due' | 'assignees' | 'progress'
+/** 'manual' is the order the project stores, which no column header can ask for. */
+type SortKey = 'manual' | 'title' | 'status' | 'priority' | 'due' | 'assignees' | 'progress'
 type SortDir = 'asc' | 'desc'
 
 export type { SortKey, SortDir }
@@ -74,6 +75,8 @@ export interface TableContext {
   onRefresh: () => Promise<void>
   onSelectionChange: () => void
   onBulkDelete: () => void
+  /** A header was clicked: persist the order and repaint whatever else shows it. */
+  onSortChange: (sortKey: SortKey, sortDir: SortDir) => void
 }
 
 /**
@@ -159,6 +162,9 @@ export function renderTable(ctx: TableContext): void {
           ctx.state.sortKey = col.key as SortKey
           ctx.state.sortDir = 'asc'
         }
+        // A header click is a choice like any other, so it is remembered like any other
+        // — and the button above the table has to agree with the arrow in the header.
+        ctx.onSortChange(ctx.state.sortKey, ctx.state.sortDir)
         paintSortIndicators()
         refreshTableBody(ctx)
       })
@@ -232,8 +238,10 @@ function fillTableBody(ctx: TableContext): void {
     }
     list.push(f)
   }
-  for (const list of childrenByParent.values()) {
-    list.sort((a, b) => compareTask(a.task, b.task, ctx.state, ctx.statuses, ctx.priorities))
+  // Siblings are ordered within their parent, so the tree survives whatever the sort is.
+  // Entries snapshotted first: the ordered list replaces the one being read.
+  for (const [parent, list] of [...childrenByParent]) {
+    childrenByParent.set(parent, orderRows(list, (row) => row.task, ctx.state, ctx.statuses, ctx.priorities))
   }
 
   const sorted: TableTaskRow[] = []

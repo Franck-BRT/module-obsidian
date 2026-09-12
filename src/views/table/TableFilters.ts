@@ -24,14 +24,28 @@ export function compareTask(
     case 'priority':
       return dir * (priorityOrder(a.priority, priorities) - priorityOrder(b.priority, priorities))
     case 'due':
-      return dir * (a.due || 'zzz').localeCompare(b.due || 'zzz')
+      return compareText(a.due, b.due, dir)
     case 'assignees':
-      return dir * displayName(a.assignees[0] ?? '').localeCompare(displayName(b.assignees[0] ?? ''))
+      return compareText(displayName(a.assignees[0] ?? ''), displayName(b.assignees[0] ?? ''), dir)
     case 'progress':
       return dir * (a.progress - b.progress)
     default:
       return 0
   }
+}
+
+/**
+ * Text, with everything unfilled last whichever way the list is read.
+ *
+ * A blank is an absent value, not a small one: a task with no due date is not "before
+ * the first of January", and reversing the order should not parade every undated row at
+ * the top. So emptiness is settled before direction is applied, never by it.
+ */
+function compareText(a: string, b: string, dir: number): number {
+  if (!a && !b) return 0
+  if (!a) return 1
+  if (!b) return -1
+  return dir * a.localeCompare(b)
 }
 
 function priorityOrder(p: TaskPriority, priorities: PriorityConfig[]): number {

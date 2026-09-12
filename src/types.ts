@@ -393,6 +393,12 @@ export interface PMSettings {
    */
   librarySortKey: 'reference' | 'title' | 'state' | 'due' | 'issue' | 'issuer' | 'deposited'
   librarySortDir: 'asc' | 'desc'
+  /**
+   * How the table orders rows. Kept here so a header clicked in one project is still
+   * the order the next one opens in — the column arrows alone never outlived a reload.
+   */
+  tableSortKey: PMSettings['ganttSortKey']
+  tableSortDir: 'asc' | 'desc'
 }
 
 export const DEFAULT_STATUSES: StatusConfig[] = [
@@ -482,7 +488,10 @@ export const DEFAULT_SETTINGS: PMSettings = {
   kanbanSortKey: 'manual',
   kanbanSortDir: 'asc',
   librarySortKey: 'reference',
-  librarySortDir: 'asc'
+  librarySortDir: 'asc',
+  // Status, which is what the table has always opened in: an upgrade reorders nothing.
+  tableSortKey: 'status',
+  tableSortDir: 'asc'
 }
 
 export function makeId(): string {

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.0] - 2026-09-12
+
+### Added
+
+- The **table gets the same order button** as the other three views, above the columns.
+  Clicking a column header still sorts, and the two always agree
+- Among its keys, **the project's own order** — the one the drag handle writes in the
+  Gantt. The table could never show it: it opened on status and no column header could
+  ask for anything else
+- The table's order is now **remembered between sessions**, like the other three. The
+  arrows in the column headers never outlived a reload
+
+### Fixed
+
+- **A field nobody filled in now sorts last whichever way the list is read**, in the
+  table, the Gantt and the board alike. Sorting by due date descending used to parade
+  every undated task at the top, and by assignee, every unassigned one: an empty value
+  was standing in as a small one. A blank is an absent value, not a small one
+- **A lot is placed by the work it holds in the table too**, as it already was in the
+  Gantt: sorting by due date puts a lot where its tasks actually fall rather than last
+  among the undated, and by progress, at the progress its heading shows
+
 ## [2.18.0] - 2026-09-12
 
 ### Added

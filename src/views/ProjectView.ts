@@ -347,8 +347,11 @@ export class ProjectView extends ItemView {
 
   private async handleSavedViewSave(name: string): Promise<void> {
     if (!this.projectScope) return
+    // Saved from another view, the table's own order is what it will open in.
     const sortMeta =
-      this.subview instanceof TableView ? this.subview.getViewState() : { sortKey: 'status', sortDir: 'asc' as const }
+      this.subview instanceof TableView
+        ? this.subview.getViewState()
+        : { sortKey: this.plugin.settings.tableSortKey, sortDir: this.plugin.settings.tableSortDir }
     const sv: SavedView = {
       id: makeId(),
       name,
