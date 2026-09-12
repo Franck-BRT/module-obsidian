@@ -2,7 +2,7 @@ import type { CustomFieldDef, PMSettings, Project, ResolvedProjectConfig, Task }
 import { flattenTasks } from './TaskTreeOps'
 import { ALL_DAYS, makeWorkCalendar } from './WorkCalendar'
 
-const FALLBACK_COLOR = '#8a94a0'
+const FALLBACK_COLOR = '#8b8c92'
 
 /**
  * The project's own overrides where defined, the global settings everywhere else. Values

@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.24.0
+version: 2.25.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.24.0
+# Recette — Black Projects 2.25.0
 
-Plan de test manuel pour le fork. Les **716 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **717 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -481,6 +481,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 > des **statuts** et dans celle des **priorités** (Élevée / Basse — c'étaient les mêmes codes).
 > **2.23.0** : « Annulé » aussi, qui était un violet trop proche de celui d'« En cours ».
 > **2.24.0** : « Bloqué » et « En revue » (et « Critique » / « Élevée » côté priorités).
+> **2.25.0** : « À faire » et « En cours » (et « Moyenne »). La palette est complète.
 
 - [ ] Réglages → **Statuts** : ✅ **Attendu** : « En revue » est `#b76b1c` (orange brûlé)
       et « Terminé » `#06915f` (vert émeraude)
@@ -508,6 +509,14 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] **[N]** Un coffre **jamais mis à jour** (couleurs d'origine) : ✅ **Attendu** : « En revue »
       finit sur `#b16a08` — la couleur traverse les deux reprises qui la concernent, elle ne
       s'arrête pas à la première
+- [ ] **[N]** Réglages → Statuts : ✅ **Attendu** : « À faire » est `#8b8c92` (gris neutre)
+      et « En cours » `#6e62cd` (violet profond)
+- [ ] **[N]** ✅ **Attendu** : « À faire » est **toujours un gris** — pas une couleur teintée
+- [ ] **[N]** En **thème clair** : ✅ **Attendu** : la pastille « À faire » est lisible
+      *(son gris était trop pâle depuis toujours)*
+- [ ] **[N]** ✅ **Attendu** : « En cours » ne se confond plus ni avec « À faire » ni avec « Annulé »
+- [ ] **[N]** Ajouter un **nouveau statut** dans les réglages : ✅ **Attendu** : il démarre sur le
+      nouveau gris neutre
 
 **Constaté :**
 

@@ -5,6 +5,7 @@ import { restepPalette } from './paletteRestep'
 const FIRST = PALETTE_RESTEPS[0] ?? {}
 const SECOND = PALETTE_RESTEPS[1] ?? {}
 const THIRD = PALETTE_RESTEPS[2] ?? {}
+const LATEST = PALETTE_RESTEPS[PALETTE_RESTEPS.length - 1] ?? {}
 
 describe('re-stepping a colour a vault may still carry', () => {
   it('swaps an untouched old default for the new one', () => {
@@ -39,9 +40,25 @@ describe('re-stepping a colour a vault may still carry', () => {
   })
 
   it('walks a vault that has had none of them through every pass', () => {
-    const palette = [{ color: '#b8a06b' }, { color: '#79b58d' }, { color: '#767491' }, { color: '#c47070' }]
+    const palette = [
+      { color: '#b8a06b' },
+      { color: '#79b58d' },
+      { color: '#767491' },
+      { color: '#c47070' },
+      { color: '#8a94a0' },
+      { color: '#8b72be' }
+    ]
     for (const pass of PALETTE_RESTEPS) restepPalette(palette, pass)
-    expect(palette.map((p) => p.color)).toEqual(['#b16a08', '#06915f', '#367794', '#f83e54'])
+    expect(palette.map((p) => p.color)).toEqual(['#b16a08', '#06915f', '#367794', '#f83e54', '#8b8c92', '#6e62cd'])
+  })
+
+  it('leaves the neutral a neutral: it moves for contrast, not for a tint', () => {
+    const palette = [{ color: '#8a94a0' }]
+    restepPalette(palette, LATEST)
+    // A grey, still — a ticket nobody has started should not wear an accent.
+    const hex = palette[0]?.color ?? ''
+    const [r, g, b] = [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16))
+    expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThan(16)
   })
 
   it('carries a colour through two passes when a later one moves it again', () => {
@@ -64,11 +81,14 @@ describe('the palettes a fresh install starts with', () => {
   it('carries the new ones instead, in both palettes', () => {
     expect(DEFAULT_STATUSES.find((s) => s.id === 'review')?.color).toBe('#b16a08')
     expect(DEFAULT_STATUSES.find((s) => s.id === 'blocked')?.color).toBe('#f83e54')
+    expect(DEFAULT_STATUSES.find((s) => s.id === 'todo')?.color).toBe('#8b8c92')
+    expect(DEFAULT_STATUSES.find((s) => s.id === 'in-progress')?.color).toBe('#6e62cd')
     expect(DEFAULT_STATUSES.find((s) => s.id === 'done')?.color).toBe('#06915f')
     // The same two hexes were the priority palette's High and Low, so they had the same
     // defect: one fix, both palettes.
     expect(DEFAULT_PRIORITIES.find((p) => p.id === 'high')?.color).toBe('#b16a08')
     expect(DEFAULT_PRIORITIES.find((p) => p.id === 'critical')?.color).toBe('#f83e54')
+    expect(DEFAULT_PRIORITIES.find((p) => p.id === 'medium')?.color).toBe('#8b8c92')
     expect(DEFAULT_PRIORITIES.find((p) => p.id === 'low')?.color).toBe('#06915f')
     expect(DEFAULT_STATUSES.find((s) => s.id === 'cancelled')?.color).toBe('#367794')
   })

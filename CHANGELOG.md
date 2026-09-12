@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.25.0] - 2026-09-12
+
+### Changed
+
+- **"To Do" and "In Progress" re-stepped** — the two the earlier corrections kept
+  uncovering — and with them the priority palette's "Medium". The grey **stays a grey**:
+  a ticket nobody has started should not wear an accent, and tinting it, which measures
+  better, makes it one. It moves only far enough to clear **3:1 on a light background**,
+  which it had never done. The distance comes from the purple instead, carried to a
+  deeper violet
+- With that, **every colour in the palette clears 3:1 against a light and a dark
+  background alike** — something none of the five earlier states could say. The worst
+  pair for ordinary colour vision is now **ΔE 12.6**, up from 8.0 when this started, and
+  the worst under colour blindness **7.2**, up from 4.5
+
+### Notes
+
+- Where the palette now stands, after five corrections: nothing is below the contrast
+  floor, the two colours still under the chroma floor are the two meant to be quiet (the
+  grey and the slate), and no pair is closer than 12.6 / 7.2. What remains is the
+  irreducible part — a neutral sits near everything by construction, and red and green
+  stay related under protanopia — which is why every status is written as well as
+  coloured
+
 ## [2.24.0] - 2026-09-12
 
 ### Changed

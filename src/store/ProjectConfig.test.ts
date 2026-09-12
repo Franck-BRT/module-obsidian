@@ -109,14 +109,14 @@ describe('resolveProjectConfig', () => {
     expect(resolved.statuses.find((s) => s.id === 'mystery')).toEqual({
       id: 'mystery',
       label: 'mystery',
-      color: '#8a94a0',
+      color: '#8b8c92',
       icon: '',
       complete: false
     })
     expect(resolved.priorities.find((p) => p.id === 'whenever')).toEqual({
       id: 'whenever',
       label: 'whenever',
-      color: '#8a94a0',
+      color: '#8b8c92',
       icon: ''
     })
   })

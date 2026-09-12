@@ -438,16 +438,24 @@ export interface PMSettings {
  * blindness, which is the whole defect. Red is therefore carried toward crimson — the
  * standard remedy — which also lifts red against green from 4.5 to 8.2, the pair that
  * had limited the palette since the first pass.
+ *
+ * 2.25.0 — "To Do" and "In Progress", the two the earlier passes kept uncovering. The
+ * grey stays a grey: a ticket nobody has started should not wear an accent, and tinting
+ * it — which measures better — makes it one. It moves only far enough to clear 3:1 on a
+ * light background, which it had never done. The distance comes from the purple instead,
+ * carried to a deeper violet; with that, every colour in the palette clears 3:1 against a
+ * light and a dark background alike, which none of the five earlier states could say.
  */
 export const PALETTE_RESTEPS: Record<string, string>[] = [
   { '#b8a06b': '#b76b1c', '#79b58d': '#06915f' },
   { '#767491': '#367794' },
-  { '#c47070': '#f83e54', '#b76b1c': '#b16a08' }
+  { '#c47070': '#f83e54', '#b76b1c': '#b16a08' },
+  { '#8a94a0': '#8b8c92', '#8b72be': '#6e62cd' }
 ]
 
 export const DEFAULT_STATUSES: StatusConfig[] = [
-  { id: 'todo', label: 'To Do', color: '#8a94a0', icon: '', complete: false },
-  { id: 'in-progress', label: 'In Progress', color: '#8b72be', icon: '', complete: false },
+  { id: 'todo', label: 'To Do', color: '#8b8c92', icon: '', complete: false },
+  { id: 'in-progress', label: 'In Progress', color: '#6e62cd', icon: '', complete: false },
   { id: 'blocked', label: 'Blocked', color: '#f83e54', icon: '', complete: false },
   { id: 'review', label: 'In Review', color: '#b16a08', icon: '', complete: false },
   { id: 'done', label: 'Done', color: '#06915f', icon: '', complete: true },
@@ -457,7 +465,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
 export const DEFAULT_PRIORITIES: PriorityConfig[] = [
   { id: 'critical', label: 'Critical', color: '#f83e54', icon: '' },
   { id: 'high', label: 'High', color: '#b16a08', icon: '' },
-  { id: 'medium', label: 'Medium', color: '#8a94a0', icon: '' },
+  { id: 'medium', label: 'Medium', color: '#8b8c92', icon: '' },
   { id: 'low', label: 'Low', color: '#06915f', icon: '' }
 ]
 

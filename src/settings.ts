@@ -371,7 +371,7 @@ export class PMSettingTab extends PluginSettingTab {
               statuses.push({
                 id: 'status-' + makeId().slice(0, 6),
                 label: t('settings.statuses.new'),
-                color: '#8a94a0',
+                color: '#8b8c92',
                 icon: '',
                 complete: false
               })
@@ -456,7 +456,7 @@ export class PMSettingTab extends PluginSettingTab {
               priorities.push({
                 id: 'priority-' + makeId().slice(0, 6),
                 label: t('settings.priorities.new'),
-                color: '#8a94a0',
+                color: '#8b8c92',
                 icon: ''
               })
               this.persist()

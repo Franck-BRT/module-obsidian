@@ -249,7 +249,7 @@ export class ProjectEditView extends ItemView {
       makeEntry: () => ({
         id: 'status-' + makeId().slice(0, 6),
         label: t('settings.statuses.new'),
-        color: '#8a94a0',
+        color: '#8b8c92',
         icon: '',
         complete: false
       }),
@@ -273,7 +273,7 @@ export class ProjectEditView extends ItemView {
       makeEntry: () => ({
         id: 'priority-' + makeId().slice(0, 6),
         label: t('settings.priorities.new'),
-        color: '#8a94a0',
+        color: '#8b8c92',
         icon: ''
       }),
       renderEditor: (container, priorities) =>
