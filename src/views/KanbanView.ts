@@ -12,7 +12,7 @@ import { renderProjectChip } from '../ui/composites/projectChip'
 import { linkedRefs } from './linkedRefs'
 import { collectionBlocks, headingHandlers, phaseHeading, renderHeadingRow, type HeadingRow } from './headings'
 import { isPhase } from '../store/Phase'
-import { KANBAN_SORT_KEYS, orderTasks, type TaskOrder } from './sortOrder'
+import { KANBAN_SORT_KEYS, orderTasks, sortKeyLabel, type SortOrder } from './sortOrder'
 import { renderSortControl } from './SortControl'
 import type { SubView } from './SubView'
 import { t } from '../i18n'
@@ -70,6 +70,8 @@ export class KanbanView implements SubView {
     const bar = this.container.createDiv('pm-kanban-controls')
     renderSortControl(bar, {
       keys: KANBAN_SORT_KEYS,
+      label: sortKeyLabel,
+      unordered: 'manual',
       order: this.order(),
       onPick: async (order) => {
         this.plugin.settings.kanbanSortKey = order.sortKey
@@ -80,7 +82,7 @@ export class KanbanView implements SubView {
     })
   }
 
-  private order(): TaskOrder {
+  private order(): SortOrder {
     return { sortKey: this.plugin.settings.kanbanSortKey, sortDir: this.plugin.settings.kanbanSortDir }
   }
 

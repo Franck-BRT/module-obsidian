@@ -387,6 +387,12 @@ export interface PMSettings {
    */
   kanbanSortKey: PMSettings['ganttSortKey']
   kanbanSortDir: 'asc' | 'desc'
+  /**
+   * How the library lists documents. Its keys are the document's own fields, not a
+   * task's: 'reference' is the order a register has always been in, and the default.
+   */
+  librarySortKey: 'reference' | 'title' | 'state' | 'due' | 'issue' | 'issuer' | 'deposited'
+  librarySortDir: 'asc' | 'desc'
 }
 
 export const DEFAULT_STATUSES: StatusConfig[] = [
@@ -474,7 +480,9 @@ export const DEFAULT_SETTINGS: PMSettings = {
   ganttSortKey: 'manual',
   ganttSortDir: 'asc',
   kanbanSortKey: 'manual',
-  kanbanSortDir: 'asc'
+  kanbanSortDir: 'asc',
+  librarySortKey: 'reference',
+  librarySortDir: 'asc'
 }
 
 export function makeId(): string {

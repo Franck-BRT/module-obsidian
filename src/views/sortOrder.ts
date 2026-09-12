@@ -35,8 +35,9 @@ export function sortKeyLabel(key: SortKey): string {
   }
 }
 
-export interface TaskOrder {
-  sortKey: SortKey
+/** What a sort is, in any view: which field, which way. */
+export interface SortOrder<K extends string = SortKey> {
+  sortKey: K
   sortDir: PMSettings['ganttSortDir']
 }
 
@@ -51,7 +52,7 @@ export interface TaskOrder {
  */
 export function orderTasks(
   tasks: Task[],
-  order: TaskOrder,
+  order: SortOrder,
   statuses: StatusConfig[] = [],
   priorities: PriorityConfig[] = []
 ): Task[] {

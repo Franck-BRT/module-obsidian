@@ -1,7 +1,6 @@
 import { setIcon, TFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { DocState, Project, Task } from '../../types'
-import { DOC_STATES } from '../../types'
 import { documentOf, isAwaited } from '../../store/Document'
 import { formatDateShort, today } from '../../dates'
 import { displayName, safeAsync } from '../../utils'
@@ -46,6 +45,12 @@ function iconFor(extension: string): string {
 }
 
 export interface CardsContext {
+  /**
+   * The states, in the order their bands are stacked. The wall groups by state whatever
+   * else the library is sorted by, so this is what sorting by state can still say here:
+   * which end of a document's life the eye meets first.
+   */
+  states: readonly DocState[]
   plugin: PMPlugin
   projectOf: (taskId: string) => Project | null
   picked: Set<string>
@@ -63,7 +68,7 @@ export interface CardsContext {
  */
 export function renderDocumentCards(parent: HTMLElement, docs: Task[], ctx: CardsContext): void {
   const wall = parent.createDiv('pm-doc-wall')
-  for (const state of DOC_STATES) {
+  for (const state of ctx.states) {
     const group = docs.filter((task) => documentOf(task).state === state)
     if (!group.length) continue
     const heading = wall.createDiv('pm-doc-wall-heading')

@@ -102,6 +102,7 @@ export const en = {
   'doc.recipient': 'To',
   'doc.phase': 'Stage',
   'doc.state': 'State',
+  'doc.lastDeposit': 'Last deposit',
   'doc.versions': 'Versions',
   'doc.version': 'v{version}',
   'doc.approvers': 'Approvers',

@@ -1,6 +1,6 @@
 import { Menu, Notice, TFile, type EventRef, type TAbstractFile } from 'obsidian'
 import type PMPlugin from '../../main'
-import type { DocState, FilterState, Project, Task } from '../../types'
+import type { DocState, FilterState, PMSettings, Project, Task } from '../../types'
 import { DOC_STATES } from '../../types'
 import { personKeyer, type ProjectScope } from '../../store'
 import { flattenTasks } from '../../store/TaskTreeOps'
@@ -18,6 +18,8 @@ import { t } from '../../i18n'
 import { docStateLabel } from './docStateLabel'
 import type { SubView } from '../SubView'
 import { depositDocument, setDocState, signOff } from './documentActions'
+import { LIBRARY_SORT_KEYS, librarySortKeyLabel, orderDocuments } from './librarySort'
+import { renderSortControl } from '../SortControl'
 import { writeBordereau } from './bordereau'
 
 const STATE_COLORS: Record<DocState, string> = {
@@ -66,6 +68,7 @@ export class LibraryView implements SubView {
     const wrapper = this.container.createDiv('pm-library-wrapper')
     if (this.plugin.settings.libraryMode === 'cards') {
       renderDocumentCards(wrapper, shown, {
+        states: this.cardStates(),
         plugin: this.plugin,
         projectOf: (id) => this.scope.projectOf(id),
         picked: this.picked,
@@ -142,14 +145,32 @@ export class LibraryView implements SubView {
     this.watchers = [vault.on('create', touched), vault.on('delete', touched), vault.on('rename', touched)]
   }
 
-  /** Every document in scope, in reference order: that is how a library is read. */
+  /**
+   * Every document in scope, in the order the library is set to. Reference by default:
+   * that is how a register is read, and it is the order this view has always been in.
+   */
   private documents(): Task[] {
     const config = this.scope.config
     const keyOf = personKeyer(this.plugin.app)
-    return flattenTasks(this.scope.tasks())
+    const docs = flattenTasks(this.scope.tasks())
       .map((flat) => flat.task)
       .filter((task) => isDocument(task) && matchesFilter(task, this.filter, config.statuses, keyOf))
-      .sort((a, b) => documentOf(a).reference.localeCompare(documentOf(b).reference) || a.title.localeCompare(b.title))
+    return orderDocuments(docs, this.order())
+  }
+
+  private order(): { sortKey: PMSettings['librarySortKey']; sortDir: PMSettings['librarySortDir'] } {
+    return { sortKey: this.plugin.settings.librarySortKey, sortDir: this.plugin.settings.librarySortDir }
+  }
+
+  /**
+   * The order the wall stacks its state bands in. The wall groups by state whatever the
+   * library is sorted by, so sorting by state cannot reorder cards inside a band — but
+   * it can still turn the wall around, which is what reading a register backwards means
+   * here: the approved at the top rather than the awaited.
+   */
+  private cardStates(): readonly DocState[] {
+    const { sortKey, sortDir } = this.order()
+    return sortKey === 'state' && sortDir === 'desc' ? [...DOC_STATES].reverse() : DOC_STATES
   }
 
   private renderToolbar(parent: HTMLElement, docs: Task[]): void {
@@ -183,6 +204,19 @@ export class LibraryView implements SubView {
     }
 
     const right = bar.createDiv('pm-library-bar-right')
+    // The order the register is listed in — the document's own fields, in both the wall
+    // of thumbnails and the register: it is one library shown two ways.
+    renderSortControl(right, {
+      keys: LIBRARY_SORT_KEYS,
+      label: librarySortKeyLabel,
+      order: this.order(),
+      onPick: async (order) => {
+        this.plugin.settings.librarySortKey = order.sortKey
+        this.plugin.settings.librarySortDir = order.sortDir
+        await this.plugin.saveSettings()
+        this.render()
+      }
+    })
     new SegmentedControl<'list' | 'cards'>(right, {
       options: [
         { id: 'cards', label: t('view.libraryCards') },

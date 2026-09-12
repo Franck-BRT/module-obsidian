@@ -27,7 +27,7 @@ import { Temporal, today } from '../../dates'
 import type { RendererContext } from './GanttRenderer'
 import { renderTaskLabel } from './TaskLabelRenderer'
 import { collectionBlocks, headingHandlers, phaseHeading, renderHeadingRow, type HeadingRow } from '../headings'
-import { GANTT_SORT_KEYS, orderTasks, type TaskOrder } from '../sortOrder'
+import { GANTT_SORT_KEYS, orderTasks, sortKeyLabel, type SortOrder } from '../sortOrder'
 import { renderSortControl } from '../SortControl'
 import { isPhase, phaseSpan } from '../../store/Phase'
 import { phaseBracket } from './GanttPhaseBar'
@@ -138,6 +138,8 @@ export class GanttView implements SubView {
     // themselves rather than being scattered up the chart.
     renderSortControl(bar, {
       keys: GANTT_SORT_KEYS,
+      label: sortKeyLabel,
+      unordered: 'manual',
       order: this.order(),
       onPick: async (order) => {
         this.plugin.settings.ganttSortKey = order.sortKey
@@ -152,7 +154,7 @@ export class GanttView implements SubView {
     new ButtonComponent(bar).setButtonText(t('gantt.collapseAll')).onClick(() => this.setAllCollapsed(true))
   }
 
-  private order(): TaskOrder {
+  private order(): SortOrder {
     return { sortKey: this.plugin.settings.ganttSortKey, sortDir: this.plugin.settings.ganttSortDir }
   }
 

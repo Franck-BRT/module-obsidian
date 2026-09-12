@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.17.0
+version: 2.18.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.17.0
+# Recette — Black Projects 2.18.0
 
-Plan de test manuel pour le fork. Les **652 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **662 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -662,6 +662,36 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       référence / titre / indice / version / date / destinataire
 - [ ] ✅ **Attendu** : les lignes sont **triées par référence**
 - [ ] Sans rien cocher : ✅ **Attendu** : un message demande d'en choisir au moins un
+
+### Bibliothèque : ordre de la liste [N]
+
+- [ ] Vue **Bibliothèque** : ✅ **Attendu** : un bouton **« Ordre : Référence ↑ »** en haut à droite,
+      avant le sélecteur Vignettes / Registre
+- [ ] Ouvrir le menu : ✅ **Attendu** : Référence · Tâche · État · Échéance · Indice · Émetteur · Dernier dépôt
+- [ ] ✅ **Attendu** : **ni priorité ni avancement** — ce n'est pas un planning
+- [ ] Passer en **Registre** : ✅ **Attendu** : à l'ouverture, les documents sont rangés par **référence**,
+      comme avant la mise à jour
+- [ ] Choisir **Indice**, **Croissant** : ✅ **Attendu** : A, B, C… et les documents **sans indice à la fin**
+- [ ] Choisir **Décroissant** : ✅ **Attendu** : C, B, A… et les **sans indice toujours à la fin**
+      *(une case vide n'est pas une petite valeur, c'est une valeur absente)*
+- [ ] Un document **sans référence** : ✅ **Attendu** : il est **en bas** de la liste, plus en tête
+      *(changement de la 2.18.0)*
+- [ ] Choisir **État** : ✅ **Attendu** : Attendu, Reçu, En revue, Validé, Obsolète — l'ordre de la **vie**
+      d'un document, pas l'ordre alphabétique
+- [ ] Choisir **Dernier dépôt**, **Décroissant** : ✅ **Attendu** : les documents déposés le plus récemment
+      en premier, les **jamais déposés en dernier**
+- [ ] Deux documents à la **même référence** : ✅ **Attendu** : ils restent triés par nom entre eux,
+      dans les deux sens
+- [ ] Passer en **Vignettes** : ✅ **Attendu** : le tri s'applique **à l'intérieur de chaque bande d'état**
+- [ ] En Vignettes, choisir **État → Décroissant** : ✅ **Attendu** : les bandes s'inversent —
+      **Obsolète / Validé** en haut, **Attendu** en bas
+- [ ] Changer de vue puis revenir, et rouvrir Obsidian : ✅ **Attendu** : l'ordre choisi est **retenu**
+- [ ] Régler le **Gantt** et le **Tableau** sur d'autres ordres : ✅ **Attendu** : les trois vues gardent
+      **chacune le sien**
+- [ ] Filtrer par **pastille d'état** avec un tri actif : ✅ **Attendu** : le tri tient dans la liste filtrée
+- [ ] Rétrécir la fenêtre : ✅ **Attendu** : la barre passe **sur deux lignes**, rien ne sort de l'écran
+
+**Constaté :**
 
 ### Vue en cartes [N]
 

@@ -96,6 +96,7 @@ export const fr: Catalog = {
   'doc.recipient': 'Destinataire',
   'doc.phase': 'Phase',
   'doc.state': 'État',
+  'doc.lastDeposit': 'Dernier dépôt',
   'doc.versions': 'Versions',
   'doc.version': 'v{version}',
   'doc.approvers': 'Approbateurs',

@@ -1,40 +1,46 @@
 import { ButtonComponent, Menu } from 'obsidian'
 import type { PMSettings } from '../types'
-import { sortKeyLabel, type SortKey, type TaskOrder } from './sortOrder'
+import type { SortOrder } from './sortOrder'
 import { safeAsync } from '../utils'
 import { t } from '../i18n'
 
-export interface SortControlProps {
+export interface SortControlProps<K extends string> {
   /** The orders this view offers: a board leaves out status, its columns being statuses. */
-  keys: SortKey[]
-  order: TaskOrder
-  onPick: (order: TaskOrder) => void | Promise<void>
+  keys: K[]
+  label: (key: K) => string
+  order: SortOrder<K>
+  /**
+   * The key that has no direction — a view's own stored order, which exists one way
+   * only. Omit it where every key is a real field and both ways mean something.
+   */
+  unordered?: K
+  onPick: (order: SortOrder<K>) => void | Promise<void>
 }
 
 /**
  * The button that says which order rows are in, and the menu behind it: the keys, then
- * the direction once a key other than manual is chosen — there is no ascending order of
- * the project's own order, so offering one would be a lie.
+ * the direction, unless the chosen key is the one that has none.
  *
- * Shared by the Gantt and the board so the two read the same and cannot drift apart.
+ * Shared by every view that offers a sort, so the three read the same and cannot drift.
  */
-export function renderSortControl(parent: HTMLElement, props: SortControlProps): void {
-  const { keys, order } = props
-  const arrow = order.sortKey === 'manual' ? '' : order.sortDir === 'asc' ? ' ↑' : ' ↓'
+export function renderSortControl<K extends string>(parent: HTMLElement, props: SortControlProps<K>): void {
+  const { keys, label, order } = props
+  const directed = order.sortKey !== props.unordered
+  const arrow = !directed ? '' : order.sortDir === 'asc' ? ' ↑' : ' ↓'
   new ButtonComponent(parent)
-    .setButtonText(`${t('sort.by')} ${sortKeyLabel(order.sortKey)}${arrow}`)
+    .setButtonText(`${t('sort.by')} ${label(order.sortKey)}${arrow}`)
     .setTooltip(t('sort.tooltip'))
     .onClick((e) => {
       const menu = new Menu()
       for (const key of keys) {
         menu.addItem((item) =>
           item
-            .setTitle(sortKeyLabel(key))
+            .setTitle(label(key))
             .setChecked(key === order.sortKey)
             .onClick(safeAsync(async () => props.onPick({ ...order, sortKey: key })))
         )
       }
-      if (order.sortKey !== 'manual') {
+      if (directed) {
         menu.addSeparator()
         for (const dir of ['asc', 'desc'] as PMSettings['ganttSortDir'][]) {
           menu.addItem((item) =>

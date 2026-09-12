@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.18.0] - 2026-09-12
+
+### Added
+
+- The **library can be ordered**, the last view that could not be: by reference, name,
+  state, due date, issue, issuer or **last deposit**, either way round, remembered
+  between sessions and applied to both the wall of thumbnails and the register — it is
+  one library shown two ways
+- Its keys are the **document's own fields**, not a task's. A register is looked through
+  by reference or by who owes it; priority and progress answer questions nobody asks of
+  a drawing, and there is no drag order in a library to preserve
+- **Reference stays the default**, which is the order the library has always been in: an
+  upgrade reorders nothing
+- In the wall of thumbnails, which groups by state whatever else is chosen, sorting by
+  **state** turns the wall around instead of doing nothing: descending stacks the
+  approved first rather than the awaited
+
+### Changed
+
+- In the library, **a field not filled in now sorts last** whichever way the list is read
+  — a document with no reference yet used to head the register, because an empty string
+  compares before everything. A blank is an absent value, not a small one
+- The order button is now one **generic control** shared by the Gantt, the board and the
+  library, each passing its own keys and labels
+
 ## [2.17.0] - 2026-09-11
 
 ### Added
