@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.24.0] - 2026-09-12
+
+### Changed
+
+- **"Blocked" and "In Review" re-stepped** — and with them the priority palette's
+  "Critical" and "High", the same two hexes. They were red and orange at **ΔE 9.2**
+- Keeping a classic red was tried and abandoned: measured against the orange it collapses
+  to **ΔE 2.0–5.6 under colour blindness**, which is the whole defect — a true red and an
+  orange are one colour there. Red is carried toward **crimson** instead, the standard
+  remedy, and the pair now sits at **ΔE 16.9 / 7.2**
+- That also lifts **red against green from 4.5 to 8.2** — above the target, and the pair
+  that had limited this palette since the first correction
+
+### Notes
+
+- The palette's remaining limits are now in its two quietest colours, untouched so far:
+  "To Do" grey and "In Progress" purple sit ΔE 11.5 apart, and that purple is the closest
+  thing to the "Cancelled" slate under protanopia (6.6). Everything else clears both
+  floors, and in dark mode all six colours clear 3:1
+
 ## [2.23.0] - 2026-09-12
 
 ### Changed

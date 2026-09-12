@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.23.0
+version: 2.24.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.23.0
+# Recette — Black Projects 2.24.0
 
-Plan de test manuel pour le fork. Les **715 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **716 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -480,6 +480,7 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 > **Nouveau en 2.22.0** : « En revue » et « Terminé » ont changé de couleur, dans la palette
 > des **statuts** et dans celle des **priorités** (Élevée / Basse — c'étaient les mêmes codes).
 > **2.23.0** : « Annulé » aussi, qui était un violet trop proche de celui d'« En cours ».
+> **2.24.0** : « Bloqué » et « En revue » (et « Critique » / « Élevée » côté priorités).
 
 - [ ] Réglages → **Statuts** : ✅ **Attendu** : « En revue » est `#b76b1c` (orange brûlé)
       et « Terminé » `#06915f` (vert émeraude)
@@ -499,6 +500,14 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       autant qu'un ticket actif
 - [ ] **[N]** Un coffre déjà passé en **2.22.0** : ✅ **Attendu** : il reçoit quand même cette
       nouvelle couleur *(les reprises sont comptées, pas un simple drapeau)*
+- [ ] **[N]** Réglages → Statuts : ✅ **Attendu** : « Bloqué » est `#f83e54` (rouge framboise)
+      et « En revue » `#b16a08` (orange brûlé)
+- [ ] **[N]** Réglages → Priorités : ✅ **Attendu** : « Critique » et « Élevée » portent les mêmes codes
+- [ ] **[N]** ✅ **Attendu** : « Bloqué » et « En revue » ne se ressemblent plus, et « Bloqué »
+      ne se confond plus avec « Terminé »
+- [ ] **[N]** Un coffre **jamais mis à jour** (couleurs d'origine) : ✅ **Attendu** : « En revue »
+      finit sur `#b16a08` — la couleur traverse les deux reprises qui la concernent, elle ne
+      s'arrête pas à la première
 
 **Constaté :**
 

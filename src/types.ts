@@ -431,24 +431,32 @@ export interface PMSettings {
  * that mean opposite things, told apart by a shade. Now a slate blue at ΔE 13.2, and
  * still quiet, because a cancelled ticket should read retired rather than like a sixth
  * accent — the loud colours that measured better all looked active.
+ *
+ * 2.24.0 — "Blocked" and "In Review", red and orange at ΔE 9.2, and the same two hexes
+ * as the priority palette's "Critical" and "High". Keeping a classic red was tried and
+ * abandoned: measured against the orange it collapses to ΔE 2.0–5.6 under colour
+ * blindness, which is the whole defect. Red is therefore carried toward crimson — the
+ * standard remedy — which also lifts red against green from 4.5 to 8.2, the pair that
+ * had limited the palette since the first pass.
  */
 export const PALETTE_RESTEPS: Record<string, string>[] = [
   { '#b8a06b': '#b76b1c', '#79b58d': '#06915f' },
-  { '#767491': '#367794' }
+  { '#767491': '#367794' },
+  { '#c47070': '#f83e54', '#b76b1c': '#b16a08' }
 ]
 
 export const DEFAULT_STATUSES: StatusConfig[] = [
   { id: 'todo', label: 'To Do', color: '#8a94a0', icon: '', complete: false },
   { id: 'in-progress', label: 'In Progress', color: '#8b72be', icon: '', complete: false },
-  { id: 'blocked', label: 'Blocked', color: '#c47070', icon: '', complete: false },
-  { id: 'review', label: 'In Review', color: '#b76b1c', icon: '', complete: false },
+  { id: 'blocked', label: 'Blocked', color: '#f83e54', icon: '', complete: false },
+  { id: 'review', label: 'In Review', color: '#b16a08', icon: '', complete: false },
   { id: 'done', label: 'Done', color: '#06915f', icon: '', complete: true },
   { id: 'cancelled', label: 'Cancelled', color: '#367794', icon: '', complete: true }
 ]
 
 export const DEFAULT_PRIORITIES: PriorityConfig[] = [
-  { id: 'critical', label: 'Critical', color: '#c47070', icon: '' },
-  { id: 'high', label: 'High', color: '#b76b1c', icon: '' },
+  { id: 'critical', label: 'Critical', color: '#f83e54', icon: '' },
+  { id: 'high', label: 'High', color: '#b16a08', icon: '' },
   { id: 'medium', label: 'Medium', color: '#8a94a0', icon: '' },
   { id: 'low', label: 'Low', color: '#06915f', icon: '' }
 ]

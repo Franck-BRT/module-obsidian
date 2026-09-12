@@ -557,7 +557,7 @@ export class StyleguideView extends ItemView {
         tags: ['design', 'frontend']
       }),
       people: SAMPLE_PEOPLE,
-      priorityColor: '#c47070',
+      priorityColor: '#f83e54',
       descriptionPreview: 'Everything that must land before the announcement goes out.',
       parentTitle: 'Website relaunch',
       renderSource: (el) => renderProjectChip(el, { title: 'Platform', color: '#7a9ec4', onClick: noop }),

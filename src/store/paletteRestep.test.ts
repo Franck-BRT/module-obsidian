@@ -4,6 +4,7 @@ import { restepPalette } from './paletteRestep'
 
 const FIRST = PALETTE_RESTEPS[0] ?? {}
 const SECOND = PALETTE_RESTEPS[1] ?? {}
+const THIRD = PALETTE_RESTEPS[2] ?? {}
 
 describe('re-stepping a colour a vault may still carry', () => {
   it('swaps an untouched old default for the new one', () => {
@@ -38,9 +39,19 @@ describe('re-stepping a colour a vault may still carry', () => {
   })
 
   it('walks a vault that has had none of them through every pass', () => {
-    const palette = [{ color: '#b8a06b' }, { color: '#79b58d' }, { color: '#767491' }]
+    const palette = [{ color: '#b8a06b' }, { color: '#79b58d' }, { color: '#767491' }, { color: '#c47070' }]
     for (const pass of PALETTE_RESTEPS) restepPalette(palette, pass)
-    expect(palette.map((p) => p.color)).toEqual(['#b76b1c', '#06915f', '#367794'])
+    expect(palette.map((p) => p.color)).toEqual(['#b16a08', '#06915f', '#367794', '#f83e54'])
+  })
+
+  it('carries a colour through two passes when a later one moves it again', () => {
+    // The review amber was re-stepped once, then again: a vault that had neither must
+    // end on the second value, not stop at the first.
+    const palette = [{ color: '#b8a06b' }]
+    restepPalette(palette, FIRST)
+    expect(palette[0]?.color).toBe('#b76b1c')
+    restepPalette(palette, THIRD)
+    expect(palette[0]?.color).toBe('#b16a08')
   })
 })
 
@@ -51,11 +62,13 @@ describe('the palettes a fresh install starts with', () => {
   })
 
   it('carries the new ones instead, in both palettes', () => {
-    expect(DEFAULT_STATUSES.find((s) => s.id === 'review')?.color).toBe('#b76b1c')
+    expect(DEFAULT_STATUSES.find((s) => s.id === 'review')?.color).toBe('#b16a08')
+    expect(DEFAULT_STATUSES.find((s) => s.id === 'blocked')?.color).toBe('#f83e54')
     expect(DEFAULT_STATUSES.find((s) => s.id === 'done')?.color).toBe('#06915f')
     // The same two hexes were the priority palette's High and Low, so they had the same
     // defect: one fix, both palettes.
-    expect(DEFAULT_PRIORITIES.find((p) => p.id === 'high')?.color).toBe('#b76b1c')
+    expect(DEFAULT_PRIORITIES.find((p) => p.id === 'high')?.color).toBe('#b16a08')
+    expect(DEFAULT_PRIORITIES.find((p) => p.id === 'critical')?.color).toBe('#f83e54')
     expect(DEFAULT_PRIORITIES.find((p) => p.id === 'low')?.color).toBe('#06915f')
     expect(DEFAULT_STATUSES.find((s) => s.id === 'cancelled')?.color).toBe('#367794')
   })
