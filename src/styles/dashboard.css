@@ -8,6 +8,10 @@
 }
 
 .pm-kpi-page {
+  /* The width is stated as well as capped: auto margins on a flex item make it shrink to
+     its content instead of filling, and this page is one wherever a container it does not
+     own turns out to be a flex box. */
+  width: 100%;
   max-width: 1180px;
   margin: 0 auto;
   padding: 20px 16px 40px;

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.26.1] - 2026-09-13
+
+### Fixed
+
+- **The dashboard opened full width in some projects and shrunk and centred in others.**
+  Every view dresses the same element with a class of its own, and no view took its class
+  off again, so a previous view's `display: flex` was still governing the next view's
+  children. The dashboard's page centres itself with automatic margins, and an automatic
+  margin on a flex item makes it shrink to its content instead of filling — so the width
+  came out of how many cards that project happened to have, and which view had been
+  looked at before it
+- The class now comes off when the view changes, and the page states its width as well as
+  capping it, so neither half of that can happen again. Measured in Chromium: with a
+  stale class the page was 362px of a 998px container and is now 998, whatever it holds
+
 ## [2.26.0] - 2026-09-12
 
 ### Added

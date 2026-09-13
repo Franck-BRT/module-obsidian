@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.26.0
+version: 2.26.1
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.26.0
+# Recette — Black Projects 2.26.1
 
-Plan de test manuel pour le fork. Les **723 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **725 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -646,6 +646,12 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Basculer Obsidian en **thème clair puis sombre** : ✅ **Attendu** : la page suit, rien ne devient illisible
 - [ ] Changer la **couleur d'un statut** dans les réglages : ✅ **Attendu** : la barre correspondante suit
 - [ ] Rétrécir la fenêtre : ✅ **Attendu** : les cartes passent sur une colonne, rien ne déborde
+- [ ] **[N]** Ouvrir le **Gantt**, puis passer au **tableau de bord** : ✅ **Attendu** : la page occupe
+      **toute la largeur** *(elle se recroquevillait au centre avant la 2.26.1)*
+- [ ] **[N]** Refaire depuis le **tableur**, le **tableau**, la **bibliothèque** : ✅ **Attendu** : même largeur
+      à chaque fois, quel que soit le chemin
+- [ ] **[N]** Un projet avec **peu de cartes** et un autre avec **beaucoup** : ✅ **Attendu** : même largeur
+      *(elle dépendait du nombre de cartes)*
 - [ ] Ouvrir le tableau de bord sur un **recueil** ou une vue multi-projets : ✅ **Attendu** : il agrège l'ensemble
 - [ ] Réglages → **Vue par défaut** : ✅ **Attendu** : « Bibliothèque » et « Tableau de bord » y sont proposés
 

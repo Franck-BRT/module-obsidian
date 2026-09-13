@@ -22,6 +22,7 @@ import {
 } from '../store'
 import { truncateTitle, safeAsync } from '../utils'
 import type { SubView } from './SubView'
+import { SUBVIEW_CLASSES } from './subviewClasses'
 import { TableView } from './table/TableView'
 import type { TableViewState } from './table/TableView'
 import { GanttView } from './gantt/GanttView'
@@ -664,6 +665,10 @@ export class ProjectView extends ItemView {
 
     this.subview?.destroy?.()
     this.bodyEl.empty()
+    // Every sub-view dresses this one element, and the element outlives all of them, so
+    // the last one's clothes come off before the next one puts its own on. Left on, a
+    // previous view's `display: flex` was still governing the next view's children.
+    this.bodyEl.removeClasses([...SUBVIEW_CLASSES])
     this.subview = null
 
     switch (this.currentView) {
