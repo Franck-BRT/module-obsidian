@@ -6,6 +6,7 @@ import { PM_PROJECT_EDIT_VIEW_TYPE } from './ProjectEditView'
 import { PM_PROJECT_OVERVIEW_VIEW_TYPE } from './ProjectOverviewView'
 import { PM_PROJECT_VIEW_TYPE } from './ProjectView'
 import { PM_TASK_VIEW_TYPE, type TaskViewState } from './TaskView'
+import { surfaceFor } from './projectSurface'
 
 export class PMViewRouter {
   constructor(private plugin: PMPlugin) {}
@@ -35,14 +36,18 @@ export class PMViewRouter {
   }
 
   /**
-   * Where a project link lands, per the open projects in setting.
-   *
-   * A programme is the exception, wherever it is clicked from: it has no work of its
-   * own to read, so it opens on everything it holds — itself and the projects under it.
+   * Where a project link lands, wherever it was clicked from: the global setting, unless
+   * the project itself has something more specific to say. See `surfaceFor`.
    */
   async openProjectLink(path: string, leaf?: WorkspaceLeaf): Promise<void> {
-    if (this.plugin.index.projectRef(path)?.program) await this.openScope({ kind: 'subtree', path }, leaf)
-    else if (this.plugin.settings.projectSurface === 'tasks') await this.openScope({ kind: 'project', path }, leaf)
+    const ref = this.plugin.index.projectRef(path)
+    const surface = surfaceFor({
+      program: !!ref?.program,
+      ownDefaultView: ref?.ownDefaultView ?? null,
+      setting: this.plugin.settings.projectSurface
+    })
+    if (surface === 'subtree') await this.openScope({ kind: 'subtree', path }, leaf)
+    else if (surface === 'tasks') await this.openScope({ kind: 'project', path }, leaf)
     else await this.openProjectOverview(path, leaf)
   }
 

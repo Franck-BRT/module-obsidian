@@ -41,6 +41,7 @@ function projectRef(id: string, path: string): ProjectRef {
     color: '',
     teamMembers: [],
     program: false,
+    ownDefaultView: null,
     customFields: [],
     parentPath: undefined,
     ownStatusIds: null,

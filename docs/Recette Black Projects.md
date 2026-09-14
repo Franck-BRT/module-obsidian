@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.26.2
+version: 2.26.3
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.26.2
+# Recette — Black Projects 2.26.3
 
-Plan de test manuel pour le fork. Les **727 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **731 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -660,8 +660,12 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] **[N]** Y choisir **Tableau de bord**, fermer l'onglet, recliquer le projet dans la liste
       ✅ **Attendu** : il s'ouvre **sur son tableau de bord**
 - [ ] **[N]** Un autre projet resté sur « Réglage global » : ✅ **Attendu** : il suit le réglage global
-- [ ] **[N]** Si un projet s'ouvre sur sa **fiche** au lieu de ses vues : Réglages → **« Ouvrir les projets sur »**
-      → **« Les tâches »** *(la vue par défaut ne s'applique qu'aux vues de tâches)*
+- [ ] **[N]** Avec Réglages → **« Ouvrir les projets sur » → « La fiche »** : ✅ **Attendu** : le projet qui
+      a choisi sa vue s'ouvre quand même **directement dessus** *(son choix est plus précis que le réglage
+      global — il ne fonctionnait pas avant la 2.26.3)*
+- [ ] **[N]** Un projet resté sur **« Réglage global »**, même réglage : ✅ **Attendu** : il s'ouvre sur sa **fiche**
+- [ ] **[N]** Depuis la fiche, **« Ouvrir les tâches »** : ✅ **Attendu** : on arrive sur la vue choisie
+- [ ] **[N]** Un **programme** : ✅ **Attendu** : il s'ouvre toujours sur tout ce qu'il contient, quel que soit le réglage
 
 **Constaté :**
 

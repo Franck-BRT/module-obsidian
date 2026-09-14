@@ -458,3 +458,18 @@ describe('VaultIndex id collisions', () => {
     expect(index.findProjectIdCollisions().size).toBe(0)
   })
 })
+
+describe('the view a project says it opens on', () => {
+  it('is read from its config, without opening the note', async () => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    await fake.vault.create('P/Own.md', projectNote('p1', 'Own', 'config:\n  defaultView: dashboard\n'))
+    await fake.vault.create('P/Plain.md', projectNote('p2', 'Plain'))
+    await fake.vault.create('P/Odd.md', projectNote('p3', 'Odd', 'config:\n  defaultView: telepathy\n'))
+    const index = new VaultIndex(fake.app as unknown as App, () => ({ ...DEFAULT_SETTINGS }))
+    index.build()
+    expect(index.projectRef('P/Own.md')?.ownDefaultView).toBe('dashboard')
+    // Nothing said means inherit, and a view nobody has heard of is nothing said.
+    expect(index.projectRef('P/Plain.md')?.ownDefaultView).toBeNull()
+    expect(index.projectRef('P/Odd.md')?.ownDefaultView).toBeNull()
+  })
+})

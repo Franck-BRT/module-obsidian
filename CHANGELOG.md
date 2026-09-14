@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.26.3] - 2026-09-14
+
+### Fixed
+
+- **A project set to open on a particular view now opens there when clicked.** The
+  setting was reachable from 2.26.2, but it only decided which view to show *once you
+  were in the views* — and with "open projects on" left on the project's page, clicking
+  never got that far. Naming a view for one project is a more specific instruction than a
+  global default, so it now wins: that project goes straight to that view
+- A project that says nothing is untouched: it follows "open projects on" exactly as
+  before, and a programme still opens on everything it holds
+
 ## [2.26.2] - 2026-09-14
 
 ### Fixed

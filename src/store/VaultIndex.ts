@@ -1,6 +1,7 @@
 import type { App, Plugin, TAbstractFile } from 'obsidian'
 import { TFile, normalizePath } from 'obsidian'
-import type { CustomFieldDef, FilterState, PMSettings, StatusConfig } from '../types'
+import type { CustomFieldDef, FilterState, PMSettings, StatusConfig, ViewMode } from '../types'
+import { VIEW_MODES } from '../types'
 import { today } from '../dates'
 import { reaches } from './Scheduler'
 import {
@@ -34,6 +35,8 @@ export interface ProjectRef {
   completeStatusIds: string[] | null
   /** Days before a completed task is archived. Null inherits the global setting. */
   autoArchiveDays: number | null
+  /** The view this project opens on. Null inherits the global setting. */
+  ownDefaultView: ViewMode | null
 }
 
 /**
@@ -90,6 +93,15 @@ function ownStatusesOf(frontmatter: Record<string, unknown>): Partial<StatusConf
   const statuses = projectConfigOf(frontmatter)?.statuses
   if (!Array.isArray(statuses) || statuses.length === 0) return null
   return (statuses as Partial<StatusConfig>[]).filter((entry) => typeof entry?.id === 'string')
+}
+
+/**
+ * The view this project says it opens on, when it says one. Read here so deciding where
+ * a click lands costs no file read: the answer is needed before anything is loaded.
+ */
+function ownDefaultView(frontmatter: Record<string, unknown>): ViewMode | null {
+  const view = projectConfigOf(frontmatter)?.defaultView
+  return VIEW_MODES.find((mode) => mode === view) ?? null
 }
 
 function ownAutoArchiveDays(frontmatter: Record<string, unknown>): number | null {
@@ -461,7 +473,8 @@ export class VaultIndex {
       program: frontmatter[PROGRAM_FRONTMATTER_KEY] === true,
       ownStatusIds: own ? own.map((entry) => entry.id as string) : null,
       completeStatusIds: own ? own.filter((entry) => entry.complete === true).map((entry) => entry.id as string) : null,
-      autoArchiveDays: ownAutoArchiveDays(frontmatter)
+      autoArchiveDays: ownAutoArchiveDays(frontmatter),
+      ownDefaultView: ownDefaultView(frontmatter)
     }
     this.projects.set(path, ref)
     this.projectPathById.set(ref.id, path)
