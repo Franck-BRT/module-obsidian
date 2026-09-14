@@ -112,6 +112,18 @@ describe('task round-trip', () => {
     expect(task.timeLogs).toEqual(original.timeLogs)
   })
 
+  it('preserves the duration a template states instead of dates', () => {
+    const original = makeTask({ id: 'task-3', start: '', due: '', duration: 15 })
+    const { task } = roundTripTask(original)
+    expect(task.duration).toBe(15)
+  })
+
+  it('writes no duration line at all for a ticket that states none', () => {
+    const plain = makeTask({ id: 'task-4' })
+    expect(serializeTask(plain, makeProject('Test', 'Projects/Test.md'), null, [], refs)).not.toContain('duration:')
+    expect(roundTripTask(plain).task.duration).toBeUndefined()
+  })
+
   it('preserves a milestone type and empty start', () => {
     const original = makeTask({ id: 'm-1', type: 'milestone', start: '', due: '2026-05-01' })
     const { task } = roundTripTask(original)

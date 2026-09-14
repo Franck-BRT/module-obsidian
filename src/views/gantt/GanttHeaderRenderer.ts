@@ -54,20 +54,21 @@ export function renderTimelineHeader(ctx: RendererContext): void {
  */
 function renderRelativeHeader(g: SVGGElement, ctx: RendererContext): void {
   const { totalDays, dayWidth } = ctx.cfg
-  for (let day = 0; day < totalDays; day += 7) {
+  const week = ctx.relative?.week ?? 7
+  for (let day = 0; day < totalDays; day += week) {
     const x = day * dayWidth
-    const width = Math.min(7, totalDays - day) * dayWidth
+    const width = Math.min(week, totalDays - day) * dayWidth
     g.appendChild(
       svgEl('rect', {
         x,
         y: 0,
         width,
         height: 24,
-        class: (day / 7) % 2 === 0 ? 'pm-gantt-band-even' : 'pm-gantt-band-odd'
+        class: (day / week) % 2 === 0 ? 'pm-gantt-band-even' : 'pm-gantt-band-odd'
       })
     )
     const label = svgEl('text', { x: x + width / 2, y: 16, class: 'pm-gantt-header-week' })
-    label.textContent = t('gantt.relativeWeek', { week: day / 7 + 1 })
+    label.textContent = t('gantt.relativeWeek', { week: day / week + 1 })
     g.appendChild(label)
   }
   if (dayWidth >= 20) {

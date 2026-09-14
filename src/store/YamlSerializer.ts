@@ -70,6 +70,7 @@ export const TASK_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'completed',
   'recurrence',
   'timeEstimate',
+  'duration',
   'timeLogs',
   'customFields',
   'document',
@@ -227,6 +228,7 @@ export function buildTaskFrontmatter(
   if (task.completed) fm.completed = task.completed
   if (task.recurrence) fm.recurrence = task.recurrence
   if (task.timeEstimate !== undefined) fm.timeEstimate = task.timeEstimate
+  if (task.duration !== undefined) fm.duration = task.duration
   if (task.timeLogs?.length) fm.timeLogs = task.timeLogs
   if (Object.keys(task.customFields).length) fm.customFields = task.customFields
   const document = serializeDocument(task.document)

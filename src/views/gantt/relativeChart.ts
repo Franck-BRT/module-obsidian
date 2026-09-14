@@ -4,17 +4,29 @@ import type { TimelineCfg } from './TimelineConfig'
 import { DAY_WIDTH } from './TimelineConfig'
 import { flattenTasks } from '../../store/TaskTreeOps'
 import { addDays } from '../../store/Metrics'
+import type { WorkCalendar } from '../../store/WorkCalendar'
 import { Temporal, parsePlainDate } from '../../dates'
 
 /** A plan shorter than this still gets a month of axis, so its bars are readable. */
 const MIN_WEEKS = 4
 
 /**
+ * How many columns make a week on a dateless axis.
+ *
+ * The chart's columns are the days the plan is counted in, and a project that keeps off
+ * weekends counts five of them to the week — so a fortnight of work is two bands wide
+ * there exactly as it is on a plain calendar, with no weekend gaps to read past.
+ */
+export function relativeWeek(calendar: WorkCalendar): number {
+  return Math.max(1, calendar.workingWeekdays.size)
+}
+
+/**
  * The day the chart pretends the plan starts on.
  *
- * A Monday, so a week-by-week axis counts whole weeks from the start, and far enough in
- * the past that today's line never lands in the middle of a template. It is never shown:
- * the axis is relabelled in days from the start.
+ * Far enough in the past that nothing real can collide with it, and never shown: the
+ * columns are the plan's own days, one after another, and the axis is relabelled in days
+ * and weeks counted from the start.
  */
 export const RELATIVE_ANCHOR = '2000-01-03'
 
@@ -56,9 +68,14 @@ export function realTasksById(tasks: Task[]): Map<string, Task> {
  * runs in whole weeks so the last band is as wide as the rest, and keeps a month's width
  * for a plan too short to fill one.
  */
-export function relativeTimelineConfig(plan: RelativePlan, granularity: GanttGranularity): TimelineCfg {
-  const weeks = Math.max(MIN_WEEKS, Math.ceil(plan.span / 7))
-  const totalDays = weeks * 7
+export function relativeTimelineConfig(
+  plan: RelativePlan,
+  granularity: GanttGranularity,
+  calendar: WorkCalendar
+): TimelineCfg {
+  const week = relativeWeek(calendar)
+  const weeks = Math.max(MIN_WEEKS, Math.ceil(plan.span / week))
+  const totalDays = weeks * week
   const startDate = parsePlainDate(RELATIVE_ANCHOR) ?? Temporal.PlainDate.from(RELATIVE_ANCHOR)
   const dayWidth = DAY_WIDTH[granularity]
   return {

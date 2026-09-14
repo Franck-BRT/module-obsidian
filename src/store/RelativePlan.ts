@@ -1,8 +1,9 @@
 import type { DependencyType, Task } from '../types'
 import { DEFAULT_DEPENDENCY_OPTION } from '../types'
+import type { WorkCalendar } from './WorkCalendar'
+import { ALL_DAYS, workingDaysBetween } from './WorkCalendar'
 import { flattenTasks } from './TaskTreeOps'
 import { isPhase } from './Phase'
-import { daysBetween } from './Template'
 
 /** Where one ticket sits in a plan that has no dates: days from day zero, and how long. */
 export interface RelativeBar {
@@ -21,14 +22,21 @@ export interface RelativePlan {
 /**
  * How long a ticket takes, with or without dates.
  *
- * A template is written without dates on purpose, so the dates are only consulted when
- * someone bothered to put them there — a ticket that says nothing takes a day, which is
- * enough for it to be a bar rather than a point, and a milestone takes none because a
- * milestone is a moment.
+ * A template is written without dates on purpose, which is what the **duration** is for:
+ * at that stage one knows roughly how long a thing takes and not at all when it happens,
+ * so a stated duration is the most deliberate answer there is and comes first. Dates are
+ * consulted next, for the templates that were laid out that way; a ticket that says
+ * neither takes a day, which is enough for it to be a bar rather than a point, and a
+ * milestone takes none because a milestone is a moment.
+ *
+ * Days are counted the way the project counts them — plain days, or working days when it
+ * keeps off weekends and holidays — so a duration means the same thing here as it will
+ * once the project is created and its dates are real.
  */
-export function lengthOf(task: Task): number {
+export function lengthOf(task: Task, calendar: WorkCalendar = ALL_DAYS): number {
   if (task.type === 'milestone') return 0
-  if (task.start && task.due) return Math.max(1, daysBetween(task.start, task.due) + 1)
+  if (task.duration !== undefined && task.duration > 0) return Math.max(1, Math.round(task.duration))
+  if (task.start && task.due) return Math.max(1, workingDaysBetween(calendar, task.start, task.due) + 1)
   return 1
 }
 
@@ -66,7 +74,7 @@ export function earliestStart(pred: RelativeBar, type: DependencyType, lag: numb
  * the tickets in the loop are laid at day zero and named, so the chart says where the
  * problem is instead of hiding it.
  */
-export function relativePlan(tasks: Task[]): RelativePlan {
+export function relativePlan(tasks: Task[], calendar: WorkCalendar = ALL_DAYS): RelativePlan {
   const flat = flattenTasks(tasks)
   const byId = new Map(flat.map((entry) => [entry.task.id, entry.task]))
   const parentOf = new Map<string, string>()
@@ -120,7 +128,7 @@ export function relativePlan(tasks: Task[]): RelativePlan {
   const bars = new Map<string, RelativeBar>(
     cycles.flatMap((id) => {
       const task = byId.get(id)
-      return task ? [[id, { offset: 0, length: lengthOf(task) }] as const] : []
+      return task ? [[id, { offset: 0, length: lengthOf(task, calendar) }] as const] : []
     })
   )
 
@@ -143,7 +151,7 @@ export function relativePlan(tasks: Task[]): RelativePlan {
     const known = lotFloors.get(id)
     if (known !== undefined) return known
     const lot = byId.get(id)
-    const floor = lot ? Math.max(floorFromLinks(lot, lengthOf(lot)), inheritedFloor(id)) : 0
+    const floor = lot ? Math.max(floorFromLinks(lot, lengthOf(lot, calendar)), inheritedFloor(id)) : 0
     lotFloors.set(id, floor)
     return floor
   }
@@ -168,7 +176,7 @@ export function relativePlan(tasks: Task[]): RelativePlan {
       bars.set(id, { offset: from, length: Math.max(1, to - from) })
       continue
     }
-    const length = lengthOf(task)
+    const length = lengthOf(task, calendar)
     bars.set(id, { offset: Math.max(floorFromLinks(task, length), inheritedFloor(id)), length })
   }
 

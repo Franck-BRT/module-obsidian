@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_STATUSES, makeDocument, makeTask, type Task } from '../types'
+import { makeWorkCalendar } from './WorkCalendar'
 import { daysBetween, firstDateOf, tasksFromTemplate } from './Template'
 
 const task = (title: string, over: Partial<Task> = {}): Task => makeTask({ title, start: '', ...over })
@@ -94,5 +95,73 @@ describe('a project made from a template', () => {
     expect(made?.document?.file).toBe('')
     expect(made?.document?.versions).toEqual([])
     expect(made?.document?.approvals).toEqual([])
+  })
+})
+
+describe('a template that states durations instead of dates', () => {
+  const statuses = DEFAULT_STATUSES
+
+  const plain = (id: string, over: Partial<Task> = {}): Task =>
+    makeTask({ title: id, start: '', ...over, ...({ id } as Partial<Task>) })
+
+  it('dates the new project from the day it starts and the days each ticket claims', () => {
+    const tasks = [plain('a', { duration: 3 }), plain('b', { duration: 2, dependencies: ['a'] })]
+    const made = tasksFromTemplate(tasks, { start: '2026-03-02', statuses })
+    // Three days from the Monday, then the next one opens on the Thursday.
+    expect(made[0]).toMatchObject({ start: '2026-03-02', due: '2026-03-04' })
+    expect(made[1]).toMatchObject({ start: '2026-03-05', due: '2026-03-06' })
+  })
+
+  it('puts a milestone on its day, and leaves it without a start', () => {
+    const tasks = [plain('a', { duration: 2 }), plain('m', { type: 'milestone', dependencies: ['a'] })]
+    const made = tasksFromTemplate(tasks, { start: '2026-03-02', statuses })
+    expect(made[1]?.due).toBe('2026-03-04')
+    expect(made[1]?.start).toBe('')
+  })
+
+  it('keeps off weekends when the project does', () => {
+    const tasks = [plain('a', { duration: 5 }), plain('b', { duration: 1, dependencies: ['a'] })]
+    const calendar = makeWorkCalendar([1, 2, 3, 4, 5])
+    const made = tasksFromTemplate(tasks, { start: '2026-03-02', statuses, calendar })
+    // Monday to Friday, then the next Monday rather than the Saturday.
+    expect(made[0]).toMatchObject({ start: '2026-03-02', due: '2026-03-06' })
+    expect(made[1]).toMatchObject({ start: '2026-03-09', due: '2026-03-09' })
+  })
+
+  it('leaves a dated template alone, shifting it as it always did', () => {
+    const tasks = [plain('a', { start: '2026-01-05', due: '2026-01-09' })]
+    const made = tasksFromTemplate(tasks, { start: '2026-03-02', statuses })
+    expect(made[0]).toMatchObject({ start: '2026-03-02', due: '2026-03-06' })
+  })
+
+  it('dates what a lot holds, and lets the lot roll up from it', () => {
+    const lot = plain('lot', { type: 'phase', subtasks: [plain('x', { duration: 4 })] })
+    const made = tasksFromTemplate([lot], { start: '2026-03-02', statuses })
+    expect(made[0]?.subtasks[0]).toMatchObject({ start: '2026-03-02', due: '2026-03-05' })
+  })
+
+  it('does nothing at all without a start day', () => {
+    const tasks = [plain('a', { duration: 3 })]
+    const made = tasksFromTemplate(tasks, { start: '', statuses })
+    expect(made[0]).toMatchObject({ start: '', due: '' })
+  })
+})
+
+describe('what a template leaves open on purpose', () => {
+  const plainStatuses = DEFAULT_STATUSES
+
+  it('keeps a lone ticket undated even beside tickets the plan places', () => {
+    const tasks = [makeTask({ title: 'a', start: '', duration: 3 }), makeTask({ title: 'libre', start: '' })]
+    const made = tasksFromTemplate(tasks, { start: '2026-03-02', statuses: plainStatuses })
+    expect(made[0]?.start).toBe('2026-03-02')
+    expect(made[1]).toMatchObject({ start: '', due: '' })
+  })
+
+  it('places a ticket something else waits on, even when it claims no duration', () => {
+    const first = makeTask({ title: 'first', start: '' })
+    const second = makeTask({ title: 'second', start: '', dependencies: [first.id] })
+    const made = tasksFromTemplate([first, second], { start: '2026-03-02', statuses: plainStatuses })
+    expect(made[0]).toMatchObject({ start: '2026-03-02', due: '2026-03-02' })
+    expect(made[1]).toMatchObject({ start: '2026-03-03', due: '2026-03-03' })
   })
 })

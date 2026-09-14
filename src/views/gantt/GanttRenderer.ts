@@ -34,7 +34,7 @@ export interface RendererContext {
    * which is written before anyone knows when the project runs. It carries the real
    * tickets, because the ones being drawn are projections and must never be edited.
    */
-  relative: { realById: Map<string, Task>; plan: RelativePlan } | null
+  relative: { realById: Map<string, Task>; plan: RelativePlan; week: number } | null
   onRefresh: () => Promise<void>
   cleanupFns: (() => void)[]
 }

@@ -249,6 +249,30 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
     grid.createDiv()
   }
 
+  // A template is written before anyone knows when the project runs, so the honest thing
+  // it can say about a ticket is how long it takes. It shares the dates row's place in the
+  // grid, and appears nowhere else: in a real project the dates are the answer.
+  if (project.template && task.type !== 'milestone') {
+    renderPropRow(
+      grid,
+      t('field.duration'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        const input = cell.createEl('input', { type: 'number', cls: 'pm-prop-text pm-prop-duration' })
+        input.value = task.duration !== undefined && task.duration > 0 ? String(task.duration) : ''
+        input.placeholder = t('field.durationDays')
+        input.min = '1'
+        input.step = '1'
+        input.addEventListener('change', () => {
+          const days = Math.round(parseFloat(input.value))
+          task.duration = Number.isNaN(days) || days <= 0 ? undefined : days
+        })
+        return cell
+      },
+      'ruler'
+    )
+  }
+
   renderPropRow(
     grid,
     t('task.assignees'),

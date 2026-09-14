@@ -483,6 +483,8 @@ export const fr: Catalog = {
   'field.phase': 'Lot',
   'field.parentTask': 'Tâche parente',
   'field.date': 'Date',
+  'field.duration': 'Durée estimée',
+  'field.durationDays': 'jours',
   'field.start': 'Début',
   'field.completed': 'Terminée le',
   'field.tags': 'Étiquettes',

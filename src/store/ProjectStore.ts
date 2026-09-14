@@ -1087,9 +1087,11 @@ export class ProjectStore implements TaskSource {
     project.savedViews = structuredClone(source.savedViews)
     if (opts.parentPath) project.parentPath = opts.parentPath
     if (source.config) project.config = structuredClone(source.config)
+    const config = this.configFor(project)
     project.tasks = tasksFromTemplate(cloneTaskForest(source.tasks), {
       start: opts.start,
-      statuses: this.statusesFor(project)
+      statuses: config.statuses,
+      calendar: config.workCalendar
     })
     rebuildTaskIndex(project)
     this.hydratedBodies.add(project)

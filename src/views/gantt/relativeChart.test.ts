@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { makeTask, type Task } from '../../types'
 import { relativePlan } from '../../store/RelativePlan'
-import { projectOntoDays, realTasksById, relativeTimelineConfig, RELATIVE_ANCHOR } from './relativeChart'
+import { ALL_DAYS, makeWorkCalendar } from '../../store/WorkCalendar'
+import { projectOntoDays, realTasksById, relativeTimelineConfig, relativeWeek, RELATIVE_ANCHOR } from './relativeChart'
 
 const task = (id: string, over: Partial<Task> = {}): Task =>
   makeTask({ title: id, start: '', ...over, ...({ id } as Partial<Task>) })
@@ -53,20 +54,20 @@ describe('the axis a dateless plan is drawn against', () => {
     // would stretch a six-week template across a quarter of a century.
     const tasks = [task('a'), task('b', { dependencies: ['a'] })]
     const plan = relativePlan(tasks)
-    const cfg = relativeTimelineConfig(plan, 'day')
+    const cfg = relativeTimelineConfig(plan, 'day', ALL_DAYS)
     expect(cfg.startDate.toString()).toBe(RELATIVE_ANCHOR)
     expect(cfg.totalDays).toBeLessThan(60)
   })
 
   it('runs in whole weeks, so the last band is as wide as the others', () => {
     const tasks = [task('a', { start: '2026-05-01', due: '2026-06-30' })]
-    const cfg = relativeTimelineConfig(relativePlan(tasks), 'day')
+    const cfg = relativeTimelineConfig(relativePlan(tasks), 'day', ALL_DAYS)
     expect(cfg.totalDays % 7).toBe(0)
     expect(cfg.totalDays).toBeGreaterThanOrEqual(61)
   })
 
   it('gives a one-task template a readable width instead of a sliver', () => {
-    const cfg = relativeTimelineConfig(relativePlan([task('a')]), 'day')
+    const cfg = relativeTimelineConfig(relativePlan([task('a')]), 'day', ALL_DAYS)
     expect(cfg.totalDays).toBe(28)
   })
 })
@@ -86,9 +87,25 @@ describe('a template read end to end', () => {
     // Each one begins the day after the one it waits on, whatever dates it carried —
     // except after a milestone, which takes no time, so the work resumes on its day.
     expect(drawn.map((t) => t.start)).toEqual(['2000-01-03', '2000-01-05', '2000-01-15', '2000-01-15', '2000-02-03'])
-    const cfg = relativeTimelineConfig(plan, 'day')
+    const cfg = relativeTimelineConfig(plan, 'day', ALL_DAYS)
     expect(cfg.startDate.toString()).toBe(RELATIVE_ANCHOR)
     // Six whole weeks of axis: enough for the plan, and no more.
     expect(cfg.totalDays).toBe(42)
+  })
+})
+
+describe('how wide a week is on a dateless axis', () => {
+  const weekdays = makeWorkCalendar([1, 2, 3, 4, 5])
+
+  it('is seven columns when every day counts, five when only weekdays do', () => {
+    expect(relativeWeek(ALL_DAYS)).toBe(7)
+    expect(relativeWeek(weekdays)).toBe(5)
+  })
+
+  it('bands the axis in the project own weeks, so a fortnight is two of them', () => {
+    const tasks = [task('a', { duration: 10 })]
+    const cfg = relativeTimelineConfig(relativePlan(tasks, weekdays), 'day', weekdays)
+    expect(cfg.totalDays % 5).toBe(0)
+    expect(cfg.totalDays).toBe(20)
   })
 })

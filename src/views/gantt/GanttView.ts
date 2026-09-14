@@ -11,7 +11,7 @@ import type { SubView } from '../SubView'
 import type { TimelineCfg } from './TimelineConfig'
 import { buildTimelineConfig, dateToX, xToDate, HEADER_HEIGHT, ROW_HEIGHT, LABEL_WIDTH } from './TimelineConfig'
 import { relativePlan } from '../../store/RelativePlan'
-import { projectOntoDays, realTasksById, relativeTimelineConfig, RELATIVE_ANCHOR } from './relativeChart'
+import { projectOntoDays, realTasksById, relativeTimelineConfig, relativeWeek, RELATIVE_ANCHOR } from './relativeChart'
 import { makeDragState } from './GanttDragHandler'
 import type { DragState } from './GanttDragHandler'
 import { makeLinkState, cancelLink } from './GanttLinkHandler'
@@ -109,15 +109,16 @@ export class GanttView implements SubView {
     // A template is written before anyone knows when the project will run, so its chart
     // is laid out from the links instead: the plan they imply, projected onto days from
     // an anchor the reader never sees, with the real tickets kept beside it for editing.
-    const plan = this.scope.primary?.template ? relativePlan(activeTasks) : null
-    this.relative = plan ? { realById: realTasksById(activeTasks), plan } : null
+    const calendar = this.scope.config.workCalendar
+    const plan = this.scope.primary?.template ? relativePlan(activeTasks, calendar) : null
+    this.relative = plan ? { realById: realTasksById(activeTasks), plan, week: relativeWeek(calendar) } : null
     const charted = plan ? projectOntoDays(activeTasks, plan, RELATIVE_ANCHOR) : activeTasks
     this.flatTasks = flattenTasks(charted).filter((f) => f.visible || f.depth === 0)
     this.rows = this.buildRows(charted)
     // The ordinary axis reaches from today to the work and back; a template's counts
     // from its own day one, so it gets one built from the plan instead.
     this.cfg = plan
-      ? relativeTimelineConfig(plan, this.chartGranularity())
+      ? relativeTimelineConfig(plan, this.chartGranularity(), calendar)
       : buildTimelineConfig(charted, this.granularity)
 
     this.renderGranularityControls()

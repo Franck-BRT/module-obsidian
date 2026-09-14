@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.30.0] - 2026-09-14
+
+### Added
+
+- **An estimated duration on a ticket**, which is what one actually knows at template
+  stage: how long a thing takes, when nobody has settled on when it happens. It is the
+  first thing the template's chart reads — before any date left lying in the template —
+  so a lot given three weeks is drawn three weeks wide
+- **The days are the project's own days.** A project that keeps off weekends and holidays
+  counts a duration in working days and bands its template axis five columns to the week,
+  so a fortnight is two bands there exactly as it is on a real calendar. A project on
+  plain days counts plain days and keeps its seven. The field says only "jours", because
+  it means the same days everything else in the project means
+- **A template written in durations produces a dated project.** Creating a project from
+  one now lays the plan down from the day it starts — the same forward pass its chart is
+  drawn from, counted on the project's calendar — so a template with no dates at all comes
+  out fully scheduled instead of blank. A ticket the template dated still keeps the shift
+  it always got, and a ticket the template says nothing about at all — no duration, no
+  link, nothing waiting on it — is deliberately open and stays open
+- The field appears **in a template and nowhere else**: in a real project the dates are the
+  answer, and a second one beside them would only be a way to disagree with itself
+
 ## [2.29.1] - 2026-09-14
 
 ### Fixed

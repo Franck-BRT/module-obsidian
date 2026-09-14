@@ -504,6 +504,8 @@ export const en = {
   'field.phase': 'Phase',
   'field.parentTask': 'Parent task',
   'field.date': 'Date',
+  'field.duration': 'Estimated duration',
+  'field.durationDays': 'days',
   'field.start': 'Start',
   'field.completed': 'Completed',
   'field.tags': 'Tags',

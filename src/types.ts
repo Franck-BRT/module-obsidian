@@ -157,7 +157,13 @@ export interface Task {
    */
   dependencyOptions?: Record<string, DependencyOption>
   recurrence?: Recurrence
-  timeEstimate?: number // hours
+  timeEstimate?: number // hours of effort
+  /**
+   * How long the work takes, in days, when nobody has settled on when it happens — which
+   * is the normal state of a template. Counted the way the project counts every other
+   * day: plain days, or working days when the project keeps off weekends and holidays.
+   */
+  duration?: number
   timeLogs?: TimeLog[]
   customFields: Record<string, unknown>
   /** Set on a ticket of type `document`: its file, its versions, its approvals. */

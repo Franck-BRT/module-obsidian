@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.29.1
+version: 2.30.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.29.1
+# Recette — Black Projects 2.30.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -541,6 +541,30 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] **Réglages d'un projet existant** → **Type → Modèle** : ✅ **Attendu** : il devient un modèle
       et quitte l'arbre
 
+### Durée estimée [N]
+
+> **Nouveau en 2.30.0** : dans un modèle, un ticket peut dire **combien de temps il prend**
+> sans dire **quand**. C'est cette durée que le Gantt du modèle dessine, et c'est elle qui
+> date le projet créé ensuite.
+
+- [ ] Ouvrir une tâche **dans un modèle** : ✅ **Attendu** : un champ **« Durée estimée »**
+      (en jours) sous les dates
+- [ ] Ouvrir une tâche **dans un projet normal** : ✅ **Attendu** : le champ **n'y est pas**
+- [ ] Sur un **jalon** : ✅ **Attendu** : pas de champ non plus (un jalon ne dure pas)
+- [ ] Saisir **15** sur une tâche du modèle : ✅ **Attendu** : sa barre fait **15 jours** dans
+      le Gantt du modèle, et ce qui la suit est repoussé d'autant
+- [ ] Mettre une durée sur une tâche qui a **aussi** des dates : ✅ **Attendu** : c'est la
+      **durée** qui l'emporte (dans un modèle, les dates ne sont qu'un reste)
+- [ ] Saisir **0** ou vider le champ : ✅ **Attendu** : retour au comportement par défaut
+      (une barre d'un jour), et la ligne `duration` **disparaît** du fichier
+- [ ] Mettre des durées sur un **lot** et ses tâches : ✅ **Attendu** : le lot **couvre** ce
+      qu'il contient
+- [ ] Activer les **jours ouvrés** (réglages du projet) : ✅ **Attendu** : l'axe du modèle
+      compte **5 colonnes** par semaine — une durée de 10 fait exactement **deux semaines**
+- [ ] Les désactiver : ✅ **Attendu** : l'axe repasse à **7 colonnes** par semaine
+
+**Constaté :**
+
 ### Créer un projet à partir d'un modèle
 
 - [ ] **« + nouveau projet »** : ✅ **Attendu** : un champ **« À partir d'un modèle »** propose les modèles
@@ -562,6 +586,19 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Créer depuis un modèle **en choisissant un parent** (un programme) : ✅ **Attendu** : le projet
       arrive bien dans le programme
 - [ ] **Sans** choisir de modèle : ✅ **Attendu** : un projet vide, comme avant
+
+**Depuis un modèle écrit en durées (nouveau en 2.30.0)**
+
+- [ ] Faire un modèle **sans aucune date** : trois tâches enchaînées, durées **3**, **2**, **5**
+- [ ] Créer un projet depuis lui en choisissant un **lundi** : ✅ **Attendu** : le projet sort
+      **entièrement daté** — la première tâche commence ce lundi, la deuxième après les 3 jours,
+      la troisième après les 2 suivants
+- [ ] ✅ **Attendu** : avec les **jours ouvrés** activés, aucune date ne tombe un week-end
+- [ ] Un **jalon** dans le modèle : ✅ **Attendu** : il reçoit **sa date**, et **pas** de date de début
+- [ ] Une tâche du modèle **sans durée, sans lien et dont rien ne dépend** : ✅ **Attendu** : elle
+      reste **sans date**, comme avant
+- [ ] Un modèle **daté** (l'ancien cas) : ✅ **Attendu** : rien ne change, le décalage en bloc
+      fonctionne comme avant
 
 **Constaté :**
 

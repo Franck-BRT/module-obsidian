@@ -158,6 +158,7 @@ export function mapRawToTask(r: Record<string, unknown>, overrides?: Partial<Tas
         ? ({ ...(r.recurrence as Task['recurrence']) } as Task['recurrence'])
         : undefined,
     timeEstimate: typeof r.timeEstimate === 'number' ? r.timeEstimate : undefined,
+    duration: typeof r.duration === 'number' && r.duration > 0 ? r.duration : undefined,
     timeLogs: Array.isArray(r.timeLogs)
       ? (r.timeLogs as { date: string; hours: number; note: string }[]).map((log) => ({ ...log }))
       : undefined,

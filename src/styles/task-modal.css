@@ -206,3 +206,8 @@ a.pm-subtask-title--done:hover {
   font-size: var(--font-smallest);
   line-height: 1.4;
 }
+
+/* A duration is two digits, not a sentence: it keeps a field's height without its width. */
+.pm-prop-duration {
+  width: 7em;
+}

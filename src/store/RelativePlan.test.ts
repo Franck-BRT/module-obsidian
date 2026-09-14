@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeTask, type DependencyOption, type Task } from '../types'
 import { earliestStart, lengthOf, relativePlan } from './RelativePlan'
+import { makeWorkCalendar } from './WorkCalendar'
 
 const task = (id: string, over: Partial<Task> = {}): Task =>
   makeTask({ title: id, start: '', ...over, ...({ id } as Partial<Task>) })
@@ -200,5 +201,44 @@ describe('what the arrows must never show', () => {
       const succ = plan.bars.get(to)
       expect(pred && succ && succ.offset >= pred.offset + pred.length).toBe(true)
     }
+  })
+})
+
+describe('the duration a template states, when it has no dates to give', () => {
+  it('is how long the bar is', () => {
+    expect(lengthOf(task('a', { duration: 15 }))).toBe(15)
+  })
+
+  it('is believed over dates left lying in the template', () => {
+    expect(lengthOf(task('a', { start: '2026-01-05', due: '2026-01-06', duration: 20 }))).toBe(20)
+  })
+
+  it('never shrinks a bar to nothing, and never revives a milestone', () => {
+    expect(lengthOf(task('a', { duration: 0 }))).toBe(1)
+    expect(lengthOf(task('m', { type: 'milestone', duration: 30 }))).toBe(0)
+  })
+
+  it('counts the days the project counts: a dated week is five of them on weekdays', () => {
+    const weekdays = makeWorkCalendar([1, 2, 3, 4, 5])
+    // Monday the 5th to Friday the 16th: ten working days, fourteen plain ones.
+    const dated = task('a', { start: '2026-01-05', due: '2026-01-16' })
+    expect(lengthOf(dated, weekdays)).toBe(10)
+    expect(lengthOf(dated)).toBe(12)
+  })
+
+  it('pushes what follows by the days it claims', () => {
+    const tasks = [task('a', { duration: 15 }), task('b', { dependencies: ['a'], dependencyOptions: { a: fs() } })]
+    expect(relativePlan(tasks).bars.get('b')?.offset).toBe(15)
+  })
+
+  it('makes a lot as long as the durations it holds', () => {
+    const lot = task('lot', {
+      type: 'phase',
+      subtasks: [
+        task('x', { duration: 3 }),
+        task('y', { duration: 4, dependencies: ['x'], dependencyOptions: { x: fs() } })
+      ]
+    })
+    expect(relativePlan([lot]).bars.get('lot')).toEqual({ offset: 0, length: 7 })
   })
 })
