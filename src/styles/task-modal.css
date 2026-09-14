@@ -198,3 +198,11 @@ a.pm-subtask-title--done:hover {
 .pm-confirm-modal {
   max-width: 380px;
 }
+
+/* A line of guidance under a field, or under the title of a form that needs one. */
+.pm-prop-hint {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  line-height: 1.4;
+}

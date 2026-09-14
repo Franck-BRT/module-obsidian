@@ -61,6 +61,7 @@ export interface TaskSource {
   reassignIds(project: Project, taskIds: string[], newProjectId: boolean): Promise<void>
   /** A full copy of a project under a new title, every task cloned with a fresh id. */
   duplicateProject(source: Project, title: string): Promise<Project>
+  createFromTemplate(source: Project, opts: CreateFromTemplateOptions): Promise<Project>
   importNoteAsTask(project: Project, file: TFile, opts: ImportNoteOptions): Promise<'imported' | 'skipped'>
   importTaskForest(
     project: Project,
@@ -89,4 +90,13 @@ export interface TaskSource {
   scheduleAfterChange(project: Project, changedTaskId?: string): Promise<number>
   saveTaskAttachment(project: Project, task: Task, fileName: string, data: ArrayBuffer): Promise<TFile>
   findTaskFileConflict(project: Project, task: Task): TaskFileNameConflictError | null
+}
+
+/** What a new project needs beyond the template it is made from. */
+export interface CreateFromTemplateOptions {
+  title: string
+  folder: string
+  /** The day it starts. Empty keeps the template's own dates unchanged. */
+  start: string
+  parentPath?: string
 }

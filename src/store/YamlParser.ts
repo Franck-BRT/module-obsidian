@@ -5,6 +5,8 @@ export const TASK_FRONTMATTER_KEY = 'pm-task'
 export const COLLECTION_FRONTMATTER_KEY = 'pm-collection'
 /** Marks a project note as a programme: it groups projects and holds no work itself. */
 export const PROGRAM_FRONTMATTER_KEY = 'pm-program'
+/** Marks a project note as a template: a shape to start projects from, never run itself. */
+export const TEMPLATE_FRONTMATTER_KEY = 'pm-template'
 
 export function parseFrontmatter(content: string): {
   frontmatter: Record<string, unknown> | null

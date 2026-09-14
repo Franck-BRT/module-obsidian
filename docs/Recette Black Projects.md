@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.27.0
+version: 2.28.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.27.0
+# Recette — Black Projects 2.28.0
 
-Plan de test manuel pour le fork. Les **733 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -517,6 +517,51 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] **[N]** ✅ **Attendu** : « En cours » ne se confond plus ni avec « À faire » ni avec « Annulé »
 - [ ] **[N]** Ajouter un **nouveau statut** dans les réglages : ✅ **Attendu** : il démarre sur le
       nouveau gris neutre
+
+**Constaté :**
+
+## 7octies. Modèles de projet [N]
+
+> **Nouveau en 2.28.0** : un **modèle** porte la forme qu'un type de projet prend toujours
+> — ses lots, ses jalons, ses documents attendus. Il se construit comme un projet, et ne
+> tourne jamais.
+
+### Créer un modèle
+
+- [ ] Première page → ✅ **Attendu** : un bouton **« + nouveau modèle »** à côté des deux autres
+- [ ] Le cliquer : ✅ **Attendu** : le formulaire s'intitule **« Nouveau modèle »** et explique
+      à quoi sert un modèle
+- [ ] Le créer, l'appeler « Lancement type » : ✅ **Attendu** : sa note porte `pm-template: true`
+- [ ] ✅ **Attendu** : il apparaît dans une section **« Modèles de projet »** en bas de la première page,
+      avec l'étiquette **Modèle**
+- [ ] ✅ **Attendu** : il n'apparaît **pas** dans l'arbre des projets, et n'est **pas** compté
+      dans « n projets »
+- [ ] L'ouvrir : ✅ **Attendu** : son en-tête porte l'étiquette **Modèle**
+- [ ] Y ajouter un **lot**, un **jalon**, une **tâche** et un **document attendu**, avec des dates
+- [ ] **Réglages d'un projet existant** → **Type → Modèle** : ✅ **Attendu** : il devient un modèle
+      et quitte l'arbre
+
+### Créer un projet à partir d'un modèle
+
+- [ ] **« + nouveau projet »** : ✅ **Attendu** : un champ **« À partir d'un modèle »** propose les modèles
+- [ ] ✅ **Attendu** : ce champ **n'apparaît pas** si aucun modèle n'existe, ni pour un **programme**
+- [ ] Choisir le modèle : ✅ **Attendu** : un champ **« Démarre le »** apparaît, rempli avec **aujourd'hui**
+- [ ] Choisir une date, créer : ✅ **Attendu** : un message dit de quel modèle il vient, et le projet s'ouvre
+- [ ] ✅ **Attendu** : il contient **les mêmes lots, jalons, tâches et documents**
+- [ ] ✅ **Attendu** : la **première date** du projet est le jour demandé, et les **écarts** entre
+      les dates du modèle sont conservés
+- [ ] ✅ **Attendu** : une tâche **sans date** dans le modèle reste **sans date**
+- [ ] ✅ **Attendu** : tout est **à faire** — aucun avancement, aucune date de fin, aucune heure passée,
+      même si le modèle contenait des tâches terminées
+- [ ] Le **document** : ✅ **Attendu** : il garde sa **référence**, son **émetteur** et ses **approbateurs**,
+      et repart **Attendu**, sans fichier ni visa
+- [ ] Les **dépendances** entre tâches du modèle : ✅ **Attendu** : elles existent dans le nouveau projet,
+      et pointent vers **ses** tâches, pas vers celles du modèle
+- [ ] Rouvrir le **modèle** : ✅ **Attendu** : il est **intact** — ses dates, ses statuts, son document
+- [ ] Créer un **second** projet depuis le même modèle : ✅ **Attendu** : les deux sont indépendants
+- [ ] Créer depuis un modèle **en choisissant un parent** (un programme) : ✅ **Attendu** : le projet
+      arrive bien dans le programme
+- [ ] **Sans** choisir de modèle : ✅ **Attendu** : un projet vide, comme avant
 
 **Constaté :**
 

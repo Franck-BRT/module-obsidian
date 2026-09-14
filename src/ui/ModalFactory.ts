@@ -347,8 +347,8 @@ export async function openTaskByPath(plugin: PMPlugin, filePath: string, onSave?
   openTaskModal(plugin, project, { task, onSave: () => onSave?.() })
 }
 
-export function openProjectCreate(plugin: PMPlugin, program = false, parentPath = ''): void {
-  new ProjectCreateModal(plugin.app, plugin, program, parentPath).open()
+export function openProjectCreate(plugin: PMPlugin, program = false, parentPath = '', template = false): void {
+  new ProjectCreateModal(plugin.app, plugin, program, template, parentPath).open()
 }
 
 export function openProjectPicker(

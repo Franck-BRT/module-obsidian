@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.28.0] - 2026-09-14
+
+### Added
+
+- **Project templates**: the shape a kind of project always starts with — its lots, its
+  milestones, the documents it will be waiting for — kept as a project so it is built
+  with the very same editor and views, and never run
+- A template is created from the first page, beside the project and programme buttons, or
+  by telling an existing project it is one. **Creating a project then offers to start from
+  one**, with the day it starts: every date in the template moves by the same gap, so a
+  plan laid out over months keeps its spacing instead of collapsing onto one day
+- **The shape comes across, the history does not.** Every ticket gets a new identity, with
+  the dependencies between them remapped to the copies; status goes back to the palette's
+  first, and progress, completion dates, logged hours and archive flags are all cleared. A
+  document keeps what describes it — its reference, its issue, who owes it, who signs it —
+  and loses the file and the signatures, which belong to the project that did the work
+- **A template is counted nowhere**: not in the project tree, not in the vault scope, not
+  in a collection, not in any total. It has its own list at the bottom of the first page,
+  and says what it is beside its name
+
 ## [2.27.0] - 2026-09-14
 
 ### Added

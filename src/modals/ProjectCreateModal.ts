@@ -1,4 +1,4 @@
-import { App, ButtonComponent, ExtraButtonComponent, Keymap, Modal, setIcon } from 'obsidian'
+import { App, ButtonComponent, ExtraButtonComponent, Keymap, Modal, Notice, setIcon } from 'obsidian'
 import type PMPlugin from '../main'
 import { DEFAULT_PROJECT_COLOR, DEFAULT_PROJECT_ICON } from '../types'
 import { folderOf, projectFilePath, projectFolderOf } from '../store'
@@ -6,9 +6,13 @@ import { safeAsync, saveShortcutLabel } from '../utils'
 import { renderPersonPicker } from '../ui/PersonPicker'
 import { renderPropRow } from '../ui/FormField'
 import { renderIconControl, renderSelectControl } from '../ui/composites/properties'
+import { today } from '../dates'
 import { t } from '../i18n'
 
 interface Draft {
+  /** The template this project starts from, and the day its plan is hung on. */
+  templatePath: string
+  start: string
   title: string
   icon: string
   color: string
@@ -20,6 +24,8 @@ interface Draft {
 /** Everything a project needs to exist, asked once. Nothing is written until Create. */
 export class ProjectCreateModal extends Modal {
   private draft: Draft = {
+    templatePath: '',
+    start: '',
     title: '',
     icon: DEFAULT_PROJECT_ICON,
     color: DEFAULT_PROJECT_COLOR,
@@ -44,6 +50,8 @@ export class ProjectCreateModal extends Modal {
      * and the parent it offers.
      */
     private program = false,
+    /** Creating a template rather than a project: the same form, a different note. */
+    private template = false,
     /** Preset when the form is opened from the thing the new project belongs to. */
     parentPath = ''
   ) {
@@ -61,11 +69,14 @@ export class ProjectCreateModal extends Modal {
 
     const body = contentEl.createDiv('pm-te-body')
     this.renderTitle(body)
+    // Said where the idea is first met, rather than left to be worked out.
+    if (this.template) body.createDiv({ cls: 'pm-prop-hint', text: t('template.emptyHint') })
 
     const grid = body.createDiv('pm-te-props').createDiv('pm-prop-grid')
     this.renderIcon(grid)
     this.renderColor(grid)
     this.renderParent(grid)
+    if (!this.program) this.renderTemplate(grid)
     this.renderMembers(grid)
 
     this.renderDescription(body)
@@ -92,7 +103,7 @@ export class ProjectCreateModal extends Modal {
     this.crumbFolder = crumb.createSpan({ cls: 'pm-te-crumb-name', text: this.targetFolder() })
     const sep = crumb.createSpan({ cls: 'pm-te-crumb-sep' })
     setIcon(sep, 'chevron-right')
-    crumb.createSpan({ text: this.program ? t('program.new') : t('project.new') })
+    crumb.createSpan({ text: this.template ? t('template.new') : this.program ? t('program.new') : t('project.new') })
 
     this.header.createDiv('pm-te-header-spacer')
 
@@ -109,7 +120,11 @@ export class ProjectCreateModal extends Modal {
     const wrap = parent.createDiv('pm-te-title-wrap')
     this.titleInput = wrap.createEl('textarea', { cls: 'pm-te-title' })
     this.titleInput.rows = 1
-    this.titleInput.placeholder = this.program ? t('program.name') : t('project.name')
+    this.titleInput.placeholder = this.template
+      ? t('template.name')
+      : this.program
+        ? t('program.name')
+        : t('project.name')
     this.titleInput.spellcheck = false
     this.titleError = wrap.createDiv({ cls: 'pm-modal-title-error', attr: { hidden: '' } })
 
@@ -209,6 +224,61 @@ export class ProjectCreateModal extends Modal {
     )
   }
 
+  /**
+   * The template a new project starts from, and the day it starts.
+   *
+   * Offered on a project only: a programme holds projects rather than work, and a
+   * template is built from nothing and then filled in.
+   */
+  private renderTemplate(parent: HTMLElement): void {
+    const templates = this.plugin.index.templateRefs()
+    if (!templates.length) return
+    renderPropRow(
+      parent,
+      t('template.from'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        const draw = (): void => {
+          cell.empty()
+          renderSelectControl({
+            container: cell,
+            value: this.draft.templatePath,
+            options: [
+              { id: '', label: t('template.none') },
+              ...templates.map((ref) => ({ id: ref.path, label: ref.title, color: ref.color }))
+            ],
+            onChange: (path) => {
+              this.draft.templatePath = path
+              // A template lays out a plan; without a day to hang it on there is nothing
+              // to move it to, so the field appears with today already in it.
+              if (path && !this.draft.start) this.draft.start = today().toString()
+              this.onOpen()
+            }
+          })
+        }
+        draw()
+        return cell
+      },
+      'copy'
+    )
+    if (!this.draft.templatePath) return
+    renderPropRow(
+      parent,
+      t('template.startOn'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        const input = cell.createEl('input', { type: 'date', cls: 'pm-input' })
+        input.value = this.draft.start
+        input.addEventListener('change', () => {
+          this.draft.start = input.value
+        })
+        cell.createDiv({ cls: 'pm-prop-hint', text: t('template.startHint') })
+        return cell
+      },
+      'calendar'
+    )
+  }
+
   private renderMembers(parent: HTMLElement): void {
     renderPropRow(
       parent,
@@ -303,13 +373,36 @@ export class ProjectCreateModal extends Modal {
   private readonly create = safeAsync(async () => {
     const title = this.draft.title.trim()
     if (!title || this.app.vault.getAbstractFileByPath(this.targetPath(title))) return
+    const fromTemplate = this.draft.templatePath
+      ? await this.plugin.store.loadProjectByPath(this.draft.templatePath)
+      : null
+    if (fromTemplate) {
+      const made = await this.plugin.store.createFromTemplate(fromTemplate, {
+        title,
+        folder: this.targetFolder(),
+        start: this.draft.start,
+        ...(this.draft.parentPath ? { parentPath: this.draft.parentPath } : {})
+      })
+      // What the form says overrides what the template brought, where the two differ.
+      await this.plugin.store.updateProject(made, {
+        icon: this.draft.icon,
+        color: this.draft.color,
+        ...(this.draft.description ? { description: this.draft.description } : {}),
+        ...(this.draft.teamMembers.length ? { teamMembers: this.draft.teamMembers } : {})
+      })
+      new Notice(t('template.madeFrom', { title: fromTemplate.title }))
+      this.close()
+      await this.plugin.router.openProjectLink(made.filePath)
+      return
+    }
     const project = await this.plugin.store.createProject(title, this.targetFolder(), {
       icon: this.draft.icon,
       color: this.draft.color,
       description: this.draft.description,
       teamMembers: this.draft.teamMembers,
       parentPath: this.draft.parentPath || undefined,
-      ...(this.program ? { program: true } : {})
+      ...(this.program ? { program: true } : {}),
+      ...(this.template ? { template: true } : {})
     })
     this.close()
     await this.plugin.router.openProjectLink(project.filePath)

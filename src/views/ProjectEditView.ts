@@ -215,33 +215,35 @@ export class ProjectEditView extends ItemView {
     })
 
     /**
-     * A project that groups projects rather than holding work. Offered here as well as
-     * at creation, because a vault has parent projects that predate programmes and no
-     * other way to say what they are.
+     * What this note is: work, a container for projects, or a shape to start from. All
+     * three are projects on disk, so the choice is offered here rather than only at
+     * creation — a vault holds parent projects older than programmes, and a project
+     * worth repeating is usually recognised as a template only after it has been run.
      */
-    renderPropRow(props, t('program.one'), () => {
+    renderPropRow(props, t('project.kind'), () => {
       const cell = createDiv('pm-prop-value')
+      const current = project.template ? 'template' : project.program ? 'program' : 'project'
       renderSelectControl({
         container: cell,
-        value: project.program ? 'yes' : 'no',
+        value: current,
         options: [
-          { id: 'no', label: t('common.project') },
-          { id: 'yes', label: t('program.one') }
+          { id: 'project', label: t('common.project') },
+          { id: 'program', label: t('program.one') },
+          { id: 'template', label: t('template.one') }
         ],
         onChange: safeAsync(async (id) => {
-          const program = id === 'yes'
-          if (program === !!project.program) return
-          // Its own tickets are not touched — they stay and stay visible — but no more
-          // can be added to it, which is worth saying before it happens.
+          if (id === current) return
+          // Its own tickets are not touched — they stay and stay visible — but a
+          // programme takes no more, which is worth saying before it happens.
           const own = flattenTasks(project.tasks).length
-          if (program && own) {
+          if (id === 'program' && own) {
             const ok = await confirmDialog(this.app, t('program.convertWarning', { count: own }))
             if (!ok) {
               this.render()
               return
             }
           }
-          this.save({ program })
+          this.save({ program: id === 'program', template: id === 'template' })
           this.render()
         })
       })

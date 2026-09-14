@@ -43,6 +43,10 @@ export function renderProjectListToolbar(ctx: ProjectListContext): void {
   new ButtonComponent(ctx.toolbarEl)
     .setButtonText(t('program.newButton'))
     .onClick(() => openProjectCreate(ctx.plugin, true))
+  // And for the shape a project can start from.
+  new ButtonComponent(ctx.toolbarEl)
+    .setButtonText(t('template.newButton'))
+    .onClick(() => openProjectCreate(ctx.plugin, false, '', true))
 }
 
 function countLine(ctx: ProjectListContext): string {
@@ -55,6 +59,8 @@ function countLine(ctx: ProjectListContext): string {
   if (programs) bits.push(t('count.programs', { count: programs }))
   const collections = ctx.plugin.index.collectionRefs().length
   if (collections) bits.push(t('count.collections', { count: collections }))
+  const templates = ctx.plugin.index.templateRefs().length
+  if (templates) bits.push(t('count.templates', { count: templates }))
   if (behind) bits.push(t('project.behindCount', { count: behind }))
   return bits.join(' · ')
 }
@@ -83,6 +89,47 @@ export function renderProjectListContent(ctx: ProjectListContext): void {
   for (const column of COLUMNS) headRow.createEl('th', { text: column.label, cls: column.cls })
   renderRows(ctx, table.createEl('tbody'), roots, [])
   renderCollections(ctx)
+  renderTemplates(ctx)
+}
+
+/**
+ * Templates come last, in their own list: they are shapes rather than work, and are
+ * counted nowhere else — not in the tree, not in a collection, not in the vault scope.
+ */
+function renderTemplates(ctx: ProjectListContext): void {
+  const refs = ctx.plugin.index.templateRefs()
+  if (refs.length === 0) return
+  const section = ctx.contentEl.createDiv('pm-collection-section')
+  section.createEl('h3', { text: t('template.section'), cls: 'pm-section-label' })
+  const wrapper = section.createDiv('pm-table-wrapper')
+  wrapper.setAttr('data-borders', ctx.plugin.settings.lineBorders)
+  const table = wrapper.createEl('table', { cls: 'pm-table pm-project-table' })
+  const tbody = table.createEl('tbody')
+
+  for (const ref of refs) {
+    const { total, done } = ctx.plugin.index.counts(ref)
+    new ProjectRow(tbody, {
+      title: ref.title,
+      icon: ref.icon,
+      color: ref.color,
+      depth: 0,
+      treeGuides: null,
+      isLastChild: true,
+      childCount: 0,
+      collapsed: false,
+      tasksDone: done,
+      tasksTotal: total,
+      overdue: 0,
+      members: [],
+      badge: t('template.badge'),
+      dueLabel: '',
+      dueUrgency: 'normal',
+      onToggleCollapsed: () => {},
+      onClick: safeAsync(() => ctx.plugin.router.openScope({ kind: 'project', path: ref.path })),
+      onContextMenu: (e) => openProjectContextMenu(ctx, ref, e),
+      onActions: (e) => openProjectContextMenu(ctx, ref, e)
+    })
+  }
 }
 
 /**

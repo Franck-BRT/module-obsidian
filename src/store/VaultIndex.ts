@@ -8,7 +8,8 @@ import {
   COLLECTION_FRONTMATTER_KEY,
   FRONTMATTER_KEY,
   PROGRAM_FRONTMATTER_KEY,
-  TASK_FRONTMATTER_KEY
+  TASK_FRONTMATTER_KEY,
+  TEMPLATE_FRONTMATTER_KEY
 } from './YamlParser'
 import { customFieldList, stringList } from './YamlHydrator'
 import { projectPathForTaskPath, resolveVaultLink } from './vaultFs'
@@ -29,6 +30,8 @@ export interface ProjectRef {
   parentPath: string | undefined
   /** A programme: it groups projects and holds no work of its own. */
   program: boolean
+  /** A template: a shape to start projects from, kept out of the lists and the scopes. */
+  template: boolean
   /** Status ids the project's own palette defines. Null inherits the global palette. */
   ownStatusIds: string[] | null
   /** Which of those its own palette marks complete. Null inherits the global palette. */
@@ -207,8 +210,20 @@ export class VaultIndex {
     return () => this.changeHandlers.delete(handler)
   }
 
+  /**
+   * The projects of the vault: the ones that are being run.
+   *
+   * Templates are not among them — they are a shape to start from, not work in progress
+   * — and leaving them out here is what keeps them out of the project list, the tree,
+   * the vault scope and every count, in one place rather than in each of them.
+   */
   projectRefs(): ProjectRef[] {
-    return [...this.projects.values()].sort((a, b) => a.title.localeCompare(b.title))
+    return [...this.projects.values()].filter((ref) => !ref.template).sort((a, b) => a.title.localeCompare(b.title))
+  }
+
+  /** The templates, for the list that offers them and the picker that starts from one. */
+  templateRefs(): ProjectRef[] {
+    return [...this.projects.values()].filter((ref) => ref.template).sort((a, b) => a.title.localeCompare(b.title))
   }
 
   /** Projects with no parent, plus any whose parent link is broken or circular. */
@@ -222,7 +237,7 @@ export class VaultIndex {
     if (!paths) return []
     return paths
       .map((child) => this.projects.get(child))
-      .filter((ref): ref is ProjectRef => ref !== undefined)
+      .filter((ref): ref is ProjectRef => ref !== undefined && !ref.template)
       .sort((a, b) => a.title.localeCompare(b.title))
   }
 
@@ -353,8 +368,9 @@ export class VaultIndex {
     return this.taskById.get(taskId) ?? null
   }
 
+  /** Every task of every project being run. A template's tasks are a shape, not work. */
   allTaskRefs(): TaskRef[] {
-    return [...this.tasks.values()]
+    return [...this.tasks.values()].filter((ref) => !ref.projectPath || !this.projects.get(ref.projectPath)?.template)
   }
 
   /**
@@ -471,6 +487,7 @@ export class VaultIndex {
       customFields: customFieldList(frontmatter.customFields),
       parentPath: resolveVaultLink(this.app, frontmatter.parent, path),
       program: frontmatter[PROGRAM_FRONTMATTER_KEY] === true,
+      template: frontmatter[TEMPLATE_FRONTMATTER_KEY] === true,
       ownStatusIds: own ? own.map((entry) => entry.id as string) : null,
       completeStatusIds: own ? own.filter((entry) => entry.complete === true).map((entry) => entry.id as string) : null,
       autoArchiveDays: ownAutoArchiveDays(frontmatter),

@@ -57,7 +57,8 @@ import {
   resolveVaultLink,
   TASK_FOLDER_NAME
 } from './vaultFs'
-import type { ImportNoteOptions, TaskSource } from './TaskSource'
+import type { CreateFromTemplateOptions, ImportNoteOptions, TaskSource } from './TaskSource'
+import { tasksFromTemplate } from './Template'
 import { t } from '../i18n'
 
 /** 'fm' writes via processFrontMatter; 'full' rewrites the body too, via vault.process. */
@@ -1052,6 +1053,44 @@ export class ProjectStore implements TaskSource {
     project.parentPath = source.parentPath
     if (source.config) project.config = structuredClone(source.config)
     project.tasks = cloneTaskForest(source.tasks)
+    rebuildTaskIndex(project)
+    this.hydratedBodies.add(project)
+    for (const { task } of flattenTasks(project.tasks)) this.hydratedBodies.add(task)
+    await this.saveProject(project)
+    return project
+  }
+
+  /**
+   * A new project with a template's shape and none of its history.
+   *
+   * Built on the same machinery as a duplicate — the template's tasks are cloned, so
+   * every id is new and the dependencies between them are remapped to the copies — and
+   * then passed through `tasksFromTemplate`, which is where "none of its history" is
+   * decided and tested. The template itself is untouched, and the copy is a project: the
+   * flag does not come along.
+   */
+  async createFromTemplate(source: Project, opts: CreateFromTemplateOptions): Promise<Project> {
+    const filePath = projectFilePath(opts.title, opts.folder)
+    if (this.app.vault.getAbstractFileByPath(filePath) || this.app.vault.getAbstractFileByPath(folderOf(filePath))) {
+      throw new Error(`A project named "${opts.title}" already exists here.`)
+    }
+
+    await this.loadProjectBody(source)
+    for (const { task } of flattenTasks(source.tasks)) await this.loadTaskBody(task)
+
+    const project = makeProject(opts.title, filePath)
+    project.description = source.description
+    project.color = source.color
+    project.icon = source.icon
+    project.customFields = structuredClone(source.customFields)
+    project.teamMembers = [...source.teamMembers]
+    project.savedViews = structuredClone(source.savedViews)
+    if (opts.parentPath) project.parentPath = opts.parentPath
+    if (source.config) project.config = structuredClone(source.config)
+    project.tasks = tasksFromTemplate(cloneTaskForest(source.tasks), {
+      start: opts.start,
+      statuses: this.statusesFor(project)
+    })
     rebuildTaskIndex(project)
     this.hydratedBodies.add(project)
     for (const { task } of flattenTasks(project.tasks)) this.hydratedBodies.add(task)

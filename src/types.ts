@@ -195,6 +195,12 @@ export interface Project {
    * the figures of the projects underneath.
    */
   program?: boolean
+  /**
+   * A template: the shape a kind of project starts with — its lots, its milestones, the
+   * documents it will be waiting for — kept as a project so it is built with the same
+   * editor, and never run. A project made from one carries none of this flag.
+   */
+  template?: boolean
   /** Per-project overrides for the global settings. Absent fields inherit. */
   config?: ProjectConfig
   /** Not serialized. Rebuilt on load, maintained by the store's mutators. */
@@ -215,6 +221,7 @@ export type ProjectPatch = Partial<
     | 'config'
     | 'parentPath'
     | 'program'
+    | 'template'
   >
 >
 
