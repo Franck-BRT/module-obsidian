@@ -11,6 +11,7 @@ import {
   isTaskNotesInstalled
 } from './integrations/tasknotes'
 import { renderPaletteFields, renderStatusDoneToggle } from './ui/PaletteListEditor'
+import { viewModeOptions } from './views/viewModes'
 import { renderCustomFieldFields, renderCustomFieldOptions } from './ui/CustomFieldListEditor'
 import { renderPersonPicker } from './ui/PersonPicker'
 import { LOCALES, searchAliases, t } from './i18n'
@@ -86,13 +87,7 @@ export class PMSettingTab extends PluginSettingTab {
             control: {
               type: 'dropdown',
               key: 'defaultView',
-              options: {
-                table: t('common.table'),
-                gantt: t('common.gantt'),
-                kanban: t('common.board'),
-                library: t('view.library'),
-                dashboard: t('kpi.title')
-              }
+              options: Object.fromEntries(viewModeOptions().map((option) => [option.id, option.label]))
             }
           },
           {

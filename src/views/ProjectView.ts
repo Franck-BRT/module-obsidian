@@ -668,7 +668,7 @@ export class ProjectView extends ItemView {
     // Every sub-view dresses this one element, and the element outlives all of them, so
     // the last one's clothes come off before the next one puts its own on. Left on, a
     // previous view's `display: flex` was still governing the next view's children.
-    this.bodyEl.removeClasses([...SUBVIEW_CLASSES])
+    this.bodyEl.removeClasses(SUBVIEW_CLASSES)
     this.subview = null
 
     switch (this.currentView) {

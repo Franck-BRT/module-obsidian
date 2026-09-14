@@ -12,6 +12,7 @@ import { renderBulkActionBar } from './BulkActionBar'
 import type { BulkAction } from './BulkActionBar'
 import { renderSortControl } from '../SortControl'
 import { TASK_SORT_KEYS, sortKeyLabel } from '../sortOrder'
+import { SUBVIEW_CLASS } from '../subviewClasses'
 import { t } from '../../i18n'
 
 const taskCount = (n: number) => t('count.tasks', { count: n })
@@ -80,7 +81,7 @@ export class TableView implements SubView {
   render(): void {
     this.state.tableBody = null
     this.container.empty()
-    this.container.addClass('pm-table-view')
+    this.container.addClass(SUBVIEW_CLASS.table)
 
     this.renderControls()
     const ctx = this.makeTableContext()

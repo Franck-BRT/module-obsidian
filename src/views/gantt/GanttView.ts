@@ -31,6 +31,7 @@ import { TASK_SORT_KEYS, orderTasks, sortKeyLabel, type SortOrder } from '../sor
 import { renderSortControl } from '../SortControl'
 import { isPhase, phaseSpan } from '../../store/Phase'
 import { phaseBracket } from './GanttPhaseBar'
+import { SUBVIEW_CLASS } from '../subviewClasses'
 import { t } from '../../i18n'
 
 /**
@@ -99,7 +100,7 @@ export class GanttView implements SubView {
     this.cleanupFns = []
     cancelLink(this.link)
     this.container.empty()
-    this.container.addClass('pm-gantt-view')
+    this.container.addClass(SUBVIEW_CLASS.gantt)
 
     const activeTasks = this.getVisibleTasks()
     this.flatTasks = flattenTasks(activeTasks).filter((f) => f.visible || f.depth === 0)

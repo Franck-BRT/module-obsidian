@@ -14,6 +14,7 @@ import { Chip } from '../../ui/primitives/Chip'
 import { ChipButton } from '../../ui/primitives/ChipButton'
 import { SegmentedControl } from '../../ui/primitives/SegmentedControl'
 import { renderDocumentCards } from './LibraryCards'
+import { SUBVIEW_CLASS } from '../subviewClasses'
 import { t } from '../../i18n'
 import { docStateLabel } from './docStateLabel'
 import type { SubView } from '../SubView'
@@ -55,7 +56,7 @@ export class LibraryView implements SubView {
   render(): void {
     this.watchFiles()
     this.container.empty()
-    this.container.addClass('pm-library-view')
+    this.container.addClass(SUBVIEW_CLASS.library)
     const docs = this.documents()
     this.renderToolbar(this.container, docs)
 

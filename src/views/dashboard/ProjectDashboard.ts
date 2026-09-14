@@ -17,6 +17,7 @@ import { docStateLabel } from '../library/docStateLabel'
 import type { SubView } from '../SubView'
 import { barList, burnChart, progressRing } from './charts'
 import { writeStatusReport } from './statusReport'
+import { SUBVIEW_CLASS } from '../subviewClasses'
 import { t } from '../../i18n'
 
 /** Where a click on a figure takes the reader, and what it narrows the views to. */
@@ -48,7 +49,7 @@ export class ProjectDashboard implements SubView {
 
   render(): void {
     this.container.empty()
-    this.container.addClass('pm-kpi-view')
+    this.container.addClass(SUBVIEW_CLASS.dashboard)
     const config = this.scope.config
     const tasks = this.visibleTasks()
     this.metrics = projectMetrics({
@@ -258,7 +259,10 @@ export class ProjectDashboard implements SubView {
     const list = body.createDiv('pm-kpi-projects')
     for (const { project, m } of rows) {
       const row = list.createDiv(`pm-kpi-project pm-kpi-project--${m.health.level}`)
-      makeActivatable(row, () => void this.plugin.router.openProjectLink(project.filePath))
+      makeActivatable(
+        row,
+        safeAsync(() => this.plugin.router.openProjectLink(project.filePath))
+      )
       const head = row.createDiv('pm-kpi-project-head')
       setIcon(head.createSpan({ cls: 'pm-kpi-project-state' }), HEALTH_ICON[m.health.level])
       head.createSpan({ cls: 'pm-kpi-project-title', text: project.title })

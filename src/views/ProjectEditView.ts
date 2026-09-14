@@ -17,6 +17,7 @@ import { confirmDialog } from '../ui/ModalFactory'
 import { renderPersonPicker } from '../ui/PersonPicker'
 import { renderAddButton } from '../ui/composites/addButton'
 import { renderPropRow } from '../ui/FormField'
+import { viewModeOptions } from './viewModes'
 import { renderGlyph, renderIconControl, renderInputControl, renderSelectControl } from '../ui/composites/properties'
 import { renderPriorityListEditor, renderStatusListEditor } from '../ui/PaletteListEditor'
 import { CUSTOM_FIELD_TYPE_LABELS, renderCustomFieldListEditor } from '../ui/CustomFieldListEditor'
@@ -349,11 +350,14 @@ export class ProjectEditView extends ItemView {
       })
     }
 
-    row(t('settings.defaultView.name'), 'defaultView', [
-      { value: 'table', label: t('common.table') },
-      { value: 'gantt', label: t('common.gantt') },
-      { value: 'kanban', label: t('common.board') }
-    ])
+    // Derived from the list of views rather than spelled out: a project could not be
+    // set to open on the library or the dashboard because this list had never heard of
+    // them.
+    row(
+      t('settings.defaultView.name'),
+      'defaultView',
+      viewModeOptions().map((option) => ({ value: option.id, label: option.label }))
+    )
     row(
       t('settings.priorityIcons.name'),
       'priorityIcons',

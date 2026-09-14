@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.26.2] - 2026-09-14
+
+### Fixed
+
+- **A project could not be set to open on the dashboard** — or on the library. Its
+  "default task view" offered three views because the list was written out by hand and
+  had never been told about the two added since. Both settings, the global one and a
+  project's own override, are now built from the list of views themselves
+- Two failures that had reached a release because the output of `pnpm check` was read
+  through a `head` that cut them off: a type error in a test added in 2.26.1, and a lint
+  error in the programme card added in 2.26.0. Neither changed what the plugin does;
+  both should have stopped the release
+
+### Changed
+
+- Each view now reads its body class from one record keyed by view, typed against the
+  list of views. A sixth view cannot be added without giving it a class: the compiler
+  asks for it, which is a better guarantee than the file-scanning test it replaces
+
 ## [2.26.1] - 2026-09-13
 
 ### Fixed

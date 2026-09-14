@@ -15,6 +15,7 @@ import { isPhase } from '../store/Phase'
 import { KANBAN_SORT_KEYS, orderTasks, sortKeyLabel, type SortOrder } from './sortOrder'
 import { renderSortControl } from './SortControl'
 import type { SubView } from './SubView'
+import { SUBVIEW_CLASS } from './subviewClasses'
 import { t } from '../i18n'
 
 /** A band across the board: one lot, one project in a collection, or what is in neither. */
@@ -52,7 +53,7 @@ export class KanbanView implements SubView {
     this.config = this.scope.config
     this.personKey = personKeyer(this.plugin.app)
     this.container.empty()
-    this.container.addClass('pm-kanban-view')
+    this.container.addClass(SUBVIEW_CLASS.kanban)
 
     this.renderControls()
     const board = this.container.createDiv('pm-kanban-board')
