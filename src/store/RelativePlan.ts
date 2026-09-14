@@ -1,4 +1,4 @@
-import type { DependencyType, StatusConfig, Task } from '../types'
+import type { DependencyType, Task } from '../types'
 import { DEFAULT_DEPENDENCY_OPTION } from '../types'
 import { flattenTasks } from './TaskTreeOps'
 import { isPhase } from './Phase'
@@ -53,28 +53,53 @@ export function earliestStart(pred: RelativeBar, type: DependencyType, lag: numb
  * the project will run, so its chart cannot be drawn from dates — but the order is
  * already decided, and the order is the thing worth checking. Everything with nothing
  * in front of it starts on day zero; everything else starts as early as its links
- * allow, which is the standard forward pass, and a lot spans what it holds.
+ * allow, which is the standard forward pass.
+ *
+ * A lot takes part in that pass twice over, because a lot is a container and not a
+ * ticket. It **covers what it holds**, so anything waiting on it waits for the last of
+ * them rather than for a nominal day; and its own links **bind what it holds**, so a lot
+ * told to follow another opens after it and takes its contents along. Neither half works
+ * without the other: reading a lot as a one-day ticket would let a successor start inside
+ * it, and placing a lot without moving its contents would drag it straight back onto them.
  *
  * Links that form a loop cannot be ordered at all. Rather than refuse to draw anything,
  * the tickets in the loop are laid at day zero and named, so the chart says where the
  * problem is instead of hiding it.
  */
-export function relativePlan(tasks: Task[], statuses: StatusConfig[] = []): RelativePlan {
-  const flat = flattenTasks(tasks).map((entry) => entry.task)
-  const byId = new Map(flat.map((task) => [task.id, task]))
-  const bars = new Map<string, RelativeBar>()
+export function relativePlan(tasks: Task[]): RelativePlan {
+  const flat = flattenTasks(tasks)
+  const byId = new Map(flat.map((entry) => [entry.task.id, entry.task]))
+  const parentOf = new Map<string, string>()
+  for (const entry of flat) if (entry.parentId) parentOf.set(entry.task.id, entry.parentId)
+  /** Everything a lot holds, at any depth. Empty for anything that is not a lot. */
+  const heldBy = new Map<string, string[]>(
+    flat.map((entry) => [
+      entry.task.id,
+      isPhase(entry.task) ? flattenTasks(entry.task.subtasks).map((held) => held.task.id) : []
+    ])
+  )
 
-  // Kahn's algorithm over the links that point at something in this project.
-  const predecessors = new Map<string, string[]>()
+  // Kahn's algorithm, over the links and over what containment implies: a lot can only be
+  // placed once what it holds is placed, and what a lot holds can only be placed once
+  // whatever the lot waits on is.
   const dependents = new Map<string, string[]>()
-  for (const task of flat) {
+  const remaining = new Map<string, number>(flat.map((entry) => [entry.task.id, 0]))
+  const edge = (from: string, to: string): void => {
+    dependents.set(from, [...(dependents.get(from) ?? []), to])
+    remaining.set(to, (remaining.get(to) ?? 0) + 1)
+  }
+  const linkPreds = new Map<string, string[]>()
+  for (const { task } of flat) {
     const deps = task.dependencies.filter((id) => byId.has(id))
-    predecessors.set(task.id, deps)
-    for (const dep of deps) dependents.set(dep, [...(dependents.get(dep) ?? []), task.id])
+    linkPreds.set(task.id, deps)
+    for (const dep of deps) {
+      edge(dep, task.id)
+      for (const inside of heldBy.get(task.id) ?? []) edge(dep, inside)
+    }
+    for (const inside of heldBy.get(task.id) ?? []) edge(inside, task.id)
   }
 
-  const remaining = new Map(flat.map((task) => [task.id, predecessors.get(task.id)?.length ?? 0]))
-  const queue = flat.filter((task) => (remaining.get(task.id) ?? 0) === 0).map((task) => task.id)
+  const queue = flat.filter((entry) => remaining.get(entry.task.id) === 0).map((entry) => entry.task.id)
   const ordered: string[] = []
   while (queue.length) {
     const id = queue.shift()
@@ -86,40 +111,65 @@ export function relativePlan(tasks: Task[], statuses: StatusConfig[] = []): Rela
       if (left === 0) queue.push(next)
     }
   }
-  const cycles = flat.map((task) => task.id).filter((id) => !ordered.includes(id))
+  const placed = new Set(ordered)
+  const cycles = flat.map((entry) => entry.task.id).filter((id) => !placed.has(id))
+
+  // A loop has no order to read, so no member of it can be placed after another. They all
+  // go to day zero, which is visibly wrong on the chart — which is the point. Doing it
+  // first rather than last means a lot holding one still covers it.
+  const bars = new Map<string, RelativeBar>(
+    cycles.flatMap((id) => {
+      const task = byId.get(id)
+      return task ? [[id, { offset: 0, length: lengthOf(task) }] as const] : []
+    })
+  )
+
+  const floorFromLinks = (task: Task, ownLength: number): number => {
+    let floor = 0
+    for (const depId of linkPreds.get(task.id) ?? []) {
+      const pred = bars.get(depId)
+      if (!pred) continue
+      const option = task.dependencyOptions?.[depId] ?? DEFAULT_DEPENDENCY_OPTION
+      floor = Math.max(floor, earliestStart(pred, option.type, option.lag, ownLength))
+    }
+    return Math.max(0, floor)
+  }
+
+  // The floor a lot's own links put under it. It is read before the lot itself is placed —
+  // what it holds needs it first — so it is worked out on demand and kept. FF and SF need
+  // a length the lot does not have yet, and take what it declares.
+  const lotFloors = new Map<string, number>()
+  const lotFloor = (id: string): number => {
+    const known = lotFloors.get(id)
+    if (known !== undefined) return known
+    const lot = byId.get(id)
+    const floor = lot ? Math.max(floorFromLinks(lot, lengthOf(lot)), inheritedFloor(id)) : 0
+    lotFloors.set(id, floor)
+    return floor
+  }
+  /** What the lots around a ticket impose on it, however deep it sits inside them. */
+  function inheritedFloor(id: string): number {
+    let floor = 0
+    for (let parent = parentOf.get(id); parent !== undefined; parent = parentOf.get(parent)) {
+      floor = Math.max(floor, lotFloor(parent))
+    }
+    return floor
+  }
 
   for (const id of ordered) {
     const task = byId.get(id)
     if (!task) continue
-    const length = lengthOf(task)
-    let offset = 0
-    for (const depId of predecessors.get(id) ?? []) {
-      const pred = bars.get(depId)
-      if (!pred) continue
-      const option = task.dependencyOptions?.[depId] ?? DEFAULT_DEPENDENCY_OPTION
-      offset = Math.max(offset, earliestStart(pred, option.type, option.lag, length))
+    const held = (heldBy.get(id) ?? []).flatMap((inside) => bars.get(inside) ?? [])
+    if (held.length) {
+      // A lot holds work rather than doing any, so it covers what it holds — the same
+      // rule its dates follow when it has them.
+      const from = Math.min(...held.map((bar) => bar.offset))
+      const to = Math.max(...held.map((bar) => bar.offset + bar.length))
+      bars.set(id, { offset: from, length: Math.max(1, to - from) })
+      continue
     }
-    bars.set(id, { offset: Math.max(0, offset), length })
-  }
-
-  // A loop has no order to read, so no member of it can be placed after another. They
-  // all go to day zero, which is visibly wrong on the chart — which is the point.
-  for (const id of cycles) {
-    const task = byId.get(id)
-    if (task) bars.set(id, { offset: 0, length: lengthOf(task) })
-  }
-
-  // A lot holds work rather than doing any, so it covers what it holds — the same rule
-  // its dates follow when it has them.
-  for (const task of flat) {
-    if (!isPhase(task)) continue
-    const held = flattenTasks(task.subtasks)
-      .map((entry) => bars.get(entry.task.id))
-      .filter((bar): bar is RelativeBar => !!bar)
-    if (!held.length) continue
-    const from = Math.min(...held.map((bar) => bar.offset))
-    const to = Math.max(...held.map((bar) => bar.offset + bar.length))
-    bars.set(task.id, { offset: from, length: Math.max(1, to - from) })
+    const length = lengthOf(task)
+    bars.set(id, { offset: Math.max(floorFromLinks(task, length), inheritedFloor(id)), length })
   }
 
   const span = Math.max(1, ...[...bars.values()].map((bar) => bar.offset + bar.length))

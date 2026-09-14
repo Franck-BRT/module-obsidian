@@ -109,7 +109,7 @@ export class GanttView implements SubView {
     // A template is written before anyone knows when the project will run, so its chart
     // is laid out from the links instead: the plan they imply, projected onto days from
     // an anchor the reader never sees, with the real tickets kept beside it for editing.
-    const plan = this.scope.primary?.template ? relativePlan(activeTasks, this.scope.config.statuses) : null
+    const plan = this.scope.primary?.template ? relativePlan(activeTasks) : null
     this.relative = plan ? { realById: realTasksById(activeTasks), plan } : null
     const charted = plan ? projectOntoDays(activeTasks, plan, RELATIVE_ANCHOR) : activeTasks
     this.flatTasks = flattenTasks(charted).filter((f) => f.visible || f.depth === 0)

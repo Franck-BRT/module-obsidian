@@ -101,3 +101,104 @@ describe('the plan a template’s links imply', () => {
     expect(relativePlan([]).span).toBe(1)
   })
 })
+
+describe('a lot that waits on another lot', () => {
+  const lot = (id: string, subtasks: Task[], over: Partial<Task> = {}): Task =>
+    task(id, { type: 'phase', subtasks, ...over })
+
+  it('starts after it, instead of being dragged back onto what it holds', () => {
+    const first = lot('lot1', [task('a1'), task('a2', { dependencies: ['a1'] })])
+    const second = lot('lot2', [task('b1')], { dependencies: ['lot1'], dependencyOptions: { lot1: fs() } })
+    const plan = relativePlan([first, second])
+    // The first lot covers two chained days; the second may only open once it is over.
+    expect(plan.bars.get('lot1')).toEqual({ offset: 0, length: 2 })
+    expect(plan.bars.get('lot2')?.offset).toBe(2)
+  })
+
+  it('takes what it holds along with it', () => {
+    const first = lot('lot1', [task('a1')])
+    const second = lot('lot2', [task('b1')], { dependencies: ['lot1'], dependencyOptions: { lot1: fs() } })
+    const plan = relativePlan([first, second])
+    expect(plan.bars.get('b1')?.offset).toBe(1)
+  })
+
+  it('carries the constraint all the way down, not just to the first level', () => {
+    const inner = lot('inner', [task('deep')])
+    const first = lot('lot1', [task('a1')])
+    const second = lot('lot2', [inner], { dependencies: ['lot1'], dependencyOptions: { lot1: fs() } })
+    const plan = relativePlan([first, second])
+    expect(plan.bars.get('deep')?.offset).toBe(1)
+    expect(plan.bars.get('inner')?.offset).toBe(1)
+  })
+
+  it('is read as everything it holds when something waits on it', () => {
+    const first = lot('lot1', [task('a1', { start: '2026-01-05', due: '2026-01-09' })])
+    const after = task('after', { dependencies: ['lot1'], dependencyOptions: { lot1: fs() } })
+    const plan = relativePlan([first, after])
+    // Five days held, so the ticket after the lot opens on the sixth.
+    expect(plan.bars.get('after')?.offset).toBe(5)
+  })
+
+  it('still lets a ticket inside one lot wait on a ticket inside another', () => {
+    const first = lot('lot1', [task('a1'), task('a2')])
+    const second = lot('lot2', [task('b1', { dependencies: ['a1'], dependencyOptions: { a1: fs(2) } })])
+    const plan = relativePlan([first, second])
+    expect(plan.bars.get('b1')?.offset).toBe(3)
+    expect(plan.bars.get('lot2')?.offset).toBe(3)
+  })
+
+  it('leaves an empty lot to its own links', () => {
+    const first = lot('lot1', [task('a1')])
+    const empty = lot('lot2', [], { dependencies: ['lot1'], dependencyOptions: { lot1: fs() } })
+    const plan = relativePlan([first, empty])
+    expect(plan.bars.get('lot2')?.offset).toBe(1)
+  })
+})
+
+describe('a template laid out as a chain of lots', () => {
+  it('steps down evenly, whether or not a lot holds anything', () => {
+    // What Franck's template looks like: seven lots in a row, the first two holding
+    // tickets of their own and the rest still empty.
+    const chain: Task[] = []
+    for (let n = 1; n <= 7; n++) {
+      const deps = n === 1 ? {} : { [`lot${n - 1}`]: fs() }
+      const held = n <= 2 ? [task(`t${n}`)] : []
+      chain.push(
+        task(`lot${n}`, { type: 'phase', subtasks: held, dependencies: Object.keys(deps), dependencyOptions: deps })
+      )
+    }
+    const plan = relativePlan(chain)
+    // One day each, so each lot opens the day the one before it closes: 0, 1, 2 …
+    expect(chain.map((lot) => plan.bars.get(lot.id)?.offset)).toEqual([0, 1, 2, 3, 4, 5, 6])
+    expect(plan.bars.get('t2')?.offset).toBe(1)
+    expect(plan.cycles).toEqual([])
+  })
+})
+
+describe('what the arrows must never show', () => {
+  it('never points a finish-to-start link backwards, lots or tickets', () => {
+    const tree = [
+      task('lot1', { type: 'phase', subtasks: [task('a1'), task('a2', { dependencies: ['a1'] })] }),
+      task('lot2', {
+        type: 'phase',
+        subtasks: [task('b1', { start: '2026-03-02', due: '2026-03-06' })],
+        dependencies: ['lot1'],
+        dependencyOptions: { lot1: fs() }
+      }),
+      task('jalon', { type: 'milestone', dependencies: ['lot2'], dependencyOptions: { lot2: fs() } }),
+      task('after', { dependencies: ['jalon'], dependencyOptions: { jalon: fs() } })
+    ]
+    const plan = relativePlan(tree)
+    const links: [string, string][] = [
+      ['a1', 'a2'],
+      ['lot1', 'lot2'],
+      ['lot2', 'jalon'],
+      ['jalon', 'after']
+    ]
+    for (const [from, to] of links) {
+      const pred = plan.bars.get(from)
+      const succ = plan.bars.get(to)
+      expect(pred && succ && succ.offset >= pred.offset + pred.length).toBe(true)
+    }
+  })
+})

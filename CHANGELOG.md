@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.29.1] - 2026-09-14
+
+### Fixed
+
+- **A lot that waits on another lot now starts after it.** In a template's chart a lot was
+  placed twice: once by the forward pass, from the links it declares, and then again by the
+  rule that a lot covers what it holds — and the second placement silently threw the first
+  away. A lot told to follow another was therefore dragged back onto it, and its arrow was
+  drawn pointing backwards. A lot holding nothing yet was unaffected, which is why a chain
+  of lots broke on exactly the ones that had been filled in
+- **A lot's links now bind what it holds**: moving a lot takes its tickets, at any depth,
+  rather than leaving them behind where they were
+- **A lot is read as everything it holds** by whatever waits on it, instead of as a
+  nominal one-day ticket, so a ticket following a three-week lot opens after the three
+  weeks and not on its second day
+- A loop is now laid out before the lots are measured, so a lot holding a ticket caught in
+  one still covers it
+
 ## [2.29.0] - 2026-09-14
 
 ### Changed

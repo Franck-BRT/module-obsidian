@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.29.0
+version: 2.29.1
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.29.0
+# Recette — Black Projects 2.29.1
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -602,6 +602,15 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Mettre deux tâches en **boucle** (A dépend de B et B de A) : ✅ **Attendu** : elles sont
       posées en **semaine 1** plutôt que de disparaître
 - [ ] Un **lot** : ✅ **Attendu** : sa barre **couvre** ce qu'il contient
+- [ ] Enchaîner **deux lots** (lot 2 dépend de lot 1), chacun contenant **au moins une tâche** :
+      ✅ **Attendu** (corrigé en 2.29.1) : le lot 2 commence **après** la fin du lot 1, et sa
+      flèche part vers l'**avant** — elle ne revient pas en arrière
+- [ ] ✅ **Attendu** : les **tâches** du lot 2 ont suivi le lot, y compris celles rangées dans
+      un **sous-lot**
+- [ ] Mettre une tâche **après un lot de trois semaines** : ✅ **Attendu** : elle démarre après
+      les **trois semaines**, pas au deuxième jour du lot
+- [ ] Mélanger des lots **remplis** et des lots **encore vides** dans une même chaîne :
+      ✅ **Attendu** : l'escalier est **régulier**, sans décrochage sur les lots remplis
 - [ ] Créer un **projet** depuis ce modèle, puis ouvrir **son** Gantt : ✅ **Attendu** : il est
       **daté** normalement — axe en mois, trait « aujourd'hui », poignées de redimensionnement
 
