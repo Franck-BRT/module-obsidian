@@ -87,8 +87,21 @@ export class ProjectScope {
     return scopeKey(this.spec)
   }
 
-  /** Where a new task goes, and whose settings stand in for the group's. */
+  /**
+   * The project the scope is about: whose settings stand in for the group's, whose title
+   * names it, and whether the thing being looked at is a programme.
+   *
+   * When the spec names a project — itself, or itself and everything under it — that is
+   * the answer, found rather than assumed: the projects arrive sorted by title, so the
+   * root of a subtree is only first by luck. A programme called Zenith holding a project
+   * called Alpha was being read as Alpha.
+   */
   get primary(): Project | null {
+    if (this.spec.kind === 'project' || this.spec.kind === 'subtree') {
+      const spec = this.spec
+      const named = this.projects.find((project) => project.filePath === spec.path)
+      if (named) return named
+    }
     return this.projects[0] ?? null
   }
 

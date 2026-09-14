@@ -214,6 +214,40 @@ export class ProjectEditView extends ItemView {
       return cell
     })
 
+    /**
+     * A project that groups projects rather than holding work. Offered here as well as
+     * at creation, because a vault has parent projects that predate programmes and no
+     * other way to say what they are.
+     */
+    renderPropRow(props, t('program.one'), () => {
+      const cell = createDiv('pm-prop-value')
+      renderSelectControl({
+        container: cell,
+        value: project.program ? 'yes' : 'no',
+        options: [
+          { id: 'no', label: t('common.project') },
+          { id: 'yes', label: t('program.one') }
+        ],
+        onChange: safeAsync(async (id) => {
+          const program = id === 'yes'
+          if (program === !!project.program) return
+          // Its own tickets are not touched — they stay and stay visible — but no more
+          // can be added to it, which is worth saying before it happens.
+          const own = flattenTasks(project.tasks).length
+          if (program && own) {
+            const ok = await confirmDialog(this.app, t('program.convertWarning', { count: own }))
+            if (!ok) {
+              this.render()
+              return
+            }
+          }
+          this.save({ program })
+          this.render()
+        })
+      })
+      return cell
+    })
+
     const desc = section.createDiv('pm-edit-block')
     desc.createEl('label', { text: t('common.description'), cls: 'pm-label' })
     const area = desc.createEl('textarea', { cls: 'pm-input pm-edit-desc' })

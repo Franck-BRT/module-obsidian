@@ -133,6 +133,8 @@ export const fr: Catalog = {
   'program.noProjects': 'Aucun projet dans ce programme pour l’instant.',
   'program.addProject': 'Ajouter un projet',
   'program.projects': 'Les projets du programme',
+  'program.convertWarning':
+    'Ce projet porte {count} tickets à lui. Un programme n’en reçoit plus — ils restent, et restent visibles, mais on ne pourra plus lui en ajouter. En faire un programme ?',
   'program.holdsNoTasks': 'Un programme contient des projets, pas des tickets.',
   'count.programs': { one: '{count} programme', other: '{count} programmes' },
   'count.projectsIn': { one: '{count} projet', other: '{count} projets' },

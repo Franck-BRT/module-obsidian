@@ -422,6 +422,8 @@ export class ProjectView extends ItemView {
     }
 
     const titleEl = left.createEl('h2', { text: scope.label(), cls: 'pm-toolbar-title' })
+    // Said out loud: two containers that behave differently should not look the same.
+    if (scope.isProgram) left.createSpan({ cls: 'pm-project-row-badge', text: t('program.one') })
     if (!scope.isMulti) {
       titleEl.addClass('pm-toolbar-title--link')
       titleEl.setAttrs({ 'aria-label': t('project.openPage'), role: 'button', tabindex: '0' })

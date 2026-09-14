@@ -138,6 +138,8 @@ export const en = {
   'program.noProjects': 'No project in this programme yet.',
   'program.addProject': 'Add a project',
   'program.projects': 'Projects in this programme',
+  'program.convertWarning':
+    'This project holds {count} of its own tickets. A programme takes no more — they stay, and stay visible, but nothing new can be added to it. Make it a programme?',
   'program.holdsNoTasks': 'A programme holds projects, not tickets.',
   'count.programs': { one: '{count} programme', other: '{count} programmes' },
   'count.projectsIn': { one: '{count} project', other: '{count} projects' },

@@ -78,4 +78,35 @@ describe('a programme', () => {
         .sort()
     ).toEqual(['Génie civil', 'Équipements'])
   })
+
+  it('can be made one, and unmade, on a project that already exists', async () => {
+    const read = async (path: string): Promise<string> => {
+      const file = app.vault.getAbstractFileByPath(path)
+      return file ? await app.vault.cachedRead(file as never) : ''
+    }
+    // A vault has parent projects older than programmes; this is how they say what they
+    // are, and the note has to agree both ways round.
+    await store.updateProject(alpha, { program: true })
+    expect(await read(alpha.filePath)).toContain(`${PROGRAM_FRONTMATTER_KEY}: true`)
+    index.build()
+    expect(index.projectRef(alpha.filePath)?.program).toBe(true)
+
+    await store.updateProject(alpha, { program: false })
+    // Unmade means the key is gone, not left behind saying false.
+    expect(await read(alpha.filePath)).not.toContain(PROGRAM_FRONTMATTER_KEY)
+    index.build()
+    expect(index.projectRef(alpha.filePath)?.program).toBe(false)
+  })
+
+  it("is the scope's primary even when a project it holds sorts before it", async () => {
+    // The projects arrive sorted by title, so a programme whose name comes later in the
+    // alphabet than its own projects used to be read as one of them: not a programme,
+    // open to tickets, and opening on the wrong view.
+    const zenith = await store.createProject('Zenith', 'Work', { program: true })
+    const alpha = await store.createProject('Alpha', 'Work', { parentPath: zenith.filePath })
+    const scope = new ProjectScope({ kind: 'subtree', path: zenith.filePath }, [alpha, zenith], store)
+    expect(scope.primary?.title).toBe('Zenith')
+    expect(scope.isProgram).toBe(true)
+    expect(scope.addableProjects.map((p) => p.title)).toEqual(['Alpha'])
+  })
 })

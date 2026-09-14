@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.27.0] - 2026-09-14
+
+### Added
+
+- **An existing project can be made a programme**, and unmade, from its settings. Until
+  now the choice existed only at creation, so every parent project made before 2.26.0 had
+  no way to say what it was — which is why two of Franck's programmes opened on different
+  views: one was a programme and the other had never been told it was one
+- If it already holds tickets of its own, it says so before converting: they stay and stay
+  visible, but a programme takes no more
+- **A programme says so beside its name**, in its own page as well as in the project list.
+  Two containers that behave differently should not look the same
+
+### Fixed
+
+- **A programme whose name sorts after its own projects was not being read as one.** The
+  projects of a scope arrive sorted by title, and the scope took the first of them as the
+  one it is about — true for a subtree only by luck. A programme called "Zenith" holding a
+  project called "Alpha" was read as Alpha: no programme badge, open to tickets, and
+  opening on the wrong view. The scope now finds the project its spec names
+
 ## [2.26.3] - 2026-09-14
 
 ### Fixed

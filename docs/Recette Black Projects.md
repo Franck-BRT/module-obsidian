@@ -1,14 +1,14 @@
 ---
 type: recette
 module: Black Projects
-version: 2.26.3
+version: 2.27.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.26.3
+# Recette — Black Projects 2.27.0
 
-Plan de test manuel pour le fork. Les **731 tests automatisés** couvrent la logique
+Plan de test manuel pour le fork. Les **733 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
 ni les interactions**. Tout ce qui suit ne peut se vérifier que dans un vrai coffre.
 
@@ -568,6 +568,24 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       et le **programme n'est pas proposé**
 - [ ] Un programme avec **un seul** projet : ✅ **Attendu** : l'ajout va directement dans ce projet,
       sans question
+
+### Transformer un projet existant en programme [N]
+
+- [ ] Ouvrir un **projet existant** qui a des sous-projets → **Modifier le projet**
+- [ ] ✅ **Attendu** : une ligne **« Programme »** avec le choix **Projet / Programme**
+- [ ] La passer à **Programme** : ✅ **Attendu** : sa note gagne `pm-program: true`
+- [ ] ✅ **Attendu** : son en-tête affiche l'étiquette **« Programme »** à côté de son nom
+- [ ] ✅ **Attendu** : il s'ouvre désormais sur son **tableau de bord**, et les boutons d'ajout de
+      ticket ont disparu
+- [ ] Si ce projet portait **ses propres tickets** : ✅ **Attendu** : une question le dit avant
+      de convertir, et les tickets **restent visibles** après
+- [ ] Revenir à **Projet** : ✅ **Attendu** : la clé `pm-program` **disparaît** de la note
+      (elle n'est pas laissée à `false`)
+- [ ] **[N]** Un programme dont le **nom vient après** ses projets dans l'alphabet
+      (ex. « Zenith » contenant « Alpha ») : ✅ **Attendu** : il est bien reconnu comme programme —
+      étiquette, tableau de bord, pas d'ajout de ticket *(il était lu comme son propre projet avant la 2.27.0)*
+
+**Constaté :**
 
 ### Pièges
 
