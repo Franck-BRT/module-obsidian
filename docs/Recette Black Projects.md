@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.28.0
+version: 2.29.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.28.0
+# Recette — Black Projects 2.29.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -562,6 +562,48 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Créer depuis un modèle **en choisissant un parent** (un programme) : ✅ **Attendu** : le projet
       arrive bien dans le programme
 - [ ] **Sans** choisir de modèle : ✅ **Attendu** : un projet vide, comme avant
+
+**Constaté :**
+
+### Le Gantt d'un modèle : l'enchaînement, sans les dates
+
+> **Nouveau en 2.29.0** : dans un **modèle**, le Gantt ne lit plus les dates — il est
+> construit à partir des **liens** entre les tâches. On y lit la séquence et les
+> contraintes, pas un calendrier.
+
+- [ ] Dans « Lancement type », enchaîner : **Cadrage → Études → (jalon) Validation → Travaux → Essais**
+      (chaque tâche dépend de la précédente)
+- [ ] Ouvrir la vue **Gantt** du modèle : ✅ **Attendu** : l'axe est gradué en **« Semaine 1 »,
+      « Semaine 2 »…** — aucune date, aucun mois, aucune année
+- [ ] ✅ **Attendu** : chaque barre commence **après** celle dont elle dépend, en escalier,
+      et les **flèches** de dépendance sont bien tracées
+- [ ] ✅ **Attendu** : une tâche qui suit un **jalon** démarre **le jour du jalon** (un jalon ne
+      dure pas)
+- [ ] ✅ **Attendu** : **pas de trait « aujourd'hui »**
+- [ ] ✅ **Attendu** : le bouton **« Aujourd'hui »** a disparu de la barre d'outils
+- [ ] ✅ **Attendu** : le zoom ne propose que **Jour** et **Semaine**
+- [ ] Zoomer sur **Jour** : ✅ **Attendu** : une seconde ligne gradue les jours **« J0, J1, J2… »**
+- [ ] **Décaler** une tâche du modèle de six mois sans changer sa durée : ✅ **Attendu** : le
+      graphique **ne bouge pas** — la place d'une barre ne vient que des liens. Sa **largeur**
+      en revanche suit l'écart entre ses deux dates, et allonger une tâche **repousse** celles
+      qui la suivent
+- [ ] **Effacer** les dates d'une tâche : ✅ **Attendu** : elle reste dans le graphique, large
+      d'**un jour**, à sa place dans l'enchaînement
+- [ ] Essayer de **tirer le bord** d'une barre : ✅ **Attendu** : impossible, il n'y a **pas de
+      poignée** ; la barre ne se déplace pas non plus
+- [ ] Tirer d'un **point de lien** à un autre : ✅ **Attendu** : la dépendance se crée normalement,
+      et le graphique se **réordonne** aussitôt
+- [ ] **Cliquer une barre** : ✅ **Attendu** : le **vrai ticket** s'ouvre, avec ses **vraies dates**
+      (celles du modèle), pas celles de l'axe
+- [ ] Y **modifier** quelque chose et enregistrer : ✅ **Attendu** : la modification est bien
+      écrite dans le modèle
+- [ ] Mettre une dépendance en **SS**, **FF** ou **SF** avec un **décalage** : ✅ **Attendu** : le
+      graphique en tient compte
+- [ ] Mettre deux tâches en **boucle** (A dépend de B et B de A) : ✅ **Attendu** : elles sont
+      posées en **semaine 1** plutôt que de disparaître
+- [ ] Un **lot** : ✅ **Attendu** : sa barre **couvre** ce qu'il contient
+- [ ] Créer un **projet** depuis ce modèle, puis ouvrir **son** Gantt : ✅ **Attendu** : il est
+      **daté** normalement — axe en mois, trait « aujourd'hui », poignées de redimensionnement
 
 **Constaté :**
 

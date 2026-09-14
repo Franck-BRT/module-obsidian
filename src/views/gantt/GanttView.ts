@@ -10,6 +10,8 @@ import { SegmentedControl } from '../../ui/primitives/SegmentedControl'
 import type { SubView } from '../SubView'
 import type { TimelineCfg } from './TimelineConfig'
 import { buildTimelineConfig, dateToX, xToDate, HEADER_HEIGHT, ROW_HEIGHT, LABEL_WIDTH } from './TimelineConfig'
+import { relativePlan } from '../../store/RelativePlan'
+import { projectOntoDays, realTasksById, relativeTimelineConfig, RELATIVE_ANCHOR } from './relativeChart'
 import { makeDragState } from './GanttDragHandler'
 import type { DragState } from './GanttDragHandler'
 import { makeLinkState, cancelLink } from './GanttLinkHandler'
@@ -62,6 +64,7 @@ export class GanttView implements SubView {
     this.labelWidth = w
   }
   private cleanupFns: (() => void)[] = []
+  private relative: RendererContext['relative'] = null
   private pendingScroll: { top: number; anchorDate: Temporal.PlainDate } | null = null
 
   constructor(
@@ -103,17 +106,37 @@ export class GanttView implements SubView {
     this.container.addClass(SUBVIEW_CLASS.gantt)
 
     const activeTasks = this.getVisibleTasks()
-    this.flatTasks = flattenTasks(activeTasks).filter((f) => f.visible || f.depth === 0)
-    this.rows = this.buildRows(activeTasks)
-    this.cfg = buildTimelineConfig(activeTasks, this.granularity)
+    // A template is written before anyone knows when the project will run, so its chart
+    // is laid out from the links instead: the plan they imply, projected onto days from
+    // an anchor the reader never sees, with the real tickets kept beside it for editing.
+    const plan = this.scope.primary?.template ? relativePlan(activeTasks, this.scope.config.statuses) : null
+    this.relative = plan ? { realById: realTasksById(activeTasks), plan } : null
+    const charted = plan ? projectOntoDays(activeTasks, plan, RELATIVE_ANCHOR) : activeTasks
+    this.flatTasks = flattenTasks(charted).filter((f) => f.visible || f.depth === 0)
+    this.rows = this.buildRows(charted)
+    // The ordinary axis reaches from today to the work and back; a template's counts
+    // from its own day one, so it gets one built from the plan instead.
+    this.cfg = plan
+      ? relativeTimelineConfig(plan, this.chartGranularity())
+      : buildTimelineConfig(charted, this.granularity)
 
     this.renderGranularityControls()
     this.renderGantt()
   }
 
+  /**
+   * How wide a day is drawn. A template's axis only offers the two closest levels: with
+   * no dates to reach, a plan is weeks long, and a month to the inch would leave it a
+   * sliver — so a setting left on `year` by a project is read as the nearest one it has.
+   */
+  private chartGranularity(): GanttGranularity {
+    if (!this.relative) return this.granularity
+    return this.granularity === 'day' ? 'day' : 'week'
+  }
+
   private renderGranularityControls(): void {
     const bar = this.container.createDiv('pm-gantt-controls')
-    const levels: GanttGranularity[] = ['day', 'week', 'month', 'quarter', 'year']
+    const levels: GanttGranularity[] = this.relative ? ['day', 'week'] : ['day', 'week', 'month', 'quarter', 'year']
     const labels: Record<GanttGranularity, string> = {
       day: t('settings.granularity.day'),
       week: t('settings.granularity.week'),
@@ -124,7 +147,7 @@ export class GanttView implements SubView {
 
     new SegmentedControl<GanttGranularity>(bar, {
       options: levels.map((level) => ({ id: level, label: labels[level] })),
-      active: this.granularity,
+      active: this.chartGranularity(),
       onChange: (level) => {
         this.granularity = level
         this.plugin.settings.ganttGranularity = level
@@ -149,7 +172,8 @@ export class GanttView implements SubView {
         this.render()
       }
     })
-    new ButtonComponent(bar).setButtonText(t('common.today')).onClick(() => this.scrollToToday())
+    // A template has no today to scroll to: its plan is counted from its own day one.
+    if (!this.relative) new ButtonComponent(bar).setButtonText(t('common.today')).onClick(() => this.scrollToToday())
 
     new ButtonComponent(bar).setButtonText(t('gantt.expandAll')).onClick(() => this.setAllCollapsed(false))
     new ButtonComponent(bar).setButtonText(t('gantt.collapseAll')).onClick(() => this.setAllCollapsed(true))
@@ -364,7 +388,8 @@ export class GanttView implements SubView {
       statuses: this.scope.config.statuses,
       onRefresh: this.onRefresh,
       // Dragging a row writes the project's own order, which a sort would then hide.
-      reorderable: this.plugin.settings.ganttSortKey === 'manual'
+      reorderable: this.plugin.settings.ganttSortKey === 'manual',
+      realById: this.relative?.realById ?? null
     }
     this.rows.forEach((row, rowIndex) => {
       if (row.kind === 'group') {
@@ -448,6 +473,7 @@ export class GanttView implements SubView {
       totalRows: this.rows.length,
       drag: this.drag,
       link: this.link,
+      relative: this.relative,
       onRefresh: this.onRefresh,
       cleanupFns: this.cleanupFns
     }

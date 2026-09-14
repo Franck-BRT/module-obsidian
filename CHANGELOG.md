@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.29.0] - 2026-09-14
+
+### Changed
+
+- **A template's Gantt is drawn from its links, not from its dates.** A template is written
+  before anyone knows when the project will run, so the dates it carries are placeholders
+  and reading them as a calendar was misleading. Its chart is now laid out from the
+  dependencies alone: each ticket starts as early as the links it waits on allow — the
+  standard forward pass, honouring **FS, SS, FF and SF and their lag** — a lot spans what
+  it holds, and the axis is counted in **« Semaine 1, 2, 3… »** from the plan's own day one
+- **The sequence and the constraints are what the chart says**, and nothing else: no
+  today's line, since a template has no today; no date dragging, since there is no date to
+  move; and only the two closest zoom levels, a plan being weeks long rather than years
+- **Dependencies are still drawn and still created** by dragging between the link dots, so
+  the chart remains the place a template's sequence is laid out
+- **A ticket clicked in a template opens the real ticket.** The bars are projections, laid
+  onto days counted from an anchor the reader never sees, and an edit that landed on one of
+  them would have been thrown away — so every one of them is routed back to the ticket it
+  stands for before anything is opened
+- **A loop is shown rather than hidden**: tickets that depend on each other in a circle are
+  laid at day one instead of being dropped from the chart
+
 ## [2.28.0] - 2026-09-14
 
 ### Added

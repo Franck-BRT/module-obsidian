@@ -37,13 +37,50 @@ export function renderTimelineHeader(ctx: RendererContext): void {
   )
 
   const { granularity } = ctx.cfg
-  if (granularity === 'day') renderDayHeader(g, ctx)
+  if (ctx.relative) renderRelativeHeader(g, ctx)
+  else if (granularity === 'day') renderDayHeader(g, ctx)
   else if (granularity === 'week') renderWeekHeader(g, ctx)
   else if (granularity === 'month') renderMonthHeader(g, ctx)
   else if (granularity === 'quarter') renderQuarterHeader(g, ctx)
   else renderYearHeader(g, ctx)
 
   ctx.headerSvgEl.appendChild(g)
+}
+
+/**
+ * The axis of a plan with no dates: weeks counted from the start, and days inside them
+ * when there is room. The anchor the bars were projected onto never appears — the reader
+ * is told "week 3", which is the only thing a template can honestly say.
+ */
+function renderRelativeHeader(g: SVGGElement, ctx: RendererContext): void {
+  const { totalDays, dayWidth } = ctx.cfg
+  for (let day = 0; day < totalDays; day += 7) {
+    const x = day * dayWidth
+    const width = Math.min(7, totalDays - day) * dayWidth
+    g.appendChild(
+      svgEl('rect', {
+        x,
+        y: 0,
+        width,
+        height: 24,
+        class: (day / 7) % 2 === 0 ? 'pm-gantt-band-even' : 'pm-gantt-band-odd'
+      })
+    )
+    const label = svgEl('text', { x: x + width / 2, y: 16, class: 'pm-gantt-header-week' })
+    label.textContent = t('gantt.relativeWeek', { week: day / 7 + 1 })
+    g.appendChild(label)
+  }
+  if (dayWidth >= 20) {
+    for (let day = 0; day < totalDays; day++) {
+      const label = svgEl('text', {
+        x: day * dayWidth + dayWidth / 2,
+        y: 42,
+        class: 'pm-gantt-header-day'
+      })
+      label.textContent = t('gantt.relativeDay', { day })
+      g.appendChild(label)
+    }
+  }
 }
 
 function renderDayHeader(g: SVGGElement, ctx: RendererContext): void {

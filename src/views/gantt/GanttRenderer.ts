@@ -1,5 +1,6 @@
 import type PMPlugin from '../../main'
-import type { StatusConfig } from '../../types'
+import type { StatusConfig, Task } from '../../types'
+import type { RelativePlan } from '../../store/RelativePlan'
 import type { ProjectScope } from '../../store'
 import type { FlatTask } from '../../store/TaskTreeOps'
 import type { TimelineCfg } from './TimelineConfig'
@@ -28,6 +29,12 @@ export interface RendererContext {
   totalRows: number
   drag: DragState
   link: LinkState
+  /**
+   * Set when the chart is laid out from the links rather than from dates — a template,
+   * which is written before anyone knows when the project runs. It carries the real
+   * tickets, because the ones being drawn are projections and must never be edited.
+   */
+  relative: { realById: Map<string, Task>; plan: RelativePlan } | null
   onRefresh: () => Promise<void>
   cleanupFns: (() => void)[]
 }
@@ -94,6 +101,8 @@ export function renderGridLines(ctx: RendererContext): void {
 }
 
 export function renderTodayLine(ctx: RendererContext, svgHeight: number): void {
+  // A template has no today: its plan is counted from its own day one.
+  if (ctx.relative) return
   const x = dateToX(ctx.cfg, today())
   if (x < 0 || x > ctx.cfg.totalWidth) return
 

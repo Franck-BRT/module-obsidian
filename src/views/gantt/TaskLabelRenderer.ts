@@ -19,6 +19,8 @@ export interface LabelContext {
   onRefresh: () => Promise<void>
   /** False while a sort is on: the order a drag would write is not the one on screen. */
   reorderable: boolean
+  /** The real tickets, when the rows being drawn are a template's projections. */
+  realById: Map<string, Task> | null
 }
 
 export function renderTaskLabel(
@@ -86,7 +88,7 @@ export function renderTaskLabel(
 
   const titleEl = el.createSpan({ text: task.title, cls: 'pm-gantt-label-title' })
   titleEl.addEventListener('click', () => {
-    openTaskModal(ctx.plugin, project, { task, onSave: () => ctx.onRefresh() })
+    openTaskModal(ctx.plugin, project, { task: ctx.realById?.get(task.id) ?? task, onSave: () => ctx.onRefresh() })
   })
 
   // With one project the rows are all its own; with several, each says where it belongs.

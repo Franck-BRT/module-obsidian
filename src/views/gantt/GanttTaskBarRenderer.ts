@@ -116,14 +116,22 @@ export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: n
   const assigneesStr = task.assignees.length
     ? `\n${t('gantt.tooltipAssignees')}: ${task.assignees.map(displayName).join(', ')}`
     : ''
+  // A template's dates are the projection's, not anyone's: the tooltip says the days the
+  // plan takes instead of quoting a calendar that was invented to draw it.
+  const whenStr = ctx.relative
+    ? `${t('gantt.tooltipSpan', { count: ctx.relative.plan.bars.get(task.id)?.length ?? 1 })}\n`
+    : `${t('gantt.tooltipStart')}: ${task.start || '\u2014'}  ${t('gantt.tooltipDue')}: ${task.due || '\u2014'}\n`
   ttEl.textContent =
     `${task.title}\n${statusConfig?.label ?? task.status} \u00b7 ${task.priority}\n` +
-    `${t('gantt.tooltipStart')}: ${task.start || '\u2014'}  ${t('gantt.tooltipDue')}: ${task.due || '\u2014'}\n` +
+    whenStr +
     `${t('gantt.tooltipProgress')}: ${task.progress}%${assigneesStr}`
   rect.appendChild(ttEl)
 
+  // Dragging writes dates. In a template there are none to write: the bar is where the
+  // links put it, and moving it by hand would mean nothing. Links stay live — drawing
+  // one is how a template's plan is actually built.
   const HANDLE_W = 8
-  for (const side of ['left', 'right'] as const) {
+  for (const side of ctx.relative ? [] : (['left', 'right'] as const)) {
     const hx = side === 'left' ? x : x + width - HANDLE_W
     const handle = svgEl('rect', {
       x: hx,
@@ -176,7 +184,7 @@ export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: n
     barGroup.appendChild(dot)
   }
 
-  if (task.start && task.due) {
+  if (task.start && task.due && !ctx.relative) {
     ctx.cleanupFns.push(
       attachBarDrag({
         trigger: rect,
@@ -203,7 +211,10 @@ export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: n
       ctx.drag.dragMoved = false
       return
     }
-    openTaskModal(ctx.plugin, project, { task, onSave: () => ctx.onRefresh() })
+    openTaskModal(ctx.plugin, project, {
+      task: ctx.relative?.realById.get(task.id) ?? task,
+      onSave: () => ctx.onRefresh()
+    })
   })
 }
 
@@ -307,7 +318,10 @@ function renderMilestoneDiamond(g: SVGGElement, task: Task, row: number, color: 
   diamond.appendChild(tt)
 
   diamond.addEventListener('click', () => {
-    openTaskModal(ctx.plugin, project, { task, onSave: () => ctx.onRefresh() })
+    openTaskModal(ctx.plugin, project, {
+      task: ctx.relative?.realById.get(task.id) ?? task,
+      onSave: () => ctx.onRefresh()
+    })
   })
 }
 
