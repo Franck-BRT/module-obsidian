@@ -26,15 +26,20 @@ export interface RelativePlan {
  * at that stage one knows roughly how long a thing takes and not at all when it happens,
  * so a stated duration is the most deliberate answer there is and comes first. Dates are
  * consulted next, for the templates that were laid out that way; a ticket that says
- * neither takes a day, which is enough for it to be a bar rather than a point, and a
- * milestone takes none because a milestone is a moment.
+ * neither takes a day, which is enough for it to be a bar rather than a point.
+ *
+ * A milestone does no work, but it **owns the day it marks**: what follows it opens the
+ * day after, which is the rule the project's own scheduler applies once the dates are
+ * real — an FS link clears its predecessor's last day before starting. Giving it no day
+ * here would put the next bar's left edge half a column behind the diamond's centre, and
+ * draw the arrow between them pointing backwards.
  *
  * Days are counted the way the project counts them — plain days, or working days when it
  * keeps off weekends and holidays — so a duration means the same thing here as it will
  * once the project is created and its dates are real.
  */
 export function lengthOf(task: Task, calendar: WorkCalendar = ALL_DAYS): number {
-  if (task.type === 'milestone') return 0
+  if (task.type === 'milestone') return 1
   if (task.duration !== undefined && task.duration > 0) return Math.max(1, Math.round(task.duration))
   if (task.start && task.due) return Math.max(1, workingDaysBetween(calendar, task.start, task.due) + 1)
   return 1

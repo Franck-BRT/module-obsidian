@@ -84,9 +84,10 @@ describe('a template read end to end', () => {
     ]
     const plan = relativePlan(tasks)
     const drawn = projectOntoDays(tasks, plan, RELATIVE_ANCHOR)
-    // Each one begins the day after the one it waits on, whatever dates it carried —
-    // except after a milestone, which takes no time, so the work resumes on its day.
-    expect(drawn.map((t) => t.start)).toEqual(['2000-01-03', '2000-01-05', '2000-01-15', '2000-01-15', '2000-02-03'])
+    // Each one begins the day after the one it waits on, whatever dates it carried. A
+    // milestone does no work but owns the day it marks, so the work resumes the day after
+    // it — the same rule the dated scheduler follows.
+    expect(drawn.map((t) => t.start)).toEqual(['2000-01-03', '2000-01-05', '2000-01-15', '2000-01-16', '2000-02-04'])
     const cfg = relativeTimelineConfig(plan, 'day', ALL_DAYS)
     expect(cfg.startDate.toString()).toBe(RELATIVE_ANCHOR)
     // Six whole weeks of axis: enough for the plan, and no more.

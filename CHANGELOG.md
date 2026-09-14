@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.30.1] - 2026-09-14
+
+### Fixed
+
+- **The work after a milestone now starts the day after it**, in a template's chart, so
+  the arrow leaving a milestone points forward instead of doubling back. The plan treated
+  a milestone as taking no time at all and opened the next ticket on the milestone's own
+  day — and since a diamond is drawn in the middle of its day while a bar begins at the
+  left edge of its, the next bar landed half a column behind the diamond it was supposed
+  to follow
+- **It is the project's own rule that decides**, not the chart's: the scheduler that owns
+  real dates clears a predecessor's last day before starting a finish-to-start successor,
+  milestone included. The template chart now says what the project will do
+- A lot **covers the day its milestone marks**, rather than stopping just short of it
+- New guarantee, held by tests: the dates a template hands to a new project are ones the
+  project's scheduler **would not move** — it now reproduces the milestone case that used
+  to disagree
+
 ## [2.30.0] - 2026-09-14
 
 ### Added

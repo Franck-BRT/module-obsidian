@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_STATUSES, makeDocument, makeTask, type Task } from '../types'
 import { makeWorkCalendar } from './WorkCalendar'
+import { computeSchedule } from './Scheduler'
 import { daysBetween, firstDateOf, tasksFromTemplate } from './Template'
 
 const task = (title: string, over: Partial<Task> = {}): Task => makeTask({ title, start: '', ...over })
@@ -163,5 +164,39 @@ describe('what a template leaves open on purpose', () => {
     const made = tasksFromTemplate([first, second], { start: '2026-03-02', statuses: plainStatuses })
     expect(made[0]).toMatchObject({ start: '2026-03-02', due: '2026-03-02' })
     expect(made[1]).toMatchObject({ start: '2026-03-03', due: '2026-03-03' })
+  })
+})
+
+describe('the dates a template hands to the new project', () => {
+  it('are ones the project scheduler already agrees with, milestones included', () => {
+    // The strongest thing the plan can promise: what it lays down, the scheduler that
+    // owns real dates would not move. A milestone is the case that used to disagree.
+    const a = makeTask({ title: 'a', start: '', duration: 3 })
+    const m = makeTask({ title: 'jalon', type: 'milestone', start: '', due: '', dependencies: [a.id] })
+    const b = makeTask({ title: 'b', start: '', duration: 2, dependencies: [m.id] })
+    const made = tasksFromTemplate([a, m, b], { start: '2026-03-02', statuses: DEFAULT_STATUSES })
+
+    expect(made.map((task) => [task.start, task.due])).toEqual([
+      ['2026-03-02', '2026-03-04'],
+      ['', '2026-03-05'],
+      ['2026-03-06', '2026-03-07']
+    ])
+    expect(computeSchedule(made, undefined, DEFAULT_STATUSES).patches).toEqual([])
+  })
+
+  it('agrees with it on a working-day project too', () => {
+    const calendar = makeWorkCalendar([1, 2, 3, 4, 5])
+    const a = makeTask({ title: 'a', start: '', duration: 5 })
+    const m = makeTask({ title: 'jalon', type: 'milestone', start: '', due: '', dependencies: [a.id] })
+    const b = makeTask({ title: 'b', start: '', duration: 2, dependencies: [m.id] })
+    const made = tasksFromTemplate([a, m, b], { start: '2026-03-02', statuses: DEFAULT_STATUSES, calendar })
+
+    // Monday to Friday, the milestone on the following Monday, then Tuesday and Wednesday.
+    expect(made.map((task) => [task.start, task.due])).toEqual([
+      ['2026-03-02', '2026-03-06'],
+      ['', '2026-03-09'],
+      ['2026-03-10', '2026-03-11']
+    ])
+    expect(computeSchedule(made, undefined, DEFAULT_STATUSES, false, [], calendar).patches).toEqual([])
   })
 })

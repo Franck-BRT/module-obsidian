@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.30.0
+version: 2.30.1
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.30.0
+# Recette — Black Projects 2.30.1
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -614,8 +614,11 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       « Semaine 2 »…** — aucune date, aucun mois, aucune année
 - [ ] ✅ **Attendu** : chaque barre commence **après** celle dont elle dépend, en escalier,
       et les **flèches** de dépendance sont bien tracées
-- [ ] ✅ **Attendu** : une tâche qui suit un **jalon** démarre **le jour du jalon** (un jalon ne
-      dure pas)
+- [ ] ✅ **Attendu** (corrigé en 2.30.1) : une tâche qui suit un **jalon** démarre **le lendemain**
+      du jalon, et la flèche qui part du losange va vers l'**avant** — elle ne revient pas en arrière
+- [ ] ✅ **Attendu** : un **lot** qui se termine par un jalon **couvre le jour du jalon**
+- [ ] Créer un projet depuis ce modèle : ✅ **Attendu** : la tâche qui suit le jalon est datée
+      **au lendemain** du jalon — le graphique du modèle disait déjà ce que le projet fait
 - [ ] ✅ **Attendu** : **pas de trait « aujourd'hui »**
 - [ ] ✅ **Attendu** : le bouton **« Aujourd'hui »** a disparu de la barre d'outils
 - [ ] ✅ **Attendu** : le zoom ne propose que **Jour** et **Semaine**

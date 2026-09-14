@@ -20,8 +20,8 @@ describe('how long a ticket takes when a template gives no dates', () => {
     expect(lengthOf(task('a', { start: '2026-01-05', due: '2026-01-09' }))).toBe(5)
   })
 
-  it('takes none at all for a milestone, which is a moment', () => {
-    expect(lengthOf(task('a', { type: 'milestone' }))).toBe(0)
+  it('is one day for a milestone: no work, but the day it marks is its own', () => {
+    expect(lengthOf(task('a', { type: 'milestone' }))).toBe(1)
   })
 })
 
@@ -213,9 +213,9 @@ describe('the duration a template states, when it has no dates to give', () => {
     expect(lengthOf(task('a', { start: '2026-01-05', due: '2026-01-06', duration: 20 }))).toBe(20)
   })
 
-  it('never shrinks a bar to nothing, and never revives a milestone', () => {
+  it('never shrinks a bar to nothing, and never stretches a milestone', () => {
     expect(lengthOf(task('a', { duration: 0 }))).toBe(1)
-    expect(lengthOf(task('m', { type: 'milestone', duration: 30 }))).toBe(0)
+    expect(lengthOf(task('m', { type: 'milestone', duration: 30 }))).toBe(1)
   })
 
   it('counts the days the project counts: a dated week is five of them on weekdays', () => {
@@ -240,5 +240,38 @@ describe('the duration a template states, when it has no dates to give', () => {
       ]
     })
     expect(relativePlan([lot]).bars.get('lot')).toEqual({ offset: 0, length: 7 })
+  })
+})
+
+describe('a milestone, which marks a day rather than filling one', () => {
+  it('lets the work after it start the next day, as the dated scheduler does', () => {
+    const tasks = [
+      task('a', { duration: 2 }),
+      task('m', { type: 'milestone', dependencies: ['a'], dependencyOptions: { a: fs() } }),
+      task('b', { dependencies: ['m'], dependencyOptions: { m: fs() } })
+    ]
+    const plan = relativePlan(tasks)
+    // The milestone marks the day the work before it closed on; the next thing opens after.
+    expect(plan.bars.get('m')?.offset).toBe(2)
+    expect(plan.bars.get('b')?.offset).toBe(3)
+  })
+
+  it('never points its arrow backwards, which is how it is drawn', () => {
+    const tasks = [task('m', { type: 'milestone' }), task('b', { dependencies: ['m'], dependencyOptions: { m: fs() } })]
+    const plan = relativePlan(tasks)
+    const milestone = plan.bars.get('m')
+    const after = plan.bars.get('b')
+    expect(milestone && after && after.offset >= milestone.offset + milestone.length).toBe(true)
+  })
+
+  it('is covered by the lot that holds it, day included', () => {
+    const lot = task('lot', {
+      type: 'phase',
+      subtasks: [
+        task('x', { duration: 2 }),
+        task('m', { type: 'milestone', dependencies: ['x'], dependencyOptions: { x: fs() } })
+      ]
+    })
+    expect(relativePlan([lot]).bars.get('lot')).toEqual({ offset: 0, length: 3 })
   })
 })
