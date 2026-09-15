@@ -405,7 +405,9 @@ button.pm-chip-btn--active:hover {
   border-color: color-mix(in srgb, var(--pm-chip-color) 20%, transparent);
 }
 .pm-chip--outline {
-  border-color: var(--background-modifier-border);
+  /* A hint of the chip's own colour, so a type badge belongs to its family without
+     competing with the filled status beside it. Neutral when no colour was set. */
+  border-color: color-mix(in srgb, var(--pm-chip-color) 35%, var(--background-modifier-border));
 }
 .pm-chip--plain {
   color: var(--text-normal);

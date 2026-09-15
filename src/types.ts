@@ -339,6 +339,30 @@ export interface PriorityConfig {
   icon: string
 }
 
+/**
+ * What a kind of ticket looks like wherever it appears. Unlike a status, the list is
+ * fixed — the five kinds are the ones the editor can make — so a type is recoloured and
+ * renamed, never added or deleted.
+ */
+export interface TypeConfig {
+  id: TaskType
+  label: string
+  color: string
+  icon: string
+}
+
+/** What a document's state looks like. Fixed for the same reason a type's is. */
+export interface DocStateConfig {
+  id: DocState
+  label: string
+  color: string
+  icon: string
+}
+
+/** When a ticket says its kind on its own row. */
+export type TypeBadgeMode = 'none' | 'distinct' | 'all'
+export const TYPE_BADGE_MODES: readonly TypeBadgeMode[] = ['none', 'distinct', 'all']
+
 export type PriorityIconSet = 'chevrons' | 'signal' | 'arrows' | 'alerts' | 'none'
 
 /** One icon per rank, highest priority first. Ranks past the fifth carry no icon. */
@@ -371,6 +395,15 @@ export interface PMSettings {
   ganttWeekLabel: GanttWeekLabel
   statuses: StatusConfig[]
   priorities: PriorityConfig[]
+  /**
+   * What each kind of ticket looks like, and each state a document passes through.
+   * Global rather than per project: a status can mean different things in two plans, but
+   * a milestone is a milestone everywhere, and so is a document waiting to be approved.
+   */
+  types: TypeConfig[]
+  docStates: DocStateConfig[]
+  /** Which tickets say their kind on their own row: none, the ones that are not plain tasks, or all. */
+  typeBadges: TypeBadgeMode
   /** Icons for priorities that don't carry their own. */
   priorityIcons: PriorityIconSet
   /** Task properties every project starts with. A project adds to these, or overrides one by id. */
@@ -493,6 +526,38 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
   { id: 'cancelled', label: 'Cancelled', color: '#367794', icon: '', complete: true }
 ]
 
+/**
+ * The kinds of ticket, and what each looks like by default.
+ *
+ * The icon comes first here, not the colour: five hues cannot all be told apart by
+ * someone who does not see red and green, and these have to sit beside the status
+ * palette without being read as a status. So every kind carries its own glyph and its
+ * badge is outlined where a status is filled — the colour is an accent on top of two
+ * channels that already work. The hues are the best-separated set the palette validator
+ * found for five slots; the ordinary task is grey on purpose, since it is the case that
+ * should not shout.
+ */
+export const DEFAULT_TYPES: TypeConfig[] = [
+  { id: 'task', label: 'Task', color: '#6b7280', icon: 'square-check-big' },
+  { id: 'subtask', label: 'Subtask', color: '#15803d', icon: 'git-branch' },
+  { id: 'milestone', label: 'Milestone', color: '#7e22ce', icon: 'diamond' },
+  { id: 'phase', label: 'Phase', color: '#b45309', icon: 'layers' },
+  { id: 'document', label: 'Document', color: '#0369a1', icon: 'file-text' }
+]
+
+/**
+ * A document's state. These deliberately borrow the status palette's language — a
+ * document's state is a state — and each carries a glyph so the difference between
+ * something to chase and something to forget is never colour alone.
+ */
+export const DEFAULT_DOC_STATES: DocStateConfig[] = [
+  { id: 'expected', label: 'Expected', color: '#8b8c92', icon: 'clock' },
+  { id: 'received', label: 'Received', color: '#367794', icon: 'inbox' },
+  { id: 'in-review', label: 'In Review', color: '#b16a08', icon: 'eye' },
+  { id: 'approved', label: 'Approved', color: '#06915f', icon: 'check' },
+  { id: 'obsolete', label: 'Obsolete', color: '#6b6b70', icon: 'archive' }
+]
+
 export const DEFAULT_PRIORITIES: PriorityConfig[] = [
   { id: 'critical', label: 'Critical', color: '#f83e54', icon: '' },
   { id: 'high', label: 'High', color: '#b16a08', icon: '' },
@@ -517,6 +582,28 @@ export function seedStatuses(): StatusConfig[] {
   return DEFAULT_STATUSES.map((s) => ({ ...s, label: labels[s.id] ?? s.label }))
 }
 
+export function seedTypes(): TypeConfig[] {
+  const labels: Record<string, string> = {
+    task: t('task.type.task'),
+    subtask: t('task.type.subtask'),
+    milestone: t('task.type.milestone'),
+    phase: t('task.type.phase'),
+    document: t('task.type.document')
+  }
+  return DEFAULT_TYPES.map((type) => ({ ...type, label: labels[type.id] ?? type.label }))
+}
+
+export function seedDocStates(): DocStateConfig[] {
+  const labels: Record<string, string> = {
+    expected: t('doc.state.expected'),
+    received: t('doc.state.received'),
+    'in-review': t('doc.state.in-review'),
+    approved: t('doc.state.approved'),
+    obsolete: t('doc.state.obsolete')
+  }
+  return DEFAULT_DOC_STATES.map((state) => ({ ...state, label: labels[state.id] ?? state.label }))
+}
+
 export function seedPriorities(): PriorityConfig[] {
   const labels: Record<string, string> = {
     critical: t('default.priority.critical'),
@@ -535,6 +622,9 @@ export const DEFAULT_SETTINGS: PMSettings = {
   ganttGranularity: 'week',
   ganttWeekLabel: 'weekNumber',
   statuses: DEFAULT_STATUSES,
+  types: DEFAULT_TYPES,
+  docStates: DEFAULT_DOC_STATES,
+  typeBadges: 'distinct',
   priorities: DEFAULT_PRIORITIES,
   priorityIcons: 'chevrons',
   customFields: [],

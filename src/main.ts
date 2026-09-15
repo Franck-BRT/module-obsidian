@@ -3,8 +3,10 @@ import {
   DEFAULT_SETTINGS,
   makeDefaultFilter,
   PALETTE_RESTEPS,
+  seedDocStates,
   seedPriorities,
   seedStatuses,
+  seedTypes,
   type PMSettings,
   type Project,
   type Task
@@ -52,6 +54,7 @@ import { migrateProjects, migrateProjectLayout } from './migration'
 import { dedupePeople, displayName, safeAsync } from './utils'
 import { today } from './dates'
 import { setLocale, t } from './i18n'
+import { setTicketAppearance } from './store/TicketPalette'
 
 export default class PMPlugin extends Plugin {
   settings: PMSettings = { ...DEFAULT_SETTINGS }
@@ -368,11 +371,14 @@ export default class PMPlugin extends Plugin {
     setLocale(this.settings.language)
     if (!saved?.statuses?.length) this.settings.statuses = seedStatuses()
     if (!saved?.priorities?.length) this.settings.priorities = seedPriorities()
+    if (!saved?.types?.length) this.settings.types = seedTypes()
+    if (!saved?.docStates?.length) this.settings.docStates = seedDocStates()
     if (!this.settings.projectFilters) this.settings.projectFilters = {}
     if (!this.settings.scopeViews) this.settings.scopeViews = {}
     if (!this.settings.collapsedTasks) this.settings.collapsedTasks = {}
     if (!this.settings.collapsedProjects) this.settings.collapsedProjects = []
     if (!this.settings.excludedFolders) this.settings.excludedFolders = []
+    this.applyTicketAppearance()
 
     let migrated = false
     // Filters were keyed by project path before a view could cover several projects.
@@ -670,7 +676,17 @@ export default class PMPlugin extends Plugin {
     // The language setting can change here, and everything already on screen was
     // built with the old one.
     setLocale(this.settings.language)
+    this.applyTicketAppearance()
     await this.saveData(this.settings)
+  }
+
+  /** Hands the row-and-card composites the marks they draw tickets with. */
+  applyTicketAppearance(): void {
+    setTicketAppearance({
+      types: this.settings.types,
+      docStates: this.settings.docStates,
+      badges: this.settings.typeBadges
+    })
   }
 
   showNotice(msg: string, duration = 3000): void {

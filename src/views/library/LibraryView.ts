@@ -17,19 +17,12 @@ import { renderDocumentCards } from './LibraryCards'
 import { SUBVIEW_CLASS } from '../subviewClasses'
 import { t } from '../../i18n'
 import { docStateLabel } from './docStateLabel'
+import { docStateConfigOf } from '../../store/TicketPalette'
 import type { SubView } from '../SubView'
 import { depositDocument, setDocState, signOff } from './documentActions'
 import { LIBRARY_SORT_KEYS, librarySortKeyLabel, orderDocuments } from './librarySort'
 import { renderSortControl } from '../SortControl'
 import { writeBordereau } from './bordereau'
-
-const STATE_COLORS: Record<DocState, string> = {
-  expected: 'var(--text-muted)',
-  received: 'var(--color-blue)',
-  'in-review': 'var(--color-orange)',
-  approved: 'var(--color-green)',
-  obsolete: 'var(--text-faint)'
-}
 
 /**
  * A project's documents as a library rather than as a plan: what exists, at which
@@ -347,7 +340,7 @@ export class LibraryView implements SubView {
     const stateChip = new Chip(stateCell)
       .setLabel(docStateLabel(meta.state))
       .setVariant('outline')
-      .setColor(STATE_COLORS[meta.state])
+      .setColor(docStateConfigOf(meta.state).color)
     stateChip.el.addClass('pm-clickable')
     stateChip.el.addEventListener('click', (e) => {
       if (!project) return

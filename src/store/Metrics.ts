@@ -3,6 +3,7 @@ import { DOC_STATES } from '../types'
 import { isTerminalStatus, displayName } from '../utils'
 import { isPhase, phaseSpan } from './Phase'
 import { documentOf, isDocument } from './Document'
+import { docStateConfigOf } from './TicketPalette'
 import { totalLoggedHours } from './TaskTreeOps'
 
 /** One class of a breakdown: what it is, how many, and the colour it already wears. */
@@ -99,14 +100,6 @@ export interface MetricsInput {
   soonDays?: number
   /** At most this many points on the curve; the step widens until they fit. */
   maxPoints?: number
-}
-
-const DOC_STATE_COLORS: Record<DocState, string> = {
-  expected: 'var(--text-muted)',
-  received: 'var(--color-blue)',
-  'in-review': 'var(--color-orange)',
-  approved: 'var(--color-green)',
-  obsolete: 'var(--text-faint)'
 }
 
 /** Adds days to a YYYY-MM-DD without a Date object, which would drag a timezone in. */
@@ -255,7 +248,7 @@ export function projectMetrics(input: MetricsInput): ProjectMetrics {
       byState: DOC_STATES.map((state) => ({
         id: state,
         label: state,
-        color: DOC_STATE_COLORS[state],
+        color: docStateConfigOf(state).color,
         count: docStateCount.get(state) ?? 0
       })).filter((slice) => slice.count > 0)
     },

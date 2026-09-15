@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.31.0] - 2026-09-15
+
+### Added
+
+- **Ticket types are yours to colour**, in Settings → Ticket types: the colour, the icon
+  and the name of each of the five kinds — task, subtask, milestone, lot, document. The
+  list is fixed, since those are the kinds the editor can make, so they are recoloured and
+  renamed but never added to or deleted
+- **Document states too**, in Settings → Document states: expected, received, in review,
+  approved, obsolete. Renaming one renames it **everywhere** — the library, the dashboard's
+  document chart, the state menus — because they all now ask the same place
+- **A badge on the row says which kind a ticket is**, with a choice of when: never, every
+  kind but the plain task (the default), or always. A document is never marked twice: its
+  own badge already says both what it is and where it has got to
+
+### Changed
+
+- **A kind is outlined and glyph-led where a state is filled.** Five kinds cannot be told
+  apart by hue alone — not by someone who does not see red and green, and not beside a
+  status palette that got to the colour wheel first — so every kind carries its own icon
+  and its badge has a different shape. The colour is an accent on two channels that
+  already work, which is also what makes it safe to hand over
+- The default hues are the best-separated five the palette validator found, and the
+  ordinary task is grey on purpose: it is the case that should not shout
+
+### Fixed
+
+- The milestone and subtask marks were **hardcoded purple and green in two files**, the
+  document state colours in **three**, and a document's state name ignored any rename. All
+  of it now comes from one palette
+
 ## [2.30.1] - 2026-09-14
 
 ### Fixed

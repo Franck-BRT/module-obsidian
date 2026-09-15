@@ -2,7 +2,7 @@ import type { Task } from '../../types'
 import { formatDateShort } from '../../dates'
 import { AvatarStack, type AvatarPerson } from '../primitives/AvatarStack'
 import { Chip } from '../primitives/Chip'
-import { renderDocumentBadge } from './documentBadge'
+import { renderDocumentBadge, renderTypeBadge } from '../TicketBadges'
 import { ProgressBar } from '../primitives/ProgressBar'
 import { renderDueChip } from './dueChip'
 import { renderTagChip } from './tagChip'
@@ -50,22 +50,7 @@ export class KanbanCard {
     const titleRow = body.createDiv('pm-kanban-card-title-row')
     titleRow.createSpan({ text: task.title, cls: 'pm-kanban-card-title' })
     renderDocumentBadge(titleRow, task)
-    if (task.type === 'milestone') {
-      new Chip(titleRow)
-        .setLabel(t('common.milestoneBadge'))
-        .setVariant('solid')
-        .setSize('sm')
-        .setColor('var(--color-purple)')
-        .setTooltip(t('common.milestone'))
-    }
-    if (task.type === 'subtask') {
-      new Chip(titleRow)
-        .setLabel(t('common.sub'))
-        .setVariant('solid')
-        .setSize('sm')
-        .setColor('var(--color-green)')
-        .setTooltip(t('common.subtask'))
-    }
+    renderTypeBadge(titleRow, task)
     if (task.recurrence) {
       new Chip(titleRow)
         .setLabel(t('common.recurringBadge'))

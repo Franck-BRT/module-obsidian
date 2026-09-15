@@ -1,7 +1,14 @@
 import { App, Notice, PluginSettingTab, Setting, debounce } from 'obsidian'
 import type { SettingDefinitionItem, SettingDefinitionPage } from 'obsidian'
 import type PMPlugin from './main'
-import { type PMSettings, DEFAULT_SETTINGS, priorityIconSetLabels, makeId } from './types'
+import {
+  type PMSettings,
+  type TypeBadgeMode,
+  DEFAULT_SETTINGS,
+  priorityIconSetLabels,
+  makeId,
+  TYPE_BADGE_MODES
+} from './types'
 import { flattenTasks } from './store/TaskTreeOps'
 import { saveShortcutLabel } from './utils'
 import {
@@ -16,6 +23,18 @@ import { renderCustomFieldFields, renderCustomFieldOptions } from './ui/CustomFi
 import { renderPersonPicker } from './ui/PersonPicker'
 import { LOCALES, searchAliases, t } from './i18n'
 import { invalidHolidays, renderHolidays, renderWorkingWeekdays } from './ui/WorkCalendarEditor'
+
+/** Exhaustive, so a new mode cannot reach the interface without a name. */
+function typeBadgeModeLabel(mode: TypeBadgeMode): string {
+  switch (mode) {
+    case 'none':
+      return t('settings.typeBadges.none')
+    case 'distinct':
+      return t('settings.typeBadges.distinct')
+    case 'all':
+      return t('settings.typeBadges.all')
+  }
+}
 
 export type { PMSettings }
 export { DEFAULT_SETTINGS }
@@ -316,7 +335,14 @@ export class PMSettingTab extends PluginSettingTab {
       {
         type: 'group',
         heading: t('settings.group.taskFields'),
-        items: [this.statusesPage(), this.prioritiesPage(), this.customFieldsPage(), this.teamMembersPage()]
+        items: [
+          this.statusesPage(),
+          this.prioritiesPage(),
+          this.typesPage(),
+          this.docStatesPage(),
+          this.customFieldsPage(),
+          this.teamMembersPage()
+        ]
       },
       {
         type: 'group',
@@ -419,6 +445,69 @@ export class PMSettingTab extends PluginSettingTab {
               this.update()
             }
           }
+        }
+      ]
+    }
+  }
+
+  /**
+   * What each kind of ticket looks like. The five kinds are the ones the editor can make,
+   * so unlike a status the list is fixed: they are recoloured, re-iconed and renamed, and
+   * never added to or deleted — which is why this page has no add button and no handles.
+   */
+  private typesPage(): SettingDefinitionPage {
+    const types = this.plugin.settings.types
+    return {
+      type: 'page',
+      name: t('settings.types.name'),
+      desc: t('settings.types.desc'),
+      displayValue: () => typeBadgeModeLabel(this.plugin.settings.typeBadges),
+      items: [
+        {
+          name: t('settings.typeBadges.name'),
+          desc: t('settings.typeBadges.desc'),
+          control: {
+            type: 'dropdown',
+            key: 'typeBadges',
+            options: Object.fromEntries(TYPE_BADGE_MODES.map((mode) => [mode, typeBadgeModeLabel(mode)]))
+          }
+        },
+        {
+          type: 'list',
+          heading: t('settings.types.name'),
+          emptyState: t('settings.types.empty'),
+          items: types.map((type) => ({
+            name: type.label,
+            render: (setting: Setting) => {
+              setting.setClass('pm-palette-row')
+              renderPaletteFields(setting.controlEl, type, () => this.persist())
+            }
+          }))
+        }
+      ]
+    }
+  }
+
+  /** The same, for the states a document goes through while a project waits on it. */
+  private docStatesPage(): SettingDefinitionPage {
+    const states = this.plugin.settings.docStates
+    return {
+      type: 'page',
+      name: t('settings.docStates.name'),
+      desc: t('settings.docStates.desc'),
+      displayValue: () => t('count.statuses', { count: states.length }),
+      items: [
+        {
+          type: 'list',
+          heading: t('settings.docStates.name'),
+          emptyState: t('settings.docStates.empty'),
+          items: states.map((state) => ({
+            name: state.label,
+            render: (setting: Setting) => {
+              setting.setClass('pm-palette-row')
+              renderPaletteFields(setting.controlEl, state, () => this.persist())
+            }
+          }))
         }
       ]
     }

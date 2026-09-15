@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.30.1
+version: 2.31.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.30.1
+# Recette — Black Projects 2.31.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1127,6 +1127,49 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 **Constaté :**
 
 ---
+
+## 7nonies. Couleurs des types et des états [N]
+
+> **Nouveau en 2.31.0** : les **types de ticket** et les **états de document** se colorent
+> depuis les réglages. Un type porte une pastille **bordée avec son icône**, un état une
+> pastille **pleine** : même teinte, on ne les confond pas.
+
+### Types de tickets
+
+- [ ] **Réglages → Types de tickets** : ✅ **Attendu** : cinq lignes — Tâche, Sous-tâche,
+      Jalon, Lot, Document — chacune avec icône, nom et couleur
+- [ ] ✅ **Attendu** : **pas** de bouton « ajouter », **pas** de poignée de tri, **pas** de
+      suppression (les cinq types sont ceux que l'éditeur sait créer)
+- [ ] Changer la couleur du **Jalon** en rouge : ✅ **Attendu** : les pastilles « Jalon »
+      passent au rouge dans le tableau **et** sur le kanban
+- [ ] Changer son **icône** et son **nom** : ✅ **Attendu** : les deux suivent partout
+- [ ] **Afficher le type sur les lignes → Toujours** : ✅ **Attendu** : même les tâches
+      ordinaires portent leur pastille
+- [ ] **→ Jamais** : ✅ **Attendu** : plus aucune pastille de type ; les **états** restent
+- [ ] **→ Sauf les tâches ordinaires** (défaut) : ✅ **Attendu** : jalons, lots et sous-tâches
+      sont marqués, les tâches simples non
+- [ ] ✅ **Attendu** : un **document** ne porte **jamais** deux pastilles — la sienne dit déjà
+      son type et son état
+
+### États des documents
+
+- [ ] **Réglages → États des documents** : ✅ **Attendu** : cinq lignes — Attendu, Reçu,
+      En revue, Approuvé, Obsolète
+- [ ] Changer la couleur d'**Approuvé** : ✅ **Attendu** : elle suit dans la **bibliothèque**
+      (cartes et tableau), sur la pastille du **document** dans le tableur et le kanban, et
+      dans le graphique des documents du **tableau de bord**
+- [ ] **Renommer** « Attendu » en « À fournir » : ✅ **Attendu** : le nouveau nom apparaît
+      dans la bibliothèque, dans le **menu** de changement d'état et sur le tableau de bord
+- [ ] ✅ **Attendu** : chaque état a une **icône** distincte — la couleur n'est jamais seule
+      à porter l'information
+
+### Lisibilité
+
+- [ ] Mettre un **type** et un **état** à la même couleur : ✅ **Attendu** : on les distingue
+      quand même — le type est **bordé avec une icône**, l'état est **plein**
+- [ ] Vérifier en thème **clair** et en thème **sombre**
+
+**Constaté :**
 
 ## 8. Robustesse
 

@@ -1,6 +1,6 @@
 import type { Task } from '../../../types'
 import { Chip } from '../../primitives/Chip'
-import { renderDocumentBadge } from '../documentBadge'
+import { renderDocumentBadge, renderTypeBadge } from '../../TicketBadges'
 import { IconButton } from '../../primitives/IconButton'
 import { renderTagChip } from '../tagChip'
 import { renderTreeGuides } from '../treeGuides'
@@ -50,22 +50,7 @@ export class TitleCell {
       })
 
     renderDocumentBadge(inner, task)
-    if (task.type === 'milestone') {
-      new Chip(inner)
-        .setLabel(t('common.milestoneBadge'))
-        .setVariant('solid')
-        .setSize('sm')
-        .setColor('var(--color-purple)')
-        .setTooltip(t('common.milestone'))
-    }
-    if (task.type === 'subtask') {
-      new Chip(inner)
-        .setLabel(t('common.sub'))
-        .setVariant('solid')
-        .setSize('sm')
-        .setColor('var(--color-green)')
-        .setTooltip(t('common.subtask'))
-    }
+    renderTypeBadge(inner, task)
     if (task.recurrence) {
       new Chip(inner)
         .setLabel(t('common.recurringBadge'))
