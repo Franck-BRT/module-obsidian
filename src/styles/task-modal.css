@@ -211,3 +211,139 @@ a.pm-subtask-title--done:hover {
 .pm-prop-duration {
   width: 7em;
 }
+
+/* ---- Choosing predecessors -------------------------------------------------
+   A window instead of a drop-down: the plan's own shape on the left, what has
+   been picked on the right, so a long vault stays searchable by eye. */
+.pm-modal--deps {
+  width: min(960px, 94vw);
+}
+.pm-deps-title {
+  margin: 0 0 12px;
+  font-size: var(--font-ui-large);
+}
+.pm-deps-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+}
+.pm-deps-search:focus-within {
+  border-color: var(--interactive-accent);
+}
+.pm-deps-search-icon {
+  --pm-glyph-size: 15px;
+  display: inline-flex;
+  color: var(--text-muted);
+}
+.pm-deps-search-field {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+.pm-deps-body {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.pm-deps-pane {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  min-height: 320px;
+  max-height: min(52vh, 440px);
+  overflow-y: auto;
+  padding: 6px;
+}
+.pm-deps-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px;
+  padding-left: calc(6px + var(--depth, 0) * 16px);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+}
+.pm-deps-row:hover {
+  background: var(--background-modifier-hover);
+}
+.pm-deps-row--group {
+  font-weight: 600;
+}
+.pm-deps-row--blocked {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.pm-deps-twist,
+.pm-deps-icon {
+  --pm-glyph-size: 14px;
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.pm-deps-check {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.pm-deps-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-deps-count,
+.pm-deps-blocked,
+.pm-deps-chosen-project {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+.pm-deps-empty {
+  padding: 14px 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  text-align: center;
+}
+.pm-deps-chosen-head {
+  padding: 4px 6px 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pm-deps-chosen-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px;
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+}
+.pm-deps-chosen-row:hover {
+  background: var(--background-modifier-hover);
+}
+.pm-deps-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* One column on a narrow window: the tree first, then what is picked. */
+@media (max-width: 620px) {
+  .pm-deps-body {
+    grid-template-columns: 1fr;
+  }
+  .pm-deps-pane {
+    min-height: 180px;
+  }
+}

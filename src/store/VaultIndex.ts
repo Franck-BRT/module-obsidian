@@ -65,6 +65,10 @@ export interface TaskRef {
   projectId: string
   projectPath: string | null
   title: string
+  /** The kind of ticket, so a lot can be told from the work it holds without loading it. */
+  type: string
+  /** The ticket it sits under, lot or task, resolved from its own note. */
+  parentId: string | null
   status: string
   priority: string
   start: string
@@ -531,6 +535,8 @@ export class VaultIndex {
       projectId,
       projectPath: this.resolveOwner(path, projectId),
       title: str(frontmatter.title, 'Untitled'),
+      type: str(frontmatter.type, 'task'),
+      parentId: frontmatter.parent ? refToId(this.app, str(frontmatter.parent), path) : null,
       status: str(frontmatter.status, 'todo'),
       priority: str(frontmatter.priority, 'medium'),
       start: str(frontmatter.start),

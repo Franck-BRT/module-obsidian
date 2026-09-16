@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.32.0
+version: 2.33.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.32.0
+# Recette — Black Projects 2.33.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1189,6 +1189,38 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       l'archive a son propre interrupteur, ce n'est pas le filtre qui cache
 - [ ] Un projet avec des **lots** : ✅ **Attendu** : le compte porte sur les **tickets**, pas
       sur les lots
+
+**Constaté :**
+
+## 7undecies. Choisir les prédécesseurs [N]
+
+> **Nouveau en 2.33.0** : « Dépend de » ouvre une **fenêtre** — arborescence projet / lot /
+> tâche à gauche, sélection à droite, recherche en haut.
+
+- [ ] Ouvrir une tâche → **« + Ajouter une dépendance »** : ✅ **Attendu** : une **fenêtre**
+      s'ouvre, plus de longue liste déroulante
+- [ ] ✅ **Attendu** : le **projet en cours est ouvert** en premier ; les autres projets sont
+      **repliés**, avec le **nombre** de tâches qu'ils contiennent
+- [ ] Déplier un projet : ✅ **Attendu** : ses **lots** apparaissent, et les tâches dedans
+- [ ] ✅ **Attendu** : les **lots** ne sont **pas cochables** (un lot n'est pas du travail)
+- [ ] **Cocher** deux tâches : ✅ **Attendu** : elles apparaissent **à droite**, avec le nom de
+      leur projet, et le compte se met à jour
+- [ ] Les **retirer** depuis la droite (croix) : ✅ **Attendu** : la case se décoche à gauche
+- [ ] **Rechercher** « consign » : ✅ **Attendu** : seules les branches contenant un résultat
+      restent, **projet et lot compris**, et elles sont **ouvertes** automatiquement
+- [ ] Rechercher le **nom d'un lot** : ✅ **Attendu** : tout ce qu'il contient est proposé
+- [ ] Rechercher quelque chose d'introuvable : ✅ **Attendu** : « Aucune tâche ne correspond. »
+- [ ] Une tâche qui **créerait un cycle** : ✅ **Attendu** : elle est **affichée**, grisée, non
+      cochable, avec la mention **« créerait un cycle »** — elle ne disparaît pas
+- [ ] ✅ **Attendu** : la tâche **elle-même** n'est jamais proposée
+- [ ] **Annuler** : ✅ **Attendu** : rien n'a changé
+- [ ] **OK** : ✅ **Attendu** : les dépendances sont posées, et chacune garde son **type de lien
+      (FS/SS/FF/SF) et son décalage** si elle en avait un
+- [ ] Retirer une dépendance depuis la **fiche** (hors fenêtre) : ✅ **Attendu** : son type de
+      lien et son décalage sont **oubliés** avec elle
+- [ ] Une tâche **archivée** : ✅ **Attendu** : elle n'est **pas** proposée, sauf si elle est
+      **déjà** une dépendance
+- [ ] Un nom de tâche **très long** : ✅ **Attendu** : il est tronqué mais **lisible au survol**
 
 **Constaté :**
 

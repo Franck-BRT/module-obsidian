@@ -42,6 +42,11 @@ export interface MultiSelectOpts {
   avatarStack?: boolean
   /** A vertical list of id + title-link rows. Backs Depends on. */
   depsList?: boolean
+  /**
+   * Opens a window of its own instead of the built-in drop-down, for a list too long to
+   * scan flat. It is handed the repaint, since the values change only once it is done.
+   */
+  openPicker?: (refresh: () => void) => void
   /** The note a deps-list value stands for, turning its title into a link that opens it. */
   linkFor?: (id: string) => DepLink | null
   /** How a deps-list value schedules, letting the row edit its link type and lag. */
@@ -135,6 +140,10 @@ export function renderMultiSelect(opts: MultiSelectOpts): void {
 
   let pop: Popover | null = null
   anchorBtn.addEventListener('click', () => {
+    if (opts.openPicker) {
+      opts.openPicker(renderValues)
+      return
+    }
     if (pop?.isOpen) {
       pop.close()
       return

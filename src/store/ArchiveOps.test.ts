@@ -22,6 +22,8 @@ function ref(id: string, dependencies: string[], archived = false): TaskRef {
     projectId: 'p1',
     projectPath: 'Projects/Roadmap.md',
     title: id,
+    type: 'task',
+    parentId: null,
     status: 'todo',
     priority: 'medium',
     start: '',

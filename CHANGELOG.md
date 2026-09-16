@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.33.0] - 2026-09-16
+
+### Changed
+
+- **Predecessors are chosen in a window, not a drop-down.** A flat list of every ticket in
+  the vault by title is unusable past a few dozen: the ticket is there, it just cannot be
+  found. The candidates are now shown the way the plan is organised — **project, lot,
+  ticket**, each foldable — with the project being edited open first and the rest waiting
+  to be asked for
+- **A search over the whole vault**, which keeps the project and the lot standing around
+  a match so the answer stays placeable, and opens the way down to it rather than leaving
+  it behind a folded group
+- **What is chosen stands on the right**, as a list with the project each one comes from,
+  removable one by one — instead of being inferred from ticks scattered down a tree
+- **A ticket that would close a loop is shown and marked** "créerait un cycle" rather than
+  quietly left out. A candidate that is merely absent reads as a ticket that has gone
+  missing, which is the confusion this picker exists to end
+- Nothing is written until **OK**, and the link type and lag already set on a dependency
+  survive the trip: the picker hands back a list, the editor keeps the rest
+
+### Added
+
+- The index now knows each ticket's **kind** and the **ticket it sits under**, which is what
+  lets the picker group by lot without loading every project in the vault
+
 ## [2.32.0] - 2026-09-16
 
 ### Added

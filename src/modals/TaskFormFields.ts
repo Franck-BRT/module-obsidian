@@ -9,6 +9,7 @@ import { isTerminalStatus, priorityIcon, stringToColor } from '../utils'
 import { completionOutcome, relativeDue } from '../dates'
 import { renderCustomFieldInput } from './CustomFieldInputs'
 import { renderPersonPicker } from '../ui/PersonPicker'
+import { DependencyPickerModal } from './DependencyPickerModal'
 import {
   renderSelectControl,
   renderDateControl,
@@ -423,6 +424,12 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
       ...foreign
     ]
     const titleOf = (id: string) => allTasks.find((t) => t.id === id)?.label ?? id
+    // Dropping a link drops how it scheduled with it, wherever the drop came from.
+    const dropDependency = (id: string): void => {
+      task.dependencies = task.dependencies.filter((d) => d !== id)
+      const options = withoutDependency(task.dependencyOptions, id)
+      task.dependencyOptions = Object.keys(options).length ? options : undefined
+    }
     const depRow = renderPropRow(
       grid,
       t('task.dependsOn'),
@@ -430,11 +437,24 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
         const cell = createDiv('pm-prop-value')
         renderMultiSelect({
           container: cell,
-          search: true,
           addLabel: t('task.addDependency'),
           addLabelMore: t('task.addAnother'),
-          placeholder: t('task.searchTasks'),
           depsList: true,
+          // A drop-down listing every ticket in the vault by title cannot be searched by
+          // eye, so the choosing happens in a window that shows the plan's own shape.
+          openPicker: (refresh) => {
+            new DependencyPickerModal(plugin.app, {
+              plugin,
+              taskId: task.id,
+              homeProject: project.filePath,
+              selected: [...task.dependencies],
+              onConfirm: (ids) => {
+                for (const id of task.dependencies) if (!ids.includes(id)) dropDependency(id)
+                for (const id of ids) if (!task.dependencies.includes(id)) task.dependencies.push(id)
+                refresh()
+              }
+            }).open()
+          },
           labelFor: titleOf,
           linkFor: (id) => {
             const path = plugin.index.task(id)?.path
@@ -461,11 +481,7 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
           add: (id) => {
             if (!task.dependencies.includes(id)) task.dependencies.push(id)
           },
-          remove: (id) => {
-            task.dependencies = task.dependencies.filter((d) => d !== id)
-            const options = withoutDependency(task.dependencyOptions, id)
-            task.dependencyOptions = Object.keys(options).length ? options : undefined
-          }
+          remove: dropDependency
         })
         return cell
       },

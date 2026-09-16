@@ -17,6 +17,8 @@ function ref(id: string, over: Partial<TaskRef> = {}): TaskRef {
     projectId: 'a',
     projectPath: 'Projects/A/A.md',
     title: id,
+    type: 'task',
+    parentId: null,
     status: 'todo',
     priority: 'medium',
     start: '',
