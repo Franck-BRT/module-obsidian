@@ -1,7 +1,9 @@
 import { parsePlainDate, Temporal, today } from '../dates'
 import type { DueDateFilter, FilterState, StatusConfig, Task } from '../types'
+import { makeDefaultFilter } from '../types'
 import { displayName, isTerminalStatus } from '../utils'
 import type { FlatTask } from './TaskTreeOps'
+import { flattenTasks } from './TaskTreeOps'
 import { isPhase } from './Phase'
 
 export function isFilterActive(filter: FilterState): boolean {
@@ -151,4 +153,31 @@ function matchDueDateFilter(task: FilterableTask, filter: DueDateFilter, statuse
     default:
       return true
   }
+}
+
+/**
+ * How many tickets the filter is keeping off screen.
+ *
+ * A view that has quietly gone half empty looks like lost data — that is exactly how it
+ * was reported — so the filter row says what it is doing rather than leaving the reader
+ * to infer it from a chart with nothing in it.
+ *
+ * Counted against the same view with every rule dropped but `showArchived`, because
+ * archived tickets are hidden by a toggle of their own rather than by the filter, and
+ * counting them here would put a number on the row of every project that has an archive.
+ * Lots are left out for the same reason a lot is not work: it is tickets that went
+ * missing, and a lot only ever follows what it holds.
+ */
+export function countHiddenByFilter(
+  tasks: Task[],
+  filter: FilterState,
+  statuses: StatusConfig[] = [],
+  keyOf?: (raw: string) => string
+): number {
+  if (!isFilterActive(filter)) return 0
+  const flat = flattenTasks(tasks).filter(({ task }) => !isPhase(task))
+  const baseline = { ...makeDefaultFilter(), showArchived: filter.showArchived }
+  const before = applyTaskFilterFlat(flat, baseline, statuses, keyOf).length
+  const after = applyTaskFilterFlat(flat, filter, statuses, keyOf).length
+  return Math.max(0, before - after)
 }

@@ -544,6 +544,7 @@ export const en = {
   'filter.dueDate': 'Due date',
   'filter.thisWeek': 'This week',
   'filter.thisMonth': 'This month',
+  'filter.hidden': { one: '{count} task hidden by the filter', other: '{count} tasks hidden by the filter' },
   'filter.noDate': 'No date',
   'filter.assignee': 'Assignee',
   'filter.toggleRow': 'Toggle filter row',

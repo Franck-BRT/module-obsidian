@@ -520,3 +520,10 @@ button.pm-chip-rm {
      button, so sharing a right edge is what makes them share a centre line. */
   padding-right: 10px;
 }
+
+/* What the filter is doing, beside the button that undoes it: quiet, but never absent
+   while rows are missing. */
+.pm-filter-hidden {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}

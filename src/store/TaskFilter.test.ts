@@ -4,6 +4,7 @@ import {
   applyTaskFilter,
   applyTaskFilterFlat,
   applyTaskFilterPromote,
+  countHiddenByFilter,
   countActiveFilters,
   isFilterActive,
   matchesFilter
@@ -324,5 +325,39 @@ describe('a phase under a filter', () => {
   it('drops out of the promoted tree when it is left holding nothing', () => {
     const tree = [lot('lot1', [task({ id: 'a' })])]
     expect(applyTaskFilterPromote(tree, filter({ tags: ['keep'] }), DEFAULT_STATUSES)).toEqual([])
+  })
+})
+
+describe('countHiddenByFilter', () => {
+  const dated = (id: string, over: Partial<Task> = {}): Task =>
+    makeTask({ title: id, ...over, ...({ id } as Partial<Task>) })
+
+  it('counts nothing at all when no filter is on', () => {
+    expect(countHiddenByFilter([dated('a'), dated('b')], filter(), DEFAULT_STATUSES)).toBe(0)
+  })
+
+  it('counts what the filter took away', () => {
+    const tasks = [dated('a', { status: 'todo' }), dated('b', { status: 'done' }), dated('c', { status: 'done' })]
+    expect(countHiddenByFilter(tasks, filter({ statuses: ['todo'] }), DEFAULT_STATUSES)).toBe(2)
+  })
+
+  it('looks inside lots, and never counts the lots themselves', () => {
+    const lot = dated('lot', {
+      type: 'phase',
+      subtasks: [dated('x', { status: 'todo' }), dated('y', { status: 'done' })]
+    })
+    expect(countHiddenByFilter([lot], filter({ statuses: ['todo'] }), DEFAULT_STATUSES)).toBe(1)
+  })
+
+  it('does not blame the filter for what the archive toggle hides', () => {
+    // Archived tickets are hidden by their own switch; counting them here would put a
+    // number on every project that has ever archived anything.
+    const tasks = [dated('a', { status: 'todo' }), dated('old', { status: 'todo', archived: true })]
+    expect(countHiddenByFilter(tasks, filter({ statuses: ['todo'] }), DEFAULT_STATUSES)).toBe(0)
+  })
+
+  it('counts every ticket when the filter matches none of them', () => {
+    const tasks = [dated('a', { status: 'done' }), dated('b', { status: 'done' })]
+    expect(countHiddenByFilter(tasks, filter({ dueDateFilter: 'overdue' }), DEFAULT_STATUSES)).toBe(2)
   })
 })

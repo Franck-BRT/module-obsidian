@@ -521,6 +521,7 @@ export const fr: Catalog = {
   'filter.dueDate': 'Échéance',
   'filter.thisWeek': 'Cette semaine',
   'filter.thisMonth': 'Ce mois-ci',
+  'filter.hidden': { one: '{count} tâche masquée par le filtre', other: '{count} tâches masquées par le filtre' },
   'filter.noDate': 'Sans date',
   'filter.assignee': 'Assigné',
   'filter.toggleRow': 'Afficher la barre de filtres',

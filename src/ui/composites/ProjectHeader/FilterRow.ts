@@ -1,7 +1,7 @@
 import { Menu } from 'obsidian'
 import type { Task, FilterState, StatusConfig, PriorityConfig, PriorityIconSet, DueDateFilter } from '../../../types'
 import { collectAllAssignees, collectAllTags } from '../../../store'
-import { countActiveFilters } from '../../../store/TaskFilter'
+import { countActiveFilters, countHiddenByFilter } from '../../../store/TaskFilter'
 import { renderFilterDropdown } from '../../FilterDropdown'
 import { ChipButton } from '../../primitives/ChipButton'
 import { displayName, priorityIcon } from '../../../utils'
@@ -32,6 +32,7 @@ function dueLabels(): Record<DueDateFilter, string> {
 export class FilterRow {
   el: HTMLElement
   private clearBtn: ChipButton | null = null
+  private hiddenEl: HTMLElement | null = null
 
   constructor(
     parentEl: HTMLElement,
@@ -108,6 +109,7 @@ export class FilterRow {
     this.renderDueDateButton(notify)
     this.renderArchivedButton(notify)
     this.renderClearButton()
+    this.renderHiddenCount()
   }
 
   private renderDueDateButton(notify: () => void): void {
@@ -164,11 +166,30 @@ export class FilterRow {
     this.updateClearButton()
   }
 
+  /**
+   * What the filter is actually doing, next to the button that undoes it. Without it a
+   * chart that has gone quiet reads as lost work rather than as a rule still in force.
+   */
+  private renderHiddenCount(): void {
+    const { filter, statuses, tasks, personKeyOf } = this.props
+    const hidden = countHiddenByFilter(tasks, filter, statuses, personKeyOf)
+    if (hidden === 0) {
+      this.hiddenEl = null
+      return
+    }
+    this.hiddenEl = this.el.createSpan({ cls: 'pm-filter-hidden', text: t('filter.hidden', { count: hidden }) })
+  }
+
   private updateClearButton(): void {
     if (this.clearBtn) {
       this.clearBtn.el.remove()
       this.clearBtn = null
     }
+    if (this.hiddenEl) {
+      this.hiddenEl.remove()
+      this.hiddenEl = null
+    }
     this.renderClearButton()
+    this.renderHiddenCount()
   }
 }

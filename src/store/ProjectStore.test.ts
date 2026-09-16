@@ -1942,3 +1942,32 @@ describe('ProjectStore recurring tasks', () => {
     expect(nextChild.status).toBe('todo')
   })
 })
+
+describe('a task whose file is there but whose links are not', () => {
+  it('still shows a task whose parent points in a circle', async () => {
+    // Two tickets each claiming the other as its parent. Nothing roots the pair, so both
+    // used to be counted as somebody's child and neither reached the project.
+    const { store, vault, app } = newStore()
+    const project = await store.createProject('Loop', 'Projects')
+    const a = await addNamed(store, project, 'Première')
+    const b = await addNamed(store, project, 'Seconde')
+
+    for (const [task, otherId] of [
+      [a, b.id],
+      [b, a.id]
+    ] as const) {
+      const file = fileAt(app, expectDefined(task.filePath, 'task file missing'))
+      const content = await vault.cachedRead(file)
+      await vault.modify(file, content.replace(/^parent:.*$/m, `parent: ${otherId}`))
+    }
+
+    const reloaded = expectDefined(
+      await new ProjectStore(app, () => SETTINGS).loadProject(fileAt(app, project.filePath))
+    )
+    const ids = flattenTasks(reloaded.tasks).map((f) => f.task.id)
+    expect(ids).toContain(a.id)
+    expect(ids).toContain(b.id)
+    // And the tree is walkable: a loop must never become an endless one.
+    expect(ids.length).toBeLessThan(10)
+  })
+})

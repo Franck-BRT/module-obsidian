@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.31.0
+version: 2.32.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.31.0
+# Recette — Black Projects 2.32.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1168,6 +1168,27 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Mettre un **type** et un **état** à la même couleur : ✅ **Attendu** : on les distingue
       quand même — le type est **bordé avec une icône**, l'état est **plein**
 - [ ] Vérifier en thème **clair** et en thème **sombre**
+
+**Constaté :**
+
+## 7decies. Ce qu'un filtre cache [N]
+
+> **Nouveau en 2.32.0** : quand un filtre masque des tickets, la barre de filtres **le dit**,
+> à côté du bouton qui l'efface.
+
+- [ ] Sur un projet, poser **Échéance : En retard** alors que peu de tâches sont en retard :
+      ✅ **Attendu** : la barre affiche **« n tâches masquées par le filtre »**
+- [ ] ✅ **Attendu** : le compte est **juste** — comparer avec le nombre de tâches du projet
+- [ ] Passer en **Gantt**, **Kanban**, **Tableur** : ✅ **Attendu** : le message reste, c'est la
+      même barre
+- [ ] **Effacer** les filtres : ✅ **Attendu** : le message disparaît et **toutes** les tâches
+      reviennent
+- [ ] Un filtre qui ne masque **rien** (par exemple un statut que tout le monde a) :
+      ✅ **Attendu** : **pas** de message
+- [ ] Activer **Archivée** seule, sans autre filtre : ✅ **Attendu** : **pas** de message —
+      l'archive a son propre interrupteur, ce n'est pas le filtre qui cache
+- [ ] Un projet avec des **lots** : ✅ **Attendu** : le compte porte sur les **tickets**, pas
+      sur les lots
 
 **Constaté :**
 

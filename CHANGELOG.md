@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.32.0] - 2026-09-16
+
+### Added
+
+- **The filter row now says how many tickets it is hiding** — "23 tâches masquées par le
+  filtre", beside the button that clears it. A filter is kept per view and survives a
+  restart, so a chart that has quietly gone half empty weeks later reads as lost work
+  rather than as a rule still in force. That is exactly how it was reported
+- The count ignores what the **archive toggle** hides, since that is a switch of its own,
+  and it counts tickets rather than lots: a lot only ever follows what it holds
+
+### Fixed
+
+- A regression test now covers a task file whose `parent` points in a circle: it stays
+  visible, and walking the tree still terminates
+
 ## [2.31.0] - 2026-09-15
 
 ### Added
