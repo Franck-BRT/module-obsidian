@@ -5,9 +5,8 @@ import { type FlatTask, flattenTasks } from '../../store/TaskTreeOps'
 import { findTaskById } from '../../store/TaskIndex'
 import { applyTaskFilterFlat, isFilterActive } from '../../store/TaskFilter'
 import { openTaskModal } from '../../ui/ModalFactory'
-import { renderAddButton } from '../../ui/composites/addButton'
+import { renderAddTicketButton } from '../../ui/composites/addTicketButton'
 import { childTreeGuides } from '../../ui/composites/treeGuides'
-import { openAddTask } from '../addTask'
 import { collectionBlocks, phaseHeading, type HeadingRow } from '../headings'
 import { isPhase } from '../../store/Phase'
 import { orderRows } from '../sortOrder'
@@ -323,24 +322,11 @@ function renderWindowRows(ctx: TableContext): void {
   if (ctx.scope.canAddTask) {
     const addRow = tbody.createEl('tr', { cls: 'pm-table-add-row' })
     const addCell = addRow.createEl('td', { attr: { colspan: String(colCount) } })
-    renderAddButton(addCell, t('gantt.addTask'), (e) => {
-      openAddTask(ctx.plugin, ctx.scope, { event: e, onSave: () => ctx.onRefresh() })
+    renderAddTicketButton(addCell, {
+      plugin: ctx.plugin,
+      scope: ctx.scope,
+      onSave: () => ctx.onRefresh()
     })
-    // A document is an ordinary ticket whose type is already chosen. The shortcut spares
-    // the trip through the type field, and says out loud that the tool keeps documents.
-    const addDoc = renderAddButton(
-      addCell,
-      t('gantt.addDocument'),
-      (e) => {
-        openAddTask(ctx.plugin, ctx.scope, {
-          event: e,
-          defaults: { type: 'document' },
-          onSave: () => ctx.onRefresh()
-        })
-      },
-      'file-text'
-    )
-    addDoc.addClass('pm-add-document')
   }
 
   calibrateRowHeight(ctx)

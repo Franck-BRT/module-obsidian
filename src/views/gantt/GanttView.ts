@@ -1,11 +1,10 @@
-import { ButtonComponent, setTooltip, type Scope } from 'obsidian'
+import { ButtonComponent, type Scope } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Task, GanttGranularity, FilterState } from '../../types'
 import { personKeyer, type ProjectScope } from '../../store'
 import { type FlatTask, flattenTasks } from '../../store/TaskTreeOps'
 import { applyTaskFilterPromote } from '../../store/TaskFilter'
-import { openAddTask } from '../addTask'
-import { renderAddButton } from '../../ui/composites/addButton'
+import { renderAddTicketButton } from '../../ui/composites/addTicketButton'
 import { SegmentedControl } from '../../ui/primitives/SegmentedControl'
 import type { SubView } from '../SubView'
 import type { TimelineCfg } from './TimelineConfig'
@@ -302,23 +301,11 @@ export class GanttView implements SubView {
     if (this.scope.canAddTask) {
       const addRow = leftBody.createDiv('pm-gantt-label-row pm-gantt-add-row')
       addRow.style.height = `${ROW_HEIGHT}px`
-      renderAddButton(addRow, t('gantt.addTask'), (e) => {
-        openAddTask(this.plugin, this.scope, { event: e, onSave: () => this.onRefresh() })
+      renderAddTicketButton(addRow, {
+        plugin: this.plugin,
+        scope: this.scope,
+        onSave: () => this.onRefresh()
       })
-      const addDoc = renderAddButton(
-        addRow,
-        t('gantt.addDocument'),
-        (e) => {
-          openAddTask(this.plugin, this.scope, {
-            event: e,
-            defaults: { type: 'document' },
-            onSave: () => this.onRefresh()
-          })
-        },
-        'file-text'
-      )
-      addDoc.addClass('pm-add-document')
-      setTooltip(addDoc, t('gantt.addDocument'))
     }
 
     // The right panel's horizontal scrollbar eats into its viewport height, letting it

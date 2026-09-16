@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.35.1
+version: 2.36.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.35.1
+# Recette — Black Projects 2.36.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1320,6 +1320,24 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       ✅ **Attendu** : il **remonte** au premier niveau avec son contenu
 - [ ] ✅ **Attendu** : un lot **replié** se déplace aussi bien qu'un lot déplié
 - [ ] **Rouvrir le coffre** : ✅ **Attendu** : la nouvelle organisation a tenu
+
+**Constaté :**
+
+## 7quindecies. Un seul bouton « Ajouter » [N]
+
+> **Nouveau en 2.36.0** : les deux boutons « ajouter une tâche » / « ajouter un document »
+> laissent place à **un seul bouton** qui déplie le choix du type.
+
+- [ ] Bas du **tableur** et bas du **Gantt** : ✅ **Attendu** : **un seul** bouton « + Ajouter »
+- [ ] Le cliquer : ✅ **Attendu** : un menu **Tâche, Sous-tâche, Jalon, Lot, Document**, chacun
+      avec **l'icône de son type**
+- [ ] Choisir **Lot** : ✅ **Attendu** : la fiche s'ouvre avec le type **Lot** déjà choisi
+- [ ] Faire de même pour **Jalon** et **Document** : ✅ **Attendu** : le type est pré-rempli
+- [ ] **Réglages → Types de tickets**, renommer « Lot » en « Phase » et changer son icône :
+      ✅ **Attendu** : le menu affiche **le nouveau nom et la nouvelle icône**
+- [ ] Sur un **recueil** couvrant plusieurs projets : ✅ **Attendu** : après le choix du type,
+      le menu de choix du **projet** s'affiche comme avant
+- [ ] **Rétrécir** la colonne du Gantt : ✅ **Attendu** : le bouton reste utilisable
 
 **Constaté :**
 

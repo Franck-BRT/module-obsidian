@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.36.0] - 2026-09-16
+
+### Changed
+
+- **One "Ajouter" button that asks what kind**, instead of one button per kind. The tool
+  knows five kinds of ticket and only two of them had a place on the row, which made the
+  other three look unavailable: a lot, a milestone and a subtask could only be made by
+  creating a task and changing its type afterwards
+- **Each entry carries that kind's own icon and its own name** — the ones set in Settings →
+  Ticket types — so the menu and the badges on the rows below it read as the same
+  vocabulary. Rename "Lot" and the menu says it too
+- The table and the Gantt now share one implementation of that row. They had a copy each,
+  which is how the document shortcut came to exist in both and nowhere else
+
 ## [2.35.1] - 2026-09-16
 
 ### Fixed
