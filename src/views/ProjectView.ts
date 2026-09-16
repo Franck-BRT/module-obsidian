@@ -1,4 +1,4 @@
-import { ButtonComponent, ExtraButtonComponent, ItemView, Menu, Scope, setIcon, WorkspaceLeaf } from 'obsidian'
+import { ButtonComponent, ExtraButtonComponent, ItemView, Menu, Scope, WorkspaceLeaf } from 'obsidian'
 import type PMPlugin from '../main'
 import {
   type Project,
@@ -34,6 +34,7 @@ import { ChipButton } from '../ui/primitives/ChipButton'
 import { ViewSwitcher } from '../ui/primitives/ViewSwitcher'
 import { ProjectHeader } from '../ui/composites/ProjectHeader'
 import { renderGlyph } from '../ui/composites/properties'
+import { showAddTicketMenu } from '../ui/composites/addTicketButton'
 import { t } from '../i18n'
 
 export const PM_PROJECT_VIEW_TYPE = 'pm-project'
@@ -451,21 +452,12 @@ export class ProjectView extends ItemView {
     // A collection has no project of its own, so a task added here would land in
     // whichever source happened to come first — and not even join the collection.
     if (scope.canAddTask) {
+      // One button that asks what kind, rather than one per kind: the tool makes five and
+      // only two of them ever had a place here.
       new ButtonComponent(right)
-        .setButtonText(t('project.addTaskButton'))
+        .setButtonText(t('task.addTicket'))
         .setCta()
-        .onClick((e) => this.addTask(e))
-      const addDoc = new ButtonComponent(right)
-        .setButtonText(t('project.addDocButton'))
-        .setCta()
-        .onClick((e) => this.addTask(e, { type: 'document' }))
-      // A document icon rather than a second plus: with two add buttons side by side, a
-      // plus says only "add", and what it adds is the whole point of the shortcut.
-      // Prepended, because setButtonText has already replaced the button's contents.
-      addDoc.buttonEl.addClass('pm-btn-icon-text')
-      const docIcon = addDoc.buttonEl.createSpan({ cls: 'pm-glyph-icon' })
-      setIcon(docIcon, 'file-text')
-      addDoc.buttonEl.prepend(docIcon)
+        .onClick((e) => showAddTicketMenu(e, (type) => this.addTask(e, { type })))
     }
 
     if (!scope.isMulti) {

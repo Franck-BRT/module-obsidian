@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.36.0
+version: 2.37.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.36.0
+# Recette — Black Projects 2.37.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1338,6 +1338,19 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Sur un **recueil** couvrant plusieurs projets : ✅ **Attendu** : après le choix du type,
       le menu de choix du **projet** s'affiche comme avant
 - [ ] **Rétrécir** la colonne du Gantt : ✅ **Attendu** : le bouton reste utilisable
+
+### Les autres boutons « Ajouter » (2.37.0)
+
+- [ ] **Barre du haut** : ✅ **Attendu** : **un seul** bouton bleu « Ajouter », qui ouvre le même
+      menu des cinq types
+- [ ] Le **+** sur l'en-tête d'un **lot** : ✅ **Attendu** : il ouvre le menu, et ce qu'on choisit
+      atterrit **dans ce lot**
+- [ ] Y créer un **jalon**, puis un **document**, puis un **sous-lot** : ✅ **Attendu** : les trois
+      sont bien **dans le lot**
+- [ ] Son **infobulle** : ✅ **Attendu** : « Ajouter à ce lot » — plus « une tâche »
+- [ ] Menu **⋯** d'un lot → « Ajouter à ce lot » : ✅ **Attendu** : même menu
+- [ ] Le **+** sur une **tâche** (sous-tâche) : ✅ **Attendu** : **inchangé**, il crée directement
+      une sous-tâche sans poser de question
 
 **Constaté :**
 

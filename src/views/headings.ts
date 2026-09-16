@@ -9,6 +9,7 @@ import { buildTaskContextMenu } from '../ui/TaskContextMenu'
 import { archivePhase } from './phaseActions'
 import { safeAsync } from '../utils'
 import { openTaskModal } from '../ui/ModalFactory'
+import { showAddTicketMenu } from '../ui/composites/addTicketButton'
 import { formatDateShort } from '../dates'
 import { CollapseToggle } from '../ui/primitives/CollapseToggle'
 import { IconButton } from '../ui/primitives/IconButton'
@@ -88,7 +89,7 @@ export interface ProjectHeadingHandlers {
   onToggle: () => void | Promise<void>
   onOpen: () => void | Promise<void>
   /** Offered on a phase: the block is where its tasks go, so it can take a new one. */
-  onAdd?: () => void
+  onAdd?: (e: MouseEvent | KeyboardEvent) => void
   /** Everything else the heading can do, behind the overflow button. */
   onMenu?: (e: MouseEvent) => void
 }
@@ -126,7 +127,7 @@ export function renderHeadingRow(parent: HTMLElement, heading: HeadingRow, handl
       .setRevealOnHover(true)
       .onClick((e) => {
         e.stopPropagation()
-        handlers.onAdd?.()
+        handlers.onAdd?.(e)
       })
   }
   if (handlers.onMenu) {
@@ -203,8 +204,12 @@ export function headingHandlers(
     const phase = phaseOf()
     if (project && phase) openTaskModal(plugin, project, { task: phase, onSave: saved })
   }
-  const addTask = (): void => {
-    if (project) openTaskModal(plugin, project, { parentId: heading.key, onSave: saved })
+  // The lot is the parent either way; the menu only settles what kind of ticket it takes.
+  const addTask = (e: MouseEvent | KeyboardEvent): void => {
+    if (!project) return
+    showAddTicketMenu(e, (type) =>
+      openTaskModal(plugin, project, { parentId: heading.key, defaults: { type }, onSave: saved })
+    )
   }
 
   return {

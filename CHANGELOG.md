@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.37.0] - 2026-09-16
+
+### Changed
+
+- **The toolbar's two buttons become one "Ajouter"** that asks what kind, like the row at
+  the foot of a view already does
+- **A lot's + now asks too**, so a lot can be given a milestone, a document or a sub-lot
+  directly instead of only a task. Its tooltip says "Ajouter à ce lot" rather than
+  promising a task it no longer only makes
+- **Every add in the plugin now offers the same five kinds**, from one menu built in one
+  place: the ghost at the foot of the table and the Gantt, the toolbar's filled button,
+  and the small plus on a lot's heading. They rendered their own controls and each decided
+  separately what could be added, which is how the toolbar came to offer two kinds and a
+  lot exactly one
+- The "add a subtask" plus on a task row is untouched: it says what it makes, and means it
+
 ## [2.36.0] - 2026-09-16
 
 ### Changed
