@@ -158,9 +158,12 @@ describe('moveTaskInTree', () => {
     expect(tasks[0].subtasks.map((t) => t.id)).toEqual(['y', 'x'])
   })
 
-  it('returns false when source and target are not siblings', () => {
+  it('moves a task in beside one that is not its sibling', () => {
+    // This used to be refused, which is what made a drop into another lot do nothing.
     const tasks = [task({ id: 'a' }), task({ id: 'p', subtasks: [task({ id: 'x' })] })]
-    expect(moveTaskInTree(tasks, 'a', 'x', 'before')).toBe(false)
+    expect(moveTaskInTree(tasks, 'a', 'x', 'before')).toBe(true)
+    expect(tasks.map((t) => t.id)).toEqual(['p'])
+    expect(findTask(tasks, 'p')?.subtasks.map((t) => t.id)).toEqual(['a', 'x'])
   })
 })
 
@@ -226,5 +229,58 @@ describe('totalLoggedHours', () => {
       ]
     })
     expect(totalLoggedHours(t)).toBe(5.5)
+  })
+})
+
+describe('moving a task out of one lot and into another', () => {
+  const lots = () => [
+    task({ id: 'lot1', type: 'phase', subtasks: [task({ id: 'a' })] }),
+    task({ id: 'lot2', type: 'phase', subtasks: [task({ id: 'b' })] }),
+    task({ id: 'weekly' })
+  ]
+
+  it('drops it beside a task living in another lot', () => {
+    // The whole point: until now both had to share a parent or nothing happened at all.
+    const tree = lots()
+    expect(moveTaskInTree(tree, 'weekly', 'b', 'before')).toBe(true)
+    expect(findTask(tree, 'lot2')?.subtasks.map((t) => t.id)).toEqual(['weekly', 'b'])
+    expect(tree.map((t) => t.id)).toEqual(['lot1', 'lot2'])
+  })
+
+  it('drops it inside a lot, which is the only way into a folded one', () => {
+    const tree = lots()
+    expect(moveTaskInTree(tree, 'weekly', 'lot2', 'inside')).toBe(true)
+    expect(findTask(tree, 'lot2')?.subtasks.map((t) => t.id)).toEqual(['b', 'weekly'])
+  })
+
+  it('takes what it holds along with it', () => {
+    const tree = [task({ id: 'lot1', type: 'phase', subtasks: [] }), task({ id: 'p', subtasks: [task({ id: 'kid' })] })]
+    moveTaskInTree(tree, 'p', 'lot1', 'inside')
+    expect(findTask(tree, 'lot1')?.subtasks[0]?.subtasks.map((t) => t.id)).toEqual(['kid'])
+  })
+
+  it('refuses to drop a lot inside itself, which would take the branch out of the tree', () => {
+    const tree = [task({ id: 'lot', type: 'phase', subtasks: [task({ id: 'inner' })] })]
+    expect(moveTaskInTree(tree, 'lot', 'inner', 'after')).toBe(false)
+    expect(moveTaskInTree(tree, 'lot', 'inner', 'inside')).toBe(false)
+    expect(tree.map((t) => t.id)).toEqual(['lot'])
+  })
+
+  it('refuses to drop a task onto itself', () => {
+    const tree = lots()
+    expect(moveTaskInTree(tree, 'weekly', 'weekly', 'after')).toBe(false)
+  })
+
+  it('lifts a task out of a lot when dropped beside a top-level one', () => {
+    const tree = lots()
+    expect(moveTaskInTree(tree, 'a', 'weekly', 'after')).toBe(true)
+    expect(tree.map((t) => t.id)).toEqual(['lot1', 'lot2', 'weekly', 'a'])
+    expect(findTask(tree, 'lot1')?.subtasks).toEqual([])
+  })
+
+  it('still reorders two tasks in the same lot', () => {
+    const tree = [task({ id: 'lot', type: 'phase', subtasks: [task({ id: 'x' }), task({ id: 'y' })] })]
+    expect(moveTaskInTree(tree, 'y', 'x', 'before')).toBe(true)
+    expect(findTask(tree, 'lot')?.subtasks.map((t) => t.id)).toEqual(['y', 'x'])
   })
 })

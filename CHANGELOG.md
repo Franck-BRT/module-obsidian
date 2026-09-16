@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.35.0] - 2026-09-16
+
+### Fixed
+
+- **A task can be dragged from one lot into another.** It could not before: the move only
+  ran when the dragged ticket and the one it was dropped on already shared a parent, so
+  every drop into a different lot did **nothing at all**, without a word. Reordering
+  within a lot worked, which is what made it look like the drag was fine
+- **Dropping into a lot itself** — the middle of its row lights up — which is the only way
+  into a lot that is **folded shut**: its tickets are not on screen to be dropped beside.
+  A plain ticket still takes a drop above or below only, so nothing becomes a parent by
+  accident
+- **The move is written to every note it touches**: the ticket's own parent link and both
+  lots' task lists. The destination alone was being written, which would have left the
+  note pointing at the lot it came from for the next load to put it back
+
+### Added
+
+- A drag is refused when it would take a branch out of the tree — a lot dropped onto
+  something it holds, or a ticket onto itself
+
 ## [2.34.2] - 2026-09-16
 
 ### Fixed

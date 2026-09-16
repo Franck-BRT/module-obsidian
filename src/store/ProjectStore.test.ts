@@ -17,7 +17,7 @@ import { ProjectStore } from './ProjectStore'
 import { parseFrontmatter } from './YamlParser'
 import { projectTaskFolder } from './vaultFs'
 import { addDays, daysBetween } from './Scheduler'
-import { buildTaskIndex } from './TaskIndex'
+import { buildTaskIndex, findParentId } from './TaskIndex'
 import { findTask, flattenTasks } from './TaskTreeOps'
 import { VaultIndex } from './VaultIndex'
 
@@ -1983,5 +1983,54 @@ describe('a task whose file is there but whose links are not', () => {
     expect(ids).toContain(b.id)
     // And the tree is walkable: a loop must never become an endless one.
     expect(ids.length).toBeLessThan(10)
+  })
+})
+
+describe('dragging a task into another lot', () => {
+  it('moves it, and writes the move to every note it touches', async () => {
+    // A live metadata cache, because the proof is that the wikilinks in the notes
+    // resolve back to the same shape on a cold load.
+    const { app } = makeFakeApp({ liveMetadataCache: true })
+    const typed = app as unknown as App
+    const store = new ProjectStore(typed, () => SETTINGS)
+    const project = await store.createProject('COSMA', 'Projects')
+    const lot1 = await addNamed(store, project, 'QO OV-COM')
+    await store.updateTask(project, lot1.id, { type: 'phase' })
+    const lot2 = await addNamed(store, project, 'QO Telecom')
+    await store.updateTask(project, lot2.id, { type: 'phase' })
+    const weekly = await addNamed(store, project, 'Weekly QO', lot1.id)
+
+    await store.reorderTask(project, weekly.id, lot2.id, 'inside')
+
+    expect(findTask(project.tasks, lot1.id)?.subtasks).toHaveLength(0)
+    expect(findTask(project.tasks, lot2.id)?.subtasks.map((t) => t.id)).toEqual([weekly.id])
+
+    // The notes have to say so too, or the next load puts it back where it came from.
+    const reloaded = expectDefined(
+      await new ProjectStore(typed, () => SETTINGS).loadProject(fileAt(typed, project.filePath))
+    )
+    expect(findTask(reloaded.tasks, lot2.id)?.subtasks.map((t) => t.title)).toEqual(['Weekly QO'])
+    expect(findTask(reloaded.tasks, lot1.id)?.subtasks).toHaveLength(0)
+  })
+
+  it('puts it beside a task that lives in another lot', async () => {
+    const { store, project } = await (async () => {
+      const { store, app } = newStore()
+      const project = await store.createProject('COSMA', 'Projects')
+      return { store, project, app }
+    })()
+    const lot1 = await addNamed(store, project, 'Lot 1')
+    await store.updateTask(project, lot1.id, { type: 'phase' })
+    const lot2 = await addNamed(store, project, 'Lot 2')
+    await store.updateTask(project, lot2.id, { type: 'phase' })
+    const inLot2 = await addNamed(store, project, 'Déjà là', lot2.id)
+    const weekly = await addNamed(store, project, 'Weekly QO', lot1.id)
+
+    await store.reorderTask(project, weekly.id, inLot2.id, 'before')
+
+    expect(findTask(project.tasks, lot2.id)?.subtasks.map((t) => t.id)).toEqual([weekly.id, inLot2.id])
+    expect(findTask(project.tasks, lot1.id)?.subtasks).toHaveLength(0)
+    // And the index agrees, so the very next save writes the right parents.
+    expect(findParentId(project, weekly.id)).toBe(lot2.id)
   })
 })

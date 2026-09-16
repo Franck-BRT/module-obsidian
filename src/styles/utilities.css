@@ -54,6 +54,12 @@ body.pm-resize-active * {
 .pm-gantt-label-row--drop-after {
   box-shadow: inset 0 -2px 0 var(--interactive-accent);
 }
+/* Landing inside a lot rather than beside it: the whole row lights up, because there is
+   no gap between two rows to point at — the ticket is going in. */
+.pm-gantt-label-row--drop-inside {
+  box-shadow: inset 0 0 0 2px var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
+}
 
 /* Modals render outside .pm-root, so these use Obsidian's native vars only. */
 

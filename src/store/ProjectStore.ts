@@ -24,6 +24,7 @@ import {
   deleteTaskFromTree,
   flattenTasks,
   moveTaskInTree,
+  parentIdOf,
   updateTaskInTree
 } from './TaskTreeOps'
 import { hydrateProjectFromFrontmatter, hydrateTaskFromFile, hydrateTasks } from './YamlHydrator'
@@ -1376,10 +1377,27 @@ export class ProjectStore implements TaskSource {
   }
 
   /** Sibling order lives in the parent's subtaskIds, so only the parent is rewritten. */
-  async reorderTask(project: Project, taskId: string, targetId: string, position: 'before' | 'after'): Promise<void> {
+  async reorderTask(
+    project: Project,
+    taskId: string,
+    targetId: string,
+    position: 'before' | 'after' | 'inside'
+  ): Promise<void> {
+    const oldParentId = findParentId(project, taskId)
+    // Read from the tree and before the move: the index still says where the ticket was,
+    // and the target itself does not move.
+    const newParentId = position === 'inside' ? targetId : parentIdOf(project.tasks, targetId)
     if (!moveTaskInTree(project.tasks, taskId, targetId, position)) return
-    const parentId = findParentId(project, targetId)
-    if (parentId) this.markDirty(project, [parentId], 'full')
+    // Landing in another lot is a move, not just a new position: the ticket's own Parent
+    // link changes and both lots' Subtasks lists with it. Writing only the destination
+    // would leave the note pointing at the lot it came from, and the next load would
+    // quietly put it back.
+    if (oldParentId !== newParentId) {
+      indexSetParent(project, taskId, newParentId)
+      this.markDirty(project, [taskId], 'full')
+      if (oldParentId) this.markDirty(project, [oldParentId], 'full')
+    }
+    if (newParentId) this.markDirty(project, [newParentId], 'full')
     await this.saveProject(project)
   }
 

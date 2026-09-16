@@ -127,19 +127,67 @@ function remapDeps(task: Task, idMap: Map<string, string>): void {
 }
 
 /** Reorders among siblings only; the two tasks must share a parent. */
-export function moveTaskInTree(tasks: Task[], taskId: string, targetId: string, position: 'before' | 'after'): boolean {
-  const taskIdx = tasks.findIndex((t) => t.id === taskId)
-  const targetIdx = tasks.findIndex((t) => t.id === targetId)
-  if (taskIdx !== -1 && targetIdx !== -1) {
-    const [task] = tasks.splice(taskIdx, 1)
-    const insertIdx = tasks.findIndex((t) => t.id === targetId)
-    tasks.splice(position === 'before' ? insertIdx : insertIdx + 1, 0, task)
+/**
+ * The task holding this one, read from the tree itself.
+ *
+ * `findParentId` answers from the task index, which is right everywhere the index is up
+ * to date — and wrong immediately after a move, which only touches the tree. A move has
+ * to compare where a ticket was with where it landed, so it asks the tree.
+ */
+export function parentIdOf(tasks: Task[], id: string, parentId: string | null = null): string | null {
+  for (const task of tasks) {
+    if (task.id === id) return parentId
+    const found = parentIdOf(task.subtasks, id, task.id)
+    if (found !== null) return found
+  }
+  return null
+}
+
+/** The list a task actually sits in, so a move can put another one beside it. */
+function listHolding(tasks: Task[], id: string): Task[] | null {
+  if (tasks.some((t) => t.id === id)) return tasks
+  for (const t of tasks) {
+    const found = listHolding(t.subtasks, id)
+    if (found) return found
+  }
+  return null
+}
+
+/**
+ * Drops a task beside another one, or inside it.
+ *
+ * The target is found wherever it lives, not only among the dragged task's own siblings:
+ * moving a ticket from one lot to another is the ordinary case, and requiring a shared
+ * parent made every such drop a silent no-op. `inside` puts it at the end of what the
+ * target holds, which is the only way into a lot that is folded shut — its tickets are
+ * not on screen to be dropped beside.
+ *
+ * Refused when it would take a branch out of the tree with it: onto itself, or into
+ * something it holds.
+ */
+export function moveTaskInTree(
+  tasks: Task[],
+  taskId: string,
+  targetId: string,
+  position: 'before' | 'after' | 'inside'
+): boolean {
+  if (taskId === targetId) return false
+  const moved = findTask(tasks, taskId)
+  const target = findTask(tasks, targetId)
+  if (!moved || !target) return false
+  if (findTask(moved.subtasks, targetId)) return false
+
+  deleteTaskFromTree(tasks, taskId)
+  if (position === 'inside') {
+    target.subtasks.push(moved)
     return true
   }
-  for (const t of tasks) {
-    if (moveTaskInTree(t.subtasks, taskId, targetId, position)) return true
-  }
-  return false
+  // Read after the removal: taking the task out shifts the target when they shared a list.
+  const list = listHolding(tasks, targetId)
+  if (!list) return false
+  const at = list.findIndex((t) => t.id === targetId)
+  list.splice(position === 'before' ? at : at + 1, 0, moved)
+  return true
 }
 
 export function filterArchived(tasks: Task[]): Task[] {

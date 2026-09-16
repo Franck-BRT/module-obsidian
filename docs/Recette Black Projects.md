@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.34.2
+version: 2.35.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.34.2
+# Recette — Black Projects 2.35.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1286,6 +1286,30 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       pointes
 - [ ] Dans un **modèle** (Gantt sans dates) : ✅ **Attendu** : rien n'a changé, les flèches
       étaient déjà correctes
+
+**Constaté :**
+
+## 7quaterdecies. Déplacer une tâche d'un lot à l'autre [N]
+
+> **Corrigé en 2.35.0** : dans le Gantt, glisser une tâche d'un lot vers un autre ne
+> faisait **rien**. Le tri doit être sur **Manuel** pour que le glisser-déposer soit actif.
+
+- [ ] Un projet avec **deux lots**, une tâche dans le premier
+- [ ] Dans le **Gantt**, glisser la tâche sur une tâche **du second lot** : ✅ **Attendu** :
+      elle **change de lot** et se place avant ou après selon le bord visé
+- [ ] **Replier** le second lot, puis glisser une tâche sur **son milieu** : ✅ **Attendu** :
+      la **ligne entière s'allume** et la tâche atterrit **dedans**
+- [ ] Viser le **quart haut** ou le **quart bas** d'un lot : ✅ **Attendu** : trait au-dessus ou
+      au-dessous — la tâche se place **à côté** du lot, pas dedans
+- [ ] Sur une **tâche ordinaire** : ✅ **Attendu** : seulement au-dessus / au-dessous, jamais
+      « dedans »
+- [ ] Glisser une tâche **hors d'un lot**, sur une tâche de premier niveau : ✅ **Attendu** :
+      elle **sort** du lot
+- [ ] Glisser un **lot sur une de ses propres tâches** : ✅ **Attendu** : **refusé**, rien ne bouge
+- [ ] Une tâche **avec des sous-tâches** : ✅ **Attendu** : elles **suivent**
+- [ ] **Fermer et rouvrir le coffre** : ✅ **Attendu** : la tâche est **toujours** dans son
+      nouveau lot (le déplacement est écrit dans les trois notes concernées)
+- [ ] Mettre un **tri** autre que Manuel : ✅ **Attendu** : le glisser-déposer est désactivé
 
 **Constaté :**
 

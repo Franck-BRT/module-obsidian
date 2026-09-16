@@ -8,6 +8,7 @@ import { IconButton } from '../../ui/primitives/IconButton'
 import { openTaskByPath, openTaskModal } from '../../ui/ModalFactory'
 import { renderProjectChip } from '../../ui/composites/projectChip'
 import { renderStatusDot } from '../../ui/StatusBadge'
+import { isPhase } from '../../store/Phase'
 import { safeAsync } from '../../utils'
 import { ROW_HEIGHT } from './TimelineConfig'
 import { t } from '../../i18n'
@@ -46,24 +47,40 @@ export function renderTaskLabel(
   el.addEventListener('dragend', () => {
     el.removeClass('pm-gantt-label-row--dragging')
   })
-  let dropPosition: 'before' | 'after' = 'before'
+  const DROP_CLASSES = [
+    'pm-gantt-label-row--drop-before',
+    'pm-gantt-label-row--drop-after',
+    'pm-gantt-label-row--drop-inside'
+  ]
+  let dropPosition: 'before' | 'after' | 'inside' = 'before'
   el.addEventListener('dragover', (e: DragEvent) => {
     if (!ctx.reorderable) return
     e.preventDefault()
     const rect = el.getBoundingClientRect()
-    const midY = rect.top + rect.height / 2
-    dropPosition = e.clientY < midY ? 'before' : 'after'
-    el.removeClass('pm-gantt-label-row--drop-before', 'pm-gantt-label-row--drop-after')
-    el.addClass(dropPosition === 'before' ? 'pm-gantt-label-row--drop-before' : 'pm-gantt-label-row--drop-after')
+    const offset = (e.clientY - rect.top) / rect.height
+    // A lot takes a drop in its middle, which is the only way into one that is folded
+    // shut: its tickets are not on screen to be dropped beside. Anything else is still
+    // two halves, since dropping into a plain ticket would make it a parent by accident.
+    dropPosition = isPhase(task)
+      ? offset < 0.25
+        ? 'before'
+        : offset > 0.75
+          ? 'after'
+          : 'inside'
+      : offset < 0.5
+        ? 'before'
+        : 'after'
+    el.removeClasses(DROP_CLASSES)
+    el.addClass(`pm-gantt-label-row--drop-${dropPosition}`)
   })
   el.addEventListener('dragleave', () => {
-    el.removeClass('pm-gantt-label-row--drop-before', 'pm-gantt-label-row--drop-after')
+    el.removeClasses(DROP_CLASSES)
   })
   el.addEventListener(
     'drop',
     safeAsync(async (e: DragEvent) => {
       e.preventDefault()
-      el.removeClass('pm-gantt-label-row--drop-before', 'pm-gantt-label-row--drop-after')
+      el.removeClasses(DROP_CLASSES)
       if (!ctx.reorderable) return
       const draggedId = e.dataTransfer?.getData('text/plain')
       if (!draggedId || draggedId === task.id) return
