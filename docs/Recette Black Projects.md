@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.34.1
+version: 2.34.2
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.34.1
+# Recette — Black Projects 2.34.2
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1268,6 +1268,24 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Mettre **une date et un nombre** en passant de l'un à l'autre : ✅ **Attendu** : un seul
       des deux est retenu à la fois
 - [ ] Fermer et rouvrir le coffre : ✅ **Attendu** : tous ces réglages sont **conservés**
+
+**Constaté :**
+
+## 7terdecies. Les flèches autour d'un jalon [N]
+
+> **Corrigé en 2.34.2** : dans un projet daté, la dépendance **arrivant** sur un jalon
+> n'était pas dessinée.
+
+- [ ] Dans un projet **daté**, enchaîner **Tâche A → Jalon → Tâche B**
+- [ ] Ouvrir le **Gantt** : ✅ **Attendu** : la flèche **A → Jalon** est bien tracée et **arrive
+      sur la pointe gauche** du losange
+- [ ] ✅ **Attendu** : la flèche **Jalon → B** part de la **pointe droite** du losange
+- [ ] Changer de **zoom** (Jour, Semaine, Mois, Trimestre, Année) : ✅ **Attendu** : les deux
+      flèches restent **collées au losange** à tous les niveaux
+- [ ] Un jalon qui dépend d'un **autre jalon** : ✅ **Attendu** : la flèche relie les deux
+      pointes
+- [ ] Dans un **modèle** (Gantt sans dates) : ✅ **Attendu** : rien n'a changé, les flèches
+      étaient déjà correctes
 
 **Constaté :**
 

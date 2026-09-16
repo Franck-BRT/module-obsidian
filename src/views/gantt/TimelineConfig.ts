@@ -7,6 +7,8 @@ export const HEADER_HEIGHT = 56
 export const LABEL_WIDTH = 280
 export const BAR_PADDING = 8
 export const BAR_BORDER_RADIUS = 7
+/** Half the width of a milestone diamond, from its centre to its left or right point. */
+export const MILESTONE_SIZE = 12
 
 export const DAY_WIDTH: Record<GanttGranularity, number> = {
   day: 44,
@@ -127,4 +129,30 @@ export function snapX(x: number, snapPoints: number[], threshold: number): numbe
 
 export function getWeekNumber(d: Temporal.PlainDate): number {
   return d.weekOfYear ?? 0
+}
+
+/**
+ * Where a dependency arrow leaves a ticket, and where one arrives at it.
+ *
+ * A bar runs from the start of its first day to the end of its last, so an arrow leaves
+ * its right edge and arrives at its left. A milestone has no span at all — it is a
+ * diamond drawn in the middle of the day it marks, and it carries **no start date**, so
+ * reading `start` for it yields nothing and its incoming arrows were being dropped
+ * altogether. It is anchored on the diamond's own points instead, which is also what
+ * keeps the arrow touching it at every zoom level rather than at one.
+ */
+export function arrowStartX(task: Pick<Task, 'type' | 'start' | 'due'>, cfg: TimelineCfg): number | null {
+  const date = parsePlainDate(task.due) ?? parsePlainDate(task.start)
+  if (!date) return null
+  if (task.type === 'milestone') return dateToX(cfg, date) + cfg.dayWidth / 2 + MILESTONE_SIZE
+  return dateToX(cfg, date.add({ days: 1 }))
+}
+
+export function arrowEndX(task: Pick<Task, 'type' | 'start' | 'due'>, cfg: TimelineCfg): number | null {
+  if (task.type === 'milestone') {
+    const date = parsePlainDate(task.due) ?? parsePlainDate(task.start)
+    return date === null ? null : dateToX(cfg, date) + cfg.dayWidth / 2 - MILESTONE_SIZE
+  }
+  const start = parsePlainDate(task.start) ?? parsePlainDate(task.due)
+  return start === null ? null : dateToX(cfg, start)
 }

@@ -8,6 +8,9 @@ import {
   HEADER_HEIGHT,
   BAR_PADDING,
   BAR_BORDER_RADIUS,
+  MILESTONE_SIZE,
+  arrowEndX,
+  arrowStartX,
   dateToX,
   xToDate,
   getSnapPoints,
@@ -299,7 +302,7 @@ function renderMilestoneDiamond(g: SVGGElement, task: Task, row: number, color: 
 
   const cx = dateToX(ctx.cfg, date) + ctx.cfg.dayWidth / 2
   const cy = HEADER_HEIGHT + row * ROW_HEIGHT + ROW_HEIGHT / 2
-  const size = 12
+  const size = MILESTONE_SIZE
 
   const pts = `${cx},${cy - size} ${cx + size},${cy} ${cx},${cy + size} ${cx - size},${cy}`
   const diamond = svgEl('polygon', {
@@ -381,17 +384,15 @@ export function renderDependencyArrows(ctx: RendererContext): void {
     const toRow = indexMap.get(task.id)
     if (toRow === undefined) continue
     const toY = HEADER_HEIGHT + toRow * ROW_HEIGHT + ROW_HEIGHT / 2
-    const taskStart = parsePlainDate(task.start)
-    if (!taskStart) continue
-    const toX = dateToX(ctx.cfg, taskStart)
+    const toX = arrowEndX(task, ctx.cfg)
+    if (toX === null) continue
 
     for (const depId of task.dependencies) {
       const fromRow = indexMap.get(depId)
       if (fromRow === undefined) continue
       const depTask = ctx.flatTasks.find((f) => f.task.id === depId)?.task
-      const depDue = depTask ? parsePlainDate(depTask.due) : null
-      if (!depDue) continue
-      const fromX = dateToX(ctx.cfg, depDue.add({ days: 1 }))
+      const fromX = depTask ? arrowStartX(depTask, ctx.cfg) : null
+      if (fromX === null) continue
       const fromY = HEADER_HEIGHT + fromRow * ROW_HEIGHT + ROW_HEIGHT / 2
 
       const midX = (fromX + toX) / 2

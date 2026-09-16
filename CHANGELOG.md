@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.34.2] - 2026-09-16
+
+### Fixed
+
+- **A milestone now shows the constraint arriving at it.** In a dated project no incoming
+  dependency arrow was ever drawn on a milestone: the renderer read the successor's
+  **start date** to know where to land, and a milestone deliberately has none — it marks a
+  day, it does not span one — so every arrow into it was dropped before it was drawn.
+  Arrows *leaving* a milestone were fine, which is why only half the link was missing
+- **Both ends now touch the diamond itself**, its left point on the way in and its right
+  point on the way out, instead of the edges of the day around it. The old outgoing anchor
+  happened to sit close to the diamond at week zoom and drifted away from it at every
+  other, so the arrow met the diamond at one zoom level and missed it at the rest
+- This never affected a **template's** chart, where the dateless plan gives a milestone a
+  day of its own to be drawn on
+
 ## [2.34.1] - 2026-09-16
 
 ### Fixed
