@@ -85,8 +85,13 @@ describe('the tree a predecessor is chosen from', () => {
   })
 
   it('does not put a ticket under a parent in another project', () => {
-    const tree = build([ref('lot', { type: 'phase' }), ref('a', { parentId: 'lot', projectPath: 'Projects/B/B.md' })])
-    expect(shape(tree)).toEqual([{ COSMA: ['lot'] }, { Autre: ['a'] }])
+    const tree = build([
+      ref('lot', { type: 'phase' }),
+      ref('here', { parentId: 'lot' }),
+      ref('a', { parentId: 'lot', projectPath: 'Projects/B/B.md' })
+    ])
+    // The lot keeps the ticket that is really in it, and the far one stays where it lives.
+    expect(shape(tree)).toEqual([{ COSMA: [{ lot: ['here'] }] }, { Autre: ['a'] }])
   })
 
   it('gathers tickets whose project is gone under a name of their own', () => {
@@ -119,5 +124,26 @@ describe('what a folded group says it holds', () => {
   it('counts tickets at any depth and never the containers', () => {
     const tree = build([ref('lot', { type: 'phase' }), ref('a', { parentId: 'lot' }), ref('b')])
     expect(countPickable(tree[0])).toBe(2)
+  })
+})
+
+describe('containers with nothing to offer', () => {
+  it('drops an empty lot rather than showing a row that opens onto nothing', () => {
+    const tree = build([ref('lot', { type: 'phase' }), ref('a')])
+    expect(shape(tree)).toEqual([{ COSMA: ['a'] }])
+  })
+
+  it('drops a project whose only ticket was the one being edited', () => {
+    const tree = build([ref('a'), ref('me', { projectPath: 'Projects/B/B.md' })])
+    expect(shape(tree)).toEqual([{ COSMA: ['a'] }])
+  })
+
+  it('keeps a lot that still holds something, at any depth', () => {
+    const tree = build([
+      ref('lot', { type: 'phase' }),
+      ref('inner', { type: 'phase', parentId: 'lot' }),
+      ref('deep', { parentId: 'inner' })
+    ])
+    expect(shape(tree)).toEqual([{ COSMA: [{ lot: [{ inner: ['deep'] }] }] }])
   })
 })

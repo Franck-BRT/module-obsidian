@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.34.0
+version: 2.34.1
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.34.0
+# Recette — Black Projects 2.34.1
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1201,7 +1201,15 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       s'ouvre, plus de longue liste déroulante
 - [ ] ✅ **Attendu** : le **projet en cours est ouvert** en premier ; les autres projets sont
       **repliés**, avec le **nombre** de tâches qu'ils contiennent
-- [ ] Déplier un projet : ✅ **Attendu** : ses **lots** apparaissent, et les tâches dedans
+- [ ] Déplier un projet : ✅ **Attendu** : ses **lots** apparaissent, et les tâches **dedans**
+- [ ] ✅ **Attendu** (corrigé en 2.34.1) : un lot affiche le **nombre de tâches qu'il contient**,
+      jamais 0, et ses tâches ne sont **pas** listées à plat sous le projet
+- [ ] Un lot contenant un **sous-lot** : ✅ **Attendu** : l'imbrication descend aussi loin que
+      le plan
+- [ ] Un lot **vide** : ✅ **Attendu** : il n'est **pas affiché** — une ligne qui ne s'ouvre sur
+      rien n'est pas une ligne
+- [ ] Un autre projet dont la **seule** tâche est celle qu'on modifie : ✅ **Attendu** : il
+      n'apparaît pas
 - [ ] ✅ **Attendu** : les **lots** ne sont **pas cochables** (un lot n'est pas du travail)
 - [ ] **Cocher** deux tâches : ✅ **Attendu** : elles apparaissent **à droite**, avec le nom de
       leur projet, et le compte se met à jour

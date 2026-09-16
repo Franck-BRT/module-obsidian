@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.34.1] - 2026-09-16
+
+### Fixed
+
+- **The predecessor picker now puts tasks inside their lots.** Every lot showed 0 and every
+  task sat loose at the project's level, which is the one thing the window was built to
+  avoid. The index was reading a task's parent from `parent`, which is the **project**
+  note's field for the project above it; a task note names the ticket above it in
+  `parentId`. Read from the right key, the grouping works and nesting goes as deep as the
+  plan does
+- **A container holding nothing that can be ticked is no longer listed** — an empty lot, or
+  a project whose only ticket is the one being edited. A row that opens onto nothing is
+  not a row
+
 ## [2.34.0] - 2026-09-16
 
 ### Added

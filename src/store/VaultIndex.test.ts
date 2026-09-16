@@ -89,6 +89,26 @@ describe('VaultIndex', () => {
     expect(refs.find((r) => r.id === 't2')?.archived).toBe(true)
   })
 
+  it('reads the lot a task sits in, and the kind of ticket it is', async () => {
+    // The picker groups by lot from the index alone, so a note's own parentId has to
+    // reach it — reading the wrong key left every lot empty and every task loose.
+    await vault.create('Projects/Roadmap.md', projectNote('p1', 'Roadmap'))
+    await vault.create(
+      'Projects/Roadmap_tasks/lot.md',
+      `---\npm-task: true\nid: lot1\nprojectId: p1\ntitle: Lot 1\ntype: phase\nstatus: todo\n---\n\n`
+    )
+    await vault.create(
+      'Projects/Roadmap_tasks/one.md',
+      `---\npm-task: true\nid: t1\nprojectId: p1\ntitle: One\nstatus: todo\nparentId: "[[Projects/Roadmap_tasks/lot]]"\n---\n\n`
+    )
+    index.build()
+
+    const refs = index.taskRefs('Projects/Roadmap.md')
+    expect(expectDefined(refs.find((r) => r.id === 'lot1')).type).toBe('phase')
+    expect(expectDefined(refs.find((r) => r.id === 't1')).parentId).toBe('lot1')
+    expect(expectDefined(refs.find((r) => r.id === 'lot1')).parentId).toBeNull()
+  })
+
   it('attributes a task moved out of the task folder by its projectId', async () => {
     await vault.create('Projects/Roadmap.md', projectNote('p1', 'Roadmap'))
     await vault.create('Elsewhere/stray.md', taskNote('t1', 'Stray', 'p1'))

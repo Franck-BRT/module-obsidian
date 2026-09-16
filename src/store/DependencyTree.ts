@@ -93,13 +93,27 @@ export function buildDependencyTree(input: DependencyTreeInput): DependencyNode[
     else groupFor(ref.projectPath).children.push(node)
   }
 
-  // A lot is a container here even when nothing is left inside it after filtering: it is
-  // still not work, and ticking it would mean depending on a heading.
+  // A container holding nothing that can be ticked is a row that cannot be used: an empty
+  // lot, or a project whose only ticket is the one being edited. They are dropped rather
+  // than left to be opened onto nothing.
+  const prune = (list: DependencyNode[]): DependencyNode[] => {
+    const kept: DependencyNode[] = []
+    for (const node of list) {
+      if (node.kind === 'task') {
+        kept.push(node)
+        continue
+      }
+      const children = prune(node.children)
+      if (children.length) kept.push({ ...node, children })
+    }
+    return kept
+  }
+
   const sortTree = (list: DependencyNode[]): void => {
     list.sort(compareNodes)
     for (const node of list) sortTree(node.children)
   }
-  const result = [...groups.values()]
+  const result = prune([...groups.values()])
   sortTree(result)
   result.sort((a, b) => {
     const home = `project:${input.homeProject ?? ''}`

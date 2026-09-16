@@ -536,7 +536,9 @@ export class VaultIndex {
       projectPath: this.resolveOwner(path, projectId),
       title: str(frontmatter.title, 'Untitled'),
       type: str(frontmatter.type, 'task'),
-      parentId: frontmatter.parent ? refToId(this.app, str(frontmatter.parent), path) : null,
+      // `parentId`, not `parent`: a task note names the ticket above it, while `parent`
+      // is the project note's own field for the project above it.
+      parentId: frontmatter.parentId ? refToId(this.app, str(frontmatter.parentId), path) : null,
       status: str(frontmatter.status, 'todo'),
       priority: str(frontmatter.priority, 'medium'),
       start: str(frontmatter.start),
