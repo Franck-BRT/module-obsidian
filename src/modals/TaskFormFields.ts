@@ -110,6 +110,9 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
         onChange: (id) => {
           task.type = id as TaskType
           if (id === 'milestone') {
+            // Its day moves to the due date rather than being thrown away with the start:
+            // a milestone marks a day, and a task being turned into one already had it.
+            task.due = task.due || task.start
             task.start = ''
             task.progress = 0
           }

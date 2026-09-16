@@ -697,9 +697,25 @@ export function makeCollection(title: string, filePath: string): Collection {
   }
 }
 
+/**
+ * A milestone marks a day rather than spanning one, so its date belongs in `due` and it
+ * has no start at all.
+ *
+ * The editor enforces that when the type is picked by hand, which leaves every other way
+ * of making one — a menu that hands the type in as a default, an import, a note edited by
+ * hand — free to write a milestone with a start and no date. Such a milestone stakes out
+ * the day it was created in whatever lot holds it, which is why a red overrun bar
+ * appeared on a lot every time one was added. Normalised here, where every task is built,
+ * so a note already written that way is put right the next time it is read.
+ */
+function normalizeMilestone(task: Task): Task {
+  if (task.type !== 'milestone' || !task.start) return task
+  return { ...task, due: task.due || task.start, start: '' }
+}
+
 export function makeTask(overrides: Partial<Task> = {}): Task {
   const now = new Date().toISOString()
-  return {
+  return normalizeMilestone({
     id: makeId(),
     title: t('task.newTask'),
     description: '',
@@ -719,7 +735,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     createdAt: now,
     updatedAt: now,
     ...overrides
-  }
+  })
 }
 
 export const DEFAULT_PROJECT_COLOR = '#8b72be'

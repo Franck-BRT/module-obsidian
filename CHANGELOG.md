@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.37.1] - 2026-09-16
+
+### Fixed
+
+- **A new milestone no longer paints a red bar across the lot that holds it.** A milestone
+  marks a day, so its date belongs in the **due** date and it has no start — but that rule
+  lived only in the type dropdown's own handler, so a milestone made from the add menu
+  kept the start every new ticket is given: **today**. Its lot rolled back to today, ran
+  before its declared start, and was marked as overrunning. Every time
+- **The rule now lives where every task is built**, so a milestone written that way by an
+  import, by hand, or by an older version is **put right the next time its note is read** —
+  the red bars already in a vault go away on their own
+- **Turning an existing task into a milestone keeps its day** instead of throwing it away.
+  The editor cleared the start, which lost the date outright for a task that had no due
+  date of its own
+
 ## [2.37.0] - 2026-09-16
 
 ### Changed

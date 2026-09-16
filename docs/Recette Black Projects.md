@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.37.0
+version: 2.37.1
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.37.0
+# Recette — Black Projects 2.37.1
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1351,6 +1351,24 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Menu **⋯** d'un lot → « Ajouter à ce lot » : ✅ **Attendu** : même menu
 - [ ] Le **+** sur une **tâche** (sous-tâche) : ✅ **Attendu** : **inchangé**, il crée directement
       une sous-tâche sans poser de question
+
+**Constaté :**
+
+## 7sexdecies. La date d'un jalon [N]
+
+> **Corrigé en 2.37.1** : un jalon créé depuis le menu gardait la date de **début** du jour,
+> ce qui faisait apparaître une **barre rouge de dépassement** sur son lot.
+
+- [ ] Un lot avec des **dates déclarées** commençant **plus tard qu'aujourd'hui**
+- [ ] Y ajouter un **jalon** depuis le **+** du lot : ✅ **Attendu** : **aucune barre rouge**
+      n'apparaît sur le lot
+- [ ] Ouvrir le jalon : ✅ **Attendu** : il a une **Date** (échéance) et **pas** de début
+- [ ] Ouvrir une **tâche** ordinaire d'un lot et la passer en **Jalon** : ✅ **Attendu** : elle
+      **garde son jour** — si elle n'avait qu'un début, il devient sa date
+- [ ] **Rouvrir un projet ancien** contenant des jalons créés avant cette version :
+      ✅ **Attendu** : les barres rouges **disparaissent d'elles-mêmes** au chargement
+- [ ] Un lot dont une **tâche** commence vraiment avant ses dates déclarées : ✅ **Attendu** :
+      la barre rouge est **toujours là** — c'est un vrai dépassement
 
 **Constaté :**
 

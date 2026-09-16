@@ -136,3 +136,31 @@ describe('what a phase still has open', () => {
     expect(openTasksIn(lot, open)).toHaveLength(2)
   })
 })
+
+describe('a lot holding a milestone made today', () => {
+  it('does not report an overrun for a milestone it was given', () => {
+    // Reported as a red bar appearing on the lot every time a milestone was created: the
+    // milestone kept today as its start, so the roll-up reached back to today.
+    const lot = makeTask({
+      title: 'Lot 1',
+      type: 'phase',
+      start: '2026-10-01',
+      due: '2026-10-31',
+      subtasks: [makeTask({ title: 'Jalon', type: 'milestone', due: '2026-10-15' })]
+    })
+    const span = phaseSpan(lot)
+    expect(span.rolledStart).toBe('2026-10-15')
+    expect(span.overruns).toBe(false)
+  })
+
+  it('still reports one when the work really does start early', () => {
+    const lot = makeTask({
+      title: 'Lot 1',
+      type: 'phase',
+      start: '2026-10-01',
+      due: '2026-10-31',
+      subtasks: [makeTask({ title: 'Avance', start: '2026-09-20', due: '2026-09-25' })]
+    })
+    expect(phaseSpan(lot).overruns).toBe(true)
+  })
+})
