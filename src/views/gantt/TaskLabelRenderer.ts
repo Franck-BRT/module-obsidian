@@ -8,8 +8,8 @@ import { IconButton } from '../../ui/primitives/IconButton'
 import { openTaskByPath, openTaskModal } from '../../ui/ModalFactory'
 import { renderProjectChip } from '../../ui/composites/projectChip'
 import { renderStatusDot } from '../../ui/StatusBadge'
-import { isPhase } from '../../store/Phase'
 import { safeAsync } from '../../utils'
+import { attachRowDragDrop } from './rowDragDrop'
 import { ROW_HEIGHT } from './TimelineConfig'
 import { t } from '../../i18n'
 
@@ -39,55 +39,12 @@ export function renderTaskLabel(
   el.style.paddingLeft = `${depth * 18 + 8}px`
   el.dataset.taskId = task.id
 
-  el.draggable = ctx.reorderable
-  el.addEventListener('dragstart', (e: DragEvent) => {
-    e.dataTransfer?.setData('text/plain', task.id)
-    el.addClass('pm-gantt-label-row--dragging')
+  attachRowDragDrop(el, task, {
+    plugin: ctx.plugin,
+    project,
+    reorderable: ctx.reorderable,
+    onRefresh: ctx.onRefresh
   })
-  el.addEventListener('dragend', () => {
-    el.removeClass('pm-gantt-label-row--dragging')
-  })
-  const DROP_CLASSES = [
-    'pm-gantt-label-row--drop-before',
-    'pm-gantt-label-row--drop-after',
-    'pm-gantt-label-row--drop-inside'
-  ]
-  let dropPosition: 'before' | 'after' | 'inside' = 'before'
-  el.addEventListener('dragover', (e: DragEvent) => {
-    if (!ctx.reorderable) return
-    e.preventDefault()
-    const rect = el.getBoundingClientRect()
-    const offset = (e.clientY - rect.top) / rect.height
-    // A lot takes a drop in its middle, which is the only way into one that is folded
-    // shut: its tickets are not on screen to be dropped beside. Anything else is still
-    // two halves, since dropping into a plain ticket would make it a parent by accident.
-    dropPosition = isPhase(task)
-      ? offset < 0.25
-        ? 'before'
-        : offset > 0.75
-          ? 'after'
-          : 'inside'
-      : offset < 0.5
-        ? 'before'
-        : 'after'
-    el.removeClasses(DROP_CLASSES)
-    el.addClass(`pm-gantt-label-row--drop-${dropPosition}`)
-  })
-  el.addEventListener('dragleave', () => {
-    el.removeClasses(DROP_CLASSES)
-  })
-  el.addEventListener(
-    'drop',
-    safeAsync(async (e: DragEvent) => {
-      e.preventDefault()
-      el.removeClasses(DROP_CLASSES)
-      if (!ctx.reorderable) return
-      const draggedId = e.dataTransfer?.getData('text/plain')
-      if (!draggedId || draggedId === task.id) return
-      await ctx.plugin.store.reorderTask(project, draggedId, task.id, dropPosition)
-      await ctx.onRefresh()
-    })
-  )
 
   if (task.subtasks.length > 0) {
     new CollapseToggle(el, {

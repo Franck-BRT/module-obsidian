@@ -284,3 +284,37 @@ describe('moving a task out of one lot and into another', () => {
     expect(findTask(tree, 'lot')?.subtasks.map((t) => t.id)).toEqual(['y', 'x'])
   })
 })
+
+describe('moving a whole lot', () => {
+  const tree = () => [
+    task({ id: 'lot1', type: 'phase', subtasks: [task({ id: 'a' }), task({ id: 'b' })] }),
+    task({ id: 'lot2', type: 'phase', subtasks: [task({ id: 'c' })] }),
+    task({ id: 'loose' })
+  ]
+
+  it('reorders one lot against another, carrying everything it holds', () => {
+    const t = tree()
+    expect(moveTaskInTree(t, 'lot2', 'lot1', 'before')).toBe(true)
+    expect(t.map((x) => x.id)).toEqual(['lot2', 'lot1', 'loose'])
+    expect(findTask(t, 'lot2')?.subtasks.map((x) => x.id)).toEqual(['c'])
+    expect(findTask(t, 'lot1')?.subtasks.map((x) => x.id)).toEqual(['a', 'b'])
+  })
+
+  it('nests a lot inside another, which is how a sub-lot is made', () => {
+    const t = tree()
+    expect(moveTaskInTree(t, 'lot2', 'lot1', 'inside')).toBe(true)
+    expect(t.map((x) => x.id)).toEqual(['lot1', 'loose'])
+    expect(findTask(t, 'lot1')?.subtasks.map((x) => x.id)).toEqual(['a', 'b', 'lot2'])
+    expect(findTask(t, 'lot2')?.subtasks.map((x) => x.id)).toEqual(['c'])
+  })
+
+  it('pulls a sub-lot back out to the top level', () => {
+    const t = [
+      task({ id: 'outer', type: 'phase', subtasks: [task({ id: 'inner', type: 'phase' })] }),
+      task({ id: 'x' })
+    ]
+    expect(moveTaskInTree(t, 'inner', 'x', 'after')).toBe(true)
+    expect(t.map((n) => n.id)).toEqual(['outer', 'x', 'inner'])
+    expect(findTask(t, 'outer')?.subtasks).toEqual([])
+  })
+})

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.35.1] - 2026-09-16
+
+### Fixed
+
+- **A whole lot can now be dragged**, with everything it holds — reordered against another
+  lot, nested inside one to make a sub-lot, or pulled back out to the top level. A lot's
+  row is drawn as a heading rather than as a task label, and the drag had only ever been
+  wired into the label, so a lot was immovable
+- **The same omission made 2.35.0's "drop into a lot" unreachable in the Gantt**: the drop
+  zone was added to the task label, which a lot never uses. Both row kinds now share one
+  implementation, so neither can drift from the other again
+
 ## [2.35.0] - 2026-09-16
 
 ### Fixed

@@ -28,6 +28,7 @@ import { svgEl } from '../../utils'
 import { Temporal, today } from '../../dates'
 import type { RendererContext } from './GanttRenderer'
 import { renderTaskLabel } from './TaskLabelRenderer'
+import { attachRowDragDrop } from './rowDragDrop'
 import { collectionBlocks, headingHandlers, phaseHeading, renderHeadingRow, type HeadingRow } from '../headings'
 import { TASK_SORT_KEYS, orderTasks, sortKeyLabel, type SortOrder } from '../sortOrder'
 import { renderSortControl } from '../SortControl'
@@ -424,6 +425,18 @@ export class GanttView implements SubView {
     el.style.height = `${ROW_HEIGHT}px`
     el.style.paddingLeft = `${depth * 18 + 4}px`
     el.toggleClass('is-collapsed', phase.collapsed)
+    el.dataset.taskId = phase.id
+    // A lot is a row like any other as far as the drag is concerned: it can be picked up
+    // whole, and dropped into. Drawing it as a heading is no reason to make it immovable.
+    const owner = this.scope.projectOf(phase.id)
+    if (owner) {
+      attachRowDragDrop(el, phase, {
+        plugin: this.plugin,
+        project: owner,
+        reorderable: this.plugin.settings.ganttSortKey === 'manual',
+        onRefresh: this.onRefresh
+      })
+    }
     renderHeadingRow(
       el,
       heading,
