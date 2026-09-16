@@ -23,7 +23,14 @@ export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document'
 export interface Recurrence {
   interval: 'daily' | 'weekly' | 'monthly' | 'yearly'
   every: number // e.g. every 2 weeks
+  /** The series stops after this day. Absent runs on for ever. */
   endDate?: string // YYYY-MM-DD
+  /**
+   * How many occurrences are still to come, this one included, so each note says what is
+   * left of its own series. Every occurrence hands its successor one fewer, and the last
+   * one hands on nothing. Absent runs on for ever.
+   */
+  count?: number
 }
 
 /**

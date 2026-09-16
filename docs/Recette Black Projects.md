@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.33.0
+version: 2.34.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.33.0
+# Recette — Black Projects 2.34.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1221,6 +1221,45 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 - [ ] Une tâche **archivée** : ✅ **Attendu** : elle n'est **pas** proposée, sauf si elle est
       **déjà** une dépendance
 - [ ] Un nom de tâche **très long** : ✅ **Attendu** : il est tronqué mais **lisible au survol**
+
+**Constaté :**
+
+## 7duodecies. Répétition : combien de fois, jusqu'à quand [N]
+
+> **Nouveau en 2.34.0** : une répétition dit maintenant **tous les combien**, et **quand elle
+> s'arrête** — à une date ou après un nombre de fois.
+
+### Le piège corrigé
+
+- [ ] Créer une tâche **sans début ni échéance**, lui mettre **Répétition : Hebdomadaire** :
+      ✅ **Attendu** : un **avertissement orange** sous le champ dit qu'une répétition part de
+      la date de la tâche et que rien ne sera recréé
+- [ ] Lui donner une **échéance** : ✅ **Attendu** : l'avertissement **disparaît**
+- [ ] La passer à **Terminé** : ✅ **Attendu** : la **suivante apparaît**, une semaine plus tard
+
+### Tous les combien
+
+- [ ] ✅ **Attendu** : un champ **« Tous les »** avec un nombre, et l'unité qui suit l'intervalle
+      (« 2 semaines », « 1 mois »…)
+- [ ] Mettre **2** sur une répétition hebdomadaire, terminer la tâche : ✅ **Attendu** : la
+      suivante tombe **deux semaines** plus tard, pas une
+- [ ] Saisir **0** ou du vide : ✅ **Attendu** : ramené à **1**
+
+### Quand ça s'arrête
+
+- [ ] ✅ **Attendu** : un champ **« Fin »** : **Jamais** / **À une date** / **Après un nombre de fois**
+- [ ] **À une date**, mettre une date deux occurrences plus loin : ✅ **Attendu** : la série
+      s'arrête après cette date — la dernière tâche terminée ne recrée rien
+- [ ] **Après un nombre de fois**, mettre **3** : ✅ **Attendu** : un rappel dit que le compte
+      inclut celle-ci et se décompte
+- [ ] Terminer la tâche : ✅ **Attendu** : la suivante existe et affiche **2**
+- [ ] La terminer aussi : ✅ **Attendu** : la suivante affiche **1**
+- [ ] Terminer celle-là : ✅ **Attendu** : **plus rien n'est créé**
+- [ ] Choisir **Jamais** après avoir mis une date : ✅ **Attendu** : la date est **oubliée** —
+      jamais deux réponses à la même question dans la note
+- [ ] Mettre **une date et un nombre** en passant de l'un à l'autre : ✅ **Attendu** : un seul
+      des deux est retenu à la fois
+- [ ] Fermer et rouvrir le coffre : ✅ **Attendu** : tous ces réglages sont **conservés**
 
 **Constaté :**
 

@@ -54,6 +54,30 @@ function typeOptions(): SelectItem[] {
   ]
 }
 
+/** What "every 2" is counting, in the plural the number needs. Exhaustive by design. */
+function repeatUnitLabel(rec: Recurrence): string {
+  const count = Math.max(1, Math.floor(rec.every || 1))
+  switch (rec.interval) {
+    case 'daily':
+      return t('task.repeatUnit.day', { count })
+    case 'weekly':
+      return t('task.repeatUnit.week', { count })
+    case 'monthly':
+      return t('task.repeatUnit.month', { count })
+    case 'yearly':
+      return t('task.repeatUnit.year', { count })
+  }
+}
+
+/** Never, a last day, or a number of times. Exhaustive, so a new ending needs a name. */
+function repeatEndOptions(): SelectItem[] {
+  return [
+    { id: 'never', label: t('task.repeatEnd.never'), icon: 'infinity' },
+    { id: 'date', label: t('task.repeatEnd.date'), icon: 'calendar' },
+    { id: 'count', label: t('task.repeatEnd.count'), icon: 'hash' }
+  ]
+}
+
 function repeatOptions(): SelectItem[] {
   return [
     { id: 'none', label: t('task.repeat.none'), icon: 'repeat' },
@@ -344,7 +368,7 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
   }
 
   if (task.recurrence || shownExtras.has('repeat')) {
-    renderPropRow(
+    const repeatRow = renderPropRow(
       grid,
       t('task.repeat'),
       () => {
@@ -358,17 +382,93 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
               task.recurrence = undefined
             } else {
               task.recurrence = {
+                ...task.recurrence,
                 interval: id as Recurrence['interval'],
-                every: task.recurrence?.every ?? 1,
-                endDate: task.recurrence?.endDate
+                every: task.recurrence?.every ?? 1
               }
             }
             rerender()
           }
         })
+        // A repetition is worked out from the task's own dates, so one with neither has
+        // nothing to count from and would quietly never happen. Said here, where the
+        // repetition is set, rather than discovered weeks later.
+        if (task.recurrence && !task.start && !task.due) {
+          cell.createDiv({ cls: 'pm-prop-hint pm-prop-hint--warn', text: t('task.repeatNeedsDate') })
+        }
         return cell
       },
       'repeat'
+    )
+    repeatRow.addClass('pm-prop-row--wide')
+  }
+
+  const recurrence = task.recurrence
+  if (recurrence) {
+    renderPropRow(
+      grid,
+      t('task.repeatEvery'),
+      () => {
+        const cell = createDiv('pm-prop-value pm-repeat-every')
+        const input = cell.createEl('input', { type: 'number', cls: 'pm-prop-text pm-prop-duration' })
+        input.value = String(Math.max(1, Math.floor(recurrence.every || 1)))
+        input.min = '1'
+        input.step = '1'
+        input.addEventListener('change', () => {
+          const every = Math.floor(parseFloat(input.value))
+          recurrence.every = Number.isNaN(every) || every < 1 ? 1 : every
+          rerender()
+        })
+        cell.createSpan({ cls: 'pm-prop-unit', text: repeatUnitLabel(recurrence) })
+        return cell
+      },
+      'repeat-2'
+    )
+
+    renderPropRow(
+      grid,
+      t('task.repeatEndLabel'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        const mode = recurrence.count !== undefined ? 'count' : recurrence.endDate ? 'date' : 'never'
+        renderSelectControl({
+          container: cell,
+          value: mode,
+          options: repeatEndOptions(),
+          onChange: (id) => {
+            // One ending at a time: choosing a date clears the count and the other way
+            // round, so the note never carries two answers to the same question.
+            recurrence.endDate = id === 'date' ? (recurrence.endDate ?? (task.due || task.start)) : undefined
+            recurrence.count = id === 'count' ? (recurrence.count ?? 5) : undefined
+            rerender()
+          }
+        })
+        if (mode === 'date') {
+          renderDateControl({
+            container: cell,
+            value: recurrence.endDate ?? '',
+            emptyLabel: t('field.setDate'),
+            onChange: (v) => {
+              recurrence.endDate = v || undefined
+              rerender()
+            }
+          })
+        }
+        if (mode === 'count') {
+          const input = cell.createEl('input', { type: 'number', cls: 'pm-prop-text pm-prop-duration' })
+          input.value = String(Math.max(1, Math.floor(recurrence.count ?? 1)))
+          input.min = '1'
+          input.step = '1'
+          input.addEventListener('change', () => {
+            const count = Math.floor(parseFloat(input.value))
+            recurrence.count = Number.isNaN(count) || count < 1 ? 1 : count
+            rerender()
+          })
+          cell.createDiv({ cls: 'pm-prop-hint', text: t('task.repeatCountHint') })
+        }
+        return cell
+      },
+      'circle-stop'
     )
   }
 

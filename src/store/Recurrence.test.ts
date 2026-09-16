@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { Temporal } from '../dates'
 import type { Recurrence } from '../types'
-import { nextOccurrence } from './Recurrence'
+import { makeTask } from '../types'
+import { buildNextOccurrence, nextOccurrence } from './Recurrence'
 
 const weekly: Recurrence = { interval: 'weekly', every: 1 }
 const monthly: Recurrence = { interval: 'monthly', every: 1 }
@@ -63,5 +64,38 @@ describe('nextOccurrence catching up on a late completion', () => {
 
   it('still respects the end date while catching up', () => {
     expect(nextOccurrence({ ...weekly, endDate: '2026-02-01' }, '', '2026-01-07', '2026-04-08')).toBeNull()
+  })
+})
+
+describe('a series that runs a set number of times', () => {
+  const weekly3 = { interval: 'weekly' as const, every: 1, count: 3 }
+
+  it('still has one to give while more than one is left', () => {
+    expect(nextOccurrence(weekly3, '', '2026-04-08')?.due).toBe('2026-04-15')
+  })
+
+  it('stops once this is the last of them', () => {
+    expect(nextOccurrence({ ...weekly3, count: 1 }, '', '2026-04-08')).toBeNull()
+    expect(nextOccurrence({ ...weekly3, count: 0 }, '', '2026-04-08')).toBeNull()
+  })
+
+  it('counts down as the series runs, so each occurrence says what is left', () => {
+    const task = makeTask({ title: 'Relevé', due: '2026-04-08', recurrence: weekly3 })
+    const second = buildNextOccurrence(task, 'todo', '2026-04-08')
+    expect(second?.recurrence).toEqual({ ...weekly3, count: 2 })
+    const third = second ? buildNextOccurrence(second, 'todo', '2026-04-15') : null
+    expect(third?.recurrence).toEqual({ ...weekly3, count: 1 })
+    expect(third ? buildNextOccurrence(third, 'todo', '2026-04-22') : null).toBeNull()
+  })
+
+  it('runs to whichever end comes first, the date or the count', () => {
+    const task = { ...weekly3, count: 9, endDate: '2026-04-20' }
+    expect(nextOccurrence(task, '', '2026-04-08')?.due).toBe('2026-04-15')
+    expect(nextOccurrence(task, '', '2026-04-15')).toBeNull()
+  })
+
+  it('leaves an endless series endless', () => {
+    const task = makeTask({ title: 'Sauvegarde', due: '2026-04-08', recurrence: { interval: 'weekly', every: 1 } })
+    expect(buildNextOccurrence(task, 'todo', '2026-04-08')?.recurrence).toEqual({ interval: 'weekly', every: 1 })
   })
 })

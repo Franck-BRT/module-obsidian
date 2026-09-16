@@ -112,6 +112,11 @@ describe('task round-trip', () => {
     expect(task.timeLogs).toEqual(original.timeLogs)
   })
 
+  it('preserves how long a series has left to run', () => {
+    const original = makeTask({ id: 'task-r', recurrence: { interval: 'weekly', every: 2, count: 4 } })
+    expect(roundTripTask(original).task.recurrence).toEqual({ interval: 'weekly', every: 2, count: 4 })
+  })
+
   it('preserves the duration a template states instead of dates', () => {
     const original = makeTask({ id: 'task-3', start: '', due: '', duration: 15 })
     const { task } = roundTripTask(original)

@@ -26,8 +26,10 @@ function shift(date: string, rec: Recurrence, periods: number): string {
 }
 
 /**
- * Where the next occurrence of a recurring task falls, or null when there should not
- * be one: no date to count from, or the series has run past its end date.
+ * Where the next occurrence of a recurring task falls, or null when there should not be
+ * one: no date to count from, the series has run past its end date, or this was the last
+ * of the number it was given. An end date and a count can both be set — whichever comes
+ * first stops the series.
  *
  * Every shift is measured from the original dates rather than compounded, so a task
  * due on the 31st stays on the 31st instead of drifting down the month. A task
@@ -44,6 +46,8 @@ export function nextOccurrence(
 ): OccurrenceDates | null {
   const anchor = due || start
   if (!anchor) return null
+  // `count` is what is left including this one, so one left means this was the last.
+  if (rec.count !== undefined && rec.count <= 1) return null
 
   for (let periods = 1; periods <= MAX_CATCH_UP_PERIODS; periods++) {
     const nextAnchor = shift(anchor, rec, periods)
@@ -98,6 +102,11 @@ export function buildNextOccurrence(task: Task, openStatusId: string, completedO
   }
   clone.start = dates.start
   clone.due = dates.due
+  // The successor inherits the series one shorter, which is what ends it without anyone
+  // having to remember where the series began.
+  if (task.recurrence.count !== undefined) {
+    clone.recurrence = { ...task.recurrence, count: task.recurrence.count - 1 }
+  }
   return clone
 }
 

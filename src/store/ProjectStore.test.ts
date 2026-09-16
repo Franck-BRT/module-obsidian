@@ -1890,6 +1890,20 @@ describe('ProjectStore recurring tasks', () => {
     expect(daysBetween('2026-01-07', next.due) % 7).toBe(0)
   })
 
+  it('spawns while a counted series has more to give, and stops on the last', async () => {
+    const { store, project, task } = await weeklyTask({
+      recurrence: { interval: 'weekly', every: 1, count: 2 }
+    })
+    await store.updateTask(project, task.id, { status: 'done' })
+    const second = others(project, task)
+    expect(second).toHaveLength(1)
+    // The successor carries the series one shorter, which is what ends it.
+    expect(second[0].recurrence).toEqual({ interval: 'weekly', every: 1, count: 1 })
+
+    await store.updateTask(project, second[0].id, { status: 'done' })
+    expect(others(project, task).filter((t) => t.id !== second[0].id)).toHaveLength(0)
+  })
+
   it('creates nothing for a task without recurrence', async () => {
     const { store, project, task } = await weeklyTask({ recurrence: undefined })
     await store.updateTask(project, task.id, { status: 'done' })

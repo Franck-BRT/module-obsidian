@@ -347,3 +347,20 @@ a.pm-subtask-title--done:hover {
     min-height: 180px;
   }
 }
+
+/* A hint that is a warning rather than guidance: the setting is accepted but will do
+   nothing until something else is filled in. */
+.pm-prop-hint--warn {
+  color: var(--text-warning, var(--color-orange));
+}
+
+/* "Every [2] weeks": the number and the unit it counts read as one phrase. */
+.pm-repeat-every {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pm-prop-unit {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}

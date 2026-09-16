@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.34.0] - 2026-09-16
+
+### Added
+
+- **How often, and how long for.** A repetition can now say **"every N days / weeks /
+  months / years"** — the interval count existed in the data and had no control at all,
+  so every series ran at one — and it can be given an **end**: on a date, or after a
+  number of times
+- **A counted series carries its own remainder.** Each occurrence records how many are
+  left, itself included, and hands its successor one fewer; the last one hands on
+  nothing. Nothing has to remember where the series began, and a note says what is left
+  of its own series just by being read
+- An end date and a count can both be set: **whichever comes first** stops the series
+
+### Fixed
+
+- **A repetition on a task with no dates said nothing and did nothing.** The next
+  occurrence is worked out from the task's own start or due date, so a task with neither
+  had nothing to count from and was silently never recreated — which is how it was
+  reported. The form now says so, in the row where the repetition is set, rather than
+  leaving it to be discovered weeks later
+
 ## [2.33.0] - 2026-09-16
 
 ### Changed
