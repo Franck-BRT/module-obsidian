@@ -49,3 +49,13 @@
   line-height: var(--line-height-normal);
   color: var(--text-normal);
 }
+
+.pm-message-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.pm-message-cta .pm-glyph-icon {
+  display: inline-flex;
+}

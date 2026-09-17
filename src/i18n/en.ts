@@ -505,6 +505,7 @@ export const en = {
   'email.noMessages': 'No message (.msg or .eml) in the vault.',
   'email.message': 'Message',
   'email.emptyBody': '(message with no text)',
+  'email.pickType': 'What kind of ticket?',
   'email.from': 'From:',
   'email.to': 'To:',
   'email.cc': 'Cc:',

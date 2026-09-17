@@ -485,6 +485,7 @@ export const fr: Catalog = {
   'email.noMessages': 'Aucun message (.msg ou .eml) dans le coffre.',
   'email.message': 'Message',
   'email.emptyBody': '(message sans texte)',
+  'email.pickType': 'Quel type de ticket ?',
   'email.from': 'De :',
   'email.to': 'À :',
   'email.cc': 'Copie :',

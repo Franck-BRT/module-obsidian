@@ -1,4 +1,4 @@
-import { ButtonComponent, FileView, WorkspaceLeaf } from 'obsidian'
+import { FileView, WorkspaceLeaf, setIcon } from 'obsidian'
 import type { TFile } from 'obsidian'
 import type PMPlugin from '../main'
 import { parseEmail, type EmailMessage } from '../store/email'
@@ -69,11 +69,15 @@ export class MessageView extends FileView {
     this.addRow(envelope, t('email.cc'), mail.cc.join(', '))
     this.addRow(envelope, t('email.date'), mail.date)
 
-    new ButtonComponent(root.createDiv('pm-message-actions'))
-      .setButtonText(t('email.toTicket'))
-      .setIcon('square-check-big')
-      .setCta()
-      .onClick(safeAsync(() => ticketFromMessage(this.plugin, file)))
+    // Obsidian's button component keeps either an icon or a label, each overwriting the
+    // other, so the two are put in the button themselves.
+    const action = root.createDiv('pm-message-actions').createEl('button', { cls: 'pm-message-cta mod-cta' })
+    setIcon(action.createSpan({ cls: 'pm-glyph-icon' }), 'square-check-big')
+    action.createSpan({ text: t('email.toTicket') })
+    action.addEventListener(
+      'click',
+      safeAsync(() => ticketFromMessage(this.plugin, file))
+    )
 
     // The body is the message as it was written: line breaks are the author's, so it is
     // laid out as text rather than rendered as markdown, which would eat them.

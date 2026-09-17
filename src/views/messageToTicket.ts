@@ -2,8 +2,11 @@ import { Notice, TFile } from 'obsidian'
 import { safeAsync } from '../utils'
 import type PMPlugin from '../main'
 import { emailToMarkdown, isEmailFile, parseEmail } from '../store/email'
-import { ProjectPickerModal, pickVaultFile } from '../modals/PickerModals'
+import { pickOption, pickProject, pickVaultFile } from '../modals/PickerModals'
 import { openTaskModal } from '../ui/ModalFactory'
+import { ADDABLE_TYPES } from '../ui/composites/addTicketButton'
+import { typeConfigOf } from '../store/TicketPalette'
+import { makeDocument, type Task, type TaskType } from '../types'
 import { t } from '../i18n'
 
 /**
@@ -55,22 +58,43 @@ export async function ticketFromMessage(plugin: PMPlugin, file: TFile): Promise<
   }
   const labels = { from: t('email.from'), to: t('email.to'), cc: t('email.cc'), date: t('email.date') }
   const description = `${emailToMarkdown(mail, labels)}\n\n${t('email.original')} [[${file.path}]]`.trim()
-  const defaults = { title: mail.subject.trim() || file.basename, description }
+  const title = mail.subject.trim() || file.basename
 
-  // The message says nothing about which project it concerns, so the reader does.
+  // The message says nothing about which project it concerns, nor what it is asking for,
+  // so both are asked in that order: where it goes, then what it becomes. A vault with a
+  // single project has nothing to ask about the first.
   const projects = plugin.index.projectRefs().filter((ref) => !ref.program)
-  const open = async (path: string): Promise<void> => {
-    const project = await plugin.store.loadProjectByPath(path)
-    if (!project) return
-    openTaskModal(plugin, project, { defaults, onSave: () => undefined })
-  }
-  if (projects.length === 1) {
-    await open(projects[0].path)
+  const first = projects[0]
+  if (!first) {
+    new Notice(t('email.noProject'))
     return
   }
-  new ProjectPickerModal(
+  const chosen = projects.length === 1 ? first : await pickProject(plugin.app, projects)
+  if (!chosen) return
+
+  const type = await pickOption<TaskType>(
     plugin.app,
-    projects,
-    safeAsync((ref) => open(ref.path))
-  ).open()
+    t('email.pickType'),
+    ADDABLE_TYPES.map((kind) => {
+      const config = typeConfigOf(kind)
+      return { id: kind, label: config.label, ...(config.icon ? { icon: config.icon } : {}) }
+    })
+  )
+  if (!type) return
+
+  const project = await plugin.store.loadProjectByPath(chosen.path)
+  if (!project) return
+  openTaskModal(plugin, project, { defaults: defaultsFor(type, title, description), onSave: () => undefined })
+}
+
+/**
+ * What the form opens on.
+ *
+ * A document ticket is the one kind that carries something of its own, so it is given the
+ * reference the inbox would have given it — the two ways of turning a message into a
+ * document must not produce different tickets.
+ */
+function defaultsFor(type: TaskType, title: string, description: string): Partial<Task> {
+  const base: Partial<Task> = { title, description, type }
+  return type === 'document' ? { ...base, document: makeDocument({ reference: title }) } : base
 }

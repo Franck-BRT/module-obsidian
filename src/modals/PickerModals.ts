@@ -10,10 +10,16 @@ export class ProjectPickerModal extends SuggestModal<ProjectRef> {
   constructor(
     app: App,
     private projects: ProjectRef[],
-    private onChoose: (project: ProjectRef) => void
+    private onChoose: (project: ProjectRef) => void,
+    /** Only a caller that has a next step to abandon needs to hear about a dismissal. */
+    private onCancel?: () => void
   ) {
     super(app)
     this.setPlaceholder(t('picker.project'))
+  }
+
+  onClose(): void {
+    window.setTimeout(() => this.onCancel?.(), 0)
   }
 
   getSuggestions(query: string): ProjectRef[] {
@@ -198,6 +204,19 @@ class OptionPickerModal<T extends string> extends SuggestModal<PickerOption<T>> 
   onClose(): void {
     window.setTimeout(() => this.onChoose(null), 0)
   }
+}
+
+/** The project picker as a promise, for a flow that asks something else afterwards. */
+export function pickProject(app: App, projects: ProjectRef[]): Promise<ProjectRef | null> {
+  return new Promise((resolve) => {
+    let settled = false
+    const done = (project: ProjectRef | null): void => {
+      if (settled) return
+      settled = true
+      resolve(project)
+    }
+    new ProjectPickerModal(app, projects, done, () => done(null)).open()
+  })
 }
 
 /** A short list of named choices, when a menu would be the wrong shape for it. */
