@@ -117,7 +117,8 @@ class VaultFilePickerModal extends SuggestModal<TFile> {
   constructor(
     app: App,
     placeholder: string,
-    private onChoose: (file: TFile | null) => void
+    private onChoose: (file: TFile | null) => void,
+    private accept: (file: TFile) => boolean = () => true
   ) {
     super(app)
     this.setPlaceholder(placeholder)
@@ -126,7 +127,7 @@ class VaultFilePickerModal extends SuggestModal<TFile> {
   private files(): TFile[] {
     return this.app.vault
       .getFiles()
-      .filter((file) => file.extension !== 'md')
+      .filter((file) => file.extension !== 'md' && this.accept(file))
       .sort((a, b) => b.stat.mtime - a.stat.mtime)
   }
 
@@ -151,7 +152,7 @@ class VaultFilePickerModal extends SuggestModal<TFile> {
   }
 }
 
-export function pickVaultFile(app: App, placeholder: string): Promise<TFile | null> {
+export function pickVaultFile(app: App, placeholder: string, accept?: (file: TFile) => boolean): Promise<TFile | null> {
   return new Promise((resolve) => {
     let settled = false
     const done = (file: TFile | null): void => {
@@ -159,7 +160,7 @@ export function pickVaultFile(app: App, placeholder: string): Promise<TFile | nu
       settled = true
       resolve(file)
     }
-    new VaultFilePickerModal(app, placeholder, done).open()
+    new VaultFilePickerModal(app, placeholder, done, accept).open()
   })
 }
 

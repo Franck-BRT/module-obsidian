@@ -501,6 +501,8 @@ export const en = {
   'inbox.done': 'Filed: {mails} message(s), {documents} document(s).',
   'inbox.doneWithFailures': 'Filed, except {count} file(s): {names}',
   'email.toTicket': 'Create a ticket from this message',
+  'email.pickMessage': 'Choose the message to turn into a ticket',
+  'email.noMessages': 'No message (.msg or .eml) in the vault.',
   'email.from': 'From:',
   'email.to': 'To:',
   'email.cc': 'Cc:',

@@ -55,7 +55,7 @@ import { dedupePeople, displayName, safeAsync } from './utils'
 import { today } from './dates'
 import { setLocale, t } from './i18n'
 import { setTicketAppearance } from './store/TicketPalette'
-import { registerMessageFileMenu } from './views/messageToTicket'
+import { pickMessageForTicket, registerMessageFileMenu } from './views/messageToTicket'
 
 export default class PMPlugin extends Plugin {
   settings: PMSettings = { ...DEFAULT_SETTINGS }
@@ -137,6 +137,12 @@ export default class PMPlugin extends Plugin {
       callback: () => {
         void this.router.openDashboard()
       }
+    })
+
+    this.addCommand({
+      id: 'message-to-ticket',
+      name: t('email.toTicket'),
+      callback: safeAsync(() => pickMessageForTicket(this))
     })
 
     this.addCommand({

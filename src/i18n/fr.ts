@@ -481,6 +481,8 @@ export const fr: Catalog = {
   'inbox.done': 'Rangé : {mails} message(s), {documents} document(s).',
   'inbox.doneWithFailures': 'Rangé, sauf {count} fichier(s) : {names}',
   'email.toTicket': 'Créer un ticket depuis ce message',
+  'email.pickMessage': 'Choisissez le message à transformer en ticket',
+  'email.noMessages': 'Aucun message (.msg ou .eml) dans le coffre.',
   'email.from': 'De :',
   'email.to': 'À :',
   'email.cc': 'Copie :',

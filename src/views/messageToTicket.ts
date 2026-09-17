@@ -2,7 +2,7 @@ import { Notice, TFile } from 'obsidian'
 import { safeAsync } from '../utils'
 import type PMPlugin from '../main'
 import { emailToMarkdown, isEmailFile, parseEmail } from '../store/email'
-import { ProjectPickerModal } from '../modals/PickerModals'
+import { ProjectPickerModal, pickVaultFile } from '../modals/PickerModals'
 import { openTaskModal } from '../ui/ModalFactory'
 import { t } from '../i18n'
 
@@ -26,6 +26,24 @@ export function registerMessageFileMenu(plugin: PMPlugin): void {
       )
     })
   )
+}
+
+/**
+ * The same thing from the command palette.
+ *
+ * A right-click menu only exists where the file does, and a menu that is expected but
+ * absent — an older build still loaded, a file list that offers no menu — leaves the
+ * feature with no way in at all. A command is always there, so the reader can always get
+ * from a message to a ticket, and can see at once whether this build has the feature.
+ */
+export async function pickMessageForTicket(plugin: PMPlugin): Promise<void> {
+  const messages = plugin.app.vault.getFiles().filter((file) => isEmailFile(file.name))
+  if (messages.length === 0) {
+    new Notice(t('email.noMessages'))
+    return
+  }
+  const file = await pickVaultFile(plugin.app, t('email.pickMessage'), (candidate) => isEmailFile(candidate.name))
+  if (file) await ticketFromMessage(plugin, file)
 }
 
 export async function ticketFromMessage(plugin: PMPlugin, file: TFile): Promise<void> {
