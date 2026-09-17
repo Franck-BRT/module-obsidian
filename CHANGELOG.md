@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.39.0] - 2026-09-17
+
+### Added
+
+- **A project now has four folders from the day it is made**: `_tasks`, `_docs`, and the
+  two new ones, **`_mail`** for the messages it receives and **`_inbox`** for whatever is
+  waiting to be filed. An older project gets them the first time it is opened — the inbox
+  has to exist to be filled, and a folder that only appears once the plugin has had a
+  reason to write to it can never be the one a reader is asked to use
+- **A button that empties the inbox.** Drop anything into `_inbox`, press it, and every
+  **message** goes to `_mail` with a ticket carrying its subject, sender, date and text;
+  everything **else** goes to `_docs` as a document ticket holding the file as its first
+  issue. The button appears only when something is waiting, and says how many
+- **Right-click a `.msg` or `.eml` already in the vault → "Créer un ticket depuis ce
+  message".** A message dropped straight into the file tree is only a file to Obsidian:
+  clicking it hands it back to Outlook, which is correct and useless. The menu is where a
+  file says what can be done with it, so that is where the plugin offers to read one
+- A **markdown note** in the inbox is left alone — it may be a ticket the plugin itself
+  wrote — and so is a dotfile. One file failing to file does not strand the rest: the
+  others go through and the failures are named
+
 ## [2.38.0] - 2026-09-17
 
 ### Added

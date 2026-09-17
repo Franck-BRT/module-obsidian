@@ -474,6 +474,13 @@ export const fr: Catalog = {
   'flow.idsRepaired': 'Identifiants dupliqués réparés dans « {title} » (projet copié).',
   'count.names': { one: '{count} nom', other: '{count} noms' },
 
+  'inbox.file': { one: 'Ranger la corbeille d’arrivée ({count})', other: 'Ranger la corbeille d’arrivée ({count})' },
+  'inbox.tooltip':
+    'Classe les fichiers de _inbox : les messages dans _mail, le reste dans _docs, avec un ticket pour chacun.',
+  'inbox.deposited': 'Déposé depuis la corbeille d’arrivée',
+  'inbox.done': 'Rangé : {mails} message(s), {documents} document(s).',
+  'inbox.doneWithFailures': 'Rangé, sauf {count} fichier(s) : {names}',
+  'email.toTicket': 'Créer un ticket depuis ce message',
   'email.from': 'De :',
   'email.to': 'À :',
   'email.cc': 'Copie :',

@@ -55,6 +55,7 @@ import { dedupePeople, displayName, safeAsync } from './utils'
 import { today } from './dates'
 import { setLocale, t } from './i18n'
 import { setTicketAppearance } from './store/TicketPalette'
+import { registerMessageFileMenu } from './views/messageToTicket'
 
 export default class PMPlugin extends Plugin {
   settings: PMSettings = { ...DEFAULT_SETTINGS }
@@ -331,6 +332,7 @@ export default class PMPlugin extends Plugin {
 
   private registerTaskNoteSwap(): void {
     const swap = (): void => this.swapTaskNotes()
+    registerMessageFileMenu(this)
     this.registerEvent(this.app.workspace.on('file-open', swap))
     this.registerEvent(this.app.workspace.on('layout-change', swap))
     this.registerEvent(this.app.workspace.on('active-leaf-change', swap))

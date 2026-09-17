@@ -495,6 +495,12 @@ export const en = {
   'count.names': { one: '{count} name', other: '{count} names' },
 
   // Buttons and choices shared by the confirmation and prompt dialogs.
+  'inbox.file': { one: 'File the inbox ({count})', other: 'File the inbox ({count})' },
+  'inbox.tooltip': 'Files what is in _inbox: messages into _mail, everything else into _docs, each with a ticket.',
+  'inbox.deposited': 'Deposited from the inbox',
+  'inbox.done': 'Filed: {mails} message(s), {documents} document(s).',
+  'inbox.doneWithFailures': 'Filed, except {count} file(s): {names}',
+  'email.toTicket': 'Create a ticket from this message',
   'email.from': 'From:',
   'email.to': 'To:',
   'email.cc': 'Cc:',

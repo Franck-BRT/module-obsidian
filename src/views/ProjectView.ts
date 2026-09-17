@@ -36,6 +36,10 @@ import { ProjectHeader } from '../ui/composites/ProjectHeader'
 import { renderGlyph } from '../ui/composites/properties'
 import { showAddTicketMenu } from '../ui/composites/addTicketButton'
 import { attachEmailDrop } from './emailDrop'
+import { inboxFiles, sweepInbox } from '../store/Inbox'
+import { ensureProjectFolders } from '../store/vaultFs'
+import { DOCS_FOLDER_NAME } from '../store/DocumentStore'
+import { emailToMarkdown } from '../store/email'
 import { t } from '../i18n'
 
 export const PM_PROJECT_VIEW_TYPE = 'pm-project'
@@ -77,6 +81,8 @@ export class ProjectView extends ItemView {
    * projects already in hand would reload on top of a load that has not finished.
    */
   private loadedPaths: string[] = []
+  /** Projects whose storage folders this session has already made sure of. */
+  private foldersReady = new Set<string>()
 
   constructor(leaf: WorkspaceLeaf, plugin: PMPlugin) {
     super(leaf)
@@ -222,6 +228,10 @@ export class ProjectView extends ItemView {
       return
     }
     for (const project of projects) this.plugin.applyCollapsedState(project)
+    // A project made before the storage folders existed gets them the first time it is
+    // opened: the inbox has to be there to be filled, and a folder nobody can see is a
+    // feature nobody can use.
+    void this.ensureFolders(this.projectScope)
     if (this.defaultViewAppliedFor !== this.projectScope.key) {
       this.defaultViewAppliedFor = this.projectScope.key
       // A programme opens on its dashboard: it has no work of its own to list, and
@@ -467,6 +477,16 @@ export class ProjectView extends ItemView {
         .setButtonText(t('task.addTicket'))
         .setCta()
         .onClick((e) => showAddTicketMenu(e, (type) => this.addTask(e, { type })))
+
+      // Shown only when there is something to file: a button offering to empty an empty
+      // folder is a button that teaches people to ignore it.
+      const waiting = primary ? inboxFiles(this.app, primary).length : 0
+      if (waiting) {
+        new ButtonComponent(right)
+          .setButtonText(t('inbox.file', { count: waiting }))
+          .setTooltip(t('inbox.tooltip'))
+          .onClick(safeAsync(() => this.fileInbox()))
+      }
     }
 
     if (!scope.isMulti) {
@@ -484,6 +504,52 @@ export class ProjectView extends ItemView {
    * its type already chosen, not a second kind of thing. The shortcut saves the trip
    * through the type field and says out loud that the tool keeps documents.
    */
+  /**
+   * Empties the project's inbox: messages to `_mail` and a ticket each, everything else to
+   * `_docs` as a document ticket carrying the file.
+   *
+   * Reported as a count rather than silently, because filing moves files: a reader who
+   * cannot see what happened has no way to tell an empty inbox from a broken button.
+   */
+  /** Once per project per session; the vault check itself is cheap, the write is not. */
+  private async ensureFolders(scope: ProjectScope): Promise<void> {
+    if (!scope.canAddTask) return
+    for (const project of scope.projects) {
+      if (this.foldersReady.has(project.filePath)) continue
+      this.foldersReady.add(project.filePath)
+      try {
+        await ensureProjectFolders(this.app, project.filePath, DOCS_FOLDER_NAME)
+      } catch (error) {
+        console.error('[Black Projects] Could not create the project folders:', error)
+      }
+    }
+  }
+
+  private async fileInbox(): Promise<void> {
+    const project = this.projectScope?.primary
+    if (!project) return
+    const labels = { from: t('email.from'), to: t('email.to'), cc: t('email.cc'), date: t('email.date') }
+    const result = await sweepInbox(this.app, project, {
+      insert: (task) => this.plugin.store.insertTask(project, task),
+      deposit: async (task, source) => ({
+        ...task,
+        document: await this.plugin.documents.deposit(project, task, source, {
+          move: true,
+          by: '',
+          note: t('inbox.deposited')
+        })
+      }),
+      describeMail: (mail, link) => `${emailToMarkdown(mail, labels)}\n\n${t('email.original')} [[${link}]]`.trim(),
+      untitled: t('email.untitled')
+    })
+    await this.refreshProject()
+    this.plugin.showNotice(
+      result.failed.length
+        ? t('inbox.doneWithFailures', { count: result.failed.length, names: result.failed.join(', ') })
+        : t('inbox.done', { mails: result.mails, documents: result.documents })
+    )
+  }
+
   private addTask(e: MouseEvent, defaults?: Partial<Task>): void {
     const scope = this.projectScope
     if (!scope?.canAddTask) return

@@ -6,6 +6,7 @@ import { today } from '../dates'
 import { isTerminalStatus, sanitizeFileName } from '../utils'
 import { archiveTask as doArchiveTask, unarchiveTask as doUnarchiveTask } from './ArchiveOps'
 import { resolveProjectConfig } from './ProjectConfig'
+import { DOCS_FOLDER_NAME } from './DocumentStore'
 import { buildNextOccurrence } from './Recurrence'
 import { computeSchedule } from './Scheduler'
 import type { VaultIndex } from './VaultIndex'
@@ -53,6 +54,7 @@ import {
   folderOf,
   keepProjectStorageWithNote,
   moveTaskAttachmentFolder,
+  ensureProjectFolders,
   projectFolderOf,
   projectTaskFolder,
   resolveVaultLink,
@@ -832,6 +834,10 @@ export class ProjectStore implements TaskSource {
     const project = makeProject(title, projectFilePath(title, folder))
     if (patch) Object.assign(project, patch)
     await this.saveProject(project)
+    // The storage folders exist from the start rather than when each is first written to:
+    // `_inbox` is the one a reader is asked to put something in, and a folder that only
+    // appears once the plugin has had a reason to write to it can never be that.
+    await ensureProjectFolders(this.app, project.filePath, DOCS_FOLDER_NAME)
     return project
   }
 

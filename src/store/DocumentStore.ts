@@ -3,7 +3,7 @@ import type { App } from 'obsidian'
 import type { DocumentMeta, Project, Task } from '../types'
 import { sanitizeFileName } from '../utils'
 import { documentOf, nextVersion, recordDeposit } from './Document'
-import { ensureFolder, folderOf, projectFolderOf } from './vaultFs'
+import { ensureFolder, folderOf, projectSubFolder } from './vaultFs'
 
 /** The document storage folder inside a project's own folder. */
 export const DOCS_FOLDER_NAME = '_docs'
@@ -12,9 +12,7 @@ export const VERSIONS_FOLDER_NAME = '_versions'
 
 /** Where a project keeps its documents, in either project layout. */
 export function projectDocsFolder(app: App, projectPath: string): string {
-  const own = projectFolderOf(app, projectPath)
-  if (own) return normalizePath(`${own}/${DOCS_FOLDER_NAME}`)
-  return normalizePath(projectPath.replace(/\.md$/, `_${DOCS_FOLDER_NAME.replace(/^_/, '')}`))
+  return projectSubFolder(app, projectPath, DOCS_FOLDER_NAME)
 }
 
 export function projectVersionsFolder(app: App, projectPath: string): string {

@@ -3,6 +3,10 @@ import { TFile, TFolder, normalizePath } from 'obsidian'
 
 /** The task storage folder inside a project's own folder. */
 export const TASK_FOLDER_NAME = '_tasks'
+/** Messages dropped in from a mail client, kept whole beside the tickets made from them. */
+export const MAIL_FOLDER_NAME = '_mail'
+/** Where anything arriving is left until it is filed: the one folder a reader may fill. */
+export const INBOX_FOLDER_NAME = '_inbox'
 
 /** The folder holding a path, empty for anything at the vault root. */
 export function folderOf(path: string): string {
@@ -29,11 +33,42 @@ export function projectFolderOf(app: App, projectPath: string): string | null {
   return app.vault.getAbstractFileByPath(`${dir}/${TASK_FOLDER_NAME}`) instanceof TFolder ? dir : null
 }
 
+/**
+ * One of a project's storage folders, in either layout: inside the folder the project
+ * owns, or beside its note as `<name>_tasks` for a project made before projects had
+ * folders of their own.
+ */
+export function projectSubFolder(app: App, projectPath: string, name: string): string {
+  const own = projectFolderOf(app, projectPath)
+  if (own) return normalizePath(`${own}/${name}`)
+  return normalizePath(projectPath.replace(/\.md$/, name))
+}
+
 /** Where a project's task notes live, in either layout. */
 export function projectTaskFolder(app: App, projectPath: string): string {
-  const own = projectFolderOf(app, projectPath)
-  if (own) return normalizePath(`${own}/${TASK_FOLDER_NAME}`)
-  return normalizePath(projectPath.replace(/\.md$/, '_tasks'))
+  return projectSubFolder(app, projectPath, TASK_FOLDER_NAME)
+}
+
+export function projectMailFolder(app: App, projectPath: string): string {
+  return projectSubFolder(app, projectPath, MAIL_FOLDER_NAME)
+}
+
+export function projectInboxFolder(app: App, projectPath: string): string {
+  return projectSubFolder(app, projectPath, INBOX_FOLDER_NAME)
+}
+
+/**
+ * The folders a project starts life with.
+ *
+ * Made at once rather than when each is first needed, because `_inbox` only works if it is
+ * already there: it is the one folder a reader is asked to put something in, and a folder
+ * that appears only after the plugin has had a reason to write to it can never be that.
+ * The others follow so the project reads as one shape from the day it is made.
+ */
+export async function ensureProjectFolders(app: App, projectPath: string, docsFolderName: string): Promise<void> {
+  for (const name of [TASK_FOLDER_NAME, docsFolderName, MAIL_FOLDER_NAME, INBOX_FOLDER_NAME]) {
+    await ensureFolder(app, projectSubFolder(app, projectPath, name))
+  }
 }
 
 /**

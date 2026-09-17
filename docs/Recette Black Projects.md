@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.38.0
+version: 2.39.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.38.0
+# Recette — Black Projects 2.39.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1399,6 +1399,47 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
 
 > **Limite connue** : les **pièces jointes du message** ne sont pas extraites. Elles restent
 > dans le fichier conservé à côté du ticket.
+
+**Constaté :**
+
+## 7octodecies. La corbeille d'arrivée [N]
+
+> **Nouveau en 2.39.0** : chaque projet a `_tasks`, `_docs`, `_mail` et `_inbox`. On dépose
+> dans `_inbox`, un bouton range tout et crée les tickets.
+
+### Les dossiers
+
+- [ ] **Créer un projet** : ✅ **Attendu** : les **quatre** dossiers existent aussitôt
+- [ ] **Ouvrir un projet ancien** : ✅ **Attendu** : `_mail` et `_inbox` apparaissent
+- [ ] ✅ **Attendu** : un projet en ancienne disposition (`Projet_tasks` à côté de la note)
+      reçoit `Projet_mail` et `Projet_inbox` au même endroit
+
+### Le rangement
+
+- [ ] Déposer dans `_inbox` : deux messages (**.msg**), un **PDF**, un **XLSX**
+- [ ] Rouvrir le projet : ✅ **Attendu** : un bouton **« Ranger la corbeille d'arrivée (4) »**
+      apparaît dans la barre du haut
+- [ ] Le cliquer : ✅ **Attendu** : un message dit **2 message(s), 2 document(s)**
+- [ ] ✅ **Attendu** : les **.msg** sont dans **`_mail`**, le PDF et le XLSX dans **`_docs`**
+- [ ] ✅ **Attendu** : `_inbox` est **vide**
+- [ ] ✅ **Attendu** : chaque message a son **ticket**, titré par son **objet**, avec
+      l'expéditeur, la date, le texte et un lien vers le fichier
+- [ ] ✅ **Attendu** : chaque document a son **ticket de type Document**, le fichier étant sa
+      **première version** (visible dans la bibliothèque)
+- [ ] ✅ **Attendu** : le bouton **disparaît** une fois la corbeille vide
+- [ ] Mettre un fichier **.md** et un **.DS_Store** dans `_inbox`, ranger : ✅ **Attendu** :
+      ils **restent** où ils sont
+- [ ] Déposer deux fichiers du **même nom** (à des moments différents) : ✅ **Attendu** :
+      le second est rangé sous `nom-1`, rien n'est écrasé
+
+### Un message déjà dans le coffre
+
+- [ ] Glisser un message d'Outlook **directement dans l'explorateur de fichiers** d'Obsidian
+- [ ] **Clic droit** dessus : ✅ **Attendu** : **« Créer un ticket depuis ce message »**
+- [ ] Le choisir : ✅ **Attendu** : on demande le projet (s'il y en a plusieurs), puis la fiche
+      s'ouvre pré-remplie
+- [ ] ✅ **Attendu** : un clic **simple** sur le .msg continue d'ouvrir Outlook — c'est le
+      système qui décide, pas le plugin
 
 **Constaté :**
 
