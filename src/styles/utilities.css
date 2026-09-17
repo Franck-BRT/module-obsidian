@@ -219,3 +219,9 @@ body.pm-resize-active * {
   font-size: 1.125rem;
   color: var(--text-normal);
 }
+
+/* A message being dragged in from a mail client: the whole view answers, since the drop
+   is about the project rather than about whichever sub-view happens to be showing. */
+.pm-email-drop-target {
+  box-shadow: inset 0 0 0 2px var(--interactive-accent);
+}

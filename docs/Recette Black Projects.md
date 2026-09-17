@@ -1,12 +1,12 @@
 ---
 type: recette
 module: Black Projects
-version: 2.37.1
+version: 2.38.0
 date_recette:
 testeur:
 ---
 
-# Recette — Black Projects 2.37.1
+# Recette — Black Projects 2.38.0
 
 Plan de test manuel pour le fork. Les **747 tests automatisés** couvrent la logique
 (ordonnancement, récurrence, sérialisation, traductions) ; ils ne couvrent **ni le rendu,
@@ -1369,6 +1369,36 @@ L'interface refuse de créer un cycle, il faut donc le fabriquer à la main.
       ✅ **Attendu** : les barres rouges **disparaissent d'elles-mêmes** au chargement
 - [ ] Un lot dont une **tâche** commence vraiment avant ses dates déclarées : ✅ **Attendu** :
       la barre rouge est **toujours là** — c'est un vrai dépassement
+
+**Constaté :**
+
+## 7septdecies. Glisser un message depuis Outlook [N]
+
+> **Nouveau en 2.38.0** : un message déposé sur un projet devient un ticket pré-rempli, et
+> le fichier du message est conservé à côté.
+
+- [ ] Ouvrir un **projet** (pas un recueil), glisser un message depuis **Outlook** dessus :
+      ✅ **Attendu** : la vue **s'encadre** pendant le survol
+- [ ] Lâcher : ✅ **Attendu** : la fiche d'un **nouveau ticket** s'ouvre, avec l'**objet** comme
+      titre
+- [ ] ✅ **Attendu** : la description contient **De / À / Copie / Reçu le**, puis le **texte** du
+      message sous un trait
+- [ ] ✅ **Attendu** : les **accents** sont corrects dans l'objet **et** dans le corps
+- [ ] ✅ **Attendu** : une ligne **« Message d'origine »** renvoie au fichier, enregistré là où
+      le coffre range les pièces jointes
+- [ ] Choisir le type, le lot, puis **créer** : ✅ **Attendu** : le ticket est créé normalement
+- [ ] **Annuler** : ✅ **Attendu** : aucun ticket — mais le fichier du message reste dans le
+      coffre (c'est voulu : il a été déposé)
+- [ ] Un message **sans objet** : ✅ **Attendu** : le titre est « Message sans objet »
+- [ ] Un message **HTML seulement** : ✅ **Attendu** : le texte est lisible, sans balises
+- [ ] Depuis **Outlook Web** ou un autre client (fichier **.eml**) : ✅ **Attendu** : même résultat
+- [ ] Glisser un **PDF** ou une **image** : ✅ **Attendu** : **rien ne se passe** de notre côté
+- [ ] Glisser un message sur un **recueil** : ✅ **Attendu** : un message explique qu'il faut un
+      projet
+- [ ] Plusieurs messages d'un coup : ✅ **Attendu** : une fiche par message
+
+> **Limite connue** : les **pièces jointes du message** ne sont pas extraites. Elles restent
+> dans le fichier conservé à côté du ticket.
 
 **Constaté :**
 

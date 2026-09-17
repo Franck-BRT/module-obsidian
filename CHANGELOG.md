@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.38.0] - 2026-09-17
+
+### Added
+
+- **Drag a message out of Outlook onto a project and it becomes a ticket.** The subject
+  fills the title, and the sender, recipients, date and text fill the note, ready to edit.
+  The ticket editor opens rather than a ticket being created outright: the kind, the lot
+  and the title are still yours to settle
+- **The message file is kept too**, saved where the vault keeps attachments and linked from
+  the ticket. A summary is not the correspondence — the thread, the signatures and the
+  attachments stay in the file
+- **Both shapes a mail client drops are read.** Outlook on Windows hands over a `.msg`,
+  which is not a mail file but an OLE compound file — a small filesystem with one stream
+  per property — and everything else hands over an `.eml`. The signature decides, not the
+  extension, so a misnamed file still reads correctly
+- **Accents survive the trip**, which is the whole point of reading the formats properly: a
+  French subject travels as an encoded word and a French body as quoted-printable, and
+  read naively both arrive as mojibake. A message with only an HTML body is reduced to its
+  text rather than dropped
+
+### Notes
+
+- Read with no dependency added: the plugin still ships no third-party runtime code
+- **Attachments inside the message are not extracted** — the original file is kept beside
+  the ticket, and that is where they are
+
 ## [2.37.1] - 2026-09-16
 
 ### Fixed

@@ -35,6 +35,7 @@ import { ViewSwitcher } from '../ui/primitives/ViewSwitcher'
 import { ProjectHeader } from '../ui/composites/ProjectHeader'
 import { renderGlyph } from '../ui/composites/properties'
 import { showAddTicketMenu } from '../ui/composites/addTicketButton'
+import { attachEmailDrop } from './emailDrop'
 import { t } from '../i18n'
 
 export const PM_PROJECT_VIEW_TYPE = 'pm-project'
@@ -140,6 +141,14 @@ export class ProjectView extends ItemView {
     this.toolbarEl = root.createDiv('pm-toolbar')
     this.headerEl = root.createDiv('pm-project-header-mount')
     this.bodyEl = root.createDiv('pm-content')
+    // A message dragged from a mail client lands on the whole view, whichever sub-view
+    // happens to be showing: the drop is about the project, not about the table.
+    attachEmailDrop(
+      root,
+      this.plugin,
+      () => this.projectScope,
+      () => this.refreshProject()
+    )
 
     this.register(
       this.plugin.store.onProjectChanged((path) => {

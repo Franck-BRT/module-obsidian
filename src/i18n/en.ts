@@ -495,6 +495,14 @@ export const en = {
   'count.names': { one: '{count} name', other: '{count} names' },
 
   // Buttons and choices shared by the confirmation and prompt dialogs.
+  'email.from': 'From:',
+  'email.to': 'To:',
+  'email.cc': 'Cc:',
+  'email.date': 'Received:',
+  'email.original': 'Original message:',
+  'email.untitled': 'Message with no subject',
+  'email.unreadable': 'Could not read “{name}”.',
+  'email.noProject': 'Drop the message on a project: a collection has no project to create the ticket in.',
   'dialog.ok': 'OK',
   'dialog.cancel': 'Cancel',
   'dialog.next': 'Next',
