@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { makeTask } from './types'
+import { DEFAULT_TYPES, isTaskType, makeTask, TASK_TYPES, withMissingTypes, type TypeConfig } from './types'
 import { today } from './dates'
 
 describe('the date a milestone is made with', () => {
@@ -48,5 +48,40 @@ describe('turning a dated task into a milestone', () => {
     const task = makeTask({ title: 'Revue', start: '2026-05-04', due: '' })
     const asMilestone = makeTask({ ...task, type: 'milestone' })
     expect(asMilestone).toMatchObject({ start: '', due: '2026-05-04' })
+  })
+})
+
+describe('a palette saved before a kind of ticket existed', () => {
+  const seeded: TypeConfig[] = [
+    { id: 'task', label: 'Tâche', color: '#111111', icon: 'a' },
+    { id: 'meeting', label: 'Réunion', color: '#db2777', icon: 'users' }
+  ]
+
+  it('gains the missing kind so it can be recoloured', () => {
+    const saved: TypeConfig[] = [{ id: 'task', label: 'Mon libellé', color: '#ff0000', icon: 'z' }]
+    expect(withMissingTypes(saved, seeded)).toEqual([
+      { id: 'task', label: 'Mon libellé', color: '#ff0000', icon: 'z' },
+      { id: 'meeting', label: 'Réunion', color: '#db2777', icon: 'users' }
+    ])
+  })
+
+  /** The whole point: nothing the reader chose is overwritten by the seed. */
+  it('keeps what the reader chose, and the order they put it in', () => {
+    const saved: TypeConfig[] = [
+      { id: 'meeting', label: 'Réu', color: '#000000', icon: 'x' },
+      { id: 'task', label: 'T', color: '#ffffff', icon: 'y' }
+    ]
+    expect(withMissingTypes(saved, seeded)).toEqual(saved)
+  })
+
+  it('lists every kind the tool can make', () => {
+    expect(TASK_TYPES).toEqual(['task', 'subtask', 'milestone', 'phase', 'document', 'meeting'])
+    expect(DEFAULT_TYPES.map((type) => type.id).sort()).toEqual([...TASK_TYPES].sort())
+  })
+
+  it('reads a kind from a note only when it is one', () => {
+    expect(isTaskType('meeting')).toBe(true)
+    expect(isTaskType('reunion')).toBe(false)
+    expect(isTaskType(null)).toBe(false)
   })
 })

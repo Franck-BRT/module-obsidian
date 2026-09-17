@@ -212,6 +212,28 @@ a.pm-subtask-title--done:hover {
   width: 7em;
 }
 
+/* "09:00 – 10:30", and how long that comes to: one phrase on one line. The hint sits
+   beside the two ends rather than under them, because it is what they add up to. */
+.pm-prop-hours {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Four characters and a colon. Sized to what it holds, like the duration beside it. */
+.pm-prop-time {
+  width: 5.5em;
+}
+
+.pm-prop-hours-sep {
+  color: var(--text-muted);
+}
+
+.pm-prop-hours .pm-prop-hint {
+  margin-top: 0;
+}
+
 /* ---- Choosing predecessors -------------------------------------------------
    A window instead of a drop-down: the plan's own shape on the left, what has
    been picked on the right, so a long vault stays searchable by eye. */

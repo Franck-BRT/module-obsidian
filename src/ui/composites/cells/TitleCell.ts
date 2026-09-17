@@ -1,6 +1,6 @@
 import type { Task } from '../../../types'
 import { Chip } from '../../primitives/Chip'
-import { renderDocumentBadge, renderTypeBadge } from '../../TicketBadges'
+import { renderDocumentBadge, renderMeetingBadge, renderTimeBadge, renderTypeBadge } from '../../TicketBadges'
 import { IconButton } from '../../primitives/IconButton'
 import { renderTagChip } from '../tagChip'
 import { renderTreeGuides } from '../treeGuides'
@@ -51,6 +51,8 @@ export class TitleCell {
 
     renderDocumentBadge(inner, task)
     renderTypeBadge(inner, task)
+    renderMeetingBadge(inner, task)
+    renderTimeBadge(inner, task)
     if (task.recurrence) {
       new Chip(inner)
         .setLabel(t('common.recurringBadge'))

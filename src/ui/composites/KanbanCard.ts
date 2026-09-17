@@ -2,7 +2,7 @@ import type { Task } from '../../types'
 import { formatDateShort } from '../../dates'
 import { AvatarStack, type AvatarPerson } from '../primitives/AvatarStack'
 import { Chip } from '../primitives/Chip'
-import { renderDocumentBadge, renderTypeBadge } from '../TicketBadges'
+import { renderDocumentBadge, renderMeetingBadge, renderTimeBadge, renderTypeBadge } from '../TicketBadges'
 import { ProgressBar } from '../primitives/ProgressBar'
 import { renderDueChip } from './dueChip'
 import { renderTagChip } from './tagChip'
@@ -51,6 +51,8 @@ export class KanbanCard {
     titleRow.createSpan({ text: task.title, cls: 'pm-kanban-card-title' })
     renderDocumentBadge(titleRow, task)
     renderTypeBadge(titleRow, task)
+    renderMeetingBadge(titleRow, task)
+    renderTimeBadge(titleRow, task)
     if (task.recurrence) {
       new Chip(titleRow)
         .setLabel(t('common.recurringBadge'))

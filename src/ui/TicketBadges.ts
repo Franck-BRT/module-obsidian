@@ -1,6 +1,7 @@
 import type { Task } from '../types'
 import { documentOf, isDocument } from '../store/Document'
-import { docStateConfigOf, showsTypeBadge, typeConfigOf } from '../store/TicketPalette'
+import { docStateConfigOf, meetingKindConfigOf, showsTypeBadge, typeConfigOf } from '../store/TicketPalette'
+import { taskTimeRange } from '../store/Meeting'
 import { isIconName } from '../utils'
 import { Chip } from './primitives/Chip'
 
@@ -33,4 +34,37 @@ export function renderDocumentBadge(parent: HTMLElement, task: Task): void {
     .setColor(state.color)
     .setTooltip(`${typeConfigOf('document').label} · ${state.label}${meta.reference ? ` · ${meta.reference}` : ''}`)
   if (isIconName(state.icon)) chip.setLeadingIcon(state.icon)
+}
+
+/**
+ * What a meeting is about, wherever it shows up as a ticket.
+ *
+ * It says the kind rather than just "meeting", for the same reason a document says its
+ * state: in a plan full of meetings, technical and financial are the difference between
+ * one to attend and one to send someone else to. It replaces the type badge rather than
+ * joining it — twice-marked is no clearer than unmarked.
+ */
+export function renderMeetingBadge(parent: HTMLElement, task: Task): void {
+  const kind = meetingKindConfigOf(task)
+  if (!kind) return
+  const chip = new Chip(parent)
+    .setLabel(kind.label)
+    .setVariant('solid')
+    .setSize('sm')
+    .setColor(kind.color)
+    .setTooltip(`${typeConfigOf('meeting').label} · ${kind.label}`)
+  if (isIconName(kind.icon)) chip.setLeadingIcon(kind.icon)
+}
+
+/**
+ * The hours a ticket keeps, when it keeps any.
+ *
+ * On every kind, not only meetings: the plugin works in whole days, and the one thing a
+ * day cannot say is when in it. Outlined and clock-led, so it reads as a detail of the
+ * date rather than as another thing the ticket is.
+ */
+export function renderTimeBadge(parent: HTMLElement, task: Task): void {
+  const range = taskTimeRange(task)
+  if (!range) return
+  new Chip(parent).setLabel(range).setVariant('outline').setSize('sm').setLeadingIcon('clock').setTooltip(range)
 }

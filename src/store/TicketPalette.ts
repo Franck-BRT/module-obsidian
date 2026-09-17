@@ -1,6 +1,7 @@
-import type { DocState, DocStateConfig, Task, TaskType, TypeBadgeMode, TypeConfig } from '../types'
-import { DEFAULT_DOC_STATES, DEFAULT_TYPES } from '../types'
+import type { DocState, DocStateConfig, MeetingKindConfig, Task, TaskType, TypeBadgeMode, TypeConfig } from '../types'
+import { DEFAULT_DOC_STATES, DEFAULT_MEETING_KINDS, DEFAULT_TYPES } from '../types'
 import { isDocument } from './Document'
+import { meetingKindOf } from './Meeting'
 
 /**
  * How tickets are marked, kept here rather than threaded through every row and card.
@@ -14,10 +15,16 @@ import { isDocument } from './Document'
 export interface TicketAppearance {
   types: TypeConfig[]
   docStates: DocStateConfig[]
+  meetingKinds: MeetingKindConfig[]
   badges: TypeBadgeMode
 }
 
-let current: TicketAppearance = { types: DEFAULT_TYPES, docStates: DEFAULT_DOC_STATES, badges: 'distinct' }
+let current: TicketAppearance = {
+  types: DEFAULT_TYPES,
+  docStates: DEFAULT_DOC_STATES,
+  meetingKinds: DEFAULT_MEETING_KINDS,
+  badges: 'distinct'
+}
 
 export function setTicketAppearance(appearance: TicketAppearance): void {
   current = appearance
@@ -50,5 +57,13 @@ export function docStateConfigOf(state: DocState): DocStateConfig {
 export function showsTypeBadge(task: Task): boolean {
   if (current.badges === 'none') return false
   if (isDocument(task)) return false
+  // A meeting that says what it is about says it in its own badge, which names the kind
+  // rather than just "meeting"; one that does not falls back to saying it is a meeting.
+  if (meetingKindConfigOf(task)) return false
   return current.badges === 'all' || task.type !== 'task'
+}
+
+/** What this meeting is about, from the reader's own list. Null when it does not say. */
+export function meetingKindConfigOf(task: Pick<Task, 'type' | 'meetingKind'>): MeetingKindConfig | null {
+  return meetingKindOf(task, current.meetingKinds)
 }

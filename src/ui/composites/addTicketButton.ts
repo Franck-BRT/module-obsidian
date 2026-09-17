@@ -1,7 +1,7 @@
 import { Menu } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { ProjectScope } from '../../store'
-import type { TaskType } from '../../types'
+import { TASK_TYPES, type TaskType } from '../../types'
 import { typeConfigOf } from '../../store/TicketPalette'
 import { openAddTask } from '../../views/addTask'
 import { addPaletteMenuItem } from '../StatusBadge'
@@ -11,8 +11,11 @@ import { t } from '../../i18n'
 /**
  * The kinds an add row offers, in the order the palette lists them: the plain task first,
  * because it is what is nearly always meant.
+ *
+ * The whole list, and the list itself is checked against the union — a kind the tool can
+ * make but never offers is a kind nobody knows about.
  */
-export const ADDABLE_TYPES: readonly TaskType[] = ['task', 'subtask', 'milestone', 'phase', 'document']
+export const ADDABLE_TYPES: readonly TaskType[] = TASK_TYPES
 
 export interface AddTicketOpts {
   plugin: PMPlugin

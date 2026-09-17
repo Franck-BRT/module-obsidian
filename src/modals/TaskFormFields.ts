@@ -1,6 +1,8 @@
 import type PMPlugin from '../main'
 import type { Project, Task, TaskType, Recurrence } from '../types'
-import { DEFAULT_DEPENDENCY_OPTION } from '../types'
+import { DEFAULT_DEPENDENCY_OPTION, TASK_TYPES } from '../types'
+import { typeConfigOf } from '../store/TicketPalette'
+import { formatDuration, minutesBetween, parseTime } from '../store/Clock'
 import { collectAllAssignees, collectAllTags, findTask, flattenTasks } from '../store/TaskTreeOps'
 import { isPhase } from '../store/Phase'
 import { reaches } from '../store/Scheduler'
@@ -43,15 +45,30 @@ export interface TaskFormFieldsContext {
   openTask: (path: string) => void
 }
 
-/** Functions, not constants: a constant would freeze the locale at import time. */
+/**
+ * The kinds of ticket, from the palette rather than from a list written here.
+ *
+ * The add menu already reads the palette, so a kind renamed or re-iconed in the settings
+ * changed there and not in this dropdown — the same vocabulary under two names. Reading
+ * the same place is what stops them drifting apart again.
+ */
 function typeOptions(): SelectItem[] {
-  return [
-    { id: 'task', label: t('task.type.task'), icon: 'square-check-big' },
-    { id: 'subtask', label: t('task.type.subtask'), icon: 'git-branch' },
-    { id: 'milestone', label: t('task.type.milestone'), icon: 'diamond' },
-    { id: 'phase', label: t('task.type.phase'), icon: 'layers' },
-    { id: 'document', label: t('task.type.document'), icon: 'file-text' }
-  ]
+  return TASK_TYPES.map((type) => {
+    const config = typeConfigOf(type)
+    return { id: config.id, label: config.label, icon: config.icon }
+  })
+}
+
+/** What a meeting can be about, plus whatever this one already says it is. */
+function meetingKindOptions(plugin: PMPlugin, current: string | undefined): SelectItem[] {
+  const kinds = plugin.settings.meetingKinds
+  const options: SelectItem[] = kinds.map((kind) => ({ id: kind.id, label: kind.label, icon: kind.icon }))
+  // A kind deleted from the settings would otherwise take every meeting that used it down
+  // with it on the next save. It is kept, and marked, so the loss is a decision.
+  if (current && !kinds.some((kind) => kind.id === current)) {
+    options.push({ id: current, label: t('meeting.kindGone', { id: current }), icon: 'circle-help' })
+  }
+  return options
 }
 
 /** What "every 2" is counting, in the plural the number needs. Exhaustive by design. */
@@ -86,6 +103,23 @@ function repeatOptions(): SelectItem[] {
     { id: 'monthly', label: t('task.repeat.monthly'), icon: 'repeat' },
     { id: 'yearly', label: t('task.repeat.yearly'), icon: 'repeat' }
   ]
+}
+
+/**
+ * One end of an hour range.
+ *
+ * A plain text box rather than `<input type="time">`: the native one renders as a
+ * different control in every theme and refuses anything it does not like without saying
+ * so, whereas what a reader types — `9`, `9h30`, `14:05` — is all perfectly clear. It is
+ * read on the way out, and an unreadable value clears rather than being kept as junk.
+ */
+function renderTimeInput(cell: HTMLElement, value: string, placeholder: string, onChange: (v: string) => void): void {
+  const input = cell.createEl('input', { type: 'text', cls: 'pm-prop-text pm-prop-time' })
+  input.value = value
+  input.placeholder = placeholder
+  input.addEventListener('change', () => {
+    onChange(parseTime(input.value))
+  })
 }
 
 /**
@@ -128,6 +162,30 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
     },
     'shapes'
   )
+
+  // What the meeting is about. Only a meeting has one, and it says so right under the
+  // kind of ticket it is, because the two answer the same question at two depths.
+  if (task.type === 'meeting') {
+    renderPropRow(
+      grid,
+      t('meeting.kindField'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        renderSelectControl({
+          container: cell,
+          value: task.meetingKind ?? '',
+          options: meetingKindOptions(plugin, task.meetingKind),
+          placeholder: t('meeting.kindNone'),
+          onChange: (id) => {
+            task.meetingKind = id || undefined
+            rerender()
+          }
+        })
+        return cell
+      },
+      'users'
+    )
+  }
 
   const phases = flattenTasks(project.tasks)
     .map((f) => f.task)
@@ -298,6 +356,40 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
         return cell
       },
       'ruler'
+    )
+  }
+
+  // Hours, for the tickets that have them. A meeting always shows the row — an hour is
+  // most of what a meeting is — and any other ticket can be given one from "Add property",
+  // because a deadline at five in the afternoon is a real thing to want to write down.
+  if (task.type === 'meeting' || task.startTime || task.endTime || shownExtras.has('hours')) {
+    renderPropRow(
+      grid,
+      t('field.timeRange'),
+      () => {
+        const cell = createDiv('pm-prop-value pm-prop-hours')
+        renderTimeInput(cell, task.startTime ?? '', t('field.startTime'), (value) => {
+          task.startTime = value || undefined
+          rerender()
+        })
+        cell.createSpan({ cls: 'pm-prop-hours-sep', text: '–' })
+        renderTimeInput(cell, task.endTime ?? '', t('field.endTime'), (value) => {
+          task.endTime = value || undefined
+          rerender()
+        })
+        const length = minutesBetween(task.startTime ?? '', task.endTime ?? '')
+        if (length !== null) {
+          cell.createSpan({
+            cls: 'pm-prop-hint',
+            text: formatDuration(length, { hours: t('unit.hourShort'), minutes: t('unit.minuteShort') })
+          })
+        } else if (task.startTime && task.endTime) {
+          // Said out loud rather than quietly corrected: the reader typed one of them wrong.
+          cell.createSpan({ cls: 'pm-prop-hint pm-prop-hint--warn', text: t('field.endBeforeStart') })
+        }
+        return cell
+      },
+      'clock'
     )
   }
 
@@ -628,6 +720,9 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
   }
   if (task.dependencies.length === 0 && !shownExtras.has('depends')) {
     hidden.push({ id: 'depends', label: t('task.dependsOn'), icon: 'link-2' })
+  }
+  if (task.type !== 'meeting' && !task.startTime && !task.endTime && !shownExtras.has('hours')) {
+    hidden.push({ id: 'hours', label: t('field.timeRange'), icon: 'clock' })
   }
   if (hidden.length > 0) {
     const addCell = grid.createDiv('pm-prop-add-cell')

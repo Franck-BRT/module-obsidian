@@ -117,6 +117,43 @@ describe('task round-trip', () => {
     expect(roundTripTask(original).task.recurrence).toEqual({ interval: 'weekly', every: 2, count: 4 })
   })
 
+  it('preserves a meeting, its kind and its hours', () => {
+    const original = makeTask({
+      id: 'task-m',
+      type: 'meeting',
+      meetingKind: 'technical',
+      start: '2026-04-07',
+      due: '2026-04-07',
+      startTime: '09:00',
+      endTime: '10:30'
+    })
+    const { task } = roundTripTask(original)
+    expect(task.type).toBe('meeting')
+    expect(task.meetingKind).toBe('technical')
+    expect(task.startTime).toBe('09:00')
+    expect(task.endTime).toBe('10:30')
+  })
+
+  /** A note edited by hand says 9h30; reading it back must not lose the meeting's hour. */
+  it('reads an hour written the way a person writes it', () => {
+    const md = [
+      '---',
+      'pm-task: true',
+      'id: task-h',
+      'title: Point chantier',
+      'type: meeting',
+      'startTime: 9h30',
+      'endTime: "11"',
+      '---',
+      ''
+    ].join('\n')
+    const { frontmatter, body } = parseFrontmatter(md)
+    if (!frontmatter) throw new Error('frontmatter missing')
+    const { task } = hydrateTaskFromFile(frontmatter, body, 'Projects/Test_tasks/task.md')
+    expect(task.startTime).toBe('09:30')
+    expect(task.endTime).toBe('11:00')
+  })
+
   it('preserves the duration a template states instead of dates', () => {
     const original = makeTask({ id: 'task-3', start: '', due: '', duration: 15 })
     const { task } = roundTripTask(original)

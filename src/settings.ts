@@ -340,6 +340,7 @@ export class PMSettingTab extends PluginSettingTab {
           this.prioritiesPage(),
           this.typesPage(),
           this.docStatesPage(),
+          this.meetingKindsPage(),
           this.customFieldsPage(),
           this.teamMembersPage()
         ]
@@ -508,6 +509,57 @@ export class PMSettingTab extends PluginSettingTab {
               renderPaletteFields(setting.controlEl, state, () => this.persist())
             }
           }))
+        }
+      ]
+    }
+  }
+
+  /**
+   * What a meeting can be about — technical, financial, whatever this organisation runs.
+   *
+   * Unlike the kinds of ticket, which are the tool's own vocabulary and can only be
+   * restyled, this list is the reader's: they add to it and take from it. Deleting one
+   * leaves the meetings that used it alone rather than reassigning them — a technical
+   * meeting quietly becoming a financial one would be a lie about what happened.
+   */
+  private meetingKindsPage(): SettingDefinitionPage {
+    const kinds = this.plugin.settings.meetingKinds
+    return {
+      type: 'page',
+      name: t('settings.meetingKinds.name'),
+      desc: t('settings.meetingKinds.desc'),
+      displayValue: () => t('count.statuses', { count: kinds.length }),
+      items: [
+        {
+          type: 'list',
+          heading: t('settings.meetingKinds.name'),
+          emptyState: t('settings.meetingKinds.empty'),
+          items: kinds.map((kind) => ({
+            name: kind.label,
+            render: (setting: Setting) => {
+              setting.setClass('pm-palette-row')
+              renderPaletteFields(setting.controlEl, kind, () => this.persist())
+            }
+          })),
+          onReorder: (from, to) => this.reorder(kinds, from, to),
+          onDelete: (index) => {
+            kinds.splice(index, 1)
+            this.persist()
+            this.update()
+          },
+          addItem: {
+            name: t('settings.meetingKinds.add'),
+            action: () => {
+              kinds.push({
+                id: 'meeting-' + makeId().slice(0, 6),
+                label: t('settings.meetingKinds.new'),
+                color: '#8b8c92',
+                icon: 'users'
+              })
+              this.persist()
+              this.update()
+            }
+          }
         }
       ]
     }

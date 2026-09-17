@@ -18,7 +18,30 @@ export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'dashboard'] a
 export type ViewMode = (typeof VIEW_MODES)[number]
 export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
-export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document'
+export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document' | 'meeting'
+
+/**
+ * Every kind of ticket, in the order they are offered.
+ *
+ * Built from a record the compiler checks against the union, because the lists that need
+ * it — the add menu, the type dropdown, the reader that decides what a note says it is —
+ * are not exhaustive on their own: a kind left out of one of them does not fail to build,
+ * it fails quietly, and a ticket loads back as something else.
+ */
+const TASK_TYPE_ORDER = {
+  task: true,
+  subtask: true,
+  milestone: true,
+  phase: true,
+  document: true,
+  meeting: true
+} satisfies Record<TaskType, true>
+
+export const TASK_TYPES = Object.keys(TASK_TYPE_ORDER) as TaskType[]
+
+export function isTaskType(raw: unknown): raw is TaskType {
+  return typeof raw === 'string' && raw in TASK_TYPE_ORDER
+}
 
 export interface Recurrence {
   interval: 'daily' | 'weekly' | 'monthly' | 'yearly'
@@ -172,6 +195,15 @@ export interface Task {
    */
   duration?: number
   timeLogs?: TimeLog[]
+  /**
+   * When in the day it happens, as `HH:MM`. Optional on every ticket — a deadline at five
+   * is as real as a meeting at nine — and the two ends are independent, so "before 17:00"
+   * can be said without inventing a start for it.
+   */
+  startTime?: string
+  endTime?: string
+  /** Set on a ticket of type `meeting`: which of the reader's meeting kinds it is. */
+  meetingKind?: string
   customFields: Record<string, unknown>
   /** Set on a ticket of type `document`: its file, its versions, its approvals. */
   // oxlint-disable-next-line obsidianmd/prefer-active-doc -- a field, not the global
@@ -409,6 +441,8 @@ export interface PMSettings {
    */
   types: TypeConfig[]
   docStates: DocStateConfig[]
+  /** What a meeting can be about. Owned by the reader: the tool only seeds it. */
+  meetingKinds: MeetingKindConfig[]
   /** Which tickets say their kind on their own row: none, the ones that are not plain tasks, or all. */
   typeBadges: TypeBadgeMode
   /** Icons for priorities that don't carry their own. */
@@ -549,7 +583,8 @@ export const DEFAULT_TYPES: TypeConfig[] = [
   { id: 'subtask', label: 'Subtask', color: '#15803d', icon: 'git-branch' },
   { id: 'milestone', label: 'Milestone', color: '#7e22ce', icon: 'diamond' },
   { id: 'phase', label: 'Phase', color: '#b45309', icon: 'layers' },
-  { id: 'document', label: 'Document', color: '#0369a1', icon: 'file-text' }
+  { id: 'document', label: 'Document', color: '#0369a1', icon: 'file-text' },
+  { id: 'meeting', label: 'Meeting', color: '#db2777', icon: 'users' }
 ]
 
 /**
@@ -595,9 +630,21 @@ export function seedTypes(): TypeConfig[] {
     subtask: t('task.type.subtask'),
     milestone: t('task.type.milestone'),
     phase: t('task.type.phase'),
-    document: t('task.type.document')
+    document: t('task.type.document'),
+    meeting: t('task.type.meeting')
   }
   return DEFAULT_TYPES.map((type) => ({ ...type, label: labels[type.id] ?? type.label }))
+}
+
+/**
+ * A palette saved before a kind of ticket existed has no entry for it, and a kind with no
+ * entry cannot be recoloured — it draws from the built-in default and the settings page
+ * never lists it. The missing ones are appended; what the reader already chose is kept
+ * exactly as it is, including the order they put it in.
+ */
+export function withMissingTypes(saved: TypeConfig[], seeded: TypeConfig[]): TypeConfig[] {
+  const known = new Set(saved.map((entry) => entry.id))
+  return [...saved, ...seeded.filter((entry) => !known.has(entry.id))]
 }
 
 export function seedDocStates(): DocStateConfig[] {
@@ -609,6 +656,39 @@ export function seedDocStates(): DocStateConfig[] {
     obsolete: t('doc.state.obsolete')
   }
   return DEFAULT_DOC_STATES.map((state) => ({ ...state, label: labels[state.id] ?? state.label }))
+}
+
+/**
+ * What a meeting is about: technical, financial, whatever this organisation runs.
+ *
+ * A list the reader owns, not a fixed set, because the meetings a project holds are the
+ * shape of the organisation holding it — the five below are a starting point, not a
+ * vocabulary the tool is entitled to impose.
+ */
+export interface MeetingKindConfig {
+  id: string
+  label: string
+  color: string
+  icon: string
+}
+
+export const DEFAULT_MEETING_KINDS: MeetingKindConfig[] = [
+  { id: 'technical', label: 'Technical', color: '#0369a1', icon: 'wrench' },
+  { id: 'financial', label: 'Financial', color: '#15803d', icon: 'banknote' },
+  { id: 'coordination', label: 'Coordination', color: '#b45309', icon: 'users' },
+  { id: 'review', label: 'Review', color: '#7e22ce', icon: 'eye' },
+  { id: 'steering', label: 'Steering committee', color: '#be123c', icon: 'gavel' }
+]
+
+export function seedMeetingKinds(): MeetingKindConfig[] {
+  const labels: Record<string, string> = {
+    technical: t('meeting.kind.technical'),
+    financial: t('meeting.kind.financial'),
+    coordination: t('meeting.kind.coordination'),
+    review: t('meeting.kind.review'),
+    steering: t('meeting.kind.steering')
+  }
+  return DEFAULT_MEETING_KINDS.map((kind) => ({ ...kind, label: labels[kind.id] ?? kind.label }))
 }
 
 export function seedPriorities(): PriorityConfig[] {
@@ -631,6 +711,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   statuses: DEFAULT_STATUSES,
   types: DEFAULT_TYPES,
   docStates: DEFAULT_DOC_STATES,
+  meetingKinds: DEFAULT_MEETING_KINDS,
   typeBadges: 'distinct',
   priorities: DEFAULT_PRIORITIES,
   priorityIcons: 'chevrons',

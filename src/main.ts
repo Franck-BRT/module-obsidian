@@ -6,7 +6,9 @@ import {
   seedDocStates,
   seedPriorities,
   seedStatuses,
+  seedMeetingKinds,
   seedTypes,
+  withMissingTypes,
   type PMSettings,
   type Project,
   type Task
@@ -383,8 +385,11 @@ export default class PMPlugin extends Plugin {
     setLocale(this.settings.language)
     if (!saved?.statuses?.length) this.settings.statuses = seedStatuses()
     if (!saved?.priorities?.length) this.settings.priorities = seedPriorities()
-    if (!saved?.types?.length) this.settings.types = seedTypes()
+    // A palette saved before a kind of ticket existed keeps everything the reader chose
+    // and gains an entry for what it is missing, so every kind stays recolourable.
+    this.settings.types = saved?.types?.length ? withMissingTypes(this.settings.types, seedTypes()) : seedTypes()
     if (!saved?.docStates?.length) this.settings.docStates = seedDocStates()
+    if (!saved?.meetingKinds?.length) this.settings.meetingKinds = seedMeetingKinds()
     if (!this.settings.projectFilters) this.settings.projectFilters = {}
     if (!this.settings.scopeViews) this.settings.scopeViews = {}
     if (!this.settings.collapsedTasks) this.settings.collapsedTasks = {}
@@ -697,6 +702,7 @@ export default class PMPlugin extends Plugin {
     setTicketAppearance({
       types: this.settings.types,
       docStates: this.settings.docStates,
+      meetingKinds: this.settings.meetingKinds,
       badges: this.settings.typeBadges
     })
   }

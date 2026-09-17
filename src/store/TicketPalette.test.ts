@@ -1,10 +1,17 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { DEFAULT_DOC_STATES, DEFAULT_TYPES, makeDocument, makeTask, type Task } from '../types'
-import { docStateConfigOf, setTicketAppearance, showsTypeBadge, typeConfigOf } from './TicketPalette'
+import { DEFAULT_DOC_STATES, DEFAULT_MEETING_KINDS, DEFAULT_TYPES, makeDocument, makeTask, type Task } from '../types'
+import {
+  docStateConfigOf,
+  meetingKindConfigOf,
+  setTicketAppearance,
+  showsTypeBadge,
+  typeConfigOf
+} from './TicketPalette'
 
 const appearance = (badges: 'none' | 'distinct' | 'all') => ({
   types: DEFAULT_TYPES,
   docStates: DEFAULT_DOC_STATES,
+  meetingKinds: DEFAULT_MEETING_KINDS,
   badges
 })
 
@@ -23,7 +30,7 @@ describe('the palette a ticket is marked with', () => {
 
   it('falls back to the built-in entry rather than drawing nothing', () => {
     // A settings file written before a kind existed, or edited by hand down to one row.
-    setTicketAppearance({ ...appearance('distinct'), types: [], docStates: [] })
+    setTicketAppearance({ ...appearance('distinct'), types: [], docStates: [], meetingKinds: [] })
     expect(typeConfigOf('phase')).toEqual(DEFAULT_TYPES.find((entry) => entry.id === 'phase'))
     expect(docStateConfigOf('approved')).toEqual(DEFAULT_DOC_STATES.find((entry) => entry.id === 'approved'))
   })
@@ -62,5 +69,36 @@ describe('which tickets say their kind', () => {
       setTicketAppearance(appearance(mode))
       expect(showsTypeBadge(doc)).toBe(false)
     }
+  })
+})
+
+describe('how a meeting is marked', () => {
+  it('says what it is about rather than that it is a meeting', () => {
+    const meeting = task({ type: 'meeting', meetingKind: 'technical' })
+    expect(meetingKindConfigOf(meeting)).toMatchObject({ id: 'technical' })
+    // Once, not twice: the kind badge replaces the type badge.
+    expect(showsTypeBadge(meeting)).toBe(false)
+  })
+
+  it('still says it is a meeting when it does not say what about', () => {
+    const meeting = task({ type: 'meeting' })
+    expect(meetingKindConfigOf(meeting)).toBeNull()
+    expect(showsTypeBadge(meeting)).toBe(true)
+  })
+
+  /** A kind deleted from the settings must not be renamed as some other kind. */
+  it('claims nothing about a meeting whose kind has been deleted', () => {
+    const meeting = task({ type: 'meeting', meetingKind: 'gone-kind' })
+    expect(meetingKindConfigOf(meeting)).toBeNull()
+    expect(showsTypeBadge(meeting)).toBe(true)
+  })
+
+  it('never reads a kind off something that is not a meeting', () => {
+    expect(meetingKindConfigOf(task({ type: 'task', meetingKind: 'technical' }))).toBeNull()
+  })
+
+  it('gives every meeting kind a glyph of its own', () => {
+    const icons = DEFAULT_MEETING_KINDS.map((kind) => kind.icon)
+    expect(new Set(icons).size).toBe(DEFAULT_MEETING_KINDS.length)
   })
 })
