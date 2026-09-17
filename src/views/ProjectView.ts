@@ -36,8 +36,8 @@ import { ProjectHeader } from '../ui/composites/ProjectHeader'
 import { renderGlyph } from '../ui/composites/properties'
 import { showAddTicketMenu } from '../ui/composites/addTicketButton'
 import { attachEmailDrop } from './emailDrop'
-import { inboxFiles, sweepInbox } from '../store/Inbox'
-import { ensureProjectFolders } from '../store/vaultFs'
+import { affectsInbox, inboxFiles, sweepInbox } from '../store/Inbox'
+import { ensureProjectFolders, projectInboxFolder } from '../store/vaultFs'
 import { DOCS_FOLDER_NAME } from '../store/DocumentStore'
 import { emailToMarkdown } from '../store/email'
 import { t } from '../i18n'
@@ -83,6 +83,9 @@ export class ProjectView extends ItemView {
   private loadedPaths: string[] = []
   /** Projects whose storage folders this session has already made sure of. */
   private foldersReady = new Set<string>()
+  /** The toolbar slot the inbox button lives in, so it can be redrawn on its own. */
+  private inboxSlotEl: HTMLElement | null = null
+  private inboxRefresh: number | null = null
 
   constructor(leaf: WorkspaceLeaf, plugin: PMPlugin) {
     super(leaf)
@@ -161,6 +164,24 @@ export class ProjectView extends ItemView {
         if (this.scopeDependsOn(path)) this.redraw()
       })
     )
+    // The inbox fills from outside the plugin — a file dragged into the folder, one moved
+    // out — so the button watches the vault itself. Nothing in the project changes when a
+    // message lands in it, which is why the store's own events never mention it.
+    const watchInbox = (path: string, alsoPath?: string): void => {
+      const primary = this.projectScope?.primary
+      if (!primary || !this.inboxSlotEl) return
+      const folder = projectInboxFolder(this.app, primary.filePath)
+      // A rename reports where the file went and where it came from; leaving the inbox
+      // counts exactly as much as arriving in it.
+      if (!affectsInbox(path, folder) && !(alsoPath !== undefined && affectsInbox(alsoPath, folder))) return
+      this.queueInboxRefresh()
+    }
+    this.registerEvent(this.app.vault.on('create', (file) => watchInbox(file.path)))
+    this.registerEvent(this.app.vault.on('delete', (file) => watchInbox(file.path)))
+    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => watchInbox(file.path, oldPath)))
+    this.register(() => {
+      if (this.inboxRefresh !== null) window.clearTimeout(this.inboxRefresh)
+    })
     // A scope changes when a project joins or leaves it, which for a single-project scope
     // includes the project appearing once the index has caught up with the vault.
     this.register(
@@ -429,6 +450,7 @@ export class ProjectView extends ItemView {
     const primary = scope?.primary
     if (!scope || !primary) return
     this.toolbarEl.empty()
+    this.inboxSlotEl = null
 
     const left = this.toolbarEl.createDiv('pm-toolbar-left')
     const openOverview = safeAsync(() => this.plugin.router.openProjectOverview(primary.filePath))
@@ -478,15 +500,10 @@ export class ProjectView extends ItemView {
         .setCta()
         .onClick((e) => showAddTicketMenu(e, (type) => this.addTask(e, { type })))
 
-      // Shown only when there is something to file: a button offering to empty an empty
-      // folder is a button that teaches people to ignore it.
-      const waiting = primary ? inboxFiles(this.app, primary).length : 0
-      if (waiting) {
-        new ButtonComponent(right)
-          .setButtonText(t('inbox.file', { count: waiting }))
-          .setTooltip(t('inbox.tooltip'))
-          .onClick(safeAsync(() => this.fileInbox()))
-      }
+      // Its own slot, because this is the one control in the toolbar that changes without
+      // anything in the project changing: the folder is filled from outside the plugin.
+      this.inboxSlotEl = right.createDiv('pm-toolbar-inbox')
+      this.renderInboxButton()
     }
 
     if (!scope.isMulti) {
@@ -525,6 +542,36 @@ export class ProjectView extends ItemView {
     }
   }
 
+  /**
+   * The button that offers to empty the inbox, drawn from what is in the folder now.
+   *
+   * Shown only when something is waiting: a button offering to empty an empty folder is a
+   * button that teaches people to ignore it. Which is exactly why it has to be redrawn —
+   * one that lingers after the folder is emptied teaches the same thing.
+   */
+  private renderInboxButton(): void {
+    const slot = this.inboxSlotEl
+    if (!slot) return
+    slot.empty()
+    const primary = this.projectScope?.primary
+    if (!primary) return
+    const waiting = inboxFiles(this.app, primary).length
+    if (!waiting) return
+    new ButtonComponent(slot)
+      .setButtonText(t('inbox.file', { count: waiting }))
+      .setTooltip(t('inbox.tooltip'))
+      .onClick(safeAsync(() => this.fileInbox()))
+  }
+
+  /** A drop of ten files reports ten times; the button is drawn once. */
+  private queueInboxRefresh(): void {
+    if (this.inboxRefresh !== null) return
+    this.inboxRefresh = window.setTimeout(() => {
+      this.inboxRefresh = null
+      this.renderInboxButton()
+    }, 0)
+  }
+
   private async fileInbox(): Promise<void> {
     const project = this.projectScope?.primary
     if (!project) return
@@ -543,6 +590,7 @@ export class ProjectView extends ItemView {
       untitled: t('email.untitled')
     })
     await this.refreshProject()
+    this.renderInboxButton()
     this.plugin.showNotice(
       result.failed.length
         ? t('inbox.doneWithFailures', { count: result.failed.length, names: result.failed.join(', ') })

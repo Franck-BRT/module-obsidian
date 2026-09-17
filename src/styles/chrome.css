@@ -89,6 +89,17 @@
   flex-shrink: 0;
 }
 
+/* The inbox button's slot, so it can be redrawn without rebuilding the toolbar. It hands
+   its place in the row to the button itself, and takes up none when there is no button:
+   an empty flex item still claims the gap either side of it. */
+.pm-toolbar-inbox {
+  display: contents;
+}
+
+.pm-toolbar-inbox:empty {
+  display: none;
+}
+
 /* A button that leads with an icon. The icon takes the button's own colour rather than
    the muted grey a glyph defaults to: on a filled call-to-action, muted is invisible. */
 .pm-btn-icon-text {

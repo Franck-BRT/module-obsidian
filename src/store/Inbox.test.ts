@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planInbox, planInboxFile } from './Inbox'
+import { affectsInbox, planInbox, planInboxFile } from './Inbox'
 
 describe('what the inbox does with a file', () => {
   it('sends a message one way and a deliverable the other', () => {
@@ -39,5 +39,31 @@ describe('what the inbox does with a file', () => {
       { name: 'b.pdf', kind: 'document' },
       { name: 'c.md', kind: 'skipped' }
     ])
+  })
+})
+
+describe('affectsInbox', () => {
+  const inbox = 'Projects/Toiture/_inbox'
+
+  it('notices a file arriving in the inbox', () => {
+    expect(affectsInbox(`${inbox}/Devis.msg`, inbox)).toBe(true)
+  })
+
+  it('notices the inbox folder itself appearing or going', () => {
+    expect(affectsInbox(inbox, inbox)).toBe(true)
+  })
+
+  it('ignores a file elsewhere in the same project', () => {
+    expect(affectsInbox('Projects/Toiture/_docs/Devis.pdf', inbox)).toBe(false)
+    expect(affectsInbox('Projects/Toiture/_mail/Devis.msg', inbox)).toBe(false)
+  })
+
+  /** The one that bites: a sibling folder whose name starts with the inbox's. */
+  it('ignores a folder that merely starts with the inbox name', () => {
+    expect(affectsInbox('Projects/Toiture/_inbox-old/Devis.msg', inbox)).toBe(false)
+  })
+
+  it('ignores another project entirely', () => {
+    expect(affectsInbox('Projects/Facade/_inbox/Devis.msg', inbox)).toBe(false)
   })
 })

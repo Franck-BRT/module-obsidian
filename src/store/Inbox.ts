@@ -33,6 +33,18 @@ export function planInbox(names: string[]): InboxPlan[] {
   return names.map((name) => ({ name, kind: planInboxFile(name) }))
 }
 
+/**
+ * Whether a vault path that just changed is one the inbox count would notice.
+ *
+ * The folder itself counts as well as what is in it: an inbox that is created or removed
+ * changes the answer to "is there anything waiting" just as much as a file arriving does.
+ */
+export function affectsInbox(path: string, inboxFolder: string): boolean {
+  const folder = normalizePath(inboxFolder)
+  const clean = normalizePath(path)
+  return clean === folder || clean.startsWith(`${folder}/`)
+}
+
 export interface SweepResult {
   mails: number
   documents: number
