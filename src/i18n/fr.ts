@@ -483,6 +483,8 @@ export const fr: Catalog = {
   'email.toTicket': 'Créer un ticket depuis ce message',
   'email.pickMessage': 'Choisissez le message à transformer en ticket',
   'email.noMessages': 'Aucun message (.msg ou .eml) dans le coffre.',
+  'email.message': 'Message',
+  'email.emptyBody': '(message sans texte)',
   'email.from': 'De :',
   'email.to': 'À :',
   'email.cc': 'Copie :',

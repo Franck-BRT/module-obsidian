@@ -56,6 +56,7 @@ import { today } from './dates'
 import { setLocale, t } from './i18n'
 import { setTicketAppearance } from './store/TicketPalette'
 import { pickMessageForTicket, registerMessageFileMenu } from './views/messageToTicket'
+import { MessageView, PM_MESSAGE_VIEW_TYPE } from './views/MessageView'
 
 export default class PMPlugin extends Plugin {
   settings: PMSettings = { ...DEFAULT_SETTINGS }
@@ -117,6 +118,9 @@ export default class PMPlugin extends Plugin {
     this.registerView(PM_PROJECT_EDIT_VIEW_TYPE, (leaf) => new ProjectEditView(leaf, this))
     this.registerView(PM_DASHBOARD_VIEW_TYPE, (leaf) => new DashboardView(leaf, this))
     this.registerView(PM_TASK_VIEW_TYPE, (leaf) => new TaskView(leaf, this))
+    this.registerView(PM_MESSAGE_VIEW_TYPE, (leaf) => new MessageView(leaf, this))
+    // Claiming the extension is what stops a click handing the message back to Outlook.
+    this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
     if (__STYLEGUIDE__) registerStyleguide(this)
 

@@ -503,6 +503,8 @@ export const en = {
   'email.toTicket': 'Create a ticket from this message',
   'email.pickMessage': 'Choose the message to turn into a ticket',
   'email.noMessages': 'No message (.msg or .eml) in the vault.',
+  'email.message': 'Message',
+  'email.emptyBody': '(message with no text)',
   'email.from': 'From:',
   'email.to': 'To:',
   'email.cc': 'Cc:',
