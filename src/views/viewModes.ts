@@ -18,6 +18,8 @@ export function viewModeLabel(mode: ViewMode): string {
       return t('common.board')
     case 'library':
       return t('view.library')
+    case 'mail':
+      return t('view.mail')
     case 'dashboard':
       return t('kpi.title')
   }

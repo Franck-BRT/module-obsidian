@@ -19,6 +19,7 @@ export const SUBVIEW_CLASS = {
   gantt: 'pm-gantt-view',
   kanban: 'pm-kanban-view',
   library: 'pm-library-view',
+  mail: 'pm-mail-view',
   dashboard: 'pm-kpi-view'
 } as const satisfies Record<ViewMode, string>
 

@@ -1,8 +1,9 @@
-import { FileView, WorkspaceLeaf, setIcon } from 'obsidian'
+import { FileView, WorkspaceLeaf } from 'obsidian'
 import type { TFile } from 'obsidian'
 import type PMPlugin from '../main'
 import { parseEmail, type EmailMessage } from '../store/email'
 import { EmptyState } from '../ui/primitives/EmptyState'
+import { renderMailPreview } from './mail/mailPreview'
 import { safeAsync, truncateTitle } from '../utils'
 import { ticketFromMessage } from './messageToTicket'
 import { t } from '../i18n'
@@ -60,35 +61,13 @@ export class MessageView extends FileView {
   }
 
   private render(file: TFile, mail: EmailMessage): void {
-    const root = this.contentEl.createDiv('pm-message')
-    root.createEl('h1', { cls: 'pm-message-subject', text: mail.subject.trim() || file.basename })
-
-    const envelope = root.createDiv('pm-message-envelope')
-    this.addRow(envelope, t('email.from'), mail.from)
-    this.addRow(envelope, t('email.to'), mail.to.join(', '))
-    this.addRow(envelope, t('email.cc'), mail.cc.join(', '))
-    this.addRow(envelope, t('email.date'), mail.date)
-
-    // Obsidian's button component keeps either an icon or a label, each overwriting the
-    // other, so the two are put in the button themselves.
-    const action = root.createDiv('pm-message-actions').createEl('button', { cls: 'pm-message-cta mod-cta' })
-    setIcon(action.createSpan({ cls: 'pm-glyph-icon' }), 'square-check-big')
-    action.createSpan({ text: t('email.toTicket') })
-    action.addEventListener(
-      'click',
-      safeAsync(() => ticketFromMessage(this.plugin, file))
-    )
-
-    // The body is the message as it was written: line breaks are the author's, so it is
-    // laid out as text rather than rendered as markdown, which would eat them.
-    root.createDiv({ cls: 'pm-message-body', text: mail.body.trim() || t('email.emptyBody') })
-  }
-
-  /** A row only when the message actually carried that field: an empty "Copie :" says nothing. */
-  private addRow(parent: HTMLElement, label: string, value: string): void {
-    if (!value.trim()) return
-    const row = parent.createDiv('pm-message-row')
-    row.createSpan({ cls: 'pm-message-label', text: label })
-    row.createSpan({ cls: 'pm-message-value', text: value })
+    renderMailPreview(this.contentEl, mail, {
+      fallbackTitle: file.basename,
+      action: {
+        label: t('email.toTicket'),
+        icon: 'square-check-big',
+        onClick: safeAsync(() => ticketFromMessage(this.plugin, file))
+      }
+    })
   }
 }

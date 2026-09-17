@@ -14,7 +14,7 @@ export type GanttWeekLabel = 'weekNumber' | 'dateRange' | 'both'
  * the saved-view reader, the default-view setting — are derived from it and cannot be
  * left a view behind.
  */
-export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'dashboard'] as const
+export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'mail', 'dashboard'] as const
 export type ViewMode = (typeof VIEW_MODES)[number]
 export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
@@ -505,6 +505,10 @@ export interface PMSettings {
    */
   librarySortKey: 'reference' | 'title' | 'state' | 'due' | 'issue' | 'issuer' | 'deposited'
   librarySortDir: 'asc' | 'desc'
+  /** Where the mailbox reads a message: beside the list, under it, or not at all. */
+  mailPane: 'right' | 'bottom' | 'off'
+  mailSortKey: 'date' | 'from' | 'subject' | 'name'
+  mailSortDir: 'asc' | 'desc'
   /**
    * How the table orders rows. Kept here so a header clicked in one project is still
    * the order the next one opens in — the column arrows alone never outlived a reload.
@@ -750,6 +754,9 @@ export const DEFAULT_SETTINGS: PMSettings = {
   kanbanSortDir: 'asc',
   librarySortKey: 'reference',
   librarySortDir: 'asc',
+  mailPane: 'right',
+  mailSortKey: 'date',
+  mailSortDir: 'desc',
   // Status, which is what the table has always opened in: an upgrade reorders nothing.
   tableSortKey: 'status',
   tableSortDir: 'asc',

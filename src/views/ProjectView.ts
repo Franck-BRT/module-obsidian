@@ -28,6 +28,7 @@ import type { TableViewState } from './table/TableView'
 import { GanttView } from './gantt/GanttView'
 import { KanbanView } from './KanbanView'
 import { LibraryView } from './library/LibraryView'
+import { MailView } from './mail/MailView'
 import { ProjectDashboard } from './dashboard/ProjectDashboard'
 import { openTaskModal, promptText } from '../ui/ModalFactory'
 import { ChipButton } from '../ui/primitives/ChipButton'
@@ -480,6 +481,7 @@ export class ProjectView extends ItemView {
         { id: 'gantt', icon: 'git-fork', label: t('common.gantt') },
         { id: 'kanban', icon: 'layout-dashboard', label: t('common.board') },
         { id: 'library', icon: 'library', label: t('view.library') },
+        { id: 'mail', icon: 'mail', label: t('view.mail') },
         { id: 'dashboard', icon: 'gauge', label: t('kpi.title') }
       ],
       active: this.currentView,
@@ -823,6 +825,9 @@ export class ProjectView extends ItemView {
         break
       case 'library':
         this.subview = new LibraryView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)
+        break
+      case 'mail':
+        this.subview = new MailView(this.bodyEl, scope, this.plugin, () => this.refreshProject())
         break
       case 'dashboard':
         this.subview = new ProjectDashboard(
