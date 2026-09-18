@@ -1,6 +1,6 @@
 import type PMPlugin from '../main'
 import type { ZoneConfig } from '../types'
-import { impactsByTask, vaultOccupancies, zoneImpacts, type ZoneImpact } from './ZoneImpact'
+import { impactsByTask, vaultOccupancies, zoneImpacts, type ImpactLevel, type ZoneImpact } from './ZoneImpact'
 
 /**
  * The vault's crossings, computed once and read many times.
@@ -42,6 +42,17 @@ export class ZoneRadar {
     return this.plugin.settings.zones.length > 0
   }
 
+  /**
+   * Where the mark on a row or a bar leads.
+   *
+   * On the radar rather than threaded through every composite that draws a ticket, for
+   * the same reason the lookup itself is: a table cell, a card and a Gantt label all
+   * want it and none of them holds the router.
+   */
+  openLevel(level: ImpactLevel): void {
+    void this.plugin.router.openImpacts({ level })
+  }
+
   zoneConfig(id: string): ZoneConfig | null {
     return this.plugin.settings.zones.find((zone) => zone.id === id) ?? null
   }
@@ -54,7 +65,21 @@ export class ZoneRadar {
   private compute(): void {
     const complete = new Set(this.plugin.settings.statuses.filter((status) => status.complete).map((s) => s.id))
     const occupancies = vaultOccupancies({
-      tasks: this.plugin.index.allTaskRefs(),
+      // Field by field, never the ref itself: the index and the pass name the same
+      // things differently — a ref's `impactLevel` is the pass's `level` — and handing
+      // one straight to the other compiles, because the field it wants is optional, and
+      // is then silently absent for ever.
+      tasks: this.plugin.index.allTaskRefs().map((ref) => ({
+        id: ref.id,
+        title: ref.title,
+        projectPath: ref.projectPath,
+        start: ref.start,
+        due: ref.due,
+        status: ref.status,
+        zones: ref.zones,
+        ...(ref.impactLevel ? { level: ref.impactLevel } : {}),
+        archived: ref.archived
+      })),
       projects: this.plugin.index.projectRefs().map((ref) => ({
         path: ref.path,
         title: ref.title,

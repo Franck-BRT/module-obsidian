@@ -5,6 +5,7 @@ import { t } from '../i18n'
 import { documentOf, isDocument } from '../store/Document'
 import {
   docStateConfigOf,
+  impactOpener,
   impactsOfTask,
   meetingKindConfigOf,
   showsTypeBadge,
@@ -98,11 +99,32 @@ export function renderImpactBadge(parent: HTMLElement, task: Task): void {
   // The badge speaks at the level of the gravest thing it stands in: a ticket blocked by
   // one crossing is blocked, whatever the other two amount to.
   const worst = impacts.reduce<ImpactLevel>((held, impact) => worstLevel(held, impact.level), 'info')
-  new Chip(parent)
+  const open = impactOpener()
+  const chip = new Chip(parent)
     .setLabel(String(impacts.length))
     .setVariant('outline')
     .setSize('sm')
     .setLeadingIcon(impactLevelIcon(worst))
     .setColor(impactLevelColor(worst))
-    .setTooltip([t('impact.badge', { count: impacts.length }), ...lines].join('\n'))
+    .setTooltip(
+      [t('impact.badge', { count: impacts.length }), ...lines, ...(open ? ['', t('impact.openLevel')] : [])].join('\n')
+    )
+  if (!open) return
+  // The mark leads where it points: the crossings at the level it is showing, across
+  // every zone. It is the same gesture as the level chip on the dashboard, offered here
+  // because the reader moving a bar is the one who most needs the rest of the answer.
+  chip.el.addClass('pm-clickable')
+  chip.el.setAttr('role', 'button')
+  chip.el.setAttr('tabindex', '0')
+  chip.el.addEventListener('click', (event: MouseEvent) => {
+    // The row underneath opens a ticket; this is its own thing.
+    event.stopPropagation()
+    open(worst)
+  })
+  chip.el.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    event.stopPropagation()
+    open(worst)
+  })
 }

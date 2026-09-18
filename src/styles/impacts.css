@@ -151,7 +151,8 @@
 /* A mark that leads somewhere says so on focus as well as on hover: each is a button in
    everything but the element it uses, so it has to look like one to a keyboard. */
 .pm-impacts-zone-head .pm-clickable:focus-visible,
-.pm-impacts-level .pm-clickable:focus-visible {
+.pm-impacts-level .pm-clickable:focus-visible,
+.pm-gantt-label-row .pm-clickable:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }

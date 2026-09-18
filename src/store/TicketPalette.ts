@@ -2,7 +2,7 @@ import type { DocState, DocStateConfig, MeetingKindConfig, Task, TaskType, TypeB
 import { DEFAULT_DOC_STATES, DEFAULT_MEETING_KINDS, DEFAULT_TYPES } from '../types'
 import { isDocument } from './Document'
 import { meetingKindOf } from './Meeting'
-import type { ZoneImpact } from './ZoneImpact'
+import type { ImpactLevel, ZoneImpact } from './ZoneImpact'
 
 /**
  * How tickets are marked, kept here rather than threaded through every row and card.
@@ -80,6 +80,8 @@ export function meetingKindConfigOf(task: Pick<Task, 'type' | 'meetingKind'>): M
 export interface ImpactLookup {
   forTask(taskId: string): ZoneImpact[]
   zoneLabel(zone: string): string
+  /** Opens the crossings of one level, for the mark a reader clicks on a row or a bar. */
+  openLevel(level: ImpactLevel): void
 }
 
 let impacts: ImpactLookup | null = null
@@ -94,4 +96,10 @@ export function impactsOfTask(taskId: string): ZoneImpact[] {
 
 export function zoneLabelOf(zone: string): string {
   return impacts?.zoneLabel(zone) ?? zone
+}
+
+/** Null where nothing is listening, so a badge drawn outside the plugin is still inert. */
+export function impactOpener(): ((level: ImpactLevel) => void) | null {
+  const held = impacts
+  return held === null ? null : (level) => held.openLevel(level)
 }
