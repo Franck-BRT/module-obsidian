@@ -14,7 +14,7 @@ export type GanttWeekLabel = 'weekNumber' | 'dateRange' | 'both'
  * the saved-view reader, the default-view setting — are derived from it and cannot be
  * left a view behind.
  */
-export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'mail', 'dashboard'] as const
+export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'mail', 'impacts', 'dashboard'] as const
 export type ViewMode = (typeof VIEW_MODES)[number]
 export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
@@ -204,6 +204,12 @@ export interface Task {
   endTime?: string
   /** Set on a ticket of type `meeting`: which of the reader's meeting kinds it is. */
   meetingKind?: string
+  /**
+   * Where this ticket happens: a road, a building, a floor — whatever the reader's work
+   * is organised by. Empty means it inherits the project's own zones, which is how a
+   * project that is entirely in one place is declared once rather than on every ticket.
+   */
+  zones?: string[]
   customFields: Record<string, unknown>
   /** Set on a ticket of type `document`: its file, its versions, its approvals. */
   // oxlint-disable-next-line obsidianmd/prefer-active-doc -- a field, not the global
@@ -231,6 +237,8 @@ export interface Project {
   savedViews: SavedView[]
   /** The project this one sits under, resolved from its `parent` link. */
   parentPath?: string
+  /** Where this project's work happens, unless one of its tickets says otherwise. */
+  zones?: string[]
   /**
    * A programme: it groups projects and carries no work of its own.
    *
@@ -262,6 +270,7 @@ export type ProjectPatch = Partial<
     | 'icon'
     | 'customFields'
     | 'teamMembers'
+    | 'zones'
     | 'savedViews'
     | 'config'
     | 'parentPath'
@@ -443,6 +452,8 @@ export interface PMSettings {
   docStates: DocStateConfig[]
   /** What a meeting can be about. Owned by the reader: the tool only seeds it. */
   meetingKinds: MeetingKindConfig[]
+  /** The places work happens, for telling one project it is about to meet another. */
+  zones: ZoneConfig[]
   /** Which tickets say their kind on their own row: none, the ones that are not plain tasks, or all. */
   typeBadges: TypeBadgeMode
   /** Icons for priorities that don't carry their own. */
@@ -695,6 +706,21 @@ export function seedMeetingKinds(): MeetingKindConfig[] {
   return DEFAULT_MEETING_KINDS.map((kind) => ({ ...kind, label: labels[kind.id] ?? kind.label }))
 }
 
+/**
+ * A place work happens in.
+ *
+ * Deliberately not seeded with anything: a zone is a road, a berth, a floor, a line — it
+ * is the reader's own geography, and a tool that shipped with "Zone A, Zone B" would be
+ * guessing at it out loud. The list starts empty and the settings page says what it is
+ * for.
+ */
+export interface ZoneConfig {
+  id: string
+  label: string
+  color: string
+  icon: string
+}
+
 export function seedPriorities(): PriorityConfig[] {
   const labels: Record<string, string> = {
     critical: t('default.priority.critical'),
@@ -716,6 +742,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   types: DEFAULT_TYPES,
   docStates: DEFAULT_DOC_STATES,
   meetingKinds: DEFAULT_MEETING_KINDS,
+  zones: [],
   typeBadges: 'distinct',
   priorities: DEFAULT_PRIORITIES,
   priorityIcons: 'chevrons',

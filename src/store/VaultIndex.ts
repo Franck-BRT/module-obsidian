@@ -40,6 +40,8 @@ export interface ProjectRef {
   autoArchiveDays: number | null
   /** The view this project opens on. Null inherits the global setting. */
   ownDefaultView: ViewMode | null
+  /** Where its work happens, for the tickets that name no zone of their own. */
+  zones: string[]
 }
 
 /**
@@ -77,6 +79,8 @@ export interface TaskRef {
   dependencies: string[]
   assignees: string[]
   tags: string[]
+  /** Where it happens. Empty inherits its project's, which the impact pass resolves. */
+  zones: string[]
   archived: boolean
 }
 
@@ -495,7 +499,8 @@ export class VaultIndex {
       ownStatusIds: own ? own.map((entry) => entry.id as string) : null,
       completeStatusIds: own ? own.filter((entry) => entry.complete === true).map((entry) => entry.id as string) : null,
       autoArchiveDays: ownAutoArchiveDays(frontmatter),
-      ownDefaultView: ownDefaultView(frontmatter)
+      ownDefaultView: ownDefaultView(frontmatter),
+      zones: stringList(frontmatter.zones)
     }
     this.projects.set(path, ref)
     this.projectPathById.set(ref.id, path)
@@ -547,6 +552,7 @@ export class VaultIndex {
       dependencies: stringList(frontmatter.dependencies).map((raw) => refToId(this.app, raw, path)),
       assignees: stringList(frontmatter.assignees),
       tags: stringList(frontmatter.tags),
+      zones: stringList(frontmatter.zones),
       archived: path.split('/').at(-2) === 'Archive'
     }
     this.tasks.set(path, ref)

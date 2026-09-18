@@ -172,6 +172,7 @@ export function mapRawToTask(r: Record<string, unknown>, overrides?: Partial<Tas
     startTime: readTime(r.startTime),
     endTime: readTime(r.endTime),
     meetingKind: typeof r.meetingKind === 'string' && r.meetingKind.trim() ? r.meetingKind.trim() : undefined,
+    zones: stringList(r.zones).length ? stringList(r.zones) : undefined,
     timeLogs: Array.isArray(r.timeLogs)
       ? (r.timeLogs as { date: string; hours: number; note: string }[]).map((log) => ({ ...log }))
       : undefined,
@@ -226,6 +227,7 @@ export function hydrateProjectFromFrontmatter(
     tasks: [],
     customFields: customFieldList(frontmatter.customFields),
     teamMembers: stringList(frontmatter.teamMembers),
+    zones: stringList(frontmatter.zones).length ? stringList(frontmatter.zones) : undefined,
     createdAt: (frontmatter.createdAt as string) ?? new Date().toISOString(),
     updatedAt: (frontmatter.updatedAt as string) ?? new Date().toISOString(),
     filePath,

@@ -154,6 +154,17 @@ describe('task round-trip', () => {
     expect(task.endTime).toBe('11:00')
   })
 
+  it('preserves the zones a ticket stands in', () => {
+    const original = makeTask({ id: 'task-z', zones: ['rn7', 'quai-3'], start: '2026-04-06', due: '2026-04-10' })
+    expect(roundTripTask(original).task.zones).toEqual(['rn7', 'quai-3'])
+  })
+
+  /** A ticket with no zone inherits its project's; an empty list must not become one. */
+  it('leaves a ticket that names no zone naming none', () => {
+    expect(roundTripTask(makeTask({ id: 'task-nz' })).task.zones).toBeUndefined()
+    expect(roundTripTask(makeTask({ id: 'task-ez', zones: [] })).task.zones).toBeUndefined()
+  })
+
   it('preserves the duration a template states instead of dates', () => {
     const original = makeTask({ id: 'task-3', start: '', due: '', duration: 15 })
     const { task } = roundTripTask(original)

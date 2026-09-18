@@ -1,0 +1,94 @@
+/* ---- Where two plans meet ---------------------------------------------------
+   Grouped by zone, because a reader asks "what is coming on the RN7", not
+   "what is coming, anywhere". */
+
+.pm-impacts-view {
+  overflow-y: auto;
+}
+
+.pm-impacts {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: var(--size-4-4);
+}
+
+.pm-impacts-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-impacts-zone {
+  margin-bottom: var(--size-4-5, 20px);
+}
+
+.pm-impacts-zone-head {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding-bottom: var(--size-2-1);
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: var(--size-4-2);
+}
+
+.pm-impacts-zone-count {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+}
+
+.pm-impacts-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-4-3);
+  padding: 5px 0;
+}
+
+/* The days the two actually share: the part worth looking at, so it leads the row. */
+.pm-impacts-when {
+  flex: 0 0 11rem;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-impacts-pair {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pm-impacts-side {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pm-impacts-title {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.pm-impacts-title:hover {
+  text-decoration: underline;
+}
+
+/* The reader's own side is the one they are reading from; the other project is what is
+   news. Weight rather than colour, so it survives every theme. */
+.pm-impacts-side--near .pm-impacts-title {
+  font-weight: var(--font-semibold);
+}
+
+.pm-impacts-project {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  white-space: nowrap;
+}
+
+.pm-impacts-meets {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  flex-shrink: 0;
+}

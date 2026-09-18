@@ -12,6 +12,7 @@ import { safeAsync } from '../../utils'
 import { attachRowDragDrop } from './rowDragDrop'
 import { ROW_HEIGHT } from './TimelineConfig'
 import { t } from '../../i18n'
+import { renderImpactBadge } from '../../ui/TicketBadges'
 
 export interface LabelContext {
   plugin: PMPlugin
@@ -109,6 +110,11 @@ export function renderTaskLabel(
         menu.showAtMouseEvent(e)
       })
   }
+
+  // The Gantt is where a reader moves work about, which makes it the one place a zone
+  // crossing most needs to be visible: the week a bar is dragged into may be the week
+  // the road is shut.
+  renderImpactBadge(el, task)
 
   if (task.progress > 0) {
     el.createSpan({ text: `${task.progress}%`, cls: 'pm-gantt-label-progress' })

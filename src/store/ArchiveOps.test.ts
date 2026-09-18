@@ -17,6 +17,7 @@ function done(id: string, completed: string, overrides: Partial<Task> = {}): Tas
 
 function ref(id: string, dependencies: string[], archived = false): TaskRef {
   return {
+    zones: [],
     id,
     path: `Projects/Roadmap_tasks/${id}.md`,
     projectId: 'p1',

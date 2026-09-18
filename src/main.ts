@@ -1,3 +1,4 @@
+import { ZoneRadar } from './store/ZoneRadar'
 import { MarkdownView, Plugin, Notice } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
@@ -56,7 +57,7 @@ import { migrateProjects, migrateProjectLayout } from './migration'
 import { dedupePeople, displayName, safeAsync } from './utils'
 import { today } from './dates'
 import { setLocale, t } from './i18n'
-import { setTicketAppearance } from './store/TicketPalette'
+import { setImpactLookup, setTicketAppearance } from './store/TicketPalette'
 import { pickMessageForTicket, registerMessageFileMenu } from './views/messageToTicket'
 import { MessageView, PM_MESSAGE_VIEW_TYPE } from './views/MessageView'
 
@@ -70,6 +71,8 @@ export default class PMPlugin extends Plugin {
   autoArchiver!: AutoArchiver
   idRepair!: IdRepair
   router!: PMViewRouter
+  /** The vault's zone crossings, recomputed when the index changes. */
+  radar!: ZoneRadar
   /** Paths deliberately sent to the markdown editor, which the swap then leaves alone. */
   private markdownEscapes = new Set<string>()
   private viewRefreshScheduled = false
@@ -104,6 +107,7 @@ export default class PMPlugin extends Plugin {
     // The first sweep can run against a half-filled metadata cache, so it runs again once
     // the index has caught up. Everything in it is safe to repeat.
     this.index.register(this, () => {
+      this.radar.invalidate()
       void this.startupSweep()
     })
     this.store = new ProjectStore(this.app, () => this.settings, this.index)
@@ -114,6 +118,8 @@ export default class PMPlugin extends Plugin {
     this.autoArchiver = new AutoArchiver(this)
     this.idRepair = new IdRepair(this)
     this.router = new PMViewRouter(this)
+    this.radar = new ZoneRadar(this)
+    setImpactLookup(this.radar)
 
     this.registerView(PM_PROJECT_VIEW_TYPE, (leaf) => new ProjectView(leaf, this))
     this.registerView(PM_PROJECT_OVERVIEW_VIEW_TYPE, (leaf) => new ProjectOverviewView(leaf, this))
@@ -333,6 +339,7 @@ export default class PMPlugin extends Plugin {
   }
 
   onunload(): void {
+    setImpactLookup(null)
     this.notifier.stop()
   }
 
@@ -694,6 +701,8 @@ export default class PMPlugin extends Plugin {
     // built with the old one.
     setLocale(this.settings.language)
     this.applyTicketAppearance()
+    // A zone renamed, added or deleted changes which crossings exist and what they read as.
+    this.radar.invalidate()
     await this.saveData(this.settings)
   }
 

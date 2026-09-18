@@ -13,6 +13,7 @@ import {
 } from '../types'
 import { collectAllAssignees, flattenTasks, mergeById } from '../store'
 import { safeAsync, truncateTitle } from '../utils'
+import { renderMultiSelect } from '../ui/composites/properties/MultiSelectControl'
 import { confirmDialog } from '../ui/ModalFactory'
 import { renderPersonPicker } from '../ui/PersonPicker'
 import { renderAddButton } from '../ui/composites/addButton'
@@ -121,6 +122,7 @@ export class ProjectEditView extends ItemView {
     this.renderHeader(project)
     this.renderGeneral(project)
     this.renderMembers(project)
+    this.renderZones(project)
     this.renderStatuses(project)
     this.renderPriorities(project)
     this.renderBehavior(project)
@@ -271,6 +273,39 @@ export class ProjectEditView extends ItemView {
       selected: () => project.teamMembers,
       add: (value) => this.save({ teamMembers: [...project.teamMembers, value] }),
       remove: (value) => this.save({ teamMembers: project.teamMembers.filter((name) => name !== value) })
+    })
+  }
+
+  /**
+   * Where this project's work happens, for every ticket that does not say otherwise.
+   *
+   * Declared here rather than on each ticket because a project is usually in one place:
+   * saying it once is what makes the crossing report worth having, and a ticket that
+   * travels — a transfer, a launch — still names its own.
+   */
+  private renderZones(project: Project): void {
+    const section = this.section(t('zone.projectField'), t('zone.projectDesc'))
+    const palette = this.plugin.settings.zones
+    if (!palette.length) {
+      section.createDiv({ cls: 'pm-prop-hint', text: t('zone.needsPalette') })
+      return
+    }
+    renderMultiSelect({
+      container: section.createDiv('pm-prop-value'),
+      search: true,
+      addLabel: t('zone.field'),
+      selected: () => project.zones ?? [],
+      options: () => palette.map((zone) => ({ id: zone.id, label: zone.label, color: zone.color, icon: zone.icon })),
+      labelFor: (id) => palette.find((zone) => zone.id === id)?.label ?? id,
+      colorFor: (id) => palette.find((zone) => zone.id === id)?.color ?? 'var(--text-muted)',
+      add: (id) => {
+        const held = project.zones ?? []
+        if (!held.includes(id)) this.save({ zones: [...held, id] })
+      },
+      remove: (id) => {
+        const left = (project.zones ?? []).filter((zone) => zone !== id)
+        this.save({ zones: left })
+      }
     })
   }
 

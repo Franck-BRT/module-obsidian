@@ -2,6 +2,7 @@ import type { DocState, DocStateConfig, MeetingKindConfig, Task, TaskType, TypeB
 import { DEFAULT_DOC_STATES, DEFAULT_MEETING_KINDS, DEFAULT_TYPES } from '../types'
 import { isDocument } from './Document'
 import { meetingKindOf } from './Meeting'
+import type { ZoneImpact } from './ZoneImpact'
 
 /**
  * How tickets are marked, kept here rather than threaded through every row and card.
@@ -66,4 +67,31 @@ export function showsTypeBadge(task: Task): boolean {
 /** What this meeting is about, from the reader's own list. Null when it does not say. */
 export function meetingKindConfigOf(task: Pick<Task, 'type' | 'meetingKind'>): MeetingKindConfig | null {
   return meetingKindOf(task, current.meetingKinds)
+}
+
+/**
+ * Where the views ask whether a ticket meets another project.
+ *
+ * The same shape as the palette above and for the same reason: a row, a card and a bar
+ * all want the answer, none of them holds the plugin, and threading it through every
+ * composite that draws a ticket would be noise around what is effectively a global. The
+ * plugin sets this once and clears it on unload.
+ */
+export interface ImpactLookup {
+  forTask(taskId: string): ZoneImpact[]
+  zoneLabel(zone: string): string
+}
+
+let impacts: ImpactLookup | null = null
+
+export function setImpactLookup(lookup: ImpactLookup | null): void {
+  impacts = lookup
+}
+
+export function impactsOfTask(taskId: string): ZoneImpact[] {
+  return impacts?.forTask(taskId) ?? []
+}
+
+export function zoneLabelOf(zone: string): string {
+  return impacts?.zoneLabel(zone) ?? zone
 }

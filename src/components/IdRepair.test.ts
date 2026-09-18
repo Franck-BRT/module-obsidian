@@ -30,12 +30,14 @@ function taskRef(id: string, projectPath: string): TaskRef {
     dependencies: [],
     assignees: [],
     tags: [],
+    zones: [],
     archived: false
   }
 }
 
 function projectRef(id: string, path: string): ProjectRef {
   return {
+    zones: [],
     path,
     id,
     title: id,

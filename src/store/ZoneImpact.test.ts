@@ -1,0 +1,217 @@
+import { describe, expect, it } from 'vitest'
+import {
+  impactsByTask,
+  impactsForProjects,
+  otherSide,
+  spanOf,
+  vaultOccupancies,
+  zoneImpacts,
+  type ImpactInputs,
+  type ZoneOccupancy
+} from './ZoneImpact'
+
+let seq = 0
+const at = (project: string, zone: string, start: string, due = start, title = `t${++seq}`): ZoneOccupancy => ({
+  taskId: `${project}-${title}`,
+  title,
+  projectPath: `P/${project}.md`,
+  projectTitle: project,
+  zone,
+  start,
+  due
+})
+
+const pairs = (occupancies: ZoneOccupancy[]): string[] =>
+  zoneImpacts(occupancies)
+    .map((impact) => `${impact.zone}: ${impact.a.taskId}×${impact.b.taskId} ${impact.from}→${impact.to}`)
+    .sort()
+
+describe('the days a ticket stands in a zone', () => {
+  it('runs from its start to its due date', () => {
+    expect(spanOf({ start: '2026-04-06', due: '2026-04-10' })).toEqual({ start: '2026-04-06', due: '2026-04-10' })
+  })
+
+  /** A milestone marks one day; a deadline with no start is at least there on the day. */
+  it('is the one day it has when it has only one', () => {
+    expect(spanOf({ start: '', due: '2026-04-10' })).toEqual({ start: '2026-04-10', due: '2026-04-10' })
+    expect(spanOf({ start: '2026-04-06', due: '' })).toEqual({ start: '2026-04-06', due: '2026-04-06' })
+  })
+
+  it('is nowhere when the ticket has no date at all', () => {
+    expect(spanOf({ start: '', due: '' })).toBeNull()
+  })
+
+  /** Reversed dates are a typo, not a span running backwards, and must not vanish. */
+  it('straightens a span someone typed the wrong way round', () => {
+    expect(spanOf({ start: '2026-04-10', due: '2026-04-06' })).toEqual({ start: '2026-04-06', due: '2026-04-10' })
+  })
+})
+
+describe('two projects in one zone', () => {
+  it('reports a crossing', () => {
+    const impacts = zoneImpacts([
+      at('lancement', 'RN7', '2026-04-06', '2026-04-10', 'transfert'),
+      at('voirie', 'RN7', '2026-04-08', '2026-04-14', 'reprise')
+    ])
+    expect(impacts).toHaveLength(1)
+    expect(impacts[0]).toMatchObject({ zone: 'RN7', from: '2026-04-08', to: '2026-04-10' })
+  })
+
+  it('says nothing when the zones differ', () => {
+    expect(pairs([at('a', 'RN7', '2026-04-06', '2026-04-10'), at('b', 'RN12', '2026-04-06', '2026-04-10')])).toEqual([])
+  })
+
+  it('says nothing when the dates do not meet', () => {
+    expect(pairs([at('a', 'RN7', '2026-04-06', '2026-04-10'), at('b', 'RN7', '2026-04-11', '2026-04-14')])).toEqual([])
+  })
+
+  /** A project already knows what it is doing to itself; saying so would bury the news. */
+  it('says nothing about one project crossing itself', () => {
+    expect(pairs([at('a', 'RN7', '2026-04-06', '2026-04-10'), at('a', 'RN7', '2026-04-08', '2026-04-14')])).toEqual([])
+  })
+
+  it('counts a single shared day', () => {
+    const impacts = zoneImpacts([
+      at('a', 'RN7', '2026-04-06', '2026-04-10'),
+      at('b', 'RN7', '2026-04-10', '2026-04-14')
+    ])
+    expect(impacts).toHaveLength(1)
+    expect(impacts[0]).toMatchObject({ from: '2026-04-10', to: '2026-04-10' })
+  })
+
+  /** A launch day is a single date, and it is exactly the kind that must be caught. */
+  it('catches a one-day ticket falling inside a long one', () => {
+    const impacts = zoneImpacts([
+      at('chantier', 'RN7', '2026-04-01', '2026-04-30'),
+      at('lancement', 'RN7', '2026-04-15')
+    ])
+    expect(impacts).toHaveLength(1)
+    expect(impacts[0]).toMatchObject({ from: '2026-04-15', to: '2026-04-15' })
+  })
+
+  it('reports each pair once, not once per side', () => {
+    expect(
+      pairs([at('a', 'RN7', '2026-04-06', '2026-04-10', 'x'), at('b', 'RN7', '2026-04-07', '2026-04-09', 'y')])
+    ).toHaveLength(1)
+  })
+
+  it('reports every pair when three projects meet', () => {
+    const three = [
+      at('a', 'RN7', '2026-04-06', '2026-04-20', 'x'),
+      at('b', 'RN7', '2026-04-08', '2026-04-12', 'y'),
+      at('c', 'RN7', '2026-04-10', '2026-04-11', 'z')
+    ]
+    expect(zoneImpacts(three)).toHaveLength(3)
+  })
+
+  /** The sweep drops what has ended; a ticket after the gap must still be compared. */
+  it('does not lose a crossing that comes after a gap in the zone', () => {
+    const found = pairs([
+      at('a', 'RN7', '2026-01-01', '2026-01-05', 'early'),
+      at('b', 'RN7', '2026-06-01', '2026-06-10', 'later'),
+      at('c', 'RN7', '2026-06-05', '2026-06-06', 'meets')
+    ])
+    expect(found).toHaveLength(1)
+    expect(found[0]).toContain('2026-06-05→2026-06-06')
+  })
+
+  /**
+   * The sweep drops what has ended. It must drop only that: a long ticket still running
+   * has to survive a short one beside it expiring, or every later crossing with it is
+   * silently lost — which is the one failure this whole feature cannot afford.
+   */
+  it('keeps a long ticket in view when a short one beside it ends', () => {
+    const found = pairs([
+      at('chantier', 'RN7', '2026-04-01', '2026-04-30', 'long'),
+      at('livraison', 'RN7', '2026-04-02', '2026-04-03', 'court'),
+      at('lancement', 'RN7', '2026-04-10', '2026-04-12', 'apres')
+    ])
+    expect(found).toHaveLength(2)
+    expect(found.some((line) => line.includes('apres'))).toBe(true)
+  })
+
+  it('handles a zone with one ticket, and no tickets at all', () => {
+    expect(zoneImpacts([at('a', 'RN7', '2026-04-06')])).toEqual([])
+    expect(zoneImpacts([])).toEqual([])
+  })
+
+  it('leaves the list it was given alone', () => {
+    const given = [at('b', 'RN7', '2026-04-08'), at('a', 'RN7', '2026-04-06')]
+    const before = given.map((o) => o.taskId)
+    zoneImpacts(given)
+    expect(given.map((o) => o.taskId)).toEqual(before)
+  })
+})
+
+describe('reading an impact from one side', () => {
+  const mine = at('lancement', 'RN7', '2026-04-06', '2026-04-10', 'transfert')
+  const theirs = at('voirie', 'RN7', '2026-04-08', '2026-04-14', 'reprise')
+  const impacts = zoneImpacts([mine, theirs])
+
+  it('finds every impact a ticket is in, from either side', () => {
+    const byTask = impactsByTask(impacts)
+    expect(byTask.get(mine.taskId)).toHaveLength(1)
+    expect(byTask.get(theirs.taskId)).toHaveLength(1)
+  })
+
+  it('answers with the far end, never the near one', () => {
+    expect(otherSide(impacts[0], mine.taskId).taskId).toBe(theirs.taskId)
+    expect(otherSide(impacts[0], theirs.taskId).taskId).toBe(mine.taskId)
+  })
+
+  it('keeps the impacts touching the projects in view', () => {
+    expect(impactsForProjects(impacts, ['P/lancement.md'])).toHaveLength(1)
+    expect(impactsForProjects(impacts, ['P/autre.md'])).toHaveLength(0)
+  })
+})
+
+describe('placing the whole vault in its zones', () => {
+  const project = (path: string, zones: string[] = [], template = false) => ({
+    path,
+    title: path,
+    zones,
+    template
+  })
+  const task = (over: Partial<ImpactInputs['tasks'][number]> = {}): ImpactInputs['tasks'][number] => ({
+    id: 't',
+    title: 't',
+    projectPath: 'P/a.md',
+    start: '2026-04-06',
+    due: '2026-04-10',
+    status: 'todo',
+    zones: [],
+    archived: false,
+    ...over
+  })
+  const run = (over: Partial<ImpactInputs>): ZoneOccupancy[] =>
+    vaultOccupancies({ tasks: [], projects: [project('P/a.md')], isComplete: (s) => s === 'done', ...over })
+
+  it('uses the ticket own zones when it names any', () => {
+    const found = run({ tasks: [task({ zones: ['RN7', 'RN12'] })] })
+    expect(found.map((o) => o.zone)).toEqual(['RN7', 'RN12'])
+  })
+
+  /** Declared once for a project that is entirely in one place. */
+  it('falls back to the project zones when the ticket names none', () => {
+    const found = run({ tasks: [task()], projects: [project('P/a.md', ['Quai 3'])] })
+    expect(found.map((o) => o.zone)).toEqual(['Quai 3'])
+  })
+
+  it('lets a ticket override its project rather than adding to it', () => {
+    const found = run({ tasks: [task({ zones: ['RN7'] })], projects: [project('P/a.md', ['Quai 3'])] })
+    expect(found.map((o) => o.zone)).toEqual(['RN7'])
+  })
+
+  it('leaves out what is not in play', () => {
+    const projects = [project('P/a.md', ['RN7']), project('P/t.md', ['RN7'], true)]
+    expect(run({ tasks: [task({ start: '', due: '' })], projects })).toEqual([])
+    expect(run({ tasks: [task({ archived: true })], projects })).toEqual([])
+    expect(run({ tasks: [task({ status: 'done' })], projects })).toEqual([])
+    expect(run({ tasks: [task({ projectPath: 'P/t.md' })], projects })).toEqual([])
+    expect(run({ tasks: [task({ projectPath: null })], projects })).toEqual([])
+  })
+
+  it('says nothing at all when no zone has been declared anywhere', () => {
+    expect(run({ tasks: [task()] })).toEqual([])
+  })
+})

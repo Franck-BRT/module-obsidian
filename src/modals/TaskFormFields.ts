@@ -567,6 +567,48 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
     )
   }
 
+  // Where this ticket happens. Only offered once the reader has said what their zones
+  // are: a picker over an empty palette teaches nothing, so it says where to make them.
+  const zonesRow = renderPropRow(
+    grid,
+    t('zone.field'),
+    () => {
+      const cell = createDiv('pm-prop-value')
+      const palette = plugin.settings.zones
+      if (!palette.length) {
+        cell.createSpan({ cls: 'pm-prop-hint', text: t('zone.needsPalette') })
+        return cell
+      }
+      renderMultiSelect({
+        container: cell,
+        search: true,
+        addLabel: t('zone.field'),
+        placeholder: t('task.findOrCreate'),
+        selected: () => task.zones ?? [],
+        options: () => palette.map((zone) => ({ id: zone.id, label: zone.label, color: zone.color, icon: zone.icon })),
+        labelFor: (id) => palette.find((zone) => zone.id === id)?.label ?? id,
+        colorFor: (id) => palette.find((zone) => zone.id === id)?.color ?? 'var(--text-muted)',
+        add: (id) => {
+          const held = task.zones ?? []
+          if (!held.includes(id)) task.zones = [...held, id]
+        },
+        remove: (id) => {
+          const left = (task.zones ?? []).filter((zone) => zone !== id)
+          task.zones = left.length ? left : undefined
+        }
+      })
+      // A ticket that names none stands where its project stands, and should be able to
+      // see that rather than read an empty field as "nowhere".
+      const inherited = (project.zones ?? []).map((id) => palette.find((z) => z.id === id)?.label ?? id)
+      if (!(task.zones ?? []).length && inherited.length) {
+        cell.createSpan({ cls: 'pm-prop-hint', text: t('zone.inherited', { zones: inherited.join(', ') }) })
+      }
+      return cell
+    },
+    'map-pin'
+  )
+  zonesRow.addClass('pm-prop-row--wide')
+
   const tagsRow = renderPropRow(
     grid,
     t('field.tags'),

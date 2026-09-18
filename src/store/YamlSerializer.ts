@@ -40,6 +40,7 @@ export const PROJECT_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'parent',
   'customFields',
   'teamMembers',
+  'zones',
   'savedViews',
   'createdAt',
   'updatedAt',
@@ -77,6 +78,7 @@ export const TASK_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'customFields',
   'document',
   'meetingKind',
+  'zones',
   'collapsed'
 ])
 
@@ -164,6 +166,7 @@ export function serializeProject(
     ...(project.parentPath ? { parent: `[[${project.parentPath.replace(/\.md$/, '')}]]` } : {}),
     customFields: project.customFields,
     teamMembers: project.teamMembers,
+    ...(project.zones?.length ? { zones: project.zones } : {}),
     savedViews: project.savedViews.length ? project.savedViews : [],
     createdAt: project.createdAt,
     updatedAt: project.updatedAt
@@ -235,6 +238,7 @@ export function buildTaskFrontmatter(
   if (task.startTime) fm.startTime = task.startTime
   if (task.endTime) fm.endTime = task.endTime
   if (task.meetingKind) fm.meetingKind = task.meetingKind
+  if (task.zones?.length) fm.zones = task.zones
   if (task.timeLogs?.length) fm.timeLogs = task.timeLogs
   if (Object.keys(task.customFields).length) fm.customFields = task.customFields
   const document = serializeDocument(task.document)

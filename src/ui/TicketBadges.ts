@@ -1,6 +1,15 @@
 import type { Task } from '../types'
+import { otherSide } from '../store/ZoneImpact'
+import { t } from '../i18n'
 import { documentOf, isDocument } from '../store/Document'
-import { docStateConfigOf, meetingKindConfigOf, showsTypeBadge, typeConfigOf } from '../store/TicketPalette'
+import {
+  docStateConfigOf,
+  impactsOfTask,
+  meetingKindConfigOf,
+  showsTypeBadge,
+  typeConfigOf,
+  zoneLabelOf
+} from '../store/TicketPalette'
 import { taskTimeRange } from '../store/Meeting'
 import { isIconName } from '../utils'
 import { Chip } from './primitives/Chip'
@@ -67,4 +76,29 @@ export function renderTimeBadge(parent: HTMLElement, task: Task): void {
   const range = taskTimeRange(task)
   if (!range) return
   new Chip(parent).setLabel(range).setVariant('outline').setSize('sm').setLeadingIcon('clock').setTooltip(range)
+}
+
+/**
+ * That this ticket meets another project in a zone.
+ *
+ * Marked where the work is looked at, not only in the view that lists crossings: a
+ * reader moving a bar in the Gantt is exactly the reader who needs to know that the week
+ * they are moving it into is the week the road is shut. The tooltip names who and when,
+ * because a warning that does not say what it is warning about is only anxiety.
+ */
+export function renderImpactBadge(parent: HTMLElement, task: Task): void {
+  const impacts = impactsOfTask(task.id)
+  if (!impacts.length) return
+  const lines = impacts.map((impact) => {
+    const far = otherSide(impact, task.id)
+    const when = impact.from === impact.to ? impact.from : `${impact.from} → ${impact.to}`
+    return `${zoneLabelOf(impact.zone)} · ${far.projectTitle} · ${far.title} · ${when}`
+  })
+  new Chip(parent)
+    .setLabel(String(impacts.length))
+    .setVariant('outline')
+    .setSize('sm')
+    .setLeadingIcon('triangle-alert')
+    .setColor('var(--text-warning, var(--color-orange))')
+    .setTooltip([t('impact.badge', { count: impacts.length }), ...lines].join('\n'))
 }

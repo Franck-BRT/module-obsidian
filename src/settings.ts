@@ -341,6 +341,7 @@ export class PMSettingTab extends PluginSettingTab {
           this.typesPage(),
           this.docStatesPage(),
           this.meetingKindsPage(),
+          this.zonesPage(),
           this.customFieldsPage(),
           this.teamMembersPage()
         ]
@@ -555,6 +556,56 @@ export class PMSettingTab extends PluginSettingTab {
                 label: t('settings.meetingKinds.new'),
                 color: '#8b8c92',
                 icon: 'users'
+              })
+              this.persist()
+              this.update()
+            }
+          }
+        }
+      ]
+    }
+  }
+
+  /**
+   * The places work happens.
+   *
+   * Empty until the reader fills it, because a zone is a road, a berth, a floor, a line —
+   * their own geography, which the tool has no business guessing at. Until one exists the
+   * impact view has nothing to say, and says so.
+   */
+  private zonesPage(): SettingDefinitionPage {
+    const zones = this.plugin.settings.zones
+    return {
+      type: 'page',
+      name: t('settings.zones.name'),
+      desc: t('settings.zones.desc'),
+      displayValue: () => t('count.zones', { count: zones.length }),
+      items: [
+        {
+          type: 'list',
+          heading: t('settings.zones.name'),
+          emptyState: t('settings.zones.empty'),
+          items: zones.map((zone) => ({
+            name: zone.label,
+            render: (setting: Setting) => {
+              setting.setClass('pm-palette-row')
+              renderPaletteFields(setting.controlEl, zone, () => this.persist())
+            }
+          })),
+          onReorder: (from, to) => this.reorder(zones, from, to),
+          onDelete: (index) => {
+            zones.splice(index, 1)
+            this.persist()
+            this.update()
+          },
+          addItem: {
+            name: t('settings.zones.add'),
+            action: () => {
+              zones.push({
+                id: 'zone-' + makeId().slice(0, 6),
+                label: t('settings.zones.new'),
+                color: '#8b8c92',
+                icon: 'map-pin'
               })
               this.persist()
               this.update()
