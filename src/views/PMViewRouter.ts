@@ -31,6 +31,22 @@ export class PMViewRouter {
     await this.open(PM_PROJECT_VIEW_TYPE, { scope }, leaf)
   }
 
+  /**
+   * The crossings of the whole vault, narrowed to one zone.
+   *
+   * Opened at vault scope rather than at any project's: a crossing has two sides in two
+   * different plans, and picking one of them to look out from would answer a question
+   * the reader did not ask. The zone travels in the view state, so the view it lands on
+   * opens already filtered instead of asking again for what was just clicked.
+   */
+  async openImpacts(zone?: string, leaf?: WorkspaceLeaf): Promise<void> {
+    await this.open(
+      PM_PROJECT_VIEW_TYPE,
+      { scope: { kind: 'vault' }, view: 'impacts', ...(zone ? { impactZone: zone } : {}) },
+      leaf
+    )
+  }
+
   async openProjectOverview(path: string, leaf?: WorkspaceLeaf): Promise<void> {
     await this.open(PM_PROJECT_OVERVIEW_VIEW_TYPE, { filePath: path }, leaf)
   }

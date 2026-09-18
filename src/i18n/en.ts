@@ -243,6 +243,7 @@ export const en = {
   'view.impacts': 'Impacts',
   'impact.none': 'No crossings',
   'impact.allZones': 'All zones',
+  'impact.openZone': 'Show this zone only',
   'impact.noneHere': 'No crossing for this choice',
   'impact.noneHereHint': 'Widen the level or choose "All zones".',
   'impact.noneHint': 'No other project stands in your zones on the same dates.',

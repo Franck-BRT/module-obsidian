@@ -19,6 +19,11 @@ export interface ImpactRowOpts {
   mine: string[]
   /** At most this many rows per zone, so a dashboard stays a summary. */
   limit?: number
+  /**
+   * What clicking a zone's heading does. Given, the heading becomes a control — which is
+   * the shortest route from "there are eight crossings on the RN7" to reading them.
+   */
+  onZone?: (zone: string) => void
 }
 
 export function renderImpactZones(parent: HTMLElement, impacts: ZoneImpact[], opts: ImpactRowOpts): void {
@@ -35,11 +40,25 @@ export function renderImpactZones(parent: HTMLElement, impacts: ZoneImpact[], op
     const section = parent.createDiv('pm-impacts-zone')
     const head = section.createDiv('pm-impacts-zone-head')
     const config = opts.plugin.radar.zoneConfig(zone)
-    new Chip(head)
+    const chip = new Chip(head)
       .setLabel(opts.plugin.radar.zoneLabel(zone))
       .setVariant('solid')
       .setColor(config?.color ?? 'var(--text-muted)')
       .setLeadingIcon(config?.icon || 'map-pin')
+    const onZone = opts.onZone
+    if (onZone) {
+      chip.setTooltip(t('impact.openZone'))
+      chip.el.addClass('pm-clickable')
+      chip.el.setAttr('role', 'button')
+      chip.el.setAttr('tabindex', '0')
+      chip.el.addEventListener('click', () => onZone(zone))
+      // Reachable by keyboard, since it is a button in everything but the element it uses.
+      chip.el.addEventListener('keydown', (event: KeyboardEvent) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        onZone(zone)
+      })
+    }
     head.createSpan({ cls: 'pm-impacts-zone-count', text: t('impact.count', { count: list.length }) })
 
     // Gravest first, then soonest: a blocking crossing three weeks out matters more

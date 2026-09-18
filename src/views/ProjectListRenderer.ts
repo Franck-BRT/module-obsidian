@@ -118,7 +118,14 @@ function renderImpacts(ctx: ProjectListContext): void {
   section.createEl('h3', { text: t('impact.dashboard'), cls: 'pm-section-label' })
   // No project is "mine" here: the reader is above all of them, so the pair reads in the
   // order the detector found it rather than being turned around to face anyone.
-  renderImpactZones(section.createDiv('pm-impacts'), impacts, { plugin: ctx.plugin, mine: [], limit: 5 })
+  renderImpactZones(section.createDiv('pm-impacts'), impacts, {
+    plugin: ctx.plugin,
+    mine: [],
+    limit: 5,
+    // The summary shows five of a zone's crossings; the heading is how the reader gets
+    // to the rest, already narrowed to the zone they just pointed at.
+    onZone: safeAsync((zone: string) => ctx.plugin.router.openImpacts(zone))
+  })
 }
 
 /**

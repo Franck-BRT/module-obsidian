@@ -72,7 +72,15 @@ export class ImpactsView implements SubView {
       new EmptyState(root).setIcon('🗺️').setTitle(t('impact.noneHere')).setBody(t('impact.noneHereHint'))
       return
     }
-    renderImpactZones(root, shown, { plugin: this.plugin, mine })
+    renderImpactZones(root, shown, {
+      plugin: this.plugin,
+      mine,
+      // Inside this view the heading narrows in place rather than opening anything.
+      onZone: (zone) => {
+        this.zoneFilter = zone
+        this.render()
+      }
+    })
   }
 
   /**
@@ -169,6 +177,11 @@ export class ImpactsView implements SubView {
         this.render()
       }
     })
+  }
+
+  /** Opens narrowed to one zone, for a link that already knows which one is wanted. */
+  openAt(zone: string): void {
+    this.zoneFilter = zone
   }
 
   refresh(): void {

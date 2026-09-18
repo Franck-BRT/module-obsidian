@@ -6,6 +6,7 @@ import {
   type ViewMode,
   type FilterState,
   type SavedView,
+  VIEW_MODES,
   makeDefaultFilter,
   makeId
 } from '../types'
@@ -50,6 +51,10 @@ interface ProjectViewState {
   scope?: ScopeSpec
   /** How a project view was addressed before scopes; still accepted from saved layouts. */
   filePath?: string
+  /** The view to land on, for a link that knows which question it is answering. */
+  view?: ViewMode
+  /** The zone the impacts view should open narrowed to. */
+  impactZone?: string
   [key: string]: unknown
 }
 
@@ -88,6 +93,8 @@ export class ProjectView extends ItemView {
   /** The toolbar slot the inbox button lives in, so it can be redrawn on its own. */
   private inboxSlotEl: HTMLElement | null = null
   private inboxRefresh: number | null = null
+  /** A zone a link asked the impacts view to open narrowed to, until it is taken. */
+  private pendingImpactZone: string | null = null
 
   constructor(leaf: WorkspaceLeaf, plugin: PMPlugin) {
     super(leaf)
@@ -115,9 +122,23 @@ export class ProjectView extends ItemView {
 
   async setState(state: ProjectViewState, result: unknown): Promise<void> {
     const spec = specOf(state)
-    if (spec && (!this.spec || scopeKey(this.spec) !== scopeKey(spec))) {
-      this.spec = spec
-      await this.loadScope()
+    const movedScope = Boolean(spec && (!this.spec || scopeKey(this.spec) !== scopeKey(spec)))
+    if (spec && movedScope) this.spec = spec
+
+    // A link may say which view it is opening and what it wants narrowed to. Applied
+    // before the scope loads so the first paint is already the right one, rather than
+    // the reader watching the previous view appear and be replaced.
+    const wanted = state.view && VIEW_MODES.includes(state.view) ? state.view : null
+    const movedView = wanted !== null && wanted !== this.currentView
+    if (wanted) this.currentView = wanted
+    if (typeof state.impactZone === 'string') this.pendingImpactZone = state.impactZone
+
+    if (movedScope) await this.loadScope()
+    else if (movedView || this.pendingImpactZone !== null) {
+      // The switcher has to show where we landed, and the body has to be rebuilt: the
+      // impacts view reads its opening filter once, when it is constructed.
+      this.renderProjectToolbar()
+      this.renderCurrentView()
     }
     await super.setState(state, result as import('obsidian').ViewStateResult)
   }
@@ -837,9 +858,15 @@ export class ProjectView extends ItemView {
       case 'mail':
         this.subview = new MailView(this.bodyEl, scope, this.plugin, () => this.refreshProject())
         break
-      case 'impacts':
-        this.subview = new ImpactsView(this.bodyEl, scope, this.plugin)
+      case 'impacts': {
+        const impacts = new ImpactsView(this.bodyEl, scope, this.plugin)
+        // Taken rather than read: a zone arrived at through a link narrows this visit,
+        // and switching away and back again should not silently re-apply it.
+        if (this.pendingImpactZone !== null) impacts.openAt(this.pendingImpactZone)
+        this.pendingImpactZone = null
+        this.subview = impacts
         break
+      }
       case 'dashboard':
         this.subview = new ProjectDashboard(
           this.bodyEl,
