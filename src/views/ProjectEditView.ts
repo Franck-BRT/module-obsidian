@@ -15,7 +15,7 @@ import {
 import { collectAllAssignees, flattenTasks, mergeById } from '../store'
 import { safeAsync, truncateTitle } from '../utils'
 import { renderMultiSelect } from '../ui/composites/properties/MultiSelectControl'
-import { impactRoleIcon, impactRoleLabel } from './impacts/impactRole'
+import { impactLevelOptions, impactRoleIcon, impactRoleLabel } from './impacts/impactRole'
 import { confirmDialog } from '../ui/ModalFactory'
 import { renderPersonPicker } from '../ui/PersonPicker'
 import { renderAddButton } from '../ui/composites/addButton'
@@ -321,18 +321,46 @@ export class ProjectEditView extends ItemView {
    * works around it, so its own days must not be cluttered with what those others are
    * doing; and a project that is only ever informed is never in anyone's way.
    */
+  /**
+   * What this project does to the ones it meets in a zone, and how much it matters.
+   *
+   * Nearly every project both disturbs and is disturbed, which is why that is the
+   * default. The two exceptions earn their place: a launch calendar decides the day and
+   * everything else works around it, so its own days must not be cluttered with what
+   * those others are doing; and a project that is only ever informed is never in
+   * anyone's way. The level says how loudly it speaks when it does disturb — a launch is
+   * blocking for whatever it lands on, a survey passing through is worth knowing and no
+   * more. Both are declared once here and a ticket that differs says so itself.
+   */
   private renderImpactRole(project: Project): void {
     const section = this.section(t('zone.roleField'), t('zone.roleDesc'))
-    renderSelectControl({
-      container: section.createDiv('pm-prop-value'),
-      value: project.impactRole ?? 'both',
-      options: IMPACT_ROLES.map((role) => ({ id: role, label: impactRoleLabel(role), icon: impactRoleIcon(role) })),
-      onChange: (id) => {
-        this.save({ impactRole: id as Project['impactRole'] })
-        // Every select in this view redraws after saving: the control paints its label
-        // once and has no way to know the value behind it has moved.
-        this.render()
-      }
+    const redraw = (patch: ProjectPatch): void => {
+      this.save(patch)
+      // Every select in this view redraws after saving: the control paints its label
+      // once and has no way to know the value behind it has moved.
+      this.render()
+    }
+
+    renderPropRow(section, t('zone.roleField'), () => {
+      const cell = createDiv('pm-prop-value')
+      renderSelectControl({
+        container: cell,
+        value: project.impactRole ?? 'both',
+        options: IMPACT_ROLES.map((role) => ({ id: role, label: impactRoleLabel(role), icon: impactRoleIcon(role) })),
+        onChange: (id) => redraw({ impactRole: id as Project['impactRole'] })
+      })
+      return cell
+    })
+
+    renderPropRow(section, t('zone.levelField'), () => {
+      const cell = createDiv('pm-prop-value')
+      renderSelectControl({
+        container: cell,
+        value: project.impactLevel ?? 'caution',
+        options: impactLevelOptions(),
+        onChange: (id) => redraw({ impactLevel: id as Project['impactLevel'] })
+      })
+      return cell
     })
   }
 

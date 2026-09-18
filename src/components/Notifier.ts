@@ -88,24 +88,30 @@ export class Notifier {
     if (!notices.length) return
     for (const notice of notices) this.notifiedIds.add(notice.key)
 
-    if (notices.length > IMPACT_NOTICE_LIMIT) {
-      new Notice(t('notify.impactMany', { count: notices.length }), 8000)
-      return
-    }
-    for (const notice of notices) {
+    // A blocking crossing is never folded into a count. The cap exists so twenty mild
+    // ones do not drown the screen; it must not be the reason the one that stops work
+    // went unread.
+    const blocking = notices.filter((notice) => notice.impact.level === 'blocking')
+    const rest = notices.filter((notice) => notice.impact.level !== 'blocking')
+    const spoken = rest.length > IMPACT_NOTICE_LIMIT ? blocking : notices
+    if (rest.length > IMPACT_NOTICE_LIMIT) new Notice(t('notify.impactMany', { count: rest.length }), 8000)
+
+    for (const notice of spoken) {
+      const blocks = notice.impact.level === 'blocking'
       const when =
         notice.impact.from === notice.impact.to ? notice.impact.from : `${notice.impact.from} → ${notice.impact.to}`
-      new Notice(
-        t('notify.impact', {
-          task: notice.affected.title,
-          project: notice.affected.projectTitle,
-          other: notice.other.title,
-          otherProject: notice.other.projectTitle,
-          zone: this.plugin.radar.zoneLabel(notice.impact.zone),
-          when
-        }),
-        9000
-      )
+      // Two spelled-out calls rather than one with the key chosen inside it: the
+      // translation checker reads the source for literal keys and cannot follow a
+      // ternary, so a key built that way reads to it as a key nobody uses.
+      const params = {
+        task: notice.affected.title,
+        project: notice.affected.projectTitle,
+        other: notice.other.title,
+        otherProject: notice.other.projectTitle,
+        zone: this.plugin.radar.zoneLabel(notice.impact.zone),
+        when
+      }
+      new Notice(blocks ? t('notify.impactBlocking', params) : t('notify.impact', params), blocks ? 12000 : 9000)
     }
   }
 }

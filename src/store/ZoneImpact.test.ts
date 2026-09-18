@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   affects,
   dueImpactNotices,
+  worstLevel,
   impactsByTask,
   impactsForProjects,
   otherSide,
@@ -9,6 +10,7 @@ import {
   vaultOccupancies,
   zoneImpacts,
   type ImpactInputs,
+  type ImpactLevel,
   type ProjectImpactRole,
   type ZoneOccupancy
 } from './ZoneImpact'
@@ -20,7 +22,8 @@ const at = (
   start: string,
   due = start,
   title = `t${++seq}`,
-  role: ProjectImpactRole = 'both'
+  role: ProjectImpactRole = 'both',
+  level: ImpactLevel = 'caution'
 ): ZoneOccupancy => ({
   taskId: `${project}-${title}`,
   title,
@@ -29,7 +32,8 @@ const at = (
   zone,
   start,
   due,
-  role
+  role,
+  level
 })
 
 const pairs = (occupancies: ZoneOccupancy[]): string[] =>
@@ -177,13 +181,13 @@ describe('reading an impact from one side', () => {
 })
 
 describe('placing the whole vault in its zones', () => {
-  const project = (path: string, zones: string[] = [], template = false, role: ProjectImpactRole = 'both') => ({
-    path,
-    title: path,
-    zones,
-    template,
-    role
-  })
+  const project = (
+    path: string,
+    zones: string[] = [],
+    template = false,
+    role: ProjectImpactRole = 'both',
+    level: ImpactLevel = 'caution'
+  ) => ({ path, title: path, zones, template, role, level })
   const task = (over: Partial<ImpactInputs['tasks'][number]> = {}): ImpactInputs['tasks'][number] => ({
     id: 't',
     title: 't',
@@ -322,5 +326,64 @@ describe('which crossings are worth a notice', () => {
     )
     const moved = dueImpactNotices(impacts('2026-04-14', '2026-04-16'), '2026-04-10', '2026-04-17', (k) => said.has(k))
     expect(moved).toHaveLength(2)
+  })
+})
+
+describe('how grave a crossing is', () => {
+  const launch = (level: ImpactLevel) => at('lancement', 'RN7', '2026-04-15', '2026-04-15', 'jour-J', 'emitter', level)
+  const works = (level: ImpactLevel = 'caution') =>
+    at('voirie', 'RN7', '2026-04-10', '2026-04-20', 'reprise', 'both', level)
+
+  /** The whole point: a launch is blocking for whatever it lands on. */
+  it('takes the level of the side doing the disturbing', () => {
+    expect(zoneImpacts([launch('blocking'), works('info')])[0].level).toBe('blocking')
+  })
+
+  it('is not softened by a mild thing being disturbed', () => {
+    expect(zoneImpacts([launch('caution'), works('info')])[0].level).toBe('caution')
+  })
+
+  it('takes the graver of the two when each disturbs the other', () => {
+    const a = at('a', 'RN7', '2026-04-10', '2026-04-20', 'x', 'both', 'info')
+    const b = at('b', 'RN7', '2026-04-15', '2026-04-16', 'y', 'both', 'blocking')
+    expect(zoneImpacts([a, b])[0].level).toBe('blocking')
+  })
+
+  it('ranks the three, and answers the graver of any two', () => {
+    expect(worstLevel('info', 'blocking')).toBe('blocking')
+    expect(worstLevel('blocking', 'caution')).toBe('blocking')
+    expect(worstLevel('caution', 'info')).toBe('caution')
+    expect(worstLevel('info', 'info')).toBe('info')
+  })
+
+  it('lets a ticket overrule the level its project declares', () => {
+    const found = vaultOccupancies({
+      tasks: [
+        {
+          id: 'a',
+          title: 'a',
+          projectPath: 'P/a.md',
+          start: '2026-04-06',
+          due: '2026-04-10',
+          status: 'todo',
+          zones: [],
+          archived: false
+        },
+        {
+          id: 'b',
+          title: 'b',
+          projectPath: 'P/a.md',
+          start: '2026-04-06',
+          due: '2026-04-10',
+          status: 'todo',
+          zones: [],
+          level: 'blocking',
+          archived: false
+        }
+      ],
+      projects: [{ path: 'P/a.md', title: 'a', zones: ['rn7'], template: false, role: 'both', level: 'info' }],
+      isComplete: () => false
+    })
+    expect(found.map((o) => o.level)).toEqual(['info', 'blocking'])
   })
 })

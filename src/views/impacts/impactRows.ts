@@ -1,8 +1,9 @@
 import type PMPlugin from '../../main'
-import { affects, otherSide, type ZoneImpact, type ZoneOccupancy } from '../../store/ZoneImpact'
+import { affects, levelRank, otherSide, type ZoneImpact, type ZoneOccupancy } from '../../store/ZoneImpact'
 import { formatDateShort } from '../../dates'
 import { Chip } from '../../ui/primitives/Chip'
 import { safeAsync } from '../../utils'
+import { impactLevelColor, impactLevelIcon, impactLevelLabel } from './impactRole'
 import { t } from '../../i18n'
 
 /**
@@ -41,7 +42,9 @@ export function renderImpactZones(parent: HTMLElement, impacts: ZoneImpact[], op
       .setLeadingIcon(config?.icon || 'map-pin')
     head.createSpan({ cls: 'pm-impacts-zone-count', text: t('impact.count', { count: list.length }) })
 
-    const sorted = [...list].sort((a, b) => a.from.localeCompare(b.from))
+    // Gravest first, then soonest: a blocking crossing three weeks out matters more
+    // than a passing survey tomorrow, and a list ordered only by date buries it.
+    const sorted = [...list].sort((a, b) => levelRank(b.level) - levelRank(a.level) || a.from.localeCompare(b.from))
     const shown = opts.limit === undefined ? sorted : sorted.slice(0, opts.limit)
     for (const impact of shown) renderImpactRow(section, impact, opts)
     // A summary that silently stops short is a summary that lies about how much there is.
@@ -65,6 +68,14 @@ function renderImpactRow(parent: HTMLElement, impact: ZoneImpact, opts: ImpactRo
   const far = otherSide(impact, near.taskId)
 
   const row = parent.createDiv('pm-impacts-row')
+  row.addClass(`pm-impacts-row--${impact.level}`)
+  // Named as well as coloured: a level nobody can read is a level that is not there.
+  new Chip(row.createDiv('pm-impacts-level'))
+    .setLabel(impactLevelLabel(impact.level))
+    .setVariant('outline')
+    .setSize('sm')
+    .setLeadingIcon(impactLevelIcon(impact.level))
+    .setColor(impactLevelColor(impact.level))
   row.createDiv({
     cls: 'pm-impacts-when',
     text:

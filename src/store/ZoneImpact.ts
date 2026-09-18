@@ -22,6 +22,27 @@
  */
 export type ProjectImpactRole = 'both' | 'emitter' | 'receiver'
 
+/**
+ * How much a crossing matters.
+ *
+ * Carried by the side doing the disturbing, because that is where the answer lives: a
+ * launch day is blocking for everything around it whatever the work it lands on, and a
+ * survey passing through is worth knowing about and nothing more. The middle is the
+ * default, so a vault that says nothing keeps reporting crossings exactly as it did.
+ */
+export type ImpactLevel = 'blocking' | 'caution' | 'info'
+
+const LEVEL_RANK: Record<ImpactLevel, number> = { info: 0, caution: 1, blocking: 2 }
+
+/** The graver of two levels: a crossing is as serious as its most serious side. */
+export function worstLevel(a: ImpactLevel, b: ImpactLevel): ImpactLevel {
+  return LEVEL_RANK[a] >= LEVEL_RANK[b] ? a : b
+}
+
+export function levelRank(level: ImpactLevel): number {
+  return LEVEL_RANK[level]
+}
+
 export function emits(role: ProjectImpactRole): boolean {
   return role !== 'receiver'
 }
@@ -40,6 +61,8 @@ export interface ZoneOccupancy {
   start: string
   due: string
   role: ProjectImpactRole
+  /** How much this ticket standing here matters to whatever it lands on. */
+  level: ImpactLevel
 }
 
 export interface ZoneImpact {
@@ -51,6 +74,12 @@ export interface ZoneImpact {
   to: string
   /** Which way the disturbance runs, once each side's role is taken into account. */
   direction: 'both' | 'a-to-b' | 'b-to-a'
+  /**
+   * How grave it is: the level of whichever side is doing the disturbing, and the graver
+   * of the two when both are. A launch blocking a survey is blocking; the survey's own
+   * mildness says nothing about what the launch does to it.
+   */
+  level: ImpactLevel
 }
 
 /** Whether this ticket is the one being disturbed, rather than the one doing it. */
@@ -116,13 +145,15 @@ export function zoneImpacts(occupancies: ZoneOccupancy[]): ZoneImpact[] {
         const aToB = emits(open.role) && receives(next.role)
         const bToA = emits(next.role) && receives(open.role)
         if (!aToB && !bToA) continue
+        const level = aToB && bToA ? worstLevel(open.level, next.level) : aToB ? open.level : next.level
         out.push({
           zone,
           a: open,
           b: next,
           from: open.start > next.start ? open.start : next.start,
           to: open.due < next.due ? open.due : next.due,
-          direction: aToB && bToA ? 'both' : aToB ? 'a-to-b' : 'b-to-a'
+          direction: aToB && bToA ? 'both' : aToB ? 'a-to-b' : 'b-to-a',
+          level
         })
       }
       active.push(next)
@@ -180,9 +211,18 @@ export interface ImpactInputs {
     due: string
     status: string
     zones: string[]
+    /** Absent inherits the project's, exactly as zones do. */
+    level?: ImpactLevel
     archived: boolean
   }[]
-  projects: { path: string; title: string; zones: string[]; template: boolean; role: ProjectImpactRole }[]
+  projects: {
+    path: string
+    title: string
+    zones: string[]
+    template: boolean
+    role: ProjectImpactRole
+    level: ImpactLevel
+  }[]
   /** Statuses that mean the work is behind us. */
   isComplete: (status: string) => boolean
 }
@@ -218,7 +258,8 @@ export function vaultOccupancies(inputs: ImpactInputs): ZoneOccupancy[] {
         zone,
         start: span.start,
         due: span.due,
-        role: project.role
+        role: project.role,
+        level: task.level ?? project.level
       })
     }
   }

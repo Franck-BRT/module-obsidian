@@ -1,5 +1,6 @@
 import type { Task } from '../types'
-import { otherSide } from '../store/ZoneImpact'
+import { otherSide, worstLevel, type ImpactLevel } from '../store/ZoneImpact'
+import { impactLevelColor, impactLevelIcon, impactLevelLabel } from '../views/impacts/impactRole'
 import { t } from '../i18n'
 import { documentOf, isDocument } from '../store/Document'
 import {
@@ -92,13 +93,16 @@ export function renderImpactBadge(parent: HTMLElement, task: Task): void {
   const lines = impacts.map((impact) => {
     const far = otherSide(impact, task.id)
     const when = impact.from === impact.to ? impact.from : `${impact.from} → ${impact.to}`
-    return `${zoneLabelOf(impact.zone)} · ${far.projectTitle} · ${far.title} · ${when}`
+    return `${impactLevelLabel(impact.level)} · ${zoneLabelOf(impact.zone)} · ${far.projectTitle} · ${far.title} · ${when}`
   })
+  // The badge speaks at the level of the gravest thing it stands in: a ticket blocked by
+  // one crossing is blocked, whatever the other two amount to.
+  const worst = impacts.reduce<ImpactLevel>((held, impact) => worstLevel(held, impact.level), 'info')
   new Chip(parent)
     .setLabel(String(impacts.length))
     .setVariant('outline')
     .setSize('sm')
-    .setLeadingIcon('triangle-alert')
-    .setColor('var(--text-warning, var(--color-orange))')
+    .setLeadingIcon(impactLevelIcon(worst))
+    .setColor(impactLevelColor(worst))
     .setTooltip([t('impact.badge', { count: impacts.length }), ...lines].join('\n'))
 }

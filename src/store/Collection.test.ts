@@ -28,6 +28,7 @@ function ref(id: string, over: Partial<TaskRef> = {}): TaskRef {
     assignees: [],
     tags: [],
     zones: [],
+    impactLevel: undefined,
     archived: false,
     ...over
   }

@@ -2,6 +2,7 @@ import type PMPlugin from '../main'
 import type { Project, Task, TaskType, Recurrence } from '../types'
 import { DEFAULT_DEPENDENCY_OPTION, TASK_TYPES } from '../types'
 import { typeConfigOf } from '../store/TicketPalette'
+import { impactLevelLabel, impactLevelOptions } from '../views/impacts/impactRole'
 import { formatDuration, minutesBetween, parseTime } from '../store/Clock'
 import { collectAllAssignees, collectAllTags, findTask, flattenTasks } from '../store/TaskTreeOps'
 import { isPhase } from '../store/Phase'
@@ -608,6 +609,38 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
     'map-pin'
   )
   zonesRow.addClass('pm-prop-row--wide')
+
+  // How loudly this ticket speaks where it stands. Only where zones exist at all, and
+  // only worth saying when it differs from what the project already declares.
+  if (plugin.settings.zones.length) {
+    renderPropRow(
+      grid,
+      t('zone.levelField'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        const inherited = project.impactLevel ?? 'caution'
+        renderSelectControl({
+          container: cell,
+          value: task.impactLevel ?? inherited,
+          options: impactLevelOptions(),
+          onChange: (id) => {
+            // Choosing what the project already says leaves the ticket saying nothing,
+            // so it keeps following the project when that changes.
+            task.impactLevel = id === inherited ? undefined : (id as Task['impactLevel'])
+            rerender()
+          }
+        })
+        if (task.impactLevel === undefined) {
+          cell.createSpan({
+            cls: 'pm-prop-hint',
+            text: t('zone.levelInherited', { level: impactLevelLabel(inherited) })
+          })
+        }
+        return cell
+      },
+      'octagon-alert'
+    )
+  }
 
   const tagsRow = renderPropRow(
     grid,

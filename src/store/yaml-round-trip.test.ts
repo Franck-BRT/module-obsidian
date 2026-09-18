@@ -154,6 +154,27 @@ describe('task round-trip', () => {
     expect(task.endTime).toBe('11:00')
   })
 
+  it('preserves the level a ticket claims for itself', () => {
+    expect(roundTripTask(makeTask({ id: 'task-l', impactLevel: 'blocking' })).task.impactLevel).toBe('blocking')
+  })
+
+  /** The ordinary level is the absence of one: it must not be written into every note. */
+  it('writes no level for a ticket that follows its project', () => {
+    const task = makeTask({ id: 'task-nl' })
+    expect(serializeTask(task, makeProject('T', 'Projects/T.md'), null, [], refs)).not.toContain('impactLevel')
+    expect(roundTripTask(task).task.impactLevel).toBeUndefined()
+  })
+
+  it('preserves the level a project declares, and writes none for the default', () => {
+    const loud = makeProject('Lancement', 'Projects/Lancement.md')
+    loud.impactLevel = 'blocking'
+    expect(roundTripProject(loud).project.impactLevel).toBe('blocking')
+
+    const plain = makeProject('Voirie', 'Projects/Voirie.md')
+    plain.impactLevel = 'caution'
+    expect(serializeProject(plain, [], refs)).not.toContain('impactLevel')
+  })
+
   it('preserves a project that only ever disturbs', () => {
     const project = makeProject('Lancement', 'Projects/Lancement.md')
     project.zones = ['rn7']

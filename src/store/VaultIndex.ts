@@ -1,4 +1,4 @@
-import type { ProjectImpactRole } from './ZoneImpact'
+import type { ImpactLevel, ProjectImpactRole } from './ZoneImpact'
 import type { App, Plugin, TAbstractFile } from 'obsidian'
 import { TFile, normalizePath } from 'obsidian'
 import type { CustomFieldDef, FilterState, PMSettings, StatusConfig, ViewMode } from '../types'
@@ -45,6 +45,8 @@ export interface ProjectRef {
   zones: string[]
   /** What it does to the projects it meets in a zone. */
   impactRole: ProjectImpactRole
+  /** How much its work matters where it stands, for the tickets that do not say. */
+  impactLevel: ImpactLevel
 }
 
 /**
@@ -84,6 +86,8 @@ export interface TaskRef {
   tags: string[]
   /** Where it happens. Empty inherits its project's, which the impact pass resolves. */
   zones: string[]
+  /** How grave it is where it stands. Absent inherits its project's. */
+  impactLevel: ImpactLevel | undefined
   archived: boolean
 }
 
@@ -504,7 +508,8 @@ export class VaultIndex {
       autoArchiveDays: ownAutoArchiveDays(frontmatter),
       ownDefaultView: ownDefaultView(frontmatter),
       zones: stringList(frontmatter.zones),
-      impactRole: readImpactRole(frontmatter.impactRole)
+      impactRole: readImpactRole(frontmatter.impactRole),
+      impactLevel: readLevel(frontmatter.impactLevel) ?? 'caution'
     }
     this.projects.set(path, ref)
     this.projectPathById.set(ref.id, path)
@@ -557,6 +562,7 @@ export class VaultIndex {
       assignees: stringList(frontmatter.assignees),
       tags: stringList(frontmatter.tags),
       zones: stringList(frontmatter.zones),
+      impactLevel: readLevel(frontmatter.impactLevel),
       archived: path.split('/').at(-2) === 'Archive'
     }
     this.tasks.set(path, ref)
@@ -751,6 +757,10 @@ function collectionRule(raw: unknown): FilterState {
     dueDateFilter: (typeof f.dueDateFilter === 'string' ? f.dueDateFilter : 'any') as FilterState['dueDateFilter'],
     showArchived: f.showArchived === true
   }
+}
+
+function readLevel(raw: unknown): ImpactLevel | undefined {
+  return raw === 'blocking' || raw === 'caution' || raw === 'info' ? raw : undefined
 }
 
 /** An unreadable or absent role means the ordinary one: disturbs and is disturbed. */

@@ -42,6 +42,7 @@ export const PROJECT_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'teamMembers',
   'zones',
   'impactRole',
+  'impactLevel',
   'savedViews',
   'createdAt',
   'updatedAt',
@@ -80,6 +81,7 @@ export const TASK_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'document',
   'meetingKind',
   'zones',
+  'impactLevel',
   'collapsed'
 ])
 
@@ -169,6 +171,7 @@ export function serializeProject(
     teamMembers: project.teamMembers,
     ...(project.zones?.length ? { zones: project.zones } : {}),
     ...(project.impactRole && project.impactRole !== 'both' ? { impactRole: project.impactRole } : {}),
+    ...(project.impactLevel && project.impactLevel !== 'caution' ? { impactLevel: project.impactLevel } : {}),
     savedViews: project.savedViews.length ? project.savedViews : [],
     createdAt: project.createdAt,
     updatedAt: project.updatedAt
@@ -241,6 +244,7 @@ export function buildTaskFrontmatter(
   if (task.endTime) fm.endTime = task.endTime
   if (task.meetingKind) fm.meetingKind = task.meetingKind
   if (task.zones?.length) fm.zones = task.zones
+  if (task.impactLevel) fm.impactLevel = task.impactLevel
   if (task.timeLogs?.length) fm.timeLogs = task.timeLogs
   if (Object.keys(task.customFields).length) fm.customFields = task.customFields
   const document = serializeDocument(task.document)

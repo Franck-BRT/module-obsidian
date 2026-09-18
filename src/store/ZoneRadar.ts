@@ -60,7 +60,8 @@ export class ZoneRadar {
         title: ref.title,
         zones: ref.zones,
         template: ref.template,
-        role: ref.impactRole
+        role: ref.impactRole,
+        level: ref.impactLevel
       })),
       // A project's own palette can rename what "done" means, but a vault-wide pass has
       // no project in hand: the global palette is the honest approximation, and the cost

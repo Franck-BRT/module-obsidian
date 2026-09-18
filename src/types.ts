@@ -1,4 +1,4 @@
-import type { ProjectImpactRole } from './store/ZoneImpact'
+import type { ImpactLevel, ProjectImpactRole } from './store/ZoneImpact'
 import { today } from './dates'
 import type { TaskIndex } from './store/TaskIndex'
 import type { WorkCalendar } from './store/WorkCalendar'
@@ -19,6 +19,7 @@ export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'mail', 'impac
 export type ViewMode = (typeof VIEW_MODES)[number]
 export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
 export const IMPACT_ROLES = ['both', 'emitter', 'receiver'] as const
+export const IMPACT_LEVELS = ['blocking', 'caution', 'info'] as const
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
 export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document' | 'meeting'
 
@@ -212,6 +213,8 @@ export interface Task {
    * project that is entirely in one place is declared once rather than on every ticket.
    */
   zones?: string[]
+  /** How much this ticket matters where it stands. Absent inherits the project's. */
+  impactLevel?: ImpactLevel
   customFields: Record<string, unknown>
   /** Set on a ticket of type `document`: its file, its versions, its approvals. */
   // oxlint-disable-next-line obsidianmd/prefer-active-doc -- a field, not the global
@@ -246,6 +249,8 @@ export interface Project {
    * is what nearly every project is.
    */
   impactRole?: ProjectImpactRole
+  /** How much this project's work matters to whatever it lands on. Absent means caution. */
+  impactLevel?: ImpactLevel
   /**
    * A programme: it groups projects and carries no work of its own.
    *
@@ -279,6 +284,7 @@ export type ProjectPatch = Partial<
     | 'teamMembers'
     | 'zones'
     | 'impactRole'
+    | 'impactLevel'
     | 'savedViews'
     | 'config'
     | 'parentPath'

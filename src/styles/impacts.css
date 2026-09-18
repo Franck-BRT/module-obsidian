@@ -45,7 +45,7 @@
 
 /* The days the two actually share: the part worth looking at, so it leads the row. */
 .pm-impacts-when {
-  flex: 0 0 11rem;
+  flex: 0 0 9rem;
   color: var(--text-normal);
   font-size: var(--font-ui-small);
   font-variant-numeric: tabular-nums;
@@ -104,4 +104,32 @@
   color: var(--text-muted);
   font-size: var(--font-smallest);
   padding: 4px 0 0;
+}
+
+/* The level leads the row, before the dates: how much it matters is what decides whether
+   the reader keeps reading. */
+/* A fixed column, so the dates beside it line up down the list rather than stepping in
+   and out with the width of each level's name. */
+.pm-impacts-level {
+  flex: 0 0 8.5rem;
+}
+
+/* A blocking crossing is marked by its own left edge as well as by its chip, so a
+   scrolled list of them is scannable without reading a single label. */
+.pm-impacts-row--blocking {
+  border-left: 3px solid var(--text-error, var(--color-red));
+  padding-left: var(--size-4-2);
+  margin-left: -11px;
+}
+
+.pm-impacts-row--caution {
+  border-left: 3px solid transparent;
+  padding-left: var(--size-4-2);
+  margin-left: -11px;
+}
+
+.pm-impacts-row--info {
+  border-left: 3px solid transparent;
+  padding-left: var(--size-4-2);
+  margin-left: -11px;
 }

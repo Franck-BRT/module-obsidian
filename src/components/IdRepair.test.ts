@@ -31,6 +31,7 @@ function taskRef(id: string, projectPath: string): TaskRef {
     assignees: [],
     tags: [],
     zones: [],
+    impactLevel: undefined,
     archived: false
   }
 }
@@ -39,6 +40,7 @@ function projectRef(id: string, path: string): ProjectRef {
   return {
     zones: [],
     impactRole: 'both' as const,
+    impactLevel: 'caution' as const,
     path,
     id,
     title: id,
