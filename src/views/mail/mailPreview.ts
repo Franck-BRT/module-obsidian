@@ -22,6 +22,12 @@ export interface MailPreviewOpts {
    * worth something even where this view cannot hand them over.
    */
   onAttachment?: (attachment: EmailAttachment, event: MouseEvent) => void
+  /**
+   * Whether the vault already holds this one. A chip that leads to a file that is there
+   * says so, because "save it" and "open it" are different promises and a reader who
+   * clicks the second expecting the first has been misled.
+   */
+  isSaved?: (attachment: EmailAttachment) => boolean
 }
 
 export function renderMailPreview(parent: HTMLElement, mail: EmailMessage, opts: MailPreviewOpts): void {
@@ -44,7 +50,7 @@ export function renderMailPreview(parent: HTMLElement, mail: EmailMessage, opts:
     button.addEventListener('click', onClick)
   }
 
-  renderAttachments(root, mail.attachments, opts.onAttachment)
+  renderAttachments(root, mail.attachments, opts)
 
   // The body is the message as it was written: line breaks are the author's, so it is
   // laid out as text rather than rendered as markdown, which would eat them.
@@ -67,11 +73,8 @@ function addRow(parent: HTMLElement, label: string, value: string): void {
  * has been told too late. Each says its size, because "the big one" is how people
  * actually tell two files from each other.
  */
-function renderAttachments(
-  parent: HTMLElement,
-  attachments: EmailAttachment[],
-  onPick: MailPreviewOpts['onAttachment']
-): void {
+function renderAttachments(parent: HTMLElement, attachments: EmailAttachment[], opts: MailPreviewOpts): void {
+  const onPick = opts.onAttachment
   if (!attachments.length) return
   const row = parent.createDiv('pm-message-attachments')
   row.createSpan({
@@ -80,11 +83,19 @@ function renderAttachments(
   })
   const units = [t('unit.bytes'), t('unit.kilobytes'), t('unit.megabytes'), t('unit.gigabytes')]
   for (const attachment of attachments) {
+    const saved = opts.isSaved?.(attachment) ?? false
     const chip = row.createEl('button', { cls: 'pm-message-attachment' })
+    if (saved) chip.addClass('pm-message-attachment--saved')
     setIcon(chip.createSpan({ cls: 'pm-glyph-icon' }), attachmentIcon(attachment))
     chip.createSpan({ cls: 'pm-message-attachment-name', text: attachment.name })
     chip.createSpan({ cls: 'pm-message-attachment-size', text: formatBytes(attachment.size, units) })
-    chip.setAttr('aria-label', `${attachment.name} · ${formatBytes(attachment.size, units)}`)
+    // Marked twice: the arrow is the difference a reader sees at a glance, the label is
+    // the one a screen reader hears, and neither depends on the colour.
+    if (saved) setIcon(chip.createSpan({ cls: 'pm-message-attachment-mark' }), 'arrow-up-right')
+    const size = formatBytes(attachment.size, units)
+    const action = saved ? t('email.attachmentOpen') : t('email.attachmentSave')
+    chip.setAttr('aria-label', `${action} · ${attachment.name} · ${size}`)
+    chip.setAttr('title', `${action} · ${size}`)
     if (!onPick) {
       chip.disabled = true
       continue

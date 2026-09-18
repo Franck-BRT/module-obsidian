@@ -221,6 +221,8 @@ export const en = {
   'phase.unfold': 'Unfold',
   'task.type.document': 'Document',
   'task.type.meeting': 'Meeting',
+  'email.attachmentOpen': 'Open the document',
+  'email.attachmentSave': 'Save and open',
   'email.attachments': { one: '{count} attachment', other: '{count} attachments' },
   'email.attachmentSaved': 'Saved to "{path}".',
   'email.attachmentFailed': 'Could not extract "{name}".',

@@ -118,3 +118,15 @@
   color: var(--text-muted);
   flex-shrink: 0;
 }
+
+/* A chip that leads somewhere rather than making something: marked by an arrow and by
+   its border, never by colour alone. */
+.pm-message-attachment--saved {
+  border-color: var(--interactive-accent);
+}
+
+.pm-message-attachment-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--interactive-accent);
+}

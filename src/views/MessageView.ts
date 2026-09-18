@@ -3,7 +3,7 @@ import type PMPlugin from '../main'
 import { parseEmail, type EmailAttachment, type EmailMessage } from '../store/email'
 import { EmptyState } from '../ui/primitives/EmptyState'
 import { renderMailPreview } from './mail/mailPreview'
-import { attachmentBytes, saveAttachment } from '../store/Attachments'
+import { attachmentBytes, attachmentCandidates, looksSaved, saveAttachment, vaultProbe } from '../store/Attachments'
 import { safeAsync, truncateTitle } from '../utils'
 import { ticketFromMessage } from './messageToTicket'
 import { t } from '../i18n'
@@ -68,7 +68,8 @@ export class MessageView extends FileView {
         icon: 'square-check-big',
         onClick: safeAsync(() => ticketFromMessage(this.plugin, file))
       },
-      onAttachment: safeAsync((attachment: EmailAttachment) => this.openAttachment(file, attachment))
+      onAttachment: safeAsync((attachment: EmailAttachment) => this.openAttachment(file, attachment)),
+      isSaved: (attachment) => this.alreadySaved(file, attachment)
     })
   }
 
@@ -86,9 +87,17 @@ export class MessageView extends FileView {
       new Notice(t('email.attachmentFailed', { name: attachment.name }))
       return
     }
-    const path = await saveAttachment(this.app, file.parent?.path ?? '', attachment, bytes)
-    new Notice(t('email.attachmentSaved', { path }))
-    const saved = this.app.vault.getAbstractFileByPath(path)
+    const target = await saveAttachment(this.app, file.parent?.path ?? '', attachment, bytes)
+    // Said only when this click is what put it there.
+    if (!target.exists) new Notice(t('email.attachmentSaved', { path: target.path }))
+    const saved = this.app.vault.getAbstractFileByPath(target.path)
     if (saved instanceof TFile) await this.app.workspace.getLeaf('tab').openFile(saved)
+    void this.onLoadFile(file)
+  }
+
+  /** Whether the folder already holds this attachment, judged without reading anything. */
+  private alreadySaved(file: TFile, attachment: EmailAttachment): boolean {
+    const candidates = attachmentCandidates(file.parent?.path ?? '', attachment.name)
+    return looksSaved(candidates, attachment.size, (path) => vaultProbe(this.app).sizeOf(path))
   }
 }

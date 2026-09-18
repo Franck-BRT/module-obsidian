@@ -3,7 +3,7 @@ import type PMPlugin from '../../main'
 import type { PMSettings } from '../../types'
 import type { ProjectScope } from '../../store'
 import { MailCache, mailFiles, matchesQuery, type MailEntry } from '../../store/MailBox'
-import { attachmentBytes, saveAttachment } from '../../store/Attachments'
+import { attachmentBytes, attachmentCandidates, looksSaved, saveAttachment, vaultProbe } from '../../store/Attachments'
 import { projectDocsFolder } from '../../store/DocumentStore'
 import type { EmailAttachment } from '../../store/email'
 import { formatDateShort } from '../../dates'
@@ -179,7 +179,8 @@ export class MailView implements SubView {
         icon: 'square-check-big',
         onClick: safeAsync(() => this.makeTicket(entry))
       },
-      onAttachment: safeAsync((attachment: EmailAttachment) => this.openAttachment(entry, attachment))
+      onAttachment: safeAsync((attachment: EmailAttachment) => this.openAttachment(entry, attachment)),
+      isSaved: (attachment) => this.alreadySaved(attachment)
     })
   }
 
@@ -209,10 +210,24 @@ export class MailView implements SubView {
       return
     }
     const folder = projectDocsFolder(this.plugin.app, project.filePath)
-    const path = await saveAttachment(this.plugin.app, folder, attachment, bytes)
-    new Notice(t('email.attachmentSaved', { path }))
-    const saved = this.plugin.app.vault.getAbstractFileByPath(path)
+    const target = await saveAttachment(this.plugin.app, folder, attachment, bytes)
+    // Said only when this click is what put it there. Saying it again on the second click
+    // would claim something happened that did not.
+    if (!target.exists) new Notice(t('email.attachmentSaved', { path: target.path }))
+    const saved = this.plugin.app.vault.getAbstractFileByPath(target.path)
     if (saved instanceof TFile) await this.plugin.app.workspace.getLeaf('tab').openFile(saved)
+    // The chip can now say it leads somewhere.
+    this.paint()
+  }
+
+  /** Whether the project already holds this attachment, judged without reading anything. */
+  private alreadySaved(attachment: EmailAttachment): boolean {
+    const project = this.scope.primary
+    if (!project) return false
+    const folder = projectDocsFolder(this.plugin.app, project.filePath)
+    return looksSaved(attachmentCandidates(folder, attachment.name), attachment.size, (path) =>
+      vaultProbe(this.plugin.app).sizeOf(path)
+    )
   }
 
   private openRowMenu(e: MouseEvent, entry: MailEntry): void {

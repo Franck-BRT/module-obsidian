@@ -215,6 +215,8 @@ export const fr: Catalog = {
   'phase.unfold': 'Déplier',
   'task.type.document': 'Document',
   'task.type.meeting': 'Réunion',
+  'email.attachmentOpen': 'Ouvrir le document',
+  'email.attachmentSave': 'Enregistrer et ouvrir',
   'email.attachments': { one: '{count} pièce jointe', other: '{count} pièces jointes' },
   'email.attachmentSaved': 'Enregistré dans « {path} ».',
   'email.attachmentFailed': 'Impossible d’extraire « {name} ».',
