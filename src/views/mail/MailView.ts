@@ -3,6 +3,9 @@ import type PMPlugin from '../../main'
 import type { PMSettings } from '../../types'
 import type { ProjectScope } from '../../store'
 import { MailCache, mailFiles, matchesQuery, type MailEntry } from '../../store/MailBox'
+import { attachmentBytes, saveAttachment } from '../../store/Attachments'
+import { projectDocsFolder } from '../../store/DocumentStore'
+import type { EmailAttachment } from '../../store/email'
 import { formatDateShort } from '../../dates'
 import { safeAsync } from '../../utils'
 import { EmptyState } from '../../ui/primitives/EmptyState'
@@ -175,7 +178,8 @@ export class MailView implements SubView {
         label: t('email.toTicket'),
         icon: 'square-check-big',
         onClick: safeAsync(() => this.makeTicket(entry))
-      }
+      },
+      onAttachment: safeAsync((attachment: EmailAttachment) => this.openAttachment(entry, attachment))
     })
   }
 
@@ -187,6 +191,28 @@ export class MailView implements SubView {
     }
     await ticketFromMessage(this.plugin, file)
     await this.onRefresh()
+  }
+
+  /**
+   * An attachment, out of the message and into the project's documents.
+   *
+   * It lands in `_docs` rather than beside the mail, because that is where the project
+   * keeps the files it works from — a drawing is no less a drawing for having arrived by
+   * e-mail. The message keeps its own copy; this is a second one, deliberately.
+   */
+  private async openAttachment(entry: MailEntry, attachment: EmailAttachment): Promise<void> {
+    const project = this.scope.primary
+    if (!project) return
+    const bytes = await attachmentBytes(this.plugin.app, entry.path, attachment.name)
+    if (!bytes) {
+      new Notice(t('email.attachmentFailed', { name: attachment.name }))
+      return
+    }
+    const folder = projectDocsFolder(this.plugin.app, project.filePath)
+    const path = await saveAttachment(this.plugin.app, folder, attachment, bytes)
+    new Notice(t('email.attachmentSaved', { path }))
+    const saved = this.plugin.app.vault.getAbstractFileByPath(path)
+    if (saved instanceof TFile) await this.plugin.app.workspace.getLeaf('tab').openFile(saved)
   }
 
   private openRowMenu(e: MouseEvent, entry: MailEntry): void {

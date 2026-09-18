@@ -6,7 +6,7 @@ import { orderMail } from './mailSort'
 const entry = (name: string, over: Partial<MailEntry['mail']> = {}): MailEntry => ({
   path: `Projects/P/_mail/${name}`,
   name,
-  mail: { subject: '', from: '', to: [], cc: [], date: '', body: '', ...over }
+  mail: { subject: '', from: '', to: [], cc: [], date: '', body: '', attachments: [], ...over }
 })
 
 const unreadable = (name: string): MailEntry => ({ path: `Projects/P/_mail/${name}`, name, mail: null })

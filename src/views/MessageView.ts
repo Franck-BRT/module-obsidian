@@ -1,9 +1,9 @@
-import { FileView, WorkspaceLeaf } from 'obsidian'
-import type { TFile } from 'obsidian'
+import { FileView, Notice, TFile, WorkspaceLeaf } from 'obsidian'
 import type PMPlugin from '../main'
-import { parseEmail, type EmailMessage } from '../store/email'
+import { parseEmail, type EmailAttachment, type EmailMessage } from '../store/email'
 import { EmptyState } from '../ui/primitives/EmptyState'
 import { renderMailPreview } from './mail/mailPreview'
+import { attachmentBytes, saveAttachment } from '../store/Attachments'
 import { safeAsync, truncateTitle } from '../utils'
 import { ticketFromMessage } from './messageToTicket'
 import { t } from '../i18n'
@@ -67,7 +67,28 @@ export class MessageView extends FileView {
         label: t('email.toTicket'),
         icon: 'square-check-big',
         onClick: safeAsync(() => ticketFromMessage(this.plugin, file))
-      }
+      },
+      onAttachment: safeAsync((attachment: EmailAttachment) => this.openAttachment(file, attachment))
     })
+  }
+
+  /**
+   * An attachment, written beside the message it came with.
+   *
+   * Beside it, rather than in a project's documents, because a message opened as a file
+   * says nothing about which project it belongs to — and guessing one from the folder it
+   * happens to sit in would file a drawing under a project nobody chose. The mailbox view
+   * knows the project and puts it where it belongs; this does the honest thing instead.
+   */
+  private async openAttachment(file: TFile, attachment: EmailAttachment): Promise<void> {
+    const bytes = await attachmentBytes(this.app, file.path, attachment.name)
+    if (!bytes) {
+      new Notice(t('email.attachmentFailed', { name: attachment.name }))
+      return
+    }
+    const path = await saveAttachment(this.app, file.parent?.path ?? '', attachment, bytes)
+    new Notice(t('email.attachmentSaved', { path }))
+    const saved = this.app.vault.getAbstractFileByPath(path)
+    if (saved instanceof TFile) await this.app.workspace.getLeaf('tab').openFile(saved)
   }
 }

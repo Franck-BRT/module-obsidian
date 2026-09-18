@@ -1,7 +1,7 @@
 import { TFile, TFolder, normalizePath } from 'obsidian'
 import type { App } from 'obsidian'
 import type { Project } from '../types'
-import { isEmailFile, parseEmail, type EmailMessage } from './email'
+import { isEmailFile, parseEmail, withoutAttachmentBytes, type EmailMessage } from './email'
 import { projectMailFolder } from './vaultFs'
 
 /**
@@ -77,7 +77,11 @@ export class MailCache {
     if (held) return held
     let mail: EmailMessage | null = null
     try {
-      mail = parseEmail(file.name, new Uint8Array(await app.vault.readBinary(file)))
+      const parsed = parseEmail(file.name, new Uint8Array(await app.vault.readBinary(file)))
+      // The names and sizes are kept; the bytes are let go of. Two hundred messages
+      // holding every attachment they came with would sit in memory all session, and
+      // one is wanted only when it is clicked — at which point the file is read again.
+      mail = parsed ? withoutAttachmentBytes(parsed) : null
     } catch (error) {
       // A message that cannot be read is still a message that arrived: it keeps its row,
       // named by its file, rather than vanishing from the mailbox that holds it.

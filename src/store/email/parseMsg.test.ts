@@ -99,3 +99,91 @@ describe('a Windows FILETIME', () => {
     expect(fromFiletime(0n)).toBe('')
   })
 })
+
+describe('the files a message carries', () => {
+  const body = (text: string): FixtureStream => ({ name: '__substg1.0_1000001F', data: utf16(text) })
+
+  it('reads an attachment out of its own storage', () => {
+    const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37])
+    const msg = buildCompoundFile([
+      { name: '__substg1.0_0037001F', data: utf16('Devis') },
+      body('Ci-joint.'),
+      {
+        name: '__attach_version1.0_#00000000',
+        children: [
+          { name: '__substg1.0_3707001F', data: utf16('Devis toiture.pdf') },
+          { name: '__substg1.0_370E001F', data: utf16('application/pdf') },
+          { name: '__substg1.0_37010102', data: pdf }
+        ]
+      }
+    ])
+    const mail = parseMsg(msg)
+    expect(mail.attachments).toHaveLength(1)
+    expect(mail.attachments[0]).toMatchObject({ name: 'Devis toiture.pdf', mime: 'application/pdf', size: 8 })
+    expect(Array.from(mail.attachments[0].bytes ?? [])).toEqual(Array.from(pdf))
+  })
+
+  it('reads every attachment, not only the first', () => {
+    const msg = buildCompoundFile([
+      body('Deux pièces jointes.'),
+      {
+        name: '__attach_version1.0_#00000000',
+        children: [
+          { name: '__substg1.0_3707001F', data: utf16('a.pdf') },
+          { name: '__substg1.0_37010102', data: new Uint8Array([1, 2]) }
+        ]
+      },
+      {
+        name: '__attach_version1.0_#00000001',
+        children: [
+          { name: '__substg1.0_3707001F', data: utf16('b.xlsx') },
+          { name: '__substg1.0_37010102', data: new Uint8Array([3, 4, 5]) }
+        ]
+      }
+    ])
+    expect(parseMsg(msg).attachments.map((a) => a.name)).toEqual(['a.pdf', 'b.xlsx'])
+  })
+
+  /** Older clients write the 8.3 name only; a worse name beats no name. */
+  it('falls back to the short name, then to something rather than nothing', () => {
+    const shortOnly = buildCompoundFile([
+      body('x'),
+      {
+        name: '__attach_version1.0_#00000000',
+        children: [
+          { name: '__substg1.0_3704001F', data: utf16('DEVIS~1.PDF') },
+          { name: '__substg1.0_37010102', data: new Uint8Array([1]) }
+        ]
+      }
+    ])
+    expect(parseMsg(shortOnly).attachments[0].name).toBe('DEVIS~1.PDF')
+
+    const nameless = buildCompoundFile([
+      body('x'),
+      {
+        name: '__attach_version1.0_#00000000',
+        children: [
+          { name: '__substg1.0_3703001F', data: utf16('.pdf') },
+          { name: '__substg1.0_37010102', data: new Uint8Array([1]) }
+        ]
+      }
+    ])
+    expect(parseMsg(nameless).attachments[0].name).toBe('attachment.pdf')
+  })
+
+  /** A name with nothing behind it invites a click that can only fail. */
+  it('skips an attachment whose bytes are not there', () => {
+    const msg = buildCompoundFile([
+      body('x'),
+      {
+        name: '__attach_version1.0_#00000000',
+        children: [{ name: '__substg1.0_3707001F', data: utf16('fantome.pdf') }]
+      }
+    ])
+    expect(parseMsg(msg).attachments).toEqual([])
+  })
+
+  it('says a message carries nothing when it carries nothing', () => {
+    expect(parseMsg(buildCompoundFile([body('Rien de joint.')])).attachments).toEqual([])
+  })
+})

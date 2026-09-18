@@ -6,6 +6,23 @@
  * belonged to — is the mail client's business, and the message file itself is kept beside
  * the ticket for anyone who needs the rest.
  */
+/**
+ * A file that came with a message.
+ *
+ * The bytes are what the parser found and are what writing it to the vault needs — but a
+ * mailbox of two hundred messages holding every attachment would sit in memory all
+ * session, so they are dropped from a message once it is only being listed. Optional, so
+ * the compiler asks every reader what it does when they are not there, rather than the
+ * question being answered by a crash.
+ */
+export interface EmailAttachment {
+  name: string
+  /** What the message said it is. Empty when it did not say; the name still hints. */
+  mime: string
+  size: number
+  bytes?: Uint8Array
+}
+
 export interface EmailMessage {
   subject: string
   /** Display name and address when both are known, whichever exists otherwise. */
@@ -16,10 +33,12 @@ export interface EmailMessage {
   date: string
   /** Plain text. An HTML-only message is reduced to its text. */
   body: string
+  /** The files that came with it, in the order the message lists them. */
+  attachments: EmailAttachment[]
 }
 
 export function emptyEmail(): EmailMessage {
-  return { subject: '', from: '', to: [], cc: [], date: '', body: '' }
+  return { subject: '', from: '', to: [], cc: [], date: '', body: '', attachments: [] }
 }
 
 /** One address as "Name <address>", or whichever half the message actually gave. */
@@ -73,4 +92,30 @@ export interface EmailLabels {
   to: string
   cc: string
   date: string
+}
+
+/**
+ * A file size as it is read, not as it is stored: `284 ko`, not `290816`.
+ *
+ * Decimal units, because that is what every file manager a reader has ever seen shows,
+ * and one decimal below ten so `1,4 Mo` keeps the detail that `1 Mo` throws away.
+ */
+export function formatBytes(bytes: number, units: readonly string[]): string {
+  if (bytes <= 0) return `0 ${units[0]}`
+  let value = bytes
+  let unit = 0
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1000
+    unit++
+  }
+  const rounded = unit === 0 || value >= 10 ? Math.round(value) : Math.round(value * 10) / 10
+  return `${rounded} ${units[unit]}`
+}
+
+/** The same message with its attachments' bytes let go of, for holding in a list. */
+export function withoutAttachmentBytes(mail: EmailMessage): EmailMessage {
+  return {
+    ...mail,
+    attachments: mail.attachments.map(({ name, mime, size }) => ({ name, mime, size }))
+  }
 }

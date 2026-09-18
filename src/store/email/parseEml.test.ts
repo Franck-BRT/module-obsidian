@@ -143,3 +143,139 @@ describe('the day a message was sent', () => {
     expect(isoDate('')).toBe('')
   })
 })
+
+describe('the files an .eml carries', () => {
+  const eml = (...lines: string[]): string => lines.join('\r\n')
+
+  it('reads an attachment beside the text, and leaves the text alone', () => {
+    const raw = eml(
+      'Subject: Devis',
+      'Content-Type: multipart/mixed; boundary="B"',
+      '',
+      '--B',
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      'Ci-joint le devis.',
+      '--B',
+      'Content-Type: application/pdf; name="Devis.pdf"',
+      'Content-Disposition: attachment; filename="Devis toiture.pdf"',
+      'Content-Transfer-Encoding: base64',
+      '',
+      'JVBERi0xLjc=',
+      '--B--',
+      ''
+    )
+    const mail = parseEml(raw)
+    expect(mail.body).toBe('Ci-joint le devis.')
+    expect(mail.attachments).toHaveLength(1)
+    expect(mail.attachments[0]).toMatchObject({ name: 'Devis toiture.pdf', mime: 'application/pdf', size: 8 })
+    expect(new TextDecoder().decode(mail.attachments[0].bytes)).toBe('%PDF-1.7')
+  })
+
+  /**
+   * The text and the HTML a message is made of name no file. That is exactly what tells
+   * them from a .txt someone actually attached — which does, and must be listed.
+   */
+  it('does not mistake the message own parts for attachments', () => {
+    const raw = eml(
+      'Content-Type: multipart/alternative; boundary="B"',
+      '',
+      '--B',
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      'Bonjour.',
+      '--B',
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      '<p>Bonjour.</p>',
+      '--B--',
+      ''
+    )
+    expect(parseEml(raw).attachments).toEqual([])
+  })
+
+  it('lists a text file that was genuinely attached', () => {
+    const raw = eml(
+      'Content-Type: multipart/mixed; boundary="B"',
+      '',
+      '--B',
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      'Voir le relevé.',
+      '--B',
+      'Content-Type: text/plain; charset=utf-8',
+      'Content-Disposition: attachment; filename="releve.txt"',
+      '',
+      'ligne 1',
+      '--B--',
+      ''
+    )
+    expect(parseEml(raw).attachments.map((a) => a.name)).toEqual(['releve.txt'])
+  })
+
+  it('takes the name off the content type when no disposition says one', () => {
+    const raw = eml(
+      'Content-Type: multipart/mixed; boundary="B"',
+      '',
+      '--B',
+      'Content-Type: text/plain',
+      '',
+      'Texte.',
+      '--B',
+      'Content-Type: image/png; name="plan.png"',
+      'Content-Transfer-Encoding: base64',
+      '',
+      'iVBORw0KGgo=',
+      '--B--',
+      ''
+    )
+    expect(parseEml(raw).attachments[0]).toMatchObject({ name: 'plan.png', mime: 'image/png' })
+  })
+
+  /** A French file name arrives as an encoded word like any other header text. */
+  it('decodes a name that was encoded to survive the headers', () => {
+    const raw = eml(
+      'Content-Type: multipart/mixed; boundary="B"',
+      '',
+      '--B',
+      'Content-Type: text/plain',
+      '',
+      'Texte.',
+      '--B',
+      'Content-Type: application/pdf',
+      'Content-Disposition: attachment; filename="=?utf-8?B?UsOpY2VwdGlvbi5wZGY=?="',
+      '',
+      'x',
+      '--B--',
+      ''
+    )
+    expect(parseEml(raw).attachments[0].name).toBe('Réception.pdf')
+  })
+
+  it('finds an attachment nested in a part of its own', () => {
+    const raw = eml(
+      'Content-Type: multipart/mixed; boundary="OUT"',
+      '',
+      '--OUT',
+      'Content-Type: multipart/alternative; boundary="IN"',
+      '',
+      '--IN',
+      'Content-Type: text/plain',
+      '',
+      'Bonjour.',
+      '--IN--',
+      '--OUT',
+      'Content-Type: application/pdf',
+      'Content-Disposition: attachment; filename="a.pdf"',
+      '',
+      'x',
+      '--OUT--',
+      ''
+    )
+    expect(parseEml(raw).attachments.map((a) => a.name)).toEqual(['a.pdf'])
+  })
+
+  it('says a plain message carries nothing', () => {
+    expect(parseEml('Subject: Salut\r\n\r\nRien de joint.').attachments).toEqual([])
+  })
+})

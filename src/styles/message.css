@@ -59,3 +59,62 @@
 .pm-message-cta .pm-glyph-icon {
   display: inline-flex;
 }
+
+/* ---- What came with the message --------------------------------------------
+   Above the text, not below it: an attachment is usually the point of the mail,
+   and a reader who has to scroll past a quoted thread to find out there was a
+   drawing attached has been told too late. */
+.pm-message-attachments {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: var(--size-4-2) 0 var(--size-4-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-message-attachments-label {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  margin-right: 2px;
+}
+
+.pm-message-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 20rem;
+  padding: 3px 9px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller, var(--font-smallest));
+  cursor: pointer;
+  text-align: left;
+}
+
+.pm-message-attachment:hover:not(:disabled) {
+  background: var(--background-modifier-hover);
+  border-color: var(--background-modifier-border-hover);
+}
+
+/* Listed but not offered: a view that cannot hand the file over still says it exists. */
+.pm-message-attachment:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.pm-message-attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "The big one" is how people actually tell two files apart, so the size is always there
+   — muted, because it is never what is being looked for. */
+.pm-message-attachment-size {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}

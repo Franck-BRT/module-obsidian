@@ -1,4 +1,4 @@
-import type { EmailMessage } from './EmailMessage'
+import type { EmailAttachment, EmailMessage } from './EmailMessage'
 import { emptyEmail, formatAddress, splitAddressList } from './EmailMessage'
 
 /**
@@ -24,7 +24,53 @@ export function parseEml(raw: string): EmailMessage {
   mail.cc = addressList(headers.get('cc') ?? '')
   mail.date = isoDate(headers.get('date') ?? '')
   mail.body = readBody(body, headers)
+  mail.attachments = readAttachments(body, headers)
   return mail
+}
+
+/**
+ * The files a message carries.
+ *
+ * A part is an attachment when it names a file — through `Content-Disposition` or, for
+ * the clients that never learned to set one, through the `name` on its own content type.
+ * The text and HTML the message is made of name no file, which is exactly what tells them
+ * apart from a `.txt` someone actually attached.
+ */
+function readAttachments(body: string, headers: Map<string, string>): EmailAttachment[] {
+  const contentType = headers.get('content-type') ?? ''
+  if (!/^multipart\//i.test(contentType.trim())) return []
+  const boundary = paramOf(contentType, 'boundary')
+  if (!boundary) return []
+
+  const out: EmailAttachment[] = []
+  for (const part of splitParts(body, boundary)) {
+    const at = part.indexOf('\n\n')
+    const partHeaders = parseHeaders(at === -1 ? part : part.slice(0, at))
+    const partBody = at === -1 ? '' : part.slice(at + 2)
+    const type = (partHeaders.get('content-type') ?? '').trim()
+    // A part that is itself multipart holds its own; an attached message carries its own
+    // attachments, and they are the attached message's business, not this one's.
+    if (/^multipart\//i.test(type)) {
+      out.push(...readAttachments(partBody, partHeaders))
+      continue
+    }
+    const disposition = partHeaders.get('content-disposition') ?? ''
+    const name = decodeWords(paramOf(disposition, 'filename') || paramOf(type, 'name'))
+    if (!name) continue
+    const bytes = attachmentBytes(partBody, partHeaders.get('content-transfer-encoding') ?? '7bit')
+    out.push({ name, mime: type.split(';')[0].trim().toLowerCase(), size: bytes.length, bytes })
+  }
+  return out
+}
+
+/** An attachment is bytes, never text: it is never decoded into a string on the way out. */
+function attachmentBytes(body: string, encoding: string): Uint8Array {
+  const kind = encoding.toLowerCase().trim()
+  if (kind === 'base64') return base64Bytes(body)
+  if (kind === 'quoted-printable') return quotedPrintableBytes(body)
+  const out = new Uint8Array(body.length)
+  for (let i = 0; i < body.length; i++) out[i] = body.charCodeAt(i) & 0xff
+  return out
 }
 
 /** Header name (lower-cased) to value, continuation lines folded back onto one. */

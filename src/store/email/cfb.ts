@@ -31,6 +31,14 @@ export interface CfbEntry {
 export interface CfbFile {
   /** The direct children of the root, by name. A `.msg` keeps its properties here. */
   entries: Map<string, CfbEntry>
+  /**
+   * The children of a storage, by name.
+   *
+   * A message's attachments are not streams at the root: each is a storage of its own,
+   * holding the attachment's name and its bytes as separate streams inside. Reading one
+   * means stepping into it, which is why the walk is not confined to the root.
+   */
+  childrenOf(entry: CfbEntry): Map<string, CfbEntry>
   read(entry: CfbEntry): Uint8Array
 }
 
@@ -149,16 +157,19 @@ export function readCfb(bytes: Uint8Array): CfbFile {
 
   // The children of a storage are a red-black tree; the order does not matter here, only
   // that every one of them is seen exactly once.
-  const children = new Map<string, CfbEntry>()
-  const visit = (id: number, seen: Set<number>): void => {
-    if (id === NO_ENTRY || id >= entries.length || seen.has(id)) return
-    seen.add(id)
-    const entry = entries[id]
-    children.set(entry.name, entry)
-    visit(entry.leftId, seen)
-    visit(entry.rightId, seen)
+  const walk = (childId: number): Map<string, CfbEntry> => {
+    const children = new Map<string, CfbEntry>()
+    const visit = (id: number, seen: Set<number>): void => {
+      if (id === NO_ENTRY || id >= entries.length || seen.has(id)) return
+      seen.add(id)
+      const entry = entries[id]
+      children.set(entry.name, entry)
+      visit(entry.leftId, seen)
+      visit(entry.rightId, seen)
+    }
+    visit(childId, new Set())
+    return children
   }
-  visit(root.childId, new Set())
 
-  return { entries: children, read }
+  return { entries: walk(root.childId), childrenOf: (entry) => walk(entry.childId), read }
 }

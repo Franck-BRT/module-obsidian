@@ -20,6 +20,18 @@ export interface FixtureStream {
   data: Uint8Array
 }
 
+/** A folder inside the container: what a `.msg` puts each of its attachments in. */
+export interface FixtureStorage {
+  name: string
+  children: FixtureStream[]
+}
+
+export type FixtureNode = FixtureStream | FixtureStorage
+
+function isStorage(node: FixtureNode): node is FixtureStorage {
+  return 'children' in node
+}
+
 export function utf16(text: string): Uint8Array {
   const out = new Uint8Array(text.length * 2)
   const view = new DataView(out.buffer)
@@ -45,19 +57,32 @@ export function propertyStream(props: { tag: number; type: number; value: bigint
   return out
 }
 
-export function buildCompoundFile(streams: FixtureStream[]): Uint8Array {
+export function buildCompoundFile(nodes: FixtureNode[]): Uint8Array {
+  // Directory indices: the root is 0, then every top-level node, then the children of
+  // each storage. Where they sit does not matter; what matters is that the links agree.
+  let next = 1
+  const top = nodes.map((node) => ({ node, index: next++ }))
+  const nested = top
+    .filter((entry): entry is { node: FixtureStorage; index: number } => isStorage(entry.node))
+    .map((entry) => ({ parent: entry, children: entry.node.children.map((child) => ({ child, index: next++ })) }))
+  const totalEntries = next
+
   // Every stream here is small, so they all live in the mini stream.
+  const streams: { data: Uint8Array; index: number; start: number }[] = []
   const miniSectorsOf = (size: number) => Math.max(1, Math.ceil(size / MINI))
   let miniCursor = 0
-  const placed = streams.map((stream) => {
-    const start = miniCursor
-    miniCursor += miniSectorsOf(stream.data.length)
-    return { ...stream, start }
-  })
-  const miniStream = new Uint8Array(miniCursor * MINI)
-  for (const stream of placed) miniStream.set(stream.data, stream.start * MINI)
+  const place = (data: Uint8Array, index: number): void => {
+    streams.push({ data, index, start: miniCursor })
+    miniCursor += miniSectorsOf(data.length)
+  }
+  for (const entry of top) if (!isStorage(entry.node)) place(entry.node.data, entry.index)
+  for (const group of nested) for (const child of group.children) place(child.child.data, child.index)
 
-  const dirSectors = Math.ceil((placed.length + 1) / DIR_PER_SECTOR)
+  const miniStream = new Uint8Array(miniCursor * MINI)
+  for (const stream of streams) miniStream.set(stream.data, stream.start * MINI)
+  const startOf = new Map(streams.map((stream) => [stream.index, stream.start]))
+
+  const dirSectors = Math.ceil(totalEntries / DIR_PER_SECTOR)
   const miniStreamSectors = Math.ceil(miniStream.length / SECTOR) || 1
   // 0: FAT · 1..: directory · then the mini FAT · then the mini stream itself.
   const dirStart = 1
@@ -75,7 +100,7 @@ export function buildCompoundFile(streams: FixtureStream[]): Uint8Array {
 
   // Each stream's mini sectors run consecutively, so the chain is i → i+1 and stops.
   const miniFat = new Uint32Array(SECTOR / 4).fill(FREE)
-  for (const stream of placed) {
+  for (const stream of streams) {
     const count = miniSectorsOf(stream.data.length)
     for (let i = 0; i < count; i++) {
       miniFat[stream.start + i] = i === count - 1 ? END_OF_CHAIN : stream.start + i + 1
@@ -104,13 +129,26 @@ export function buildCompoundFile(streams: FixtureStream[]): Uint8Array {
     dirView.setUint32(at + 0x74, start, true)
     dirView.setUint32(at + 0x78, size, true)
   }
-  // The root points at the first stream; the streams hang off one another to the right,
-  // which is a legal if lopsided tree and exercises the walk.
-  writeEntry(0, 'Root Entry', 5, miniStreamStart, miniStream.length, placed.length ? 1 : FREE, FREE)
-  placed.forEach((stream, i) => {
-    const isLast = i === placed.length - 1
-    writeEntry(i + 1, stream.name, 2, stream.start, stream.data.length, FREE, isLast ? FREE : i + 2)
+
+  // The root points at the first node; siblings hang off one another to the right, which
+  // is a legal if lopsided tree and exercises the walk.
+  writeEntry(0, 'Root Entry', 5, miniStreamStart, miniStream.length, top.length ? top[0].index : FREE, FREE)
+  top.forEach((entry, i) => {
+    const right = i === top.length - 1 ? FREE : top[i + 1].index
+    if (isStorage(entry.node)) {
+      const group = nested.find((candidate) => candidate.parent === entry)
+      const first = group?.children[0]?.index ?? FREE
+      writeEntry(entry.index, entry.node.name, 1, 0, 0, first, right)
+      return
+    }
+    writeEntry(entry.index, entry.node.name, 2, startOf.get(entry.index) ?? 0, entry.node.data.length, FREE, right)
   })
+  for (const group of nested) {
+    group.children.forEach((child, i) => {
+      const right = i === group.children.length - 1 ? FREE : group.children[i + 1].index
+      writeEntry(child.index, child.child.name, 2, startOf.get(child.index) ?? 0, child.child.data.length, FREE, right)
+    })
+  }
 
   const out = new Uint8Array((totalSectors + 1) * SECTOR)
   const view = new DataView(out.buffer)
