@@ -9,6 +9,7 @@ import { EmptyState } from '../ui/primitives/EmptyState'
 import { ProjectRow } from '../ui/composites/ProjectRow'
 import { childTreeGuides } from '../ui/composites/treeGuides'
 import { linkedRefs } from './linkedRefs'
+import { renderImpactZones } from './impacts/impactRows'
 import { t } from '../i18n'
 
 const COLUMNS: { label: string; cls?: string }[] = [
@@ -67,6 +68,8 @@ function countLine(ctx: ProjectListContext): string {
   if (collections) bits.push(t('count.collections', { count: collections }))
   const templates = ctx.plugin.index.templateRefs().length
   if (templates) bits.push(t('count.templates', { count: templates }))
+  const crossings = ctx.plugin.radar.armed ? ctx.plugin.radar.all().length : 0
+  if (crossings) bits.push(t('impact.count', { count: crossings }))
   if (behind) bits.push(t('project.behindCount', { count: behind }))
   return bits.join(' · ')
 }
@@ -95,7 +98,27 @@ export function renderProjectListContent(ctx: ProjectListContext): void {
   for (const column of COLUMNS) headRow.createEl('th', { text: column.label, cls: column.cls })
   renderRows(ctx, table.createEl('tbody'), roots, [])
   renderCollections(ctx)
+  renderImpacts(ctx)
   renderTemplates(ctx)
+}
+
+/**
+ * Where two projects meet, seen from above.
+ *
+ * The project view answers "who is coming into my zones"; this answers the question only
+ * this page can, which is "where in the whole plan are two of these about to collide".
+ * Capped per zone, because a page listing every crossing in a busy vault stops being a
+ * summary — the count says how many were left out rather than quietly stopping short.
+ */
+function renderImpacts(ctx: ProjectListContext): void {
+  if (!ctx.plugin.radar.armed) return
+  const impacts = ctx.plugin.radar.all()
+  if (impacts.length === 0) return
+  const section = ctx.contentEl.createDiv('pm-collection-section')
+  section.createEl('h3', { text: t('impact.dashboard'), cls: 'pm-section-label' })
+  // No project is "mine" here: the reader is above all of them, so the pair reads in the
+  // order the detector found it rather than being turned around to face anyone.
+  renderImpactZones(section.createDiv('pm-impacts'), impacts, { plugin: ctx.plugin, mine: [], limit: 5 })
 }
 
 /**

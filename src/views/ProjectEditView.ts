@@ -1,6 +1,7 @@
 import { ButtonComponent, ItemView, WorkspaceLeaf } from 'obsidian'
 import type PMPlugin from '../main'
 import {
+  IMPACT_ROLES,
   type CustomFieldDef,
   type PriorityConfig,
   type PriorityIconSet,
@@ -14,6 +15,7 @@ import {
 import { collectAllAssignees, flattenTasks, mergeById } from '../store'
 import { safeAsync, truncateTitle } from '../utils'
 import { renderMultiSelect } from '../ui/composites/properties/MultiSelectControl'
+import { impactRoleIcon, impactRoleLabel } from './impacts/impactRole'
 import { confirmDialog } from '../ui/ModalFactory'
 import { renderPersonPicker } from '../ui/PersonPicker'
 import { renderAddButton } from '../ui/composites/addButton'
@@ -123,6 +125,7 @@ export class ProjectEditView extends ItemView {
     this.renderGeneral(project)
     this.renderMembers(project)
     this.renderZones(project)
+    this.renderImpactRole(project)
     this.renderStatuses(project)
     this.renderPriorities(project)
     this.renderBehavior(project)
@@ -306,6 +309,25 @@ export class ProjectEditView extends ItemView {
         const left = (project.zones ?? []).filter((zone) => zone !== id)
         this.save({ zones: left })
       }
+    })
+  }
+
+  /**
+   * What this project does to the others it meets in a zone.
+   *
+   * Nearly every project both disturbs and is disturbed, which is why that is the
+   * default and this control sits below the zones rather than beside them. The two
+   * exceptions earn their place: a launch calendar decides the day and everything else
+   * works around it, so its own days must not be cluttered with what those others are
+   * doing; and a project that is only ever informed is never in anyone's way.
+   */
+  private renderImpactRole(project: Project): void {
+    const section = this.section(t('zone.roleField'), t('zone.roleDesc'))
+    renderSelectControl({
+      container: section.createDiv('pm-prop-value'),
+      value: project.impactRole ?? 'both',
+      options: IMPACT_ROLES.map((role) => ({ id: role, label: impactRoleLabel(role), icon: impactRoleIcon(role) })),
+      onChange: (id) => this.save({ impactRole: id as Project['impactRole'] })
     })
   }
 

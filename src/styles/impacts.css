@@ -92,3 +92,16 @@
   font-size: var(--font-smallest);
   flex-shrink: 0;
 }
+
+/* The dashboard shows the same rows in a section of the projects page, so they need the
+   page's own margins rather than the view's centred column. */
+.pm-collection-section .pm-impacts {
+  max-width: none;
+  padding: 0;
+}
+
+.pm-impacts-more {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  padding: 4px 0 0;
+}

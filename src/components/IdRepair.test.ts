@@ -38,6 +38,7 @@ function taskRef(id: string, projectPath: string): TaskRef {
 function projectRef(id: string, path: string): ProjectRef {
   return {
     zones: [],
+    impactRole: 'both' as const,
     path,
     id,
     title: id,

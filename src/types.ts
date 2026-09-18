@@ -1,3 +1,4 @@
+import type { ProjectImpactRole } from './store/ZoneImpact'
 import { today } from './dates'
 import type { TaskIndex } from './store/TaskIndex'
 import type { WorkCalendar } from './store/WorkCalendar'
@@ -17,6 +18,7 @@ export type GanttWeekLabel = 'weekNumber' | 'dateRange' | 'both'
 export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'mail', 'impacts', 'dashboard'] as const
 export type ViewMode = (typeof VIEW_MODES)[number]
 export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
+export const IMPACT_ROLES = ['both', 'emitter', 'receiver'] as const
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
 export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document' | 'meeting'
 
@@ -240,6 +242,11 @@ export interface Project {
   /** Where this project's work happens, unless one of its tickets says otherwise. */
   zones?: string[]
   /**
+   * What this project does to the others it meets in a zone. Absent means `both`, which
+   * is what nearly every project is.
+   */
+  impactRole?: ProjectImpactRole
+  /**
    * A programme: it groups projects and carries no work of its own.
    *
    * A flag on a project rather than a type of its own, because everything a programme
@@ -271,6 +278,7 @@ export type ProjectPatch = Partial<
     | 'customFields'
     | 'teamMembers'
     | 'zones'
+    | 'impactRole'
     | 'savedViews'
     | 'config'
     | 'parentPath'

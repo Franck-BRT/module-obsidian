@@ -154,6 +154,23 @@ describe('task round-trip', () => {
     expect(task.endTime).toBe('11:00')
   })
 
+  it('preserves a project that only ever disturbs', () => {
+    const project = makeProject('Lancement', 'Projects/Lancement.md')
+    project.zones = ['rn7']
+    project.impactRole = 'emitter'
+    const { project: back } = roundTripProject(project)
+    expect(back.zones).toEqual(['rn7'])
+    expect(back.impactRole).toBe('emitter')
+  })
+
+  /** The ordinary role is the absence of one: it must not be written into every note. */
+  it('writes nothing for a project that behaves like every other', () => {
+    const project = makeProject('Voirie', 'Projects/Voirie.md')
+    const md = serializeProject(project, [], refs)
+    expect(md).not.toContain('impactRole')
+    expect(roundTripProject(project).project.impactRole).toBeUndefined()
+  })
+
   it('preserves the zones a ticket stands in', () => {
     const original = makeTask({ id: 'task-z', zones: ['rn7', 'quai-3'], start: '2026-04-06', due: '2026-04-10' })
     expect(roundTripTask(original).task.zones).toEqual(['rn7', 'quai-3'])

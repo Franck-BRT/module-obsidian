@@ -1,3 +1,4 @@
+import type { ProjectImpactRole } from './ZoneImpact'
 import type { App, Plugin, TAbstractFile } from 'obsidian'
 import { TFile, normalizePath } from 'obsidian'
 import type { CustomFieldDef, FilterState, PMSettings, StatusConfig, ViewMode } from '../types'
@@ -42,6 +43,8 @@ export interface ProjectRef {
   ownDefaultView: ViewMode | null
   /** Where its work happens, for the tickets that name no zone of their own. */
   zones: string[]
+  /** What it does to the projects it meets in a zone. */
+  impactRole: ProjectImpactRole
 }
 
 /**
@@ -500,7 +503,8 @@ export class VaultIndex {
       completeStatusIds: own ? own.filter((entry) => entry.complete === true).map((entry) => entry.id as string) : null,
       autoArchiveDays: ownAutoArchiveDays(frontmatter),
       ownDefaultView: ownDefaultView(frontmatter),
-      zones: stringList(frontmatter.zones)
+      zones: stringList(frontmatter.zones),
+      impactRole: readImpactRole(frontmatter.impactRole)
     }
     this.projects.set(path, ref)
     this.projectPathById.set(ref.id, path)
@@ -747,4 +751,9 @@ function collectionRule(raw: unknown): FilterState {
     dueDateFilter: (typeof f.dueDateFilter === 'string' ? f.dueDateFilter : 'any') as FilterState['dueDateFilter'],
     showArchived: f.showArchived === true
   }
+}
+
+/** An unreadable or absent role means the ordinary one: disturbs and is disturbed. */
+function readImpactRole(raw: unknown): ProjectImpactRole {
+  return raw === 'emitter' || raw === 'receiver' ? raw : 'both'
 }

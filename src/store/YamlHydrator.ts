@@ -228,6 +228,10 @@ export function hydrateProjectFromFrontmatter(
     customFields: customFieldList(frontmatter.customFields),
     teamMembers: stringList(frontmatter.teamMembers),
     zones: stringList(frontmatter.zones).length ? stringList(frontmatter.zones) : undefined,
+    impactRole:
+      frontmatter.impactRole === 'emitter' || frontmatter.impactRole === 'receiver'
+        ? frontmatter.impactRole
+        : undefined,
     createdAt: (frontmatter.createdAt as string) ?? new Date().toISOString(),
     updatedAt: (frontmatter.updatedAt as string) ?? new Date().toISOString(),
     filePath,

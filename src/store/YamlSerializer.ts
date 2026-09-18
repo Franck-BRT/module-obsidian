@@ -41,6 +41,7 @@ export const PROJECT_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'customFields',
   'teamMembers',
   'zones',
+  'impactRole',
   'savedViews',
   'createdAt',
   'updatedAt',
@@ -167,6 +168,7 @@ export function serializeProject(
     customFields: project.customFields,
     teamMembers: project.teamMembers,
     ...(project.zones?.length ? { zones: project.zones } : {}),
+    ...(project.impactRole && project.impactRole !== 'both' ? { impactRole: project.impactRole } : {}),
     savedViews: project.savedViews.length ? project.savedViews : [],
     createdAt: project.createdAt,
     updatedAt: project.updatedAt

@@ -12,6 +12,24 @@
  * judges. What it must never do is stay quiet about one.
  */
 
+/**
+ * What a project does to the others it meets.
+ *
+ * Most projects both disturb and are disturbed. Some only disturb: a launch calendar
+ * decides the day and everything else works around it, so its own days must not be
+ * cluttered with what those others are doing. And the mirror exists too — a project that
+ * is only ever informed and never in anyone's way.
+ */
+export type ProjectImpactRole = 'both' | 'emitter' | 'receiver'
+
+export function emits(role: ProjectImpactRole): boolean {
+  return role !== 'receiver'
+}
+
+export function receives(role: ProjectImpactRole): boolean {
+  return role !== 'emitter'
+}
+
 /** One ticket standing in one zone for one stretch of days, both ends inclusive. */
 export interface ZoneOccupancy {
   taskId: string
@@ -21,6 +39,7 @@ export interface ZoneOccupancy {
   zone: string
   start: string
   due: string
+  role: ProjectImpactRole
 }
 
 export interface ZoneImpact {
@@ -30,6 +49,15 @@ export interface ZoneImpact {
   /** The days the two actually share, which is the part worth looking at. */
   from: string
   to: string
+  /** Which way the disturbance runs, once each side's role is taken into account. */
+  direction: 'both' | 'a-to-b' | 'b-to-a'
+}
+
+/** Whether this ticket is the one being disturbed, rather than the one doing it. */
+export function affects(impact: ZoneImpact, taskId: string): boolean {
+  const isA = impact.a.taskId === taskId
+  if (impact.direction === 'both') return true
+  return impact.direction === (isA ? 'b-to-a' : 'a-to-b')
 }
 
 /**
@@ -83,12 +111,18 @@ export function zoneImpacts(occupancies: ZoneOccupancy[]): ZoneImpact[] {
       for (const open of active) {
         if (open.projectPath === next.projectPath) continue
         if (!overlaps(open, next)) continue
+        // A crossing exists only where one side can disturb and the other can be
+        // disturbed. Two launch calendars in one zone are not each other's problem.
+        const aToB = emits(open.role) && receives(next.role)
+        const bToA = emits(next.role) && receives(open.role)
+        if (!aToB && !bToA) continue
         out.push({
           zone,
           a: open,
           b: next,
           from: open.start > next.start ? open.start : next.start,
-          to: open.due < next.due ? open.due : next.due
+          to: open.due < next.due ? open.due : next.due,
+          direction: aToB && bToA ? 'both' : aToB ? 'a-to-b' : 'b-to-a'
         })
       }
       active.push(next)
@@ -97,7 +131,14 @@ export function zoneImpacts(occupancies: ZoneOccupancy[]): ZoneImpact[] {
   return out
 }
 
-/** Every impact a given ticket is in, whichever side of the pair it stands on. */
+/**
+ * The impacts each ticket is on the receiving end of.
+ *
+ * Only the receiving end, because this is what marks a ticket as disturbed: a launch day
+ * that decides the date and is worked around is not itself in trouble, and a warning on
+ * it would say the opposite of what is true. What a ticket emits is shown in the impacts
+ * view, where there is room to say which way it runs.
+ */
 export function impactsByTask(impacts: ZoneImpact[]): Map<string, ZoneImpact[]> {
   const out = new Map<string, ZoneImpact[]>()
   const add = (id: string, impact: ZoneImpact): void => {
@@ -106,8 +147,8 @@ export function impactsByTask(impacts: ZoneImpact[]): Map<string, ZoneImpact[]> 
     else out.set(id, [impact])
   }
   for (const impact of impacts) {
-    add(impact.a.taskId, impact)
-    add(impact.b.taskId, impact)
+    if (affects(impact, impact.a.taskId)) add(impact.a.taskId, impact)
+    if (affects(impact, impact.b.taskId)) add(impact.b.taskId, impact)
   }
   return out
 }
@@ -141,7 +182,7 @@ export interface ImpactInputs {
     zones: string[]
     archived: boolean
   }[]
-  projects: { path: string; title: string; zones: string[]; template: boolean }[]
+  projects: { path: string; title: string; zones: string[]; template: boolean; role: ProjectImpactRole }[]
   /** Statuses that mean the work is behind us. */
   isComplete: (status: string) => boolean
 }
@@ -176,7 +217,8 @@ export function vaultOccupancies(inputs: ImpactInputs): ZoneOccupancy[] {
         projectTitle: project.title,
         zone,
         start: span.start,
-        due: span.due
+        due: span.due,
+        role: project.role
       })
     }
   }

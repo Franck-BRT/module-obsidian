@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  affects,
   impactsByTask,
   impactsForProjects,
   otherSide,
@@ -7,18 +8,27 @@ import {
   vaultOccupancies,
   zoneImpacts,
   type ImpactInputs,
+  type ProjectImpactRole,
   type ZoneOccupancy
 } from './ZoneImpact'
 
 let seq = 0
-const at = (project: string, zone: string, start: string, due = start, title = `t${++seq}`): ZoneOccupancy => ({
+const at = (
+  project: string,
+  zone: string,
+  start: string,
+  due = start,
+  title = `t${++seq}`,
+  role: ProjectImpactRole = 'both'
+): ZoneOccupancy => ({
   taskId: `${project}-${title}`,
   title,
   projectPath: `P/${project}.md`,
   projectTitle: project,
   zone,
   start,
-  due
+  due,
+  role
 })
 
 const pairs = (occupancies: ZoneOccupancy[]): string[] =>
@@ -166,11 +176,12 @@ describe('reading an impact from one side', () => {
 })
 
 describe('placing the whole vault in its zones', () => {
-  const project = (path: string, zones: string[] = [], template = false) => ({
+  const project = (path: string, zones: string[] = [], template = false, role: ProjectImpactRole = 'both') => ({
     path,
     title: path,
     zones,
-    template
+    template,
+    role
   })
   const task = (over: Partial<ImpactInputs['tasks'][number]> = {}): ImpactInputs['tasks'][number] => ({
     id: 't',
@@ -213,5 +224,54 @@ describe('placing the whole vault in its zones', () => {
 
   it('says nothing at all when no zone has been declared anywhere', () => {
     expect(run({ tasks: [task()] })).toEqual([])
+  })
+})
+
+describe('a project that only ever disturbs', () => {
+  const launch = (start: string, due = start) => at('lancement', 'RN7', start, due, 'jour-J', 'emitter')
+  const works = (start: string, due = start) => at('voirie', 'RN7', start, due, 'reprise', 'both')
+
+  /** A launch day decides the date; everything else works around it. */
+  it('still disturbs the projects it meets', () => {
+    const impacts = zoneImpacts([launch('2026-04-15'), works('2026-04-10', '2026-04-20')])
+    expect(impacts).toHaveLength(1)
+    expect(affects(impacts[0], 'voirie-reprise')).toBe(true)
+  })
+
+  it('is not itself disturbed by them', () => {
+    const impacts = zoneImpacts([launch('2026-04-15'), works('2026-04-10', '2026-04-20')])
+    expect(affects(impacts[0], 'lancement-jour-J')).toBe(false)
+    // And so it carries no warning of its own.
+    expect(impactsByTask(impacts).get('lancement-jour-J')).toBeUndefined()
+    expect(impactsByTask(impacts).get('voirie-reprise')).toHaveLength(1)
+  })
+
+  it('has nothing to say to another project that also only disturbs', () => {
+    const other = at('essais', 'RN7', '2026-04-14', '2026-04-16', 'essai', 'emitter')
+    expect(zoneImpacts([launch('2026-04-15'), other])).toEqual([])
+  })
+
+  it('disturbs one that only listens', () => {
+    const listener = at('bureau', 'RN7', '2026-04-14', '2026-04-16', 'revue', 'receiver')
+    const impacts = zoneImpacts([launch('2026-04-15'), listener])
+    expect(impacts).toHaveLength(1)
+    expect(affects(impacts[0], 'bureau-revue')).toBe(true)
+    expect(affects(impacts[0], 'lancement-jour-J')).toBe(false)
+  })
+
+  it('leaves two ordinary projects disturbing each other both ways', () => {
+    const impacts = zoneImpacts([
+      works('2026-04-10', '2026-04-20'),
+      at('autre', 'RN7', '2026-04-15', '2026-04-16', 'x')
+    ])
+    expect(impacts[0].direction).toBe('both')
+    expect(affects(impacts[0], 'voirie-reprise')).toBe(true)
+    expect(affects(impacts[0], 'autre-x')).toBe(true)
+  })
+
+  it('says nothing at all between two projects that only listen', () => {
+    const a = at('bureau', 'RN7', '2026-04-14', '2026-04-16', 'a', 'receiver')
+    const b = at('etudes', 'RN7', '2026-04-15', '2026-04-15', 'b', 'receiver')
+    expect(zoneImpacts([a, b])).toEqual([])
   })
 })
