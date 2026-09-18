@@ -236,6 +236,8 @@ export const fr: Catalog = {
   'impact.more': 'et {count} de plus',
   'view.impacts': 'Impacts',
   'impact.none': 'Aucun croisement',
+  'impact.noneAtLevel': 'Aucun croisement à ce niveau',
+  'impact.noneAtLevelHint': 'Choisissez « Tous » pour revoir l’ensemble.',
   'impact.noneHint': 'Aucun autre projet ne se tient dans vos zones aux mêmes dates.',
   'impact.noZones': 'Aucune zone définie',
   'impact.meets': 'croise',

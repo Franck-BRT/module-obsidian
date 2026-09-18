@@ -242,6 +242,8 @@ export const en = {
   'impact.more': 'and {count} more',
   'view.impacts': 'Impacts',
   'impact.none': 'No crossings',
+  'impact.noneAtLevel': 'No crossing at this level',
+  'impact.noneAtLevelHint': 'Choose "All" to see them all again.',
   'impact.noneHint': 'No other project stands in your zones on the same dates.',
   'impact.noZones': 'No zones defined',
   'impact.meets': 'meets',
