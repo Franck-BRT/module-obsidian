@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   affects,
+  dueImpactNotices,
   impactsByTask,
   impactsForProjects,
   otherSide,
@@ -273,5 +274,53 @@ describe('a project that only ever disturbs', () => {
     const a = at('bureau', 'RN7', '2026-04-14', '2026-04-16', 'a', 'receiver')
     const b = at('etudes', 'RN7', '2026-04-15', '2026-04-15', 'b', 'receiver')
     expect(zoneImpacts([a, b])).toEqual([])
+  })
+})
+
+describe('which crossings are worth a notice', () => {
+  const impacts = (from: string, to: string, role: ProjectImpactRole = 'both') =>
+    zoneImpacts([at('a', 'RN7', from, to, 'mine', role), at('b', 'RN7', from, to, 'theirs')])
+  const none = (): boolean => false
+
+  it('announces one running today', () => {
+    expect(dueImpactNotices(impacts('2026-04-01', '2026-04-30'), '2026-04-10', '2026-04-17', none)).toHaveLength(2)
+  })
+
+  it('announces one starting inside the window', () => {
+    expect(dueImpactNotices(impacts('2026-04-15', '2026-04-16'), '2026-04-10', '2026-04-17', none)).toHaveLength(2)
+  })
+
+  it('says nothing about one beyond the window', () => {
+    expect(dueImpactNotices(impacts('2026-05-15', '2026-05-16'), '2026-04-10', '2026-04-17', none)).toEqual([])
+  })
+
+  /** Saying so would only teach the reader to dismiss these without reading them. */
+  it('says nothing about one already over', () => {
+    expect(dueImpactNotices(impacts('2026-03-01', '2026-03-05'), '2026-04-10', '2026-04-17', none)).toEqual([])
+  })
+
+  /** The one the emitter-only role exists to stop. */
+  it('tells only the side being disturbed', () => {
+    const notices = dueImpactNotices(impacts('2026-04-15', '2026-04-16', 'emitter'), '2026-04-10', '2026-04-17', none)
+    expect(notices).toHaveLength(1)
+    expect(notices[0].affected.projectTitle).toBe('b')
+    expect(notices[0].other.projectTitle).toBe('a')
+  })
+
+  it('never says the same thing twice', () => {
+    const list = impacts('2026-04-15', '2026-04-16')
+    const said = new Set<string>()
+    const first = dueImpactNotices(list, '2026-04-10', '2026-04-17', (key) => said.has(key))
+    for (const notice of first) said.add(notice.key)
+    expect(dueImpactNotices(list, '2026-04-10', '2026-04-17', (key) => said.has(key))).toEqual([])
+  })
+
+  /** A date that moves is news again, so the key has to carry the window. */
+  it('says it again once the crossing has moved', () => {
+    const said = new Set(
+      dueImpactNotices(impacts('2026-04-15', '2026-04-16'), '2026-04-10', '2026-04-17', none).map((n) => n.key)
+    )
+    const moved = dueImpactNotices(impacts('2026-04-14', '2026-04-16'), '2026-04-10', '2026-04-17', (k) => said.has(k))
+    expect(moved).toHaveLength(2)
   })
 })

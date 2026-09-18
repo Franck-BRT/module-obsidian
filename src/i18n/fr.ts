@@ -218,6 +218,8 @@ export const fr: Catalog = {
   'phase.unfold': 'Déplier',
   'task.type.document': 'Document',
   'task.type.meeting': 'Réunion',
+  'notify.impact': '« {task} » ({project}) croise « {other} » ({otherProject}) dans {zone}, {when}.',
+  'notify.impactMany': '{count} croisements entre projets à venir. Ouvrez la vue Impacts pour les voir.',
   'zone.roleField': 'Rôle dans les impacts',
   'zone.roleDesc': 'Ce que ce projet fait aux autres qu’il croise dans une zone.',
   'zone.role.both': 'Impacte et est impacté',

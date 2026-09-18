@@ -224,3 +224,46 @@ export function vaultOccupancies(inputs: ImpactInputs): ZoneOccupancy[] {
   }
   return out
 }
+
+/** One crossing worth telling somebody about, told from the side being disturbed. */
+export interface ImpactNotice {
+  impact: ZoneImpact
+  affected: ZoneOccupancy
+  other: ZoneOccupancy
+  /** Stable per crossing and per window, so a date that moves is worth saying again. */
+  key: string
+}
+
+/**
+ * The crossings a reader should hear about now.
+ *
+ * Running today, or starting inside the same window a due date is announced in. One that
+ * has already finished is history and saying so would only teach the reader to dismiss
+ * these without reading them.
+ *
+ * Told to the side being disturbed, and only to that side: a launch day that decides the
+ * date and is worked around is not in trouble, and waking its owner about the road crew
+ * working around it is exactly the noise the emitter-only role exists to stop. A crossing
+ * that disturbs both sides is worth saying to each of them, because they are two
+ * different people with two different plans to change.
+ */
+export function dueImpactNotices(
+  impacts: ZoneImpact[],
+  todayIso: string,
+  throughIso: string,
+  seen: (key: string) => boolean
+): ImpactNotice[] {
+  const out: ImpactNotice[] = []
+  for (const impact of impacts) {
+    if (impact.to < todayIso) continue
+    if (impact.from > throughIso) continue
+    for (const side of [impact.a, impact.b]) {
+      if (!affects(impact, side.taskId)) continue
+      const other = otherSide(impact, side.taskId)
+      const key = `impact:${impact.zone}:${side.taskId}:${other.taskId}:${impact.from}:${impact.to}`
+      if (seen(key)) continue
+      out.push({ impact, affected: side, other, key })
+    }
+  }
+  return out
+}

@@ -1,9 +1,12 @@
 import { Notice } from 'obsidian'
 import type PMPlugin from '../main'
 import { Temporal, today, parsePlainDate } from '../dates'
+import { dueImpactNotices } from '../store/ZoneImpact'
 import { t } from '../i18n'
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000 // check every hour
+/** Past this many, one line instead: a reader shown twenty notices reads none. */
+const IMPACT_NOTICE_LIMIT = 3
 
 export class Notifier {
   private intervalId: number | null = null
@@ -61,6 +64,48 @@ export class Notifier {
           new Notice(msg, 6000)
         }
       }
+    }
+
+    this.checkImpacts(now, threshold)
+  }
+
+  /**
+   * Crossings between projects, announced like a due date and in the same window.
+   *
+   * Only to the side being disturbed: a launch day that decides the date is not in
+   * trouble, and waking its owner about the work going on around it is exactly the noise
+   * the emitter-only role exists to stop.
+   *
+   * Several at once become one line rather than a wall of toasts. A reader who is shown
+   * twenty notices reads none of them, and the view that lists them is one click away —
+   * so the summary says how many and leaves the reading to the page built for it.
+   */
+  private checkImpacts(now: Temporal.PlainDate, threshold: Temporal.PlainDate): void {
+    if (!this.plugin.radar.armed) return
+    const notices = dueImpactNotices(this.plugin.radar.all(), now.toString(), threshold.toString(), (key) =>
+      this.notifiedIds.has(key)
+    )
+    if (!notices.length) return
+    for (const notice of notices) this.notifiedIds.add(notice.key)
+
+    if (notices.length > IMPACT_NOTICE_LIMIT) {
+      new Notice(t('notify.impactMany', { count: notices.length }), 8000)
+      return
+    }
+    for (const notice of notices) {
+      const when =
+        notice.impact.from === notice.impact.to ? notice.impact.from : `${notice.impact.from} → ${notice.impact.to}`
+      new Notice(
+        t('notify.impact', {
+          task: notice.affected.title,
+          project: notice.affected.projectTitle,
+          other: notice.other.title,
+          otherProject: notice.other.projectTitle,
+          zone: this.plugin.radar.zoneLabel(notice.impact.zone),
+          when
+        }),
+        9000
+      )
     }
   }
 }

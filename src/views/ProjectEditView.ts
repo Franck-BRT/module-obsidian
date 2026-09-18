@@ -327,7 +327,12 @@ export class ProjectEditView extends ItemView {
       container: section.createDiv('pm-prop-value'),
       value: project.impactRole ?? 'both',
       options: IMPACT_ROLES.map((role) => ({ id: role, label: impactRoleLabel(role), icon: impactRoleIcon(role) })),
-      onChange: (id) => this.save({ impactRole: id as Project['impactRole'] })
+      onChange: (id) => {
+        this.save({ impactRole: id as Project['impactRole'] })
+        // Every select in this view redraws after saving: the control paints its label
+        // once and has no way to know the value behind it has moved.
+        this.render()
+      }
     })
   }
 

@@ -224,6 +224,8 @@ export const en = {
   'phase.unfold': 'Unfold',
   'task.type.document': 'Document',
   'task.type.meeting': 'Meeting',
+  'notify.impact': '"{task}" ({project}) meets "{other}" ({otherProject}) in {zone}, {when}.',
+  'notify.impactMany': '{count} crossings between projects are coming. Open the Impacts view to see them.',
   'zone.roleField': 'Role in impacts',
   'zone.roleDesc': 'What this project does to the others it meets in a zone.',
   'zone.role.both': 'Disturbs and is disturbed',
