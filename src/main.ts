@@ -104,6 +104,12 @@ export default class PMPlugin extends Plugin {
   async onload(): Promise<void> {
     await this.loadSettings()
     this.index = new VaultIndex(this.app, () => this.settings)
+    this.radar = new ZoneRadar(this)
+    setImpactLookup(this.radar)
+    // Every note the index re-reads can have moved a date, a zone or a status, any of
+    // which changes which projects cross. `register` below only reports the first resolve,
+    // so the standing subscription is what keeps the crossings from going stale.
+    this.register(this.index.onChange(() => this.radar.invalidate()))
     // The first sweep can run against a half-filled metadata cache, so it runs again once
     // the index has caught up. Everything in it is safe to repeat.
     this.index.register(this, () => {
@@ -118,8 +124,6 @@ export default class PMPlugin extends Plugin {
     this.autoArchiver = new AutoArchiver(this)
     this.idRepair = new IdRepair(this)
     this.router = new PMViewRouter(this)
-    this.radar = new ZoneRadar(this)
-    setImpactLookup(this.radar)
 
     this.registerView(PM_PROJECT_VIEW_TYPE, (leaf) => new ProjectView(leaf, this))
     this.registerView(PM_PROJECT_OVERVIEW_VIEW_TYPE, (leaf) => new ProjectOverviewView(leaf, this))

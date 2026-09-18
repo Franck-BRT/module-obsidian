@@ -193,7 +193,13 @@ export class ProjectView extends ItemView {
         const current = this.loadedPaths
         if (paths.length !== current.length || paths.some((path, i) => path !== current[i])) {
           void this.loadScope()
+          return
         }
+        // A zone crossing is the one thing on this screen that can change without
+        // anything in this project changing: a date moved in another project's note is
+        // what decides whether a ticket here is marked. Only for a vault that has zones,
+        // so a reader who has never declared one pays nothing for the feature.
+        if (this.plugin.radar.armed) void this.refreshProject()
       })
     )
   }
