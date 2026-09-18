@@ -1,6 +1,7 @@
 import { TFile, type WorkspaceLeaf } from 'obsidian'
 import type PMPlugin from '../main'
 import type { ScopeSpec } from '../store'
+import type { ImpactLevel } from '../store/ZoneImpact'
 import { PM_DASHBOARD_VIEW_TYPE } from './DashboardView'
 import { PM_PROJECT_EDIT_VIEW_TYPE } from './ProjectEditView'
 import { PM_PROJECT_OVERVIEW_VIEW_TYPE } from './ProjectOverviewView'
@@ -32,17 +33,22 @@ export class PMViewRouter {
   }
 
   /**
-   * The crossings of the whole vault, narrowed to one zone.
+   * The crossings of the whole vault, narrowed to a zone, a level, or both.
    *
    * Opened at vault scope rather than at any project's: a crossing has two sides in two
    * different plans, and picking one of them to look out from would answer a question
-   * the reader did not ask. The zone travels in the view state, so the view it lands on
-   * opens already filtered instead of asking again for what was just clicked.
+   * the reader did not ask. What was clicked travels in the view state, so the view it
+   * lands on opens already narrowed instead of asking again for what was just pointed at.
    */
-  async openImpacts(zone?: string, leaf?: WorkspaceLeaf): Promise<void> {
+  async openImpacts(filter: { zone?: string; level?: ImpactLevel } = {}, leaf?: WorkspaceLeaf): Promise<void> {
     await this.open(
       PM_PROJECT_VIEW_TYPE,
-      { scope: { kind: 'vault' }, view: 'impacts', ...(zone ? { impactZone: zone } : {}) },
+      {
+        scope: { kind: 'vault' },
+        view: 'impacts',
+        ...(filter.zone ? { impactZone: filter.zone } : {}),
+        ...(filter.level ? { impactLevel: filter.level } : {})
+      },
       leaf
     )
   }

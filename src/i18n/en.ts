@@ -244,6 +244,7 @@ export const en = {
   'impact.none': 'No crossings',
   'impact.allZones': 'All zones',
   'impact.openZone': 'Show this zone only',
+  'impact.openLevel': 'Show this level only',
   'impact.noneHere': 'No crossing for this choice',
   'impact.noneHereHint': 'Widen the level or choose "All zones".',
   'impact.noneHint': 'No other project stands in your zones on the same dates.',

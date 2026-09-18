@@ -1,5 +1,12 @@
 import type PMPlugin from '../../main'
-import { affects, levelRank, otherSide, type ZoneImpact, type ZoneOccupancy } from '../../store/ZoneImpact'
+import {
+  affects,
+  levelRank,
+  otherSide,
+  type ImpactLevel,
+  type ZoneImpact,
+  type ZoneOccupancy
+} from '../../store/ZoneImpact'
 import { formatDateShort } from '../../dates'
 import { Chip } from '../../ui/primitives/Chip'
 import { safeAsync } from '../../utils'
@@ -24,6 +31,12 @@ export interface ImpactRowOpts {
    * the shortest route from "there are eight crossings on the RN7" to reading them.
    */
   onZone?: (zone: string) => void
+  /**
+   * What clicking a row's level does. The two together are the two halves of the same
+   * question: a zone heading widens the level and narrows the place, a level chip widens
+   * the place and narrows the gravity.
+   */
+  onLevel?: (level: ImpactLevel) => void
 }
 
 export function renderImpactZones(parent: HTMLElement, impacts: ZoneImpact[], opts: ImpactRowOpts): void {
@@ -89,12 +102,25 @@ function renderImpactRow(parent: HTMLElement, impact: ZoneImpact, opts: ImpactRo
   const row = parent.createDiv('pm-impacts-row')
   row.addClass(`pm-impacts-row--${impact.level}`)
   // Named as well as coloured: a level nobody can read is a level that is not there.
-  new Chip(row.createDiv('pm-impacts-level'))
+  const level = new Chip(row.createDiv('pm-impacts-level'))
     .setLabel(impactLevelLabel(impact.level))
     .setVariant('outline')
     .setSize('sm')
     .setLeadingIcon(impactLevelIcon(impact.level))
     .setColor(impactLevelColor(impact.level))
+  const onLevel = opts.onLevel
+  if (onLevel) {
+    level.setTooltip(t('impact.openLevel'))
+    level.el.addClass('pm-clickable')
+    level.el.setAttr('role', 'button')
+    level.el.setAttr('tabindex', '0')
+    level.el.addEventListener('click', () => onLevel(impact.level))
+    level.el.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      event.preventDefault()
+      onLevel(impact.level)
+    })
+  }
   row.createDiv({
     cls: 'pm-impacts-when',
     text:

@@ -31,6 +31,7 @@ import { KanbanView } from './KanbanView'
 import { LibraryView } from './library/LibraryView'
 import { MailView } from './mail/MailView'
 import { ImpactsView } from './impacts/ImpactsView'
+import type { ImpactLevel } from '../store/ZoneImpact'
 import { ProjectDashboard } from './dashboard/ProjectDashboard'
 import { openTaskModal, promptText } from '../ui/ModalFactory'
 import { ChipButton } from '../ui/primitives/ChipButton'
@@ -55,6 +56,8 @@ interface ProjectViewState {
   view?: ViewMode
   /** The zone the impacts view should open narrowed to. */
   impactZone?: string
+  /** The level it should open narrowed to. */
+  impactLevel?: ImpactLevel
   [key: string]: unknown
 }
 
@@ -93,8 +96,9 @@ export class ProjectView extends ItemView {
   /** The toolbar slot the inbox button lives in, so it can be redrawn on its own. */
   private inboxSlotEl: HTMLElement | null = null
   private inboxRefresh: number | null = null
-  /** A zone a link asked the impacts view to open narrowed to, until it is taken. */
+  /** What a link asked the impacts view to open narrowed to, until it is taken. */
   private pendingImpactZone: string | null = null
+  private pendingImpactLevel: ImpactLevel | null = null
 
   constructor(leaf: WorkspaceLeaf, plugin: PMPlugin) {
     super(leaf)
@@ -132,9 +136,10 @@ export class ProjectView extends ItemView {
     const movedView = wanted !== null && wanted !== this.currentView
     if (wanted) this.currentView = wanted
     if (typeof state.impactZone === 'string') this.pendingImpactZone = state.impactZone
+    if (typeof state.impactLevel === 'string') this.pendingImpactLevel = state.impactLevel
 
     if (movedScope) await this.loadScope()
-    else if (movedView || this.pendingImpactZone !== null) {
+    else if (movedView || this.pendingImpactZone !== null || this.pendingImpactLevel !== null) {
       // The switcher has to show where we landed, and the body has to be rebuilt: the
       // impacts view reads its opening filter once, when it is constructed.
       this.renderProjectToolbar()
@@ -862,8 +867,11 @@ export class ProjectView extends ItemView {
         const impacts = new ImpactsView(this.bodyEl, scope, this.plugin)
         // Taken rather than read: a zone arrived at through a link narrows this visit,
         // and switching away and back again should not silently re-apply it.
-        if (this.pendingImpactZone !== null) impacts.openAt(this.pendingImpactZone)
+        if (this.pendingImpactZone !== null || this.pendingImpactLevel !== null) {
+          impacts.openAt({ zone: this.pendingImpactZone, level: this.pendingImpactLevel })
+        }
         this.pendingImpactZone = null
+        this.pendingImpactLevel = null
         this.subview = impacts
         break
       }

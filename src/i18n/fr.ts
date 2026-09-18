@@ -238,6 +238,7 @@ export const fr: Catalog = {
   'impact.none': 'Aucun croisement',
   'impact.allZones': 'Toutes les zones',
   'impact.openZone': 'Ne voir que cette zone',
+  'impact.openLevel': 'Ne voir que ce niveau',
   'impact.noneHere': 'Aucun croisement pour ce choix',
   'impact.noneHereHint': 'Élargissez le niveau ou choisissez « Toutes les zones ».',
   'impact.noneHint': 'Aucun autre projet ne se tient dans vos zones aux mêmes dates.',

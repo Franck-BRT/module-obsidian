@@ -75,9 +75,14 @@ export class ImpactsView implements SubView {
     renderImpactZones(root, shown, {
       plugin: this.plugin,
       mine,
-      // Inside this view the heading narrows in place rather than opening anything.
+      // Inside this view the heading and the level narrow in place rather than opening
+      // anything: the same gesture meaning the same thing where it costs nothing.
       onZone: (zone) => {
         this.zoneFilter = zone
+        this.render()
+      },
+      onLevel: (level) => {
+        this.levelFilter = level
         this.render()
       }
     })
@@ -179,9 +184,10 @@ export class ImpactsView implements SubView {
     })
   }
 
-  /** Opens narrowed to one zone, for a link that already knows which one is wanted. */
-  openAt(zone: string): void {
-    this.zoneFilter = zone
+  /** Opens narrowed, for a link that already knows what was pointed at. */
+  openAt(filter: { zone?: string | null; level?: ImpactLevel | null }): void {
+    if (filter.zone !== undefined) this.zoneFilter = filter.zone
+    if (filter.level !== undefined) this.levelFilter = filter.level
   }
 
   refresh(): void {

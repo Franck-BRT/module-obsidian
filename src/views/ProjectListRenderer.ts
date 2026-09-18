@@ -10,6 +10,7 @@ import { ProjectRow } from '../ui/composites/ProjectRow'
 import { childTreeGuides } from '../ui/composites/treeGuides'
 import { linkedRefs } from './linkedRefs'
 import { renderImpactZones } from './impacts/impactRows'
+import type { ImpactLevel } from '../store/ZoneImpact'
 import { t } from '../i18n'
 
 const COLUMNS: { label: string; cls?: string }[] = [
@@ -122,9 +123,11 @@ function renderImpacts(ctx: ProjectListContext): void {
     plugin: ctx.plugin,
     mine: [],
     limit: 5,
-    // The summary shows five of a zone's crossings; the heading is how the reader gets
-    // to the rest, already narrowed to the zone they just pointed at.
-    onZone: safeAsync((zone: string) => ctx.plugin.router.openImpacts(zone))
+    // The summary shows five of a zone's crossings, and the two marks are the two ways
+    // out of it: the heading opens that zone at every level, the level opens that
+    // gravity across every zone. Each widens one axis and narrows the other.
+    onZone: safeAsync((zone: string) => ctx.plugin.router.openImpacts({ zone })),
+    onLevel: safeAsync((level: ImpactLevel) => ctx.plugin.router.openImpacts({ level }))
   })
 }
 
