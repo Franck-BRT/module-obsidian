@@ -3,6 +3,7 @@ import type { ProjectScope } from '../../store'
 import { impactsForProjects, type ImpactLevel, type ZoneImpact } from '../../store/ZoneImpact'
 import { IMPACT_LEVELS } from '../../types'
 import { ChipButton } from '../../ui/primitives/ChipButton'
+import { renderSelectControl } from '../../ui/composites/properties'
 import { impactLevelColor, impactLevelLabel } from './impactRole'
 import { renderImpactZones } from './impactRows'
 import { EmptyState } from '../../ui/primitives/EmptyState'
@@ -32,6 +33,12 @@ export class ImpactsView implements SubView {
    * a reader who had forgotten setting it.
    */
   private levelFilter: ImpactLevel | null = null
+  /**
+   * Which zone, or all of them. A select rather than pills like the levels: there are
+   * three levels and there is no telling how many zones, and twenty pills is a wall
+   * where a searchable list is a question.
+   */
+  private zoneFilter: string | null = null
 
   constructor(
     private container: HTMLElement,
@@ -58,11 +65,11 @@ export class ImpactsView implements SubView {
     const root = this.container.createDiv('pm-impacts')
     this.renderFilter(root, impacts)
 
-    const shown = this.levelFilter ? impacts.filter((impact) => impact.level === this.levelFilter) : impacts
+    const shown = impacts.filter((impact) => this.atLevel(impact) && this.inZone(impact))
     if (!shown.length) {
-      // Reachable when the data moves under a filter that is still set. The bar stays
-      // above this, so the way out is the control the reader just used.
-      new EmptyState(root).setIcon('🗺️').setTitle(t('impact.noneAtLevel')).setBody(t('impact.noneAtLevelHint'))
+      // Reachable by narrowing on both at once, and when the data moves under a filter
+      // still set. The bar stays above this, so the way out is the control just used.
+      new EmptyState(root).setIcon('🗺️').setTitle(t('impact.noneHere')).setBody(t('impact.noneHereHint'))
       return
     }
     renderImpactZones(root, shown, { plugin: this.plugin, mine })
@@ -76,10 +83,29 @@ export class ImpactsView implements SubView {
    * level nothing is at gets no pill: an always-present "Bloquant · 0" is a thing to
    * learn to ignore.
    */
+  private atLevel(impact: ZoneImpact): boolean {
+    return this.levelFilter === null || impact.level === this.levelFilter
+  }
+
+  private inZone(impact: ZoneImpact): boolean {
+    return this.zoneFilter === null || impact.zone === this.zoneFilter
+  }
+
+  /**
+   * The two questions asked of the same list, each counted under the other's answer.
+   *
+   * Counting a level against the chosen zone, and a zone against the chosen level, is
+   * what keeps the two from leading anywhere empty: every choice still on offer has
+   * something behind it, and a choice with nothing behind it is not offered at all. The
+   * alternative — counting both against everything — shows numbers that are true of the
+   * page and false of the click.
+   */
   private renderFilter(parent: HTMLElement, impacts: ZoneImpact[]): void {
     const bar = parent.createDiv('pm-impacts-bar')
+    const inZone = impacts.filter((impact) => this.inZone(impact))
+
     new ChipButton(bar)
-      .setLabel(`${t('common.all')} · ${impacts.length}`)
+      .setLabel(`${t('common.all')} · ${inZone.length}`)
       .setShape('pill')
       .setActive(this.levelFilter === null)
       .onClick(() => {
@@ -89,7 +115,7 @@ export class ImpactsView implements SubView {
 
     // Gravest first, as the rows themselves are ordered.
     for (const level of IMPACT_LEVELS) {
-      const count = impacts.filter((impact) => impact.level === level).length
+      const count = inZone.filter((impact) => impact.level === level).length
       if (!count) continue
       const chip = new ChipButton(bar)
         .setLabel(`${impactLevelLabel(level)} · ${count}`)
@@ -102,6 +128,47 @@ export class ImpactsView implements SubView {
         })
       chip.el.style.setProperty('--pm-chip-color', impactLevelColor(level))
     }
+
+    this.renderZoneFilter(
+      bar.createDiv('pm-impacts-bar-right'),
+      impacts.filter((impact) => this.atLevel(impact))
+    )
+  }
+
+  private renderZoneFilter(parent: HTMLElement, atLevel: ZoneImpact[]): void {
+    const counts = new Map<string, number>()
+    for (const impact of atLevel) counts.set(impact.zone, (counts.get(impact.zone) ?? 0) + 1)
+
+    const options = [...counts.entries()].map(([zone, count]) => {
+      const config = this.plugin.radar.zoneConfig(zone)
+      return {
+        id: zone,
+        label: `${this.plugin.radar.zoneLabel(zone)} · ${count}`,
+        color: config?.color,
+        icon: config?.icon || 'map-pin'
+      }
+    })
+    // The chosen zone stays on offer even when the level filter has emptied it, or there
+    // would be no way back to "all" but to guess that the select still opens.
+    if (this.zoneFilter !== null && !counts.has(this.zoneFilter)) {
+      options.push({
+        id: this.zoneFilter,
+        label: `${this.plugin.radar.zoneLabel(this.zoneFilter)} · 0`,
+        color: undefined,
+        icon: 'map-pin'
+      })
+    }
+
+    renderSelectControl({
+      container: parent,
+      value: this.zoneFilter ?? '',
+      search: options.length > 6,
+      options: [{ id: '', label: t('impact.allZones'), icon: 'map' }, ...options],
+      onChange: (id) => {
+        this.zoneFilter = id || null
+        this.render()
+      }
+    })
   }
 
   refresh(): void {

@@ -138,3 +138,12 @@
   padding-left: var(--size-4-2);
   margin-left: -11px;
 }
+
+/* Zones are open-ended and user-named, so they get a searchable select rather than a
+   row of pills; it sits to the right the way the library's own controls do. */
+.pm-impacts-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
