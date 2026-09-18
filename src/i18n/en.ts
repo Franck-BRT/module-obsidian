@@ -697,6 +697,7 @@ export const en = {
 
   // Collections: named sets of tasks drawn from across projects.
   'collection.new': 'Create collection',
+  'collection.newButton': '+ new collection',
   'collection.name': 'Collection name',
   'collection.section': 'Collections',
   'collection.addTo': 'Add to collection',

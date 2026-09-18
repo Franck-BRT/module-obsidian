@@ -47,6 +47,12 @@ export function renderProjectListToolbar(ctx: ProjectListContext): void {
   new ButtonComponent(ctx.toolbarEl)
     .setButtonText(t('template.newButton'))
     .onClick(() => openProjectCreate(ctx.plugin, false, '', true))
+  // A collection gathers tasks that already have a project, so it belongs on this row
+  // rather than inside one: it was reachable only from the command palette, and its
+  // list on the page below appears only once one exists — which it never did.
+  new ButtonComponent(ctx.toolbarEl)
+    .setButtonText(t('collection.newButton'))
+    .onClick(safeAsync(() => ctx.plugin.createCollection()))
 }
 
 function countLine(ctx: ProjectListContext): string {

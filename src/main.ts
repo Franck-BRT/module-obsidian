@@ -668,7 +668,7 @@ export default class PMPlugin extends Plugin {
 
   /**
    * Folds a project heading inside one collection. Keyed by collection so the same
-   * project can be open in one recueil and shut in another.
+   * project can be open in one collection and shut in another.
    */
   async toggleCollectionGroupCollapsed(collectionPath: string, projectPath: string): Promise<void> {
     const groups = this.settings.collapsedCollectionGroups
