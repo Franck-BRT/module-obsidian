@@ -1037,6 +1037,12 @@ export const en = {
   'req.block.none': 'No requirement matches.',
   'req.block.unknownKeys': 'Unknown key, ignored: {list}',
   'req.derive': 'Derive',
+  'req.deriveMany': { one: 'Derive {count}', other: 'Derive all {count}' },
+  'req.deriveManyTitle': { one: 'Derive {count} requirement', other: 'Derive {count} requirements' },
+  'req.deriveManyDone': { one: '{count} requirement derived.', other: '{count} requirements derived.' },
+  'req.deriveManyPartly': '{count} derived. Failed on: {list}',
+  'req.deriveCategoryKeep': 'Each requirement’s own',
+  'req.derivedList': { one: '{count} derivation', other: '{count} derivations' },
   'req.derivedFrom': 'Derived from {id}',
   'req.aliases': 'Aliases',
   'req.noAliases':

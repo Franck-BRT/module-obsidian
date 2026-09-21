@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeRequirement, setText } from './Requirement'
 import { addAlias } from './reqAlias'
-import { DERIVE_KINDS, derivedFrom } from './reqDerive'
+import { DERIVE_KINDS, derivationsOf, derivedFrom } from './reqDerive'
 
 const options = {
   category: 'ELEC',
@@ -108,5 +108,38 @@ describe('derivedFrom', () => {
   it('offers only the relations that can hold between two requirements', () => {
     expect(DERIVE_KINDS).not.toContain('satisfied-by')
     expect(DERIVE_KINDS[0]).toBe('derives-from')
+  })
+})
+
+describe('derivationsOf', () => {
+  const parent = makeRequirement({ id: 'REQ-SYS-0001', aliases: ['OMLX-SYS-0001'] })
+  const child = (id: string, to: string, kind: 'derives-from' | 'refines' | 'duplicates' = 'derives-from') =>
+    makeRequirement({ id, links: [{ kind, to }] })
+
+  // The claim this exists to disprove: a parent derived three times shows three children.
+  it('finds every requirement standing beneath it, not the last one written', () => {
+    const library = [parent, child('REQ-SYS-0004', 'REQ-SYS-0001'), child('REQ-SYS-0002', 'REQ-SYS-0001')]
+    expect(derivationsOf(library, parent).map((r) => r.id)).toEqual(['REQ-SYS-0002', 'REQ-SYS-0004'])
+  })
+
+  it('counts a refinement as standing beneath it too', () => {
+    const library = [parent, child('REQ-SYS-0002', 'REQ-SYS-0001', 'refines')]
+    expect(derivationsOf(library, parent).map((r) => r.id)).toEqual(['REQ-SYS-0002'])
+  })
+
+  // Saying the same thing twice is not standing beneath anything.
+  it('leaves out a relation that is not a derivation', () => {
+    const library = [parent, child('REQ-SYS-0002', 'REQ-SYS-0001', 'duplicates')]
+    expect(derivationsOf(library, parent)).toEqual([])
+  })
+
+  // A child written in a project's numbering derives from the same requirement.
+  it('follows a link written to one of its other names', () => {
+    const library = [parent, child('REQ-SYS-0002', 'omlx-sys-0001')]
+    expect(derivationsOf(library, parent).map((r) => r.id)).toEqual(['REQ-SYS-0002'])
+  })
+
+  it('has nothing to show for a requirement nothing derives from', () => {
+    expect(derivationsOf([parent], parent)).toEqual([])
   })
 })

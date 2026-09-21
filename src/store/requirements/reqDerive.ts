@@ -1,4 +1,5 @@
 import type { ReqLinkKind, ReqText, Requirement } from './Requirement'
+import { namesOf } from './reqAlias'
 
 /**
  * A new requirement started from one that already exists.
@@ -86,3 +87,28 @@ export function derivedFrom(source: Requirement, options: DeriveOptions): Partia
  * a requirement satisfied by another requirement is not a thing.
  */
 export const DERIVE_KINDS: ReqLinkKind[] = ['derives-from', 'refines', 'duplicates', 'conflicts-with']
+
+/** The relations that mean "this requirement stands beneath that one". */
+export const DERIVATION_KINDS: ReadonlySet<ReqLinkKind> = new Set(['derives-from', 'refines'])
+
+/**
+ * What stands beneath a requirement, read from the library rather than from itself.
+ *
+ * The link is written on the child — a requirement knows what it derives from — so this
+ * is the only way the parent can be shown what came out of it. Every name the parent
+ * answers to is matched, aliases included: a child written in a project's numbering
+ * derives from the same requirement as one written in the library's.
+ *
+ * All of them, in identifier order. A parent broken down three times has three children,
+ * and a list that showed one of them would be a library quietly losing work.
+ */
+export function derivationsOf(library: Requirement[], parent: Requirement): Requirement[] {
+  const names = new Set(namesOf(parent).map((name) => name.toUpperCase()))
+  return library
+    .filter(
+      (requirement) =>
+        requirement.id !== parent.id &&
+        requirement.links.some((link) => DERIVATION_KINDS.has(link.kind) && names.has(link.to.toUpperCase()))
+    )
+    .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
+}

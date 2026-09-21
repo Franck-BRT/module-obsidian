@@ -1191,3 +1191,13 @@
 .pm-req-alias-drop:hover {
   color: var(--text-error);
 }
+
+/* The identifiers a bulk derivation is about to be run on. */
+.pm-req-derive-sources {
+  font-family: var(--font-monospace);
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+  max-height: 6rem;
+  overflow-y: auto;
+  margin-bottom: var(--size-2-3);
+}

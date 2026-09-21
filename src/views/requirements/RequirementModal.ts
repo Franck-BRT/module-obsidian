@@ -16,6 +16,7 @@ import {
 import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
 import { addAlias, aliasWithPrefix, nameOwner, normalizeAlias, removeAlias } from '../../store/requirements/reqAlias'
 import { deriveRequirement } from './deriveReq'
+import { derivationsOf } from '../../store/requirements/reqDerive'
 import { safeAsync } from '../../utils'
 import { checkWording, type QualityFinding, type QualityRule } from '../../store/requirements/reqQuality'
 import { assessRequirement, type QualityAxis, type QualityAxisId } from '../../store/requirements/reqScore'
@@ -30,8 +31,9 @@ import { diffCounts, type DiffPart } from '../../store/requirements/reqDiff'
 import { formatDateShort } from '../../dates'
 import { renderSelectControl } from '../../ui/composites/properties'
 import { t } from '../../i18n'
-import { reqLanguages, reqLinkKindLabel, verificationLabel } from './reqPalette'
+import { reqLanguages, reqLinkKindLabel, reqStatusGlyph, verificationLabel } from './reqPalette'
 import { renderStars } from './reqStars'
+import { Chip } from '../../ui/primitives/Chip'
 import { openPromptModal } from './PromptModal'
 import type { PromptKey } from './promptDefs'
 
@@ -114,6 +116,7 @@ class RequirementModal extends Modal {
     this.renderAliases(this.bodyEl)
     this.renderWordings(this.bodyEl)
     this.renderLinks(this.bodyEl)
+    this.renderDerivations(this.bodyEl)
     this.renderCitations(this.bodyEl)
     this.renderHistory(this.bodyEl)
   }
@@ -795,6 +798,39 @@ class RequirementModal extends Modal {
    * and the editor must open now. An empty section would read as "quoted nowhere", which
    * is a different statement from "not counted yet", so it says which.
    */
+  /**
+   * What stands beneath this requirement.
+   *
+   * The link is written on the child — a requirement knows what it derives from — so
+   * this is the only place the parent can be told what came out of it. Without it,
+   * deriving the same requirement three times leaves three notes and nothing here
+   * saying so, which reads exactly like only one of them having been written.
+   */
+  private renderDerivations(parent: HTMLElement): void {
+    const children = derivationsOf(this.plugin.index.requirementRefs(), this.draft)
+    if (!children.length) return
+    const section = parent.createDiv('pm-req-section')
+    section
+      .createDiv('pm-req-section-head')
+      .createSpan({ cls: 'pm-req-section-title', text: t('req.derivedList', { count: children.length }) })
+    for (const child of children) {
+      const row = section.createDiv('pm-req-link')
+      const open = row.createEl('a', { cls: 'pm-req-id', text: child.id, href: '#' })
+      open.addEventListener(
+        'click',
+        safeAsync(async (event: MouseEvent) => {
+          event.preventDefault()
+          await openRequirementModal(this.plugin, child.filePath ?? '')
+        })
+      )
+      if (child.title) row.createSpan({ cls: 'pm-req-link-title', text: child.title })
+      const status = reqStatusGlyph(this.plugin.settings, child.status)
+      if (status.label) {
+        new Chip(row).setLabel(status.label).setColor(status.color).setLeadingIcon(status.icon).setVariant('outline')
+      }
+    }
+  }
+
   private renderCitations(parent: HTMLElement): void {
     const section = parent.createDiv('pm-req-section')
     section.createDiv('pm-req-section-head').createSpan({ cls: 'pm-req-section-title', text: t('req.citedIn') })
@@ -948,13 +984,15 @@ class RequirementModal extends Modal {
    * a second ago is in it — and leaving the original unsaved while its child carries the
    * new wording is the kind of divergence this library exists to prevent.
    *
-   * This editor gives way to the new one, because the new one is what is about to be
-   * worked on.
+   * The new one opens on top; this editor stays open behind it, so deriving a
+   * requirement twice is two clicks rather than two trips through the library.
    */
   private async derive(): Promise<void> {
     if (this.dirty) await this.save()
+    // This editor stays open underneath. Deriving one requirement into three is three
+    // clicks from here, and closing it each time would make it three trips back through
+    // the library.
     deriveRequirement(this.plugin, this.draft, (path) => {
-      this.close()
       void openRequirementModal(this.plugin, path)
     })
   }

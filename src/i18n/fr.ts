@@ -1015,6 +1015,12 @@ export const fr: Catalog = {
   'req.block.none': 'Aucune exigence ne correspond.',
   'req.block.unknownKeys': 'Clé inconnue, ignorée : {list}',
   'req.derive': 'Dériver',
+  'req.deriveMany': { one: 'Dériver {count}', other: 'Dériver les {count}' },
+  'req.deriveManyTitle': { one: 'Dériver {count} exigence', other: 'Dériver {count} exigences' },
+  'req.deriveManyDone': { one: '{count} exigence dérivée.', other: '{count} exigences dérivées.' },
+  'req.deriveManyPartly': '{count} dérivées. Échec sur : {list}',
+  'req.deriveCategoryKeep': 'Celle de chaque exigence',
+  'req.derivedList': { one: '{count} dérivation', other: '{count} dérivations' },
   'req.derivedFrom': 'Dérivée de {id}',
   'req.aliases': 'Alias',
   'req.noAliases':

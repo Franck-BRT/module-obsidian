@@ -63,6 +63,8 @@ import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
 import { NewRequirementModal } from './NewRequirementModal'
 import { deriveRequirement } from './deriveReq'
+import { DeriveManyModal } from './DeriveManyModal'
+import { derivedFrom } from '../../store/requirements/reqDerive'
 import { renderStars } from './reqStars'
 import { assessRequirement } from '../../store/requirements/reqScore'
 import { reqCriticalityGlyph, reqLanguages, reqStatusGlyph, reqTypeGlyph } from './reqPalette'
@@ -366,6 +368,19 @@ export class RequirementsView extends ItemView {
             : safeAsync(() => this.runBulk(jobs))
         )
       }
+    }
+
+    // On what the filters have left on screen, like the baseline button beside it: the
+    // count is in the label and again in the dialog, because writing twelve notes by
+    // accident is not something to find out about afterwards.
+    const selection = this.mode === 'library' ? filterRequirements(all, this.filter, langs) : []
+    if (selection.length > 1) {
+      const branch = right.createEl('button', { cls: 'pm-req-bulk' })
+      setIcon(branch.createSpan({ cls: 'pm-glyph-icon' }), 'git-branch-plus')
+      branch.createSpan({ text: t('req.deriveMany', { count: selection.length }) })
+      // Read again on click rather than trusted from the label: the search box redraws
+      // the list without the toolbar, so the count above can be a keystroke behind.
+      branch.addEventListener('click', () => this.deriveMany(filterRequirements(all, this.filter, langs)))
     }
 
     const port = right.createEl('button', { cls: 'pm-req-port', attr: { 'aria-label': t('req.exchange') } })
@@ -1338,6 +1353,46 @@ export class RequirementsView extends ItemView {
    * narrowed the list to read something and then had a different thought should not
    * find their new requirement filed under what they were reading.
    */
+  /**
+   * A whole selection derived at once.
+   *
+   * Written one at a time and in order, never in parallel: each identifier is minted
+   * from the counter the one before it advanced, and twelve requests racing for the same
+   * number is how two requirements end up sharing one.
+   *
+   * Nothing is opened afterwards. Twelve editors would be absurd, and the library is
+   * already showing what was written.
+   */
+  private deriveMany(sources: Requirement[]): void {
+    new DeriveManyModal(this.app, this.plugin, sources, (choice) => {
+      void (async () => {
+        let made = 0
+        const failed: string[] = []
+        for (const source of sources) {
+          const created = await this.plugin.requirements.create(
+            derivedFrom(source, {
+              category: choice.category || source.category,
+              title: source.title,
+              kind: choice.kind,
+              by: this.plugin.settings.globalTeamMembers[0] ?? '',
+              status: this.plugin.settings.requirements.statuses[0]?.id ?? ''
+            })
+          )
+          if (created) made += 1
+          else failed.push(source.id)
+        }
+        // Both numbers: a run that wrote eleven of twelve has to say so where it says it
+        // ran, not leave the twelfth to be noticed.
+        new Notice(
+          failed.length
+            ? t('req.deriveManyPartly', { count: made, list: failed.join(', ') })
+            : t('req.deriveManyDone', { count: made })
+        )
+        this.render()
+      })()
+    }).open()
+  }
+
   private createRequirement(): void {
     new NewRequirementModal(this.app, this.plugin, this.filter.category, (draft) => {
       void (async () => {
