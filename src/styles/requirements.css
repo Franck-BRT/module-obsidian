@@ -823,3 +823,105 @@
 .pm-req-twin-side .pm-req-wording {
   -webkit-line-clamp: 2;
 }
+
+/* ---- The rating ------------------------------------------------------------------
+   Stars for the glance, a number for the comparison, and the axes underneath for the
+   argument: five shapes cannot tell 61 % from 68 %, and a reader choosing what to fix
+   next needs to. */
+
+.pm-req-rating {
+  padding: var(--size-2-3) 0 var(--size-4-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-req-rating-head {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  margin-bottom: var(--size-2-3);
+}
+
+.pm-req-stars {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--text-faint);
+}
+
+.pm-req-star {
+  display: inline-flex;
+  --icon-size: 16px;
+}
+
+/* Filled rather than merely tinted: a lit star and an unlit one differ in shape, not
+   only in hue. */
+.pm-req-star--on {
+  color: var(--color-yellow, #d5a100);
+}
+
+.pm-req-star--on svg {
+  fill: currentColor;
+}
+
+.pm-req-rating-score {
+  font-weight: var(--font-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-req-axes {
+  display: grid;
+  grid-template-columns: max-content minmax(4rem, 8rem) 1fr;
+  gap: 4px var(--size-2-2);
+  align-items: center;
+}
+
+.pm-req-axis {
+  display: contents;
+}
+
+.pm-req-axis-name {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+}
+
+.pm-req-axis-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--background-modifier-border);
+  overflow: hidden;
+}
+
+.pm-req-axis-fill {
+  height: 100%;
+  width: var(--pm-axis, 0%);
+  border-radius: 3px;
+  background: var(--color-green);
+}
+
+.pm-req-axis-fill--fair {
+  background: var(--color-orange);
+}
+
+.pm-req-axis-fill--poor {
+  background: var(--color-red);
+}
+
+.pm-req-axis-miss {
+  font-size: var(--font-smallest);
+  color: var(--color-orange);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-req-axis-miss--full {
+  color: var(--text-faint);
+}
+
+@media (width <= 560px) {
+  .pm-req-axes {
+    grid-template-columns: max-content 1fr;
+  }
+  .pm-req-axis-miss {
+    grid-column: 1 / -1;
+  }
+}

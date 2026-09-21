@@ -16,6 +16,7 @@ import {
 import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
 import { safeAsync } from '../../utils'
 import { checkWording, type QualityFinding, type QualityRule } from '../../store/requirements/reqQuality'
+import { assessRequirement, type QualityAxis, type QualityAxisId } from '../../store/requirements/reqScore'
 import { mergeFindings, RequirementReviewer } from '../../store/requirements/reqQualityLlm'
 import { renderPropRow } from '../../ui/FormField'
 import { pickOption } from '../../modals/PickerModals'
@@ -83,6 +84,7 @@ class RequirementModal extends Modal {
     })
 
     this.bodyEl = contentEl.createDiv('pm-te-body')
+    this.renderRating(this.bodyEl)
     this.renderTitle(this.bodyEl)
     this.renderFields(this.bodyEl.createDiv('pm-te-props').createDiv('pm-prop-grid'))
     this.renderWordings(this.bodyEl)
@@ -373,6 +375,53 @@ class RequirementModal extends Modal {
     const reloaded = await this.plugin.requirements.load(this.path)
     if (reloaded) this.draft = reloaded
     this.render()
+  }
+
+  /* ---- The rating ---------------------------------------------------------- */
+
+  /**
+   * How good this requirement is, in one glance and then in detail.
+   *
+   * The stars are the glance. Underneath them are the six axes that produced them, each
+   * naming what it is missing, because a rating nobody can argue with is a rating nobody
+   * believes: a reviewer who disagrees has to be able to see *which* judgement they
+   * disagree with, and go and fix that.
+   */
+  private renderRating(parent: HTMLElement): void {
+    const report = assessRequirement(this.draft, reqLanguages(this.plugin.settings))
+    const section = parent.createDiv('pm-req-rating')
+
+    const head = section.createDiv('pm-req-rating-head')
+    const stars = head.createDiv({
+      cls: 'pm-req-stars',
+      attr: { 'aria-label': t('req.ratingStars', { stars: report.stars }) }
+    })
+    for (let index = 0; index < 5; index++) {
+      const star = stars.createSpan({ cls: index < report.stars ? 'pm-req-star pm-req-star--on' : 'pm-req-star' })
+      setIcon(star, 'star')
+    }
+    // The number beside the stars, because five shapes cannot tell 61 % from 68 % and a
+    // reader who is choosing what to fix next needs to.
+    head.createSpan({ cls: 'pm-req-rating-score', text: `${Math.round(report.score * 100)} %` })
+    head.createSpan({ cls: 'pm-req-rev', text: ratingWord(report.stars) })
+
+    const grid = section.createDiv('pm-req-axes')
+    for (const axis of report.axes) this.renderAxis(grid, axis)
+  }
+
+  private renderAxis(grid: HTMLElement, axis: QualityAxis): void {
+    const row = grid.createDiv('pm-req-axis')
+    row.createSpan({ cls: 'pm-req-axis-name', text: axisLabel(axis.id) })
+    // A bar as well as a colour, and the percentage in the label: three ways of reading
+    // one number, none of them the hue alone.
+    const track = row.createDiv('pm-req-axis-track')
+    const fill = track.createDiv('pm-req-axis-fill')
+    fill.style.setProperty('--pm-axis', `${Math.round(axis.score * 100)}%`)
+    fill.toggleClass('pm-req-axis-fill--poor', axis.score < 0.5)
+    fill.toggleClass('pm-req-axis-fill--fair', axis.score >= 0.5 && axis.score < 1)
+    const miss = row.createSpan({ cls: 'pm-req-axis-miss' })
+    miss.setText(axis.misses.length ? axis.misses.map((entry) => missLabel(entry)).join(', ') : t('req.axisFull'))
+    if (!axis.misses.length) miss.addClass('pm-req-axis-miss--full')
   }
 
   /* ---- Links -------------------------------------------------------------- */
@@ -666,5 +715,74 @@ function qualityLabel(rule: QualityRule): string {
       return t('req.quality.unquantified')
     default:
       return t('req.quality.tooLong')
+  }
+}
+
+/** What a rating means, in a word, for a reader who does not count stars. */
+function ratingWord(stars: number): string {
+  switch (stars) {
+    case 5:
+      return t('req.rating.excellent')
+    case 4:
+      return t('req.rating.good')
+    case 3:
+      return t('req.rating.fair')
+    case 2:
+      return t('req.rating.weak')
+    case 1:
+      return t('req.rating.poor')
+    default:
+      return t('req.rating.none')
+  }
+}
+
+function axisLabel(id: QualityAxisId): string {
+  switch (id) {
+    case 'singular':
+      return t('req.axis.singular')
+    case 'unambiguous':
+      return t('req.axis.unambiguous')
+    case 'verifiable':
+      return t('req.axis.verifiable')
+    case 'attributable':
+      return t('req.axis.attributable')
+    case 'complete':
+      return t('req.axis.complete')
+    default:
+      return t('req.axis.traceable')
+  }
+}
+
+/**
+ * What an axis is missing, named in the reader's terms.
+ *
+ * A rule id and a field name arrive here side by side, so both are translated: the rules
+ * through the labels the badges already use, the fields through their own.
+ */
+function missLabel(miss: string): string {
+  if (miss.startsWith('text.')) return t('req.miss.language', { lang: miss.slice(5).toUpperCase() })
+  switch (miss) {
+    case 'verification':
+      return t('req.field.verification')
+    case 'owner':
+      return t('req.field.owner')
+    case 'category':
+      return t('req.field.category')
+    case 'type':
+      return t('req.field.type')
+    case 'status':
+      return t('req.field.status')
+    case 'criticality':
+      return t('req.field.criticality')
+    case 'source':
+      return t('req.field.source')
+    case 'rationale':
+      return t('req.field.rationale')
+    case 'links':
+      return t('req.miss.links')
+    case 'suspect':
+      return t('req.suspectLink')
+    default:
+      return qualityLabel(miss as QualityRule)
   }
 }
