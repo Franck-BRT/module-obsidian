@@ -646,6 +646,8 @@ export interface PMSettings {
   collapsedTasks: Record<string, string[]>
   /** Paths of projects whose sub-projects are collapsed in the project list. */
   collapsedProjects: string[]
+  /** Requirement ids whose derivations are folded shut in the tree. */
+  collapsedRequirements: string[]
   /** Collection path -> the project headings folded shut inside it. */
   collapsedCollectionGroups: Record<string, string[]>
   /** How the library shows documents: as a register, or as thumbnails. */
@@ -925,6 +927,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   scopeViews: {},
   collapsedTasks: {},
   collapsedProjects: [],
+  collapsedRequirements: [],
   collapsedCollectionGroups: {},
   libraryMode: 'cards',
   ganttSortKey: 'manual',

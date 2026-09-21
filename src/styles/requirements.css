@@ -687,3 +687,74 @@
   justify-content: flex-end;
   gap: var(--size-2-2);
 }
+
+/* ---- The tree of derivations ---------------------------------------------------
+   Indentation is drawn with guide lines rather than padding: at four levels deep, a
+   row indented by whitespace alone gives no way to tell which parent it hangs from. */
+
+.pm-req-tree-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-4-3);
+  flex-wrap: wrap;
+  padding: var(--size-4-2) var(--size-4-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pm-req-tree {
+  --pm-tree-indent: 20px;
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+.pm-req-tree-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  padding: 3px 0;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.pm-req-tree-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* A row only there to hold a match is dimmed rather than removed: it is the context,
+   and context that looks like a result is context that misleads. */
+.pm-req-tree-row--context {
+  opacity: 0.55;
+}
+
+.pm-req-tree-rail {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  min-height: 20px;
+  width: calc((var(--pm-tree-depth, 0) + 1) * var(--pm-tree-indent));
+}
+
+.pm-req-tree-rail .pm-collapse-toggle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: calc(var(--level, 0) * var(--pm-tree-indent));
+  width: var(--pm-tree-indent);
+}
+
+.pm-req-tree-cell {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-2-2);
+  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pm-req-tree-cell .pm-req-wording {
+  -webkit-line-clamp: 1;
+  color: var(--text-normal);
+}
+
+.pm-req-tree-isolated {
+  padding: 0 var(--size-4-3);
+}

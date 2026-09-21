@@ -27,6 +27,15 @@ import {
 } from '../../store/requirements/Baseline'
 import type { DiffPart } from '../../store/requirements/reqDiff'
 import { formatDateShort } from '../../dates'
+import {
+  buildReqForest,
+  flattenForest,
+  forestDepth,
+  pruneForest,
+  type FlatReqRow
+} from '../../store/requirements/reqTree'
+import { CollapseToggle } from '../../ui/primitives/CollapseToggle'
+import { renderTreeGuides } from '../../ui/composites/treeGuides'
 import { toCsv } from '../../store/requirements/reqCsv'
 import { toReqif } from '../../store/requirements/reqif'
 import { toMarkdownDocument } from '../../store/requirements/reqMarkdown'
@@ -82,7 +91,7 @@ export class RequirementsView extends ItemView {
    * the same thing in both and a reader narrowing to a category should not lose it by
    * asking what covers it.
    */
-  private mode: 'library' | 'trace' | 'baseline' = 'library'
+  private mode: 'library' | 'tree' | 'trace' | 'baseline' = 'library'
   private gapFilter: CoverageGap | null = null
   /** Null until the notes have been read once; an empty map is a real answer, null is not. */
   private usage: Map<string, string[]> | null = null
@@ -163,6 +172,10 @@ export class RequirementsView extends ItemView {
 
   private renderBody(all: Requirement[], langs: string[]): void {
     const shown = sortRequirements(filterRequirements(all, this.filter, langs), this.sortKey, this.sortDir, this.lang)
+    if (this.mode === 'tree') {
+      this.renderTree(this.bodyEl, all, shown)
+      return
+    }
     if (this.mode === 'trace') {
       this.renderTrace(this.bodyEl, shown, langs)
       return
@@ -252,6 +265,7 @@ export class RequirementsView extends ItemView {
         })
     }
     mode('library', t('req.modeLibrary'))
+    mode('tree', t('req.modeTree'))
     mode('trace', t('req.modeTrace'))
     mode('baseline', t('req.modeBaseline'))
   }
@@ -368,6 +382,143 @@ export class RequirementsView extends ItemView {
   private renderBodyOnly(): void {
     this.bodyEl.empty()
     this.renderBody(this.plugin.index.requirementRefs(), reqLanguages(this.plugin.settings))
+  }
+
+  /* ---- The tree of derivations ----------------------------------------------- */
+
+  /**
+   * The shape of the library.
+   *
+   * Built from the whole library rather than from what the filters leave, because a tree
+   * of filtered nodes is a list with indentation: the parent of a match is the context
+   * that makes the match mean something, and it is usually the thing that did not match.
+   * So the filters choose what is *highlighted*, and the branches around it are kept.
+   */
+  private renderTree(parent: HTMLElement, all: Requirement[], shown: Requirement[]): void {
+    const forest = buildReqForest(all)
+    const narrowed = isReqFilterActive(this.filter)
+    const matched = new Set(shown.map((requirement) => requirement.id))
+    const roots = narrowed ? pruneForest(forest.roots, matched) : forest.roots
+
+    const head = parent.createDiv('pm-req-tree-head')
+    head.createSpan({
+      cls: 'pm-req-rev',
+      text: t('req.treeShape', { roots: roots.length, depth: forestDepth(roots) })
+    })
+    // Said where the tree is, because each is a way the tree is not telling the whole
+    // truth and the reader is entitled to know which.
+    if (forest.cycles.length) {
+      this.treeNotice(head, 'refresh-cw', t('req.treeCycles', { list: forest.cycles.join(', ') }))
+    }
+    if (forest.dangling.length) {
+      this.treeNotice(
+        head,
+        'unlink',
+        t('req.treeDangling', { list: forest.dangling.map((entry) => `${entry.id} → ${entry.parent}`).join(', ') })
+      )
+    }
+
+    if (!roots.length) {
+      new EmptyState(parent)
+        .setIcon('🌳')
+        .setTitle(narrowed ? t('req.noneHere') : t('req.treeEmpty'))
+        .setBody(narrowed ? t('req.noneHereHint') : t('req.treeEmptyHint'))
+    } else {
+      const table = parent.createDiv('pm-req-tree')
+      const collapsed = new Set(this.plugin.settings.collapsedRequirements)
+      for (const row of flattenForest(roots, collapsed)) this.renderTreeRow(table, row, matched, narrowed, collapsed)
+    }
+
+    // Kept out of the trees and listed after them: a library barely linked would
+    // otherwise draw a thousand stumps and hide the three real branches among them.
+    const isolated = narrowed ? forest.isolated.filter((requirement) => matched.has(requirement.id)) : forest.isolated
+    if (!isolated.length) return
+    const section = parent.createDiv('pm-req-section pm-req-tree-isolated')
+    section
+      .createDiv('pm-req-section-head')
+      .createSpan({ cls: 'pm-req-section-title', text: t('req.treeIsolated', { count: isolated.length }) })
+    const list = section.createDiv('pm-req-tree')
+    for (const requirement of isolated) {
+      this.renderTreeRow(
+        list,
+        {
+          node: { requirement, children: [], depth: 0, repeated: false, cyclic: false },
+          guides: [],
+          lastChild: true,
+          hasChildren: false
+        },
+        matched,
+        narrowed,
+        new Set()
+      )
+    }
+  }
+
+  private treeNotice(parent: HTMLElement, icon: string, text: string): void {
+    const line = parent.createDiv('pm-reqblock-notice pm-reqblock-notice--warn')
+    setIcon(line.createSpan({ cls: 'pm-glyph-icon' }), icon)
+    line.createSpan({ text })
+  }
+
+  private renderTreeRow(
+    table: HTMLElement,
+    row: FlatReqRow,
+    matched: Set<string>,
+    narrowed: boolean,
+    collapsed: Set<string>
+  ): void {
+    const requirement = row.node.requirement
+    const el = table.createDiv('pm-req-tree-row')
+    // Dimmed rather than removed when it is only there to hold a match: the branch is
+    // the context, and context that looks like a result is context that misleads.
+    if (narrowed && !matched.has(requirement.id)) el.addClass('pm-req-tree-row--context')
+
+    const rail = el.createDiv('pm-req-tree-rail')
+    rail.style.setProperty('--pm-tree-depth', String(row.guides.length))
+    renderTreeGuides(rail, row.guides.length ? row.guides : null, row.lastChild)
+    if (row.hasChildren) {
+      new CollapseToggle(rail, {
+        collapsed: collapsed.has(requirement.id),
+        subject: t('req.derivations'),
+        onToggle: (event) => {
+          event.stopPropagation()
+          void this.toggleBranch(requirement.id)
+        }
+      }).el.style.setProperty('--level', String(row.guides.length))
+    }
+
+    const cell = el.createDiv('pm-req-tree-cell')
+    cell.createSpan({ cls: 'pm-req-id', text: requirement.id })
+    const held = displayText(requirement, this.lang)
+    cell.createSpan({ cls: 'pm-req-wording', text: requirement.title || held?.body || t('req.noWording') })
+    const status = reqStatusGlyph(this.plugin.settings, requirement.status)
+    if (status.label) {
+      new Chip(cell).setLabel(status.label).setColor(status.color).setLeadingIcon(status.icon).setVariant('outline')
+    }
+    // The same requirement in two places, not two requirements: said, or a reader counts
+    // it twice and wonders why the totals do not add up.
+    if (row.node.repeated) this.treeMark(cell, 'copy', t('req.treeRepeated'))
+    if (row.node.cyclic) this.treeMark(cell, 'refresh-cw', t('req.treeCyclic'))
+
+    el.addEventListener(
+      'click',
+      safeAsync(() => openRequirementModal(this.plugin, requirement.filePath ?? ''))
+    )
+  }
+
+  private treeMark(cell: HTMLElement, icon: string, text: string): void {
+    const badge = cell.createSpan({ cls: 'pm-req-state pm-req-state--gap' })
+    setIcon(badge.createSpan({ cls: 'pm-glyph-icon' }), icon)
+    badge.createSpan({ text })
+  }
+
+  private async toggleBranch(id: string): Promise<void> {
+    const folded = this.plugin.settings.collapsedRequirements
+    const at = folded.indexOf(id)
+    if (at === -1) folded.push(id)
+    else folded.splice(at, 1)
+    await this.plugin.saveSettings()
+    this.render()
   }
 
   /* ---- In and out ----------------------------------------------------------- */

@@ -465,6 +465,7 @@ export default class PMPlugin extends Plugin {
     if (!this.settings.scopeViews) this.settings.scopeViews = {}
     if (!this.settings.collapsedTasks) this.settings.collapsedTasks = {}
     if (!this.settings.collapsedProjects) this.settings.collapsedProjects = []
+    if (!this.settings.collapsedRequirements) this.settings.collapsedRequirements = []
     if (!this.settings.excludedFolders) this.settings.excludedFolders = []
     this.applyTicketAppearance()
 
