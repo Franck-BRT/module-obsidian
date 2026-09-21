@@ -40,7 +40,7 @@ export function idCategory(raw: string): string {
     .normalize('NFD')
     // Accents are dropped rather than transliterated: SYSTÈME and SYSTEME must not be two
     // categories, and an id is read aloud and typed by hand more often than it is copied.
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{M}/gu, '')
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, '')
   return cleaned || 'GEN'

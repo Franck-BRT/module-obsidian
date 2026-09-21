@@ -9,6 +9,7 @@ import {
   readChatContent,
   readEmbeddings,
   readModels,
+  type ChatMessage,
   type ChatRequest
 } from './protocol'
 
@@ -79,9 +80,27 @@ export class LlmClient {
     return readChatContent(await this.send('chat/completions', 'POST', buildChatBody(this.withDefaults(request))))
   }
 
-  /** The same, asked for in a shape, and read back defensively if the shape is ignored. */
+  /**
+   * The same, asked for in a shape — and asked again in words if the shape is the problem.
+   *
+   * `response_format` is an optional parameter, and a gateway in front of a model that
+   * does not implement it fails in whatever way that gateway fails: a 400 from a strict
+   * one, a 502 from a proxy whose upstream refused. None of those mean the question could
+   * not be answered; they mean it could not be asked that way. So it is asked again
+   * without the parameter, with the shape written into the instruction instead, and the
+   * reply is read out of whatever prose comes back.
+   *
+   * Once. A second failure is the gateway or the model being down, and asking a third
+   * time only makes the reader wait longer to be told so.
+   */
   async chatJson<T>(request: ChatRequest & { schema: { name: string; schema: unknown } }): Promise<T> {
-    return parseJsonContent<T>(await this.chat(request))
+    try {
+      return parseJsonContent<T>(await this.chat(request))
+    } catch (error) {
+      if (!worthRetryingWithoutSchema(error)) throw error
+      const { schema, ...plain } = request
+      return parseJsonContent<T>(await this.chat({ ...plain, messages: askForJson(request.messages, schema.schema) }))
+    }
   }
 
   async embed(input: string[], model = this.settings.modelEmbed): Promise<number[][]> {
@@ -160,8 +179,41 @@ export function describeHttp(status: number, body: string): string {
     return `Refused (${status}). The gateway wants credentials this one is not sending.`
   }
   if (status === 422 || status === 400) return `Rejected (${status}).${detail ? ` — ${detail}` : ''}`
+  // A gateway in front of models says something different with these two: it was reached,
+  // and what it was asked to reach was not. Which is the reader's cue to check the model
+  // name rather than the address.
+  if (status === 502 || status === 504) {
+    return `The gateway could not reach the model (${status}). Check the model name.${detail ? ` — ${detail}` : ''}`
+  }
   if (status >= 500) return `The gateway failed (${status}).${detail ? ` — ${detail}` : ''}`
   return `Unexpected status ${status}.${detail ? ` — ${detail}` : ''}`
+}
+
+/**
+ * Whether the shape of the request, rather than the question, is what failed.
+ *
+ * A refusal the gateway explains, a failure at whatever it was proxying to, or a reply
+ * that came back as prose: all three are answered by asking again in plain words. A
+ * timeout or an unreachable host is not — nothing was refused, nothing arrived.
+ */
+function worthRetryingWithoutSchema(error: unknown): boolean {
+  if (!(error instanceof LlmError)) return false
+  if (error.kind === 'shape') return true
+  if (error.kind !== 'http') return false
+  return error.status === 400 || error.status === 422 || error.status === 500 || error.status === 502
+}
+
+/** The shape written into the instruction, for a gateway that will not take it as a parameter. */
+function askForJson(messages: ChatMessage[], schema: unknown): ChatMessage[] {
+  const instruction = [
+    'Answer with JSON and nothing else: no prose before it, no prose after it, no code fence.',
+    `It must match this JSON Schema: ${JSON.stringify(schema)}`
+  ].join('\n')
+  const first = messages[0]
+  if (first?.role === 'system') {
+    return [{ role: 'system', content: `${first.content}\n${instruction}` }, ...messages.slice(1)]
+  }
+  return [{ role: 'system', content: instruction }, ...messages]
 }
 
 function reachFailure(error: unknown): string {

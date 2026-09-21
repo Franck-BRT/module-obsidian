@@ -12,6 +12,7 @@ import {
   type CoverageGap
 } from '../../store/requirements/ReqCoverage'
 import {
+  addLink,
   displayText,
   isStale,
   isUnreviewedMachine,
@@ -27,6 +28,14 @@ import {
 } from '../../store/requirements/Baseline'
 import type { DiffPart } from '../../store/requirements/reqDiff'
 import { formatDateShort } from '../../dates'
+import {
+  lexicalPairs,
+  mergePairs,
+  semanticPairs,
+  thresholdsFor,
+  type SimilarPair,
+  type SimilarStrictness
+} from '../../store/requirements/reqSimilar'
 import {
   branchIds,
   buildReqForest,
@@ -93,12 +102,18 @@ export class RequirementsView extends ItemView {
    * the same thing in both and a reader narrowing to a category should not lose it by
    * asking what covers it.
    */
-  private mode: 'library' | 'tree' | 'trace' | 'baseline' = 'library'
+  private mode: 'library' | 'tree' | 'trace' | 'baseline' | 'twins' = 'library'
   private gapFilter: CoverageGap | null = null
   /** Null until the notes have been read once; an empty map is a real answer, null is not. */
   private usage: Map<string, string[]> | null = null
   /** The baseline being compared against, once one has been chosen and loaded. */
   private baseline: Baseline | null = null
+  /** How hard the reader is looking for a requirement written twice. */
+  private strictness: SimilarStrictness = 'normal'
+  /** Null until a model has been asked; an empty list is a real answer, null is not. */
+  private semantic: SimilarPair[] | null = null
+  private embedding = false
+  private stopEmbedding = false
   /** True while a bulk translation is running, which is what the same button then stops. */
   private running = false
   private stopRequested = false
@@ -186,6 +201,10 @@ export class RequirementsView extends ItemView {
       this.renderBaselines(this.bodyEl, shown)
       return
     }
+    if (this.mode === 'twins') {
+      this.renderTwins(this.bodyEl, all)
+      return
+    }
     if (!shown.length) {
       new EmptyState(this.bodyEl).setIcon('🔍').setTitle(t('req.noneHere')).setBody(t('req.noneHereHint'))
       return
@@ -270,6 +289,7 @@ export class RequirementsView extends ItemView {
     mode('tree', t('req.modeTree'))
     mode('trace', t('req.modeTrace'))
     mode('baseline', t('req.modeBaseline'))
+    mode('twins', t('req.modeTwins'))
   }
 
   private renderFlagBar(flags: HTMLElement, all: Requirement[], langs: string[]): void {
@@ -384,6 +404,153 @@ export class RequirementsView extends ItemView {
   private renderBodyOnly(): void {
     this.bodyEl.empty()
     this.renderBody(this.plugin.index.requirementRefs(), reqLanguages(this.plugin.settings))
+  }
+
+  /* ---- The requirement written twice ------------------------------------------ */
+
+  /**
+   * Pairs that may be one requirement wearing two identifiers.
+   *
+   * It happens to every library more than one person writes into: the same need stated in
+   * two sections by two people who each looked and did not find the other. Two
+   * identifiers for one obligation is a contradiction waiting for whoever has to satisfy
+   * both of them.
+   *
+   * The letters are compared straight away and with nothing: that catches the
+   * copy-paste-and-edit case, which is most of them. A model is asked only if the reader
+   * asks, and finds the rest — the same obligation in words with nothing in common, or in
+   * the other language.
+   */
+  private renderTwins(parent: HTMLElement, all: Requirement[]): void {
+    const thresholds = thresholdsFor(this.strictness)
+    const items = all
+      .map((requirement) => ({ id: requirement.id, text: wordingFor(requirement) }))
+      .filter((item) => item.text !== '')
+    const pairs = mergePairs(lexicalPairs(items, thresholds.lexical), this.semantic ?? [])
+
+    const bar = parent.createDiv('pm-req-twins-bar')
+    for (const level of ['strict', 'normal', 'wide'] as const) {
+      new ChipButton(bar)
+        .setLabel(strictnessLabel(level))
+        .setShape('pill')
+        .setActive(this.strictness === level)
+        .onClick(() => {
+          this.strictness = level
+          // The vectors are kept; only the line they are judged against moves.
+          this.semantic = this.semantic === null ? null : recut(this.semanticAll, thresholdsFor(level).semantic)
+          this.render()
+        })
+    }
+    if (this.plugin.reqVectors.available) {
+      const ask = bar.createEl('button', { cls: 'pm-req-bulk' })
+      setIcon(ask.createSpan({ cls: 'pm-glyph-icon' }), this.embedding ? 'square' : 'brain')
+      ask.createSpan({ text: this.embedding ? t('req.bulkStop') : t('req.twinsAsk', { count: items.length }) })
+      ask.addEventListener(
+        'click',
+        this.embedding
+          ? () => {
+              this.stopEmbedding = true
+            }
+          : safeAsync(() => this.askForMeaning(all))
+      )
+    }
+    bar.createSpan({ cls: 'pm-req-rev', text: t('req.twinsCount', { count: pairs.length }) })
+
+    if (!pairs.length) {
+      new EmptyState(parent).setIcon('👯').setTitle(t('req.twinsNone')).setBody(t('req.twinsNoneHint'))
+      return
+    }
+    const list = parent.createDiv('pm-req-twins')
+    const byId = new Map(all.map((requirement) => [requirement.id, requirement]))
+    for (const pair of pairs) this.renderTwin(list, pair, byId)
+  }
+
+  private renderTwin(list: HTMLElement, pair: SimilarPair, byId: Map<string, Requirement>): void {
+    const left = byId.get(pair.a)
+    const right = byId.get(pair.b)
+    if (!left || !right) return
+
+    const row = list.createDiv('pm-req-twin')
+    const head = row.createDiv('pm-req-twin-head')
+    head.createSpan({ cls: 'pm-req-twin-score', text: `${Math.round(pair.score * 100)} %` })
+    // Both numbers, because they answer different questions: one says the letters are
+    // alike, the other says a model thinks the meanings are.
+    if (pair.lexical > 0) {
+      head.createSpan({ cls: 'pm-req-rev', text: t('req.twinsLexical', { score: Math.round(pair.lexical * 100) }) })
+    }
+    if (pair.semantic !== undefined) {
+      head.createSpan({ cls: 'pm-req-rev', text: t('req.twinsSemantic', { score: Math.round(pair.semantic * 100) }) })
+    }
+    // Already settled: kept in the list rather than hidden, because a pair somebody
+    // judged and linked is the answer to "have we looked at this one".
+    const known =
+      left.links.some((link) => link.kind === 'duplicates' && link.to.toUpperCase() === pair.b) ||
+      right.links.some((link) => link.kind === 'duplicates' && link.to.toUpperCase() === pair.a)
+    if (known) {
+      const badge = head.createSpan({ cls: 'pm-req-state pm-req-state--ok' })
+      setIcon(badge.createSpan({ cls: 'pm-glyph-icon' }), 'check')
+      badge.createSpan({ text: t('req.twinsKnown') })
+      row.addClass('pm-req-twin--known')
+    } else {
+      const mark = head.createEl('button', { cls: 'pm-req-accept', text: t('req.twinsMark') })
+      mark.addEventListener(
+        'click',
+        safeAsync(() => this.markDuplicate(left, right))
+      )
+    }
+
+    for (const requirement of [left, right]) {
+      const side = row.createDiv('pm-req-twin-side')
+      side.createSpan({ cls: 'pm-req-id', text: requirement.id })
+      side.createSpan({ cls: 'pm-req-wording', text: wordingFor(requirement) })
+      side.addEventListener(
+        'click',
+        safeAsync(() => openRequirementModal(this.plugin, requirement.filePath ?? ''))
+      )
+    }
+  }
+
+  /**
+   * Records that two requirements say the same thing.
+   *
+   * Written on one side only. The relation is symmetric and saying it twice would be two
+   * facts where there is one — and the traceability view reads links in both directions
+   * already.
+   */
+  private async markDuplicate(left: Requirement, right: Requirement): Promise<void> {
+    const path = left.filePath
+    if (!path) return
+    await this.plugin.requirements.save(path, (current) => addLink(current, 'duplicates', right.id))
+    this.plugin.index.build()
+    this.render()
+  }
+
+  /** Every vector the last run produced, so changing the setting does not re-ask for them. */
+  private semanticAll: SimilarPair[] = []
+
+  private async askForMeaning(all: Requirement[]): Promise<void> {
+    this.embedding = true
+    this.stopEmbedding = false
+    this.render()
+    const notice = new Notice(t('req.twinsEmbedding', { done: 0, total: all.length }), 0)
+    try {
+      const vectors = await this.plugin.reqVectors.embedAll(
+        all,
+        (progress) => notice.setMessage(t('req.twinsEmbedding', { done: progress.done, total: progress.total })),
+        () => this.stopEmbedding
+      )
+      // Cut wide once and kept: the reader moves the line back and forth while reading,
+      // and re-asking a gateway for that would be absurd.
+      this.semanticAll = semanticPairs(vectors, thresholdsFor('wide').semantic)
+      this.semantic = recut(this.semanticAll, thresholdsFor(this.strictness).semantic)
+    } catch (error) {
+      new Notice(t('req.twinsFailed', { reason: error instanceof Error ? error.message : '' }))
+    } finally {
+      notice.hide()
+      this.embedding = false
+      this.stopEmbedding = false
+    }
+    this.render()
   }
 
   /* ---- The tree of derivations ----------------------------------------------- */
@@ -1236,4 +1403,25 @@ function describeFilter(filter: ReqFilterState): string {
   if (filter.search.trim()) bits.push(`search: ${filter.search.trim()}`)
   if (filter.flag !== 'all') bits.push(`flag: ${filter.flag}`)
   return bits.join(' · ')
+}
+
+function strictnessLabel(level: SimilarStrictness): string {
+  switch (level) {
+    case 'strict':
+      return t('req.twinsStrict')
+    case 'wide':
+      return t('req.twinsWide')
+    default:
+      return t('req.twinsNormal')
+  }
+}
+
+/** The same pairs judged against another line, without asking anything again. */
+function recut(pairs: SimilarPair[], threshold: number): SimilarPair[] {
+  return pairs.filter((pair) => (pair.semantic ?? 0) >= threshold)
+}
+
+/** What a pair is compared and shown on: the wording that governs. */
+function wordingFor(requirement: Requirement): string {
+  return textOf(requirement, requirement.sourceLang)?.body ?? Object.values(requirement.text)[0]?.body ?? ''
 }

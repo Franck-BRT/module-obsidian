@@ -764,3 +764,62 @@
 .pm-req-tree-isolated {
   padding: 0 var(--size-4-3);
 }
+
+/* ---- The requirement written twice ---------------------------------------------- */
+
+.pm-req-twins-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  flex-wrap: wrap;
+  padding: var(--size-4-2) var(--size-4-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pm-req-twins {
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+/* A pair reads as one block with two halves, not as two rows that happen to be
+   adjacent: what is being judged is the pair, and a list of singles invites the eye
+   to read down instead of across. */
+.pm-req-twin {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: var(--size-2-3);
+  margin-bottom: var(--size-2-3);
+}
+
+.pm-req-twin--known {
+  opacity: 0.6;
+}
+
+.pm-req-twin-head {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--size-2-2);
+}
+
+.pm-req-twin-score {
+  font-weight: var(--font-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-req-twin-side {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-2-2);
+  padding: 3px 0;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.pm-req-twin-side:hover {
+  background: var(--background-modifier-hover);
+}
+
+.pm-req-twin-side .pm-req-wording {
+  -webkit-line-clamp: 2;
+}

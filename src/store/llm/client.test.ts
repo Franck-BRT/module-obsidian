@@ -168,3 +168,91 @@ describe('what a failure says to the reader', () => {
     expect(describeHttp(500, 'x'.repeat(5000)).length).toBeLessThan(300)
   })
 })
+
+/**
+ * A gateway in front of models can fail at the proxy rather than at the question:
+ * `response_format` is optional, and one that does not implement it answers 400, or 502
+ * from whatever it was proxying to. None of that means the question is unanswerable.
+ */
+describe('asking again when the shape is what failed', () => {
+  const SCHEMA = { name: 'verdict', schema: { type: 'object' } }
+  const ask = { model: 'm', messages: [{ role: 'system' as const, content: 'Judge this.' }], schema: SCHEMA }
+
+  /** Fails the first call with `status`, then answers plainly. */
+  function flaky(status: number, body = 'upstream said no') {
+    const seen: Parameters<HttpTransport>[0][] = []
+    const transport: HttpTransport = (request) => {
+      seen.push(request)
+      if (seen.length === 1) return Promise.resolve({ status, text: body })
+      return Promise.resolve({
+        status: 200,
+        text: JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] })
+      })
+    }
+    return { transport, seen }
+  }
+
+  it('asks again without the parameter when the gateway refuses it', async () => {
+    const { transport, seen } = flaky(400)
+    const answer = await new LlmClient({ settings: settings(), transport }).chatJson<{ ok: boolean }>(ask)
+
+    expect(answer).toEqual({ ok: true })
+    expect(seen).toHaveLength(2)
+    const second = JSON.parse(seen[1].body ?? '{}') as { response_format?: unknown; messages: { content: string }[] }
+    expect(second.response_format).toBeUndefined()
+    // The shape moves into the instruction rather than being dropped.
+    expect(second.messages[0].content).toContain('JSON Schema')
+    expect(second.messages[0].content).toContain('Judge this.')
+  })
+
+  it('asks again when the proxy could not reach the model', async () => {
+    const { transport, seen } = flaky(502, 'BadGatewayError')
+    await new LlmClient({ settings: settings(), transport }).chatJson(ask)
+    expect(seen).toHaveLength(2)
+  })
+
+  it('asks again when the reply came back as prose', async () => {
+    const seen: Parameters<HttpTransport>[0][] = []
+    const transport: HttpTransport = (request) => {
+      seen.push(request)
+      const content = seen.length === 1 ? 'Bien sûr, voici mon avis.' : '{"ok":true}'
+      return Promise.resolve({ status: 200, text: JSON.stringify({ choices: [{ message: { content } }] }) })
+    }
+    expect(await new LlmClient({ settings: settings(), transport }).chatJson(ask)).toEqual({ ok: true })
+    expect(seen).toHaveLength(2)
+  })
+
+  // Nothing was refused and nothing arrived, so there is nothing to ask differently.
+  it('does not ask again when the gateway was never reached', async () => {
+    const seen: string[] = []
+    const transport: HttpTransport = () => {
+      seen.push('tried')
+      return Promise.reject(new Error('ECONNREFUSED'))
+    }
+    await expect(new LlmClient({ settings: settings(), transport }).chatJson(ask)).rejects.toThrow(LlmError)
+    expect(seen).toHaveLength(1)
+  })
+
+  // A second failure is the gateway being down, and a third attempt only makes the
+  // reader wait longer to be told so.
+  it('gives up after the second attempt', async () => {
+    const seen: string[] = []
+    const transport: HttpTransport = () => {
+      seen.push('tried')
+      return Promise.resolve({ status: 502, text: 'down' })
+    }
+    await expect(new LlmClient({ settings: settings(), transport }).chatJson(ask)).rejects.toThrow(LlmError)
+    expect(seen).toHaveLength(2)
+  })
+})
+
+describe('what a failure tells the reader to do', () => {
+  it('sends them to the model name when the proxy could not reach it', () => {
+    expect(describeHttp(502, 'BadGatewayError')).toContain('model name')
+    expect(describeHttp(504, '')).toContain('model name')
+  })
+
+  it('sends them to the address when there is nothing at it', () => {
+    expect(describeHttp(404, '')).toContain('/v1')
+  })
+})

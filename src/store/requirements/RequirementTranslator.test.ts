@@ -188,7 +188,9 @@ describe('RequirementTranslator', () => {
       const { transport, calls } = gateway([{ status: 500, body: 'boom' }])
       const outcomes = await new RequirementTranslator(() => settings, store, transport).translateMany(jobs)
       expect(outcomes).toHaveLength(3)
-      expect(calls()).toBe(3)
+      // Twice each: a gateway failure on a structured request is answered by asking the
+      // same question again in plain words, and only then counted as a failure.
+      expect(calls()).toBe(6)
     })
 
     it('stops when the reader asks it to', async () => {
