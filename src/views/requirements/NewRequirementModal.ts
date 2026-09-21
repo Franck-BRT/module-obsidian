@@ -1,5 +1,9 @@
 import { App, ButtonComponent, ExtraButtonComponent, Modal, setIcon } from 'obsidian'
 import type PMPlugin from '../../main'
+import type { ReqLinkKind, Requirement } from '../../store/requirements/Requirement'
+import { DERIVE_KINDS } from '../../store/requirements/reqDerive'
+import { renderSelectControl } from '../../ui/composites/properties'
+import { reqLinkKindLabel } from './reqPalette'
 import { allocateReqId, schemeOf } from '../../store/requirements/RequirementStore'
 import { idCategory, knownCategories, reqFileName } from '../../store/requirements/reqId'
 import { Chip } from '../../ui/primitives/Chip'
@@ -9,6 +13,8 @@ import { t } from '../../i18n'
 export interface NewRequirementDraft {
   category: string
   title: string
+  /** How the new one relates to the one it was started from. Absent when it starts blank. */
+  kind?: ReqLinkKind
 }
 
 /**
@@ -37,10 +43,20 @@ export class NewRequirementModal extends Modal {
     private plugin: PMPlugin,
     /** Preset from the category the library is filtered on: usually the one being worked in. */
     category: string,
-    private onSubmit: (draft: NewRequirementDraft) => void
+    private onSubmit: (draft: NewRequirementDraft) => void,
+    /**
+     * The requirement this one is being started from, when it is being started from one.
+     *
+     * The form is the same form — what is being decided is still where it is filed and
+     * what it is called — with the relation to the original added, and the original's
+     * own answers offered as the starting point.
+     */
+    private from: Requirement | null = null
   ) {
     super(app)
-    this.draft = { category: category.trim(), title: '' }
+    this.draft = from
+      ? { category: from.category.trim() || category.trim(), title: from.title, kind: DERIVE_KINDS[0] }
+      : { category: category.trim(), title: '' }
   }
 
   onOpen(): void {
@@ -54,6 +70,7 @@ export class NewRequirementModal extends Modal {
     this.renderTitle(body)
     const grid = body.createDiv('pm-te-props').createDiv('pm-prop-grid')
     this.renderCategory(grid)
+    if (this.from) this.renderKind(grid)
     this.renderFooter(contentEl)
 
     this.scope.register([], 'Enter', () => {
@@ -73,7 +90,7 @@ export class NewRequirementModal extends Modal {
     setIcon(crumb.createSpan({ cls: 'pm-te-crumb-icon' }), 'folder')
     crumb.createSpan({ cls: 'pm-te-crumb-name', text: this.plugin.settings.requirements.folder })
     setIcon(crumb.createSpan({ cls: 'pm-te-crumb-sep' }), 'chevron-right')
-    crumb.createSpan({ text: t('req.new') })
+    crumb.createSpan({ text: this.from ? t('req.derivedFrom', { id: this.from.id }) : t('req.new') })
 
     header.createDiv('pm-te-header-spacer')
     const close = new ExtraButtonComponent(header).setIcon('x').setTooltip(t('common.close'))
@@ -137,6 +154,36 @@ export class NewRequirementModal extends Modal {
     )
   }
 
+  /**
+   * The relation the new requirement will carry toward the one it came from.
+   *
+   * Written on the new one and pointing back, which is the direction the trade reads:
+   * a requirement knows what it derives from, and what derives from it is worked out by
+   * looking, not by a second link somebody has to remember to keep in step.
+   *
+   * Which requirement it points at is not repeated here: the line at the top of the form
+   * says it, and a form that says one thing twice reads as two things.
+   */
+  private renderKind(parent: HTMLElement): void {
+    renderPropRow(
+      parent,
+      t('req.linkKind'),
+      () => {
+        const host = createDiv('pm-prop-value')
+        renderSelectControl({
+          container: host,
+          value: this.draft.kind ?? DERIVE_KINDS[0],
+          options: DERIVE_KINDS.map((kind) => ({ id: kind, label: reqLinkKindLabel(kind) })),
+          onChange: (kind) => {
+            this.draft.kind = kind as ReqLinkKind
+          }
+        })
+        return host
+      },
+      'link'
+    )
+  }
+
   private renderFooter(parent: HTMLElement): void {
     const footer = parent.createDiv('pm-te-footer')
     this.idHint = footer.createSpan({ cls: 'pm-req-id' })
@@ -147,7 +194,7 @@ export class NewRequirementModal extends Modal {
     footer.createDiv('pm-footer-spacer')
     new ButtonComponent(footer).setButtonText(t('dialog.cancel')).onClick(() => this.close())
     new ButtonComponent(footer)
-      .setButtonText(t('req.create'))
+      .setButtonText(this.from ? t('req.derive') : t('req.create'))
       .setCta()
       .onClick(() => this.submit())
   }

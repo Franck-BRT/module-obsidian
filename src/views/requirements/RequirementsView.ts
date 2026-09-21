@@ -62,6 +62,7 @@ import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
 import { NewRequirementModal } from './NewRequirementModal'
+import { deriveRequirement } from './deriveReq'
 import { renderStars } from './reqStars'
 import { assessRequirement } from '../../store/requirements/reqScore'
 import { reqCriticalityGlyph, reqLanguages, reqStatusGlyph, reqTypeGlyph } from './reqPalette'
@@ -1215,6 +1216,18 @@ export class RequirementsView extends ItemView {
         .onClick(
           safeAsync(async () => {
             if (requirement.filePath) await this.app.workspace.openLinkText(requirement.filePath, '', 'tab')
+          })
+        )
+    )
+    // Where somebody reading the library thinks of it, rather than only once they are
+    // inside the requirement.
+    menu.addItem((item) =>
+      item
+        .setTitle(t('req.derive'))
+        .setIcon('git-branch-plus')
+        .onClick(() =>
+          deriveRequirement(this.plugin, requirement, (path) => {
+            void openRequirementModal(this.plugin, path)
           })
         )
     )

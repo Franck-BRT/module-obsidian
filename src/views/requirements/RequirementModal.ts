@@ -15,6 +15,7 @@ import {
 } from '../../store/requirements/Requirement'
 import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
 import { addAlias, aliasWithPrefix, nameOwner, normalizeAlias, removeAlias } from '../../store/requirements/reqAlias'
+import { deriveRequirement } from './deriveReq'
 import { safeAsync } from '../../utils'
 import { checkWording, type QualityFinding, type QualityRule } from '../../store/requirements/reqQuality'
 import { assessRequirement, type QualityAxis, type QualityAxisId } from '../../store/requirements/reqScore'
@@ -93,6 +94,12 @@ class RequirementModal extends Modal {
     contentEl.empty()
     const header = contentEl.createDiv('pm-te-header')
     header.createSpan({ cls: 'pm-req-id', text: this.draft.id })
+    const derive = header.createEl('button', { cls: 'pm-req-copy', attr: { 'aria-label': t('req.derive') } })
+    setIcon(derive, 'git-branch-plus')
+    derive.addEventListener(
+      'click',
+      safeAsync(() => this.derive())
+    )
     const copy = header.createEl('button', { cls: 'pm-req-copy', attr: { 'aria-label': t('req.copyId') } })
     setIcon(copy, 'copy')
     copy.addEventListener('click', () => {
@@ -932,6 +939,24 @@ class RequirementModal extends Modal {
 
   private author(): string {
     return this.plugin.settings.globalTeamMembers[0] ?? ''
+  }
+
+  /**
+   * A new requirement started from this one.
+   *
+   * What is on screen is written first. The copy is taken from the draft, so an edit made
+   * a second ago is in it — and leaving the original unsaved while its child carries the
+   * new wording is the kind of divergence this library exists to prevent.
+   *
+   * This editor gives way to the new one, because the new one is what is about to be
+   * worked on.
+   */
+  private async derive(): Promise<void> {
+    if (this.dirty) await this.save()
+    deriveRequirement(this.plugin, this.draft, (path) => {
+      this.close()
+      void openRequirementModal(this.plugin, path)
+    })
   }
 
   private async save(): Promise<void> {

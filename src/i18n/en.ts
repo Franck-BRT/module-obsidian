@@ -1036,6 +1036,8 @@ export const en = {
   'req.block.missing': '{id}: no requirement carries that identifier.',
   'req.block.none': 'No requirement matches.',
   'req.block.unknownKeys': 'Unknown key, ignored: {list}',
+  'req.derive': 'Derive',
+  'req.derivedFrom': 'Derived from {id}',
   'req.aliases': 'Aliases',
   'req.noAliases':
     'No alias. A requirement can be cited under a project’s own numbering without ceasing to be the same requirement.',

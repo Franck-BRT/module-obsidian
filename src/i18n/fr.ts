@@ -1014,6 +1014,8 @@ export const fr: Catalog = {
   'req.block.missing': '{id} : aucune exigence ne porte cet identifiant.',
   'req.block.none': 'Aucune exigence ne correspond.',
   'req.block.unknownKeys': 'Clé inconnue, ignorée : {list}',
+  'req.derive': 'Dériver',
+  'req.derivedFrom': 'Dérivée de {id}',
   'req.aliases': 'Alias',
   'req.noAliases':
     "Aucun alias. Une exigence peut être citée sous la numérotation d'un projet sans cesser d'être la même exigence.",
