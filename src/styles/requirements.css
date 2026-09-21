@@ -1127,3 +1127,22 @@
 .pm-req-prompt-spacer {
   flex: 1 1 auto;
 }
+
+/* The category of a requirement about to be created: the field, then everything the
+   library already numbers under, one click away. */
+.pm-req-newcat {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.pm-req-newcat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pm-req-newcat-chips .pm-chip {
+  cursor: pointer;
+}

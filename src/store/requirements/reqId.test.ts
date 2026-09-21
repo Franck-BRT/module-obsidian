@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ID_SCHEME, formatReqId, idCategory, isReqId, nextReqId, parseReqId, reqFileName } from './reqId'
+import {
+  DEFAULT_ID_SCHEME,
+  formatReqId,
+  idCategory,
+  isReqId,
+  knownCategories,
+  nextReqId,
+  parseReqId,
+  reqFileName
+} from './reqId'
 
 describe('reading an identifier', () => {
   it('splits it into its three parts', () => {
@@ -83,5 +92,28 @@ describe('the file a requirement lives in', () => {
 
   it('is just the id when there is no title yet', () => {
     expect(reqFileName('REQ-SYS-0042', '   ')).toBe('REQ-SYS-0042')
+  })
+})
+
+describe('knownCategories', () => {
+  const scheme = { prefix: 'REQ', width: 4 }
+
+  it('offers what the library already numbers under, in order', () => {
+    expect(knownCategories(scheme, ['REQ-SYS-0001', 'REQ-ELEC-0002', 'REQ-SYS-0009'])).toEqual(['ELEC', 'SYS'])
+  })
+
+  // A category whose last requirement was deleted is still spoken for: its next number
+  // still follows the old one.
+  it('offers a category that only the counters remember', () => {
+    expect(knownCategories(scheme, [], { MECA: 4 })).toEqual(['MECA'])
+  })
+
+  // Suggesting theirs would mint one of ours onto their family of identifiers.
+  it('leaves out a category numbered under somebody else’s prefix', () => {
+    expect(knownCategories(scheme, ['SUP-ABC-0001', 'REQ-SYS-0001'])).toEqual(['SYS'])
+  })
+
+  it('has nothing to offer from an empty library', () => {
+    expect(knownCategories(scheme, [])).toEqual([])
   })
 })

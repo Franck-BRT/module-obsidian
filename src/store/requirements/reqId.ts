@@ -78,6 +78,31 @@ export function nextReqId(scheme: IdScheme, category: string, taken: Iterable<st
   return formatReqId(scheme, wanted, highest + 1)
 }
 
+/**
+ * The categories this library already numbers under.
+ *
+ * Offered when a requirement is created, because a category is not a free field in
+ * practice: SYS and SYSTEME would be two counters, two families of identifiers and one
+ * reader wondering which of them is the real one. Taken from the identifiers themselves
+ * and from the counters, so a category whose last requirement was deleted is still
+ * offered — it is still spoken for, and its next number still follows the old one.
+ *
+ * Only this library's own prefix: a supplier's REQ imported as SUP-ABC-0001 is numbered
+ * under their scheme, and suggesting ABC here would mint one of ours onto their family.
+ */
+export function knownCategories(
+  scheme: IdScheme,
+  ids: Iterable<string>,
+  counters: Record<string, number> = {}
+): string[] {
+  const seen = new Set(Object.keys(counters))
+  for (const id of ids) {
+    const parsed = parseReqId(id)
+    if (parsed && parsed.prefix === scheme.prefix.toUpperCase()) seen.add(parsed.category)
+  }
+  return [...seen].sort((a, b) => a.localeCompare(b))
+}
+
 /** A file name for a requirement: the id leads, so a folder sorts the way a register does. */
 export function reqFileName(id: string, title: string): string {
   const clean = title

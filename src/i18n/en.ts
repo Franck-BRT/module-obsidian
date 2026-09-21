@@ -1002,6 +1002,8 @@ export const en = {
   'req.allTypes': 'All types',
   'req.allStatuses': 'All statuses',
   'req.titlePlaceholder': 'Requirement title',
+  'req.categoryPlaceholder': 'SYS, ELEC, MECH…',
+  'req.create': 'Create',
   'req.wordingPlaceholder': 'The system shall…',
   'req.noWording': 'Not written yet',
   'req.fallbackFrom': 'Shown in {lang}',

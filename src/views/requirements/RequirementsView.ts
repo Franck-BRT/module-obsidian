@@ -61,6 +61,7 @@ import { confirmDialog, promptText } from '../../ui/ModalFactory'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
+import { NewRequirementModal } from './NewRequirementModal'
 import { renderStars } from './reqStars'
 import { assessRequirement } from '../../store/requirements/reqScore'
 import { reqCriticalityGlyph, reqLanguages, reqStatusGlyph, reqTypeGlyph } from './reqPalette'
@@ -179,10 +180,7 @@ export class RequirementsView extends ItemView {
         .setIcon('📐')
         .setTitle(t('req.empty'))
         .setBody(t('req.emptyHint'))
-        .setAction(
-          t('req.new'),
-          safeAsync(() => this.createRequirement())
-        )
+        .setAction(t('req.new'), () => this.createRequirement())
       return
     }
 
@@ -376,10 +374,7 @@ export class RequirementsView extends ItemView {
     const add = right.createEl('button', { cls: 'pm-req-new mod-cta' })
     setIcon(add.createSpan({ cls: 'pm-glyph-icon' }), 'plus')
     add.createSpan({ text: t('req.new') })
-    add.addEventListener(
-      'click',
-      safeAsync(() => this.createRequirement())
-    )
+    add.addEventListener('click', () => this.createRequirement())
   }
 
   private renderSelect(
@@ -1322,9 +1317,21 @@ export class RequirementsView extends ItemView {
     this.render()
   }
 
-  private async createRequirement(): Promise<void> {
-    const created = await this.plugin.requirements.create({ category: this.filter.category })
-    if (created?.filePath) await openRequirementModal(this.plugin, created.filePath)
+  /**
+   * Asked before it is written, because the identifier cannot be taken back afterwards.
+   *
+   * The category the library is filtered on is offered as the answer, since that is
+   * usually the family being worked in — but it is offered, not applied: a reader who
+   * narrowed the list to read something and then had a different thought should not
+   * find their new requirement filed under what they were reading.
+   */
+  private createRequirement(): void {
+    new NewRequirementModal(this.app, this.plugin, this.filter.category, (draft) => {
+      void (async () => {
+        const created = await this.plugin.requirements.create(draft)
+        if (created?.filePath) await openRequirementModal(this.plugin, created.filePath)
+      })()
+    }).open()
   }
 }
 

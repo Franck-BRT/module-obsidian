@@ -980,6 +980,8 @@ export const fr: Catalog = {
   'req.allTypes': 'Tous les types',
   'req.allStatuses': 'Tous les statuts',
   'req.titlePlaceholder': "Intitulé de l'exigence",
+  'req.categoryPlaceholder': 'SYS, ELEC, MECA…',
+  'req.create': 'Créer',
   'req.wordingPlaceholder': 'Le système doit…',
   'req.noWording': 'Pas encore rédigée',
   'req.fallbackFrom': 'Affichée en {lang}',
