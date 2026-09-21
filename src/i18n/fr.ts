@@ -1243,6 +1243,8 @@ export const fr: Catalog = {
   'settings.req.blockFieldsEmpty':
     "Aucune colonne choisie : les blocs affichent la liste d'origine (identifiant, énoncé, statut, note).",
   'settings.req.blockFieldsAdd': 'Ajouter une colonne',
+  'settings.req.blockFieldsUp': 'Monter',
+  'settings.req.blockFieldsDown': 'Descendre',
   'settings.req.blockFieldsAll': 'Toutes les colonnes sont déjà dans la liste.',
   'settings.req.blockFieldsReset': "Revenir à la liste d'origine",
   'settings.req.blockFieldsResetDesc': 'Identifiant, énoncé, statut, note.',

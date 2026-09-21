@@ -764,9 +764,33 @@ export class PMSettingTab extends PluginSettingTab {
           type: 'list',
           heading: t('settings.req.blockFields'),
           emptyState: t('settings.req.blockFieldsEmpty'),
-          items: chosen.map((field) => ({
+          items: chosen.map((field, index) => ({
             name: reqBlockFieldLabel(field),
-            render: () => undefined
+            // Buttons as well as the drag handle, and not only for the mouseless: the
+            // order is the whole point of this list, and an affordance that is the only
+            // way to reach it must not be the one that is hardest to be sure of.
+            render: (setting: Setting) => {
+              setting.addExtraButton((button) =>
+                button
+                  .setIcon('arrow-up')
+                  .setTooltip(t('settings.req.blockFieldsUp'))
+                  .setDisabled(index === 0)
+                  // Checked again here: a disabled extra button is a styled div, and a
+                  // click on it still arrives.
+                  .onClick(() => {
+                    if (index > 0) this.reorder(chosen, index, index - 1)
+                  })
+              )
+              setting.addExtraButton((button) =>
+                button
+                  .setIcon('arrow-down')
+                  .setTooltip(t('settings.req.blockFieldsDown'))
+                  .setDisabled(index === chosen.length - 1)
+                  .onClick(() => {
+                    if (index < chosen.length - 1) this.reorder(chosen, index, index + 1)
+                  })
+              )
+            }
           })),
           onReorder: (from, to) => this.reorder(chosen, from, to),
           onDelete: (index) => {

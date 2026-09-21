@@ -1267,6 +1267,8 @@ export const en = {
   'settings.req.blockFieldsEmpty':
     'No columns chosen: blocks show the built-in list (identifier, statement, status, rating).',
   'settings.req.blockFieldsAdd': 'Add a column',
+  'settings.req.blockFieldsUp': 'Move up',
+  'settings.req.blockFieldsDown': 'Move down',
   'settings.req.blockFieldsAll': 'Every column is already in the list.',
   'settings.req.blockFieldsReset': 'Back to the built-in list',
   'settings.req.blockFieldsResetDesc': 'Identifier, statement, status, rating.',
