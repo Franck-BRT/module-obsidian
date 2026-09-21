@@ -191,6 +191,27 @@ export function pruneForest(roots: ReqTreeNode[], matched: ReadonlySet<string>):
   return roots.map((root) => keep(root)).filter((root): root is ReqTreeNode => root !== null)
 }
 
+/**
+ * Every branch in the forest, which is everything that can be folded.
+ *
+ * Deduplicated, because a requirement hanging under two parents is drawn twice and is
+ * still one branch: folding it folds both, and listing it twice would make "fold all"
+ * report a number larger than the tree has.
+ */
+export function branchIds(roots: ReqTreeNode[]): string[] {
+  const ids: string[] = []
+  const seen = new Set<string>()
+  const walk = (node: ReqTreeNode): void => {
+    if (node.children.length && !seen.has(node.requirement.id)) {
+      seen.add(node.requirement.id)
+      ids.push(node.requirement.id)
+    }
+    for (const child of node.children) walk(child)
+  }
+  for (const root of roots) walk(root)
+  return ids
+}
+
 /** How deep the forest runs, which is the one number that says whether it has a shape. */
 export function forestDepth(roots: ReqTreeNode[]): number {
   let deepest = 0

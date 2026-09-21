@@ -1087,6 +1087,8 @@ export const fr: Catalog = {
   'req.importDuplicate': 'Identifiant déjà utilisé dans ce fichier',
   'req.modeTree': 'Arbre',
   'req.derivations': 'les dérivations',
+  'req.foldAll': 'Tout replier',
+  'req.unfoldAll': 'Tout déplier',
   'req.treeShape': { one: '{roots} racine · {depth} niveaux', other: '{roots} racines · {depth} niveaux' },
   'req.treeEmpty': 'Aucune dérivation',
   'req.treeEmptyHint':

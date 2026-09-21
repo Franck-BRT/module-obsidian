@@ -701,6 +701,12 @@
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
+.pm-req-tree-folds {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
 .pm-req-tree {
   --pm-tree-indent: 20px;
   padding: var(--size-4-2) var(--size-4-3);

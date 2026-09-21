@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { addLink, makeRequirement } from './Requirement'
-import { buildReqForest, flattenForest, forestDepth, pruneForest, type ReqTreeNode } from './reqTree'
+import { branchIds, buildReqForest, flattenForest, forestDepth, pruneForest, type ReqTreeNode } from './reqTree'
 
 const req = (id: string) => makeRequirement({ id, sourceLang: 'fr' })
 const under = (id: string, parent: string) => addLink(req(id), 'derives-from', parent)
@@ -138,6 +138,35 @@ describe('flattenForest', () => {
     expect(rows[0].guides).toEqual([])
     expect(rows[1].guides).toEqual([false])
     expect(rows[2].guides).toEqual([true, false])
+  })
+})
+
+describe('branchIds', () => {
+  it('names every branch, and nothing that is a leaf', () => {
+    const forest = buildReqForest([
+      req('REQ-A-0001'),
+      under('REQ-A-0002', 'REQ-A-0001'),
+      under('REQ-A-0003', 'REQ-A-0002')
+    ])
+    expect(branchIds(forest.roots)).toEqual(['REQ-A-0001', 'REQ-A-0002'])
+  })
+
+  // Folding it folds both, so counting it twice would report a number larger than the
+  // tree has.
+  it('names a requirement hanging under two parents once', () => {
+    const shared = addLink(under('REQ-A-0003', 'REQ-A-0001'), 'derives-from', 'REQ-A-0002')
+    const forest = buildReqForest([req('REQ-A-0001'), req('REQ-A-0002'), shared, under('REQ-A-0004', 'REQ-A-0003')])
+    expect(branchIds(forest.roots).filter((id) => id === 'REQ-A-0003')).toHaveLength(1)
+  })
+
+  it('names nothing in a forest with no branches', () => {
+    expect(branchIds(buildReqForest([req('REQ-A-0001')]).roots)).toEqual([])
+  })
+
+  it('names each requirement of a loop once, however many times the walk met it', () => {
+    const a = addLink(req('REQ-A-0001'), 'derives-from', 'REQ-A-0002')
+    const b = addLink(req('REQ-A-0002'), 'derives-from', 'REQ-A-0001')
+    expect(branchIds(buildReqForest([a, b]).roots)).toEqual(['REQ-A-0001', 'REQ-A-0002'])
   })
 })
 

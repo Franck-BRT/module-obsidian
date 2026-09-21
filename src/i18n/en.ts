@@ -1109,6 +1109,8 @@ export const en = {
   'req.importDuplicate': 'Identifier already used in this file',
   'req.modeTree': 'Tree',
   'req.derivations': 'the derivations',
+  'req.foldAll': 'Fold everything',
+  'req.unfoldAll': 'Unfold everything',
   'req.treeShape': { one: '{roots} root · {depth} levels', other: '{roots} roots · {depth} levels' },
   'req.treeEmpty': 'No derivations',
   'req.treeEmptyHint':

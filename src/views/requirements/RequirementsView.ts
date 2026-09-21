@@ -28,11 +28,13 @@ import {
 import type { DiffPart } from '../../store/requirements/reqDiff'
 import { formatDateShort } from '../../dates'
 import {
+  branchIds,
   buildReqForest,
   flattenForest,
   forestDepth,
   pruneForest,
-  type FlatReqRow
+  type FlatReqRow,
+  type ReqTreeNode
 } from '../../store/requirements/reqTree'
 import { CollapseToggle } from '../../ui/primitives/CollapseToggle'
 import { renderTreeGuides } from '../../ui/composites/treeGuides'
@@ -418,6 +420,8 @@ export class RequirementsView extends ItemView {
       )
     }
 
+    this.renderFoldButtons(head, roots)
+
     if (!roots.length) {
       new EmptyState(parent)
         .setIcon('🌳')
@@ -452,6 +456,51 @@ export class RequirementsView extends ItemView {
         new Set()
       )
     }
+  }
+
+  /**
+   * Folding and unfolding the whole tree.
+   *
+   * Each button is drawn only when it would do something: on a tree already folded shut,
+   * "fold everything" is a control that answers a click with nothing, and a reader who
+   * meets one of those stops trusting the others.
+   *
+   * It acts on the branches in view, which under a filter is the pruned forest. Folding
+   * what is on screen is the only reading of "everything" that matches what the reader
+   * is looking at.
+   */
+  private renderFoldButtons(head: HTMLElement, roots: ReqTreeNode[]): void {
+    const branches = branchIds(roots)
+    if (!branches.length) return
+    const folded = new Set(this.plugin.settings.collapsedRequirements)
+    const group = head.createDiv('pm-req-tree-folds')
+    if (branches.some((id) => !folded.has(id))) {
+      new ChipButton(group)
+        .setLabel(t('req.foldAll'))
+        .setShape('pill')
+        .onClick(safeAsync(() => this.setFolded(branches, true)))
+    }
+    if (branches.some((id) => folded.has(id))) {
+      new ChipButton(group)
+        .setLabel(t('req.unfoldAll'))
+        .setShape('pill')
+        .onClick(safeAsync(() => this.setFolded(branches, false)))
+    }
+  }
+
+  /**
+   * Folds or unfolds a set of branches at once.
+   *
+   * The branches not in view are left exactly as they were: a reader who folds a filtered
+   * tree and then clears the filter should find the rest of the library as they left it,
+   * not shut.
+   */
+  private async setFolded(branches: string[], folded: boolean): Promise<void> {
+    const wanted = new Set(branches)
+    const kept = this.plugin.settings.collapsedRequirements.filter((id) => !wanted.has(id))
+    this.plugin.settings.collapsedRequirements = folded ? [...kept, ...branches] : kept
+    await this.plugin.saveSettings()
+    this.render()
   }
 
   private treeNotice(parent: HTMLElement, icon: string, text: string): void {
