@@ -18,11 +18,20 @@ import {
   missingLanguages,
   textOf
 } from '../../store/requirements/Requirement'
+import {
+  compareToBaseline,
+  countChanges,
+  type Baseline,
+  type BaselineChange,
+  type BaselineChangeKind
+} from '../../store/requirements/Baseline'
+import type { DiffPart } from '../../store/requirements/reqDiff'
+import { formatDateShort } from '../../dates'
 import { EmptyState } from '../../ui/primitives/EmptyState'
 import { ChipButton } from '../../ui/primitives/ChipButton'
 import { Chip } from '../../ui/primitives/Chip'
 import { renderSelectControl } from '../../ui/composites/properties'
-import { confirmDialog } from '../../ui/ModalFactory'
+import { confirmDialog, promptText } from '../../ui/ModalFactory'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
@@ -40,7 +49,7 @@ import {
 
 export const PM_REQUIREMENTS_VIEW_TYPE = 'pm-requirements'
 
-const FLAGS: ReqFlag[] = ['stale', 'unreviewed', 'missing', 'suspect']
+const FLAGS: ReqFlag[] = ['stale', 'unreviewed', 'missing', 'suspect', 'quality']
 
 /**
  * The requirements library.
@@ -67,10 +76,12 @@ export class RequirementsView extends ItemView {
    * the same thing in both and a reader narrowing to a category should not lose it by
    * asking what covers it.
    */
-  private mode: 'library' | 'trace' = 'library'
+  private mode: 'library' | 'trace' | 'baseline' = 'library'
   private gapFilter: CoverageGap | null = null
   /** Null until the notes have been read once; an empty map is a real answer, null is not. */
   private usage: Map<string, string[]> | null = null
+  /** The baseline being compared against, once one has been chosen and loaded. */
+  private baseline: Baseline | null = null
   /** True while a bulk translation is running, which is what the same button then stops. */
   private running = false
   private stopRequested = false
@@ -150,6 +161,10 @@ export class RequirementsView extends ItemView {
       this.renderTrace(this.bodyEl, shown, langs)
       return
     }
+    if (this.mode === 'baseline') {
+      this.renderBaselines(this.bodyEl, shown)
+      return
+    }
     if (!shown.length) {
       new EmptyState(this.bodyEl).setIcon('🔍').setTitle(t('req.noneHere')).setBody(t('req.noneHereHint'))
       return
@@ -209,11 +224,8 @@ export class RequirementsView extends ItemView {
     // Counted against the whole library rather than against what the other filters leave,
     // so the numbers say what there is instead of rearranging themselves as they are used.
     const flags = bar.createDiv('pm-req-flags')
-    if (this.mode === 'trace') {
-      this.renderGapBar(flags, all, langs)
-    } else {
-      this.renderFlagBar(flags, all, langs)
-    }
+    if (this.mode === 'trace') this.renderGapBar(flags, all, langs)
+    else if (this.mode === 'library') this.renderFlagBar(flags, all, langs)
 
     const right = bar.createDiv('pm-req-toolbar-right')
     this.renderModeSwitch(right)
@@ -223,7 +235,7 @@ export class RequirementsView extends ItemView {
   /** The two questions, side by side, because they are asked of the same narrowed list. */
   private renderModeSwitch(parent: HTMLElement): void {
     const group = parent.createDiv('pm-req-modes')
-    const mode = (id: 'library' | 'trace', label: string): void => {
+    const mode = (id: typeof this.mode, label: string): void => {
       new ChipButton(group)
         .setLabel(label)
         .setShape('pill')
@@ -235,6 +247,7 @@ export class RequirementsView extends ItemView {
     }
     mode('library', t('req.modeLibrary'))
     mode('trace', t('req.modeTrace'))
+    mode('baseline', t('req.modeBaseline'))
   }
 
   private renderFlagBar(flags: HTMLElement, all: Requirement[], langs: string[]): void {
@@ -345,6 +358,166 @@ export class RequirementsView extends ItemView {
   private renderBodyOnly(): void {
     this.bodyEl.empty()
     this.renderBody(this.plugin.index.requirementRefs(), reqLanguages(this.plugin.settings))
+  }
+
+  /* ---- Baselines ------------------------------------------------------------ */
+
+  /**
+   * The library as it stood on the days somebody signed for it.
+   *
+   * Listed rather than opened straight away: the question is usually "which review are we
+   * comparing against", and a view that picked the last one for you would answer a
+   * different question quietly.
+   */
+  private renderBaselines(parent: HTMLElement, shown: Requirement[]): void {
+    const bar = parent.createDiv('pm-req-baseline-bar')
+    const take = bar.createEl('button', { cls: 'pm-req-new mod-cta' })
+    setIcon(take.createSpan({ cls: 'pm-glyph-icon' }), 'camera')
+    // Says how many it would freeze, because what it freezes is what the filters have
+    // left on screen and that is easy to forget having set.
+    take.createSpan({ text: t('req.takeBaseline', { count: shown.length }) })
+    take.addEventListener(
+      'click',
+      safeAsync(() => this.takeBaseline(shown))
+    )
+
+    if (this.baseline) {
+      const back = bar.createEl('button', { text: t('req.allBaselines') })
+      back.addEventListener('click', () => {
+        this.baseline = null
+        this.render()
+      })
+      this.renderComparison(parent, this.baseline)
+      return
+    }
+
+    const refs = this.plugin.index.baselineRefs()
+    if (!refs.length) {
+      new EmptyState(parent).setIcon('📌').setTitle(t('req.noBaseline')).setBody(t('req.noBaselineHint'))
+      return
+    }
+    const table = parent.createDiv('pm-req-table pm-req-baselines')
+    for (const ref of refs) {
+      const row = table.createDiv('pm-req-row')
+      row.createDiv('pm-req-cell').createSpan({ cls: 'pm-req-baseline-name', text: ref.name })
+      row.createDiv('pm-req-cell').createSpan({
+        cls: 'pm-req-rev',
+        text: ref.at ? formatDateShort(ref.at.slice(0, 10)) : ''
+      })
+      row.createDiv('pm-req-cell').createSpan({ cls: 'pm-req-rev', text: t('req.baselineCount', { count: ref.count }) })
+      row.createDiv('pm-req-cell').createSpan({ cls: 'pm-req-rev', text: ref.scope })
+      row.addEventListener(
+        'click',
+        safeAsync(() => this.openBaseline(ref.path))
+      )
+    }
+  }
+
+  private async openBaseline(path: string): Promise<void> {
+    const loaded = await this.plugin.baselines.load(path)
+    if (!loaded) {
+      new Notice(t('req.baselineUnreadable'))
+      return
+    }
+    this.baseline = loaded
+    this.render()
+  }
+
+  /**
+   * Freezes what is on screen.
+   *
+   * The filters decide the set, and what they were is written into the baseline as words,
+   * because in two years the only thing that will say why these four hundred and not
+   * those is the sentence somebody left behind.
+   */
+  private async takeBaseline(shown: Requirement[]): Promise<void> {
+    if (!shown.length) {
+      new Notice(t('req.noneHere'))
+      return
+    }
+    const name = await promptText(this.app, t('req.takeBaselineTitle'), t('req.baselineName'), '')
+    if (!name) return
+    const created = await this.plugin.baselines.create(name, shown, {
+      by: this.plugin.settings.globalTeamMembers[0] ?? '',
+      scope: describeFilter(this.filter)
+    })
+    if (!created) return
+    // The index reads it on the metadata change; listing before that finds nothing.
+    this.plugin.index.build()
+    this.baseline = created
+    this.render()
+  }
+
+  /**
+   * What the library has done since.
+   *
+   * Ordered by how much a reader needs to see it: what has gone, what has arrived, what
+   * was rewritten, and then — counted rather than listed — everything that stayed put.
+   */
+  private renderComparison(parent: HTMLElement, baseline: Baseline): void {
+    const changes = compareToBaseline(baseline, this.plugin.index.requirementRefs())
+    const counts = countChanges(changes)
+    const head = parent.createDiv('pm-req-compare-head')
+    head.createSpan({ cls: 'pm-req-section-title', text: baseline.name })
+    if (baseline.at) head.createSpan({ cls: 'pm-req-rev', text: formatDateShort(baseline.at.slice(0, 10)) })
+    head.createSpan({
+      cls: 'pm-req-rev',
+      text: t('req.changeCounts', {
+        added: counts.added,
+        removed: counts.removed,
+        changed: counts.changed,
+        unchanged: counts.unchanged
+      })
+    })
+
+    const moved = changes.filter((change) => change.kind !== 'unchanged')
+    if (!moved.length) {
+      new EmptyState(parent).setIcon('📌').setTitle(t('req.baselineSame')).setBody(t('req.baselineSameHint'))
+      return
+    }
+    const order: BaselineChangeKind[] = ['removed', 'added', 'changed']
+    const list = parent.createDiv('pm-req-changes')
+    for (const kind of order) {
+      for (const change of moved.filter((entry) => entry.kind === kind)) this.renderChange(list, change)
+    }
+  }
+
+  private renderChange(list: HTMLElement, change: BaselineChange): void {
+    const row = list.createDiv('pm-req-change')
+    const head = row.createDiv('pm-req-change-head')
+    const badge = head.createSpan({ cls: `pm-req-state pm-req-state--${change.kind}` })
+    setIcon(badge.createSpan({ cls: 'pm-glyph-icon' }), changeIcon(change.kind))
+    badge.createSpan({ text: changeLabel(change.kind) })
+    head.createSpan({ cls: 'pm-req-id', text: change.id })
+    const title = change.now?.title ?? change.was?.title ?? ''
+    if (title) head.createSpan({ cls: 'pm-reqblock-title', text: title })
+
+    for (const field of change.fields) {
+      const line = row.createDiv('pm-req-change-field')
+      line.createSpan({ cls: 'pm-req-rev', text: fieldLabel(field.field) })
+      line.createSpan({ cls: 'pm-req-diff-removed', text: field.was || '—' })
+      line.createSpan({ cls: 'pm-req-diff-added', text: field.now || '—' })
+    }
+    for (const wording of change.wordings) {
+      const block = row.createDiv('pm-req-change-wording')
+      block.createSpan({ cls: 'pm-req-lang', text: wording.lang.toUpperCase() })
+      renderDiff(block.createDiv('pm-req-diff'), wording.diff)
+    }
+    // A requirement that has gone is shown as it was, because the note is not there to
+    // open and the words are the only thing left of it.
+    if (change.kind === 'removed' && change.was) {
+      for (const [lang, body] of Object.entries(change.was.text)) {
+        const block = row.createDiv('pm-req-change-wording')
+        block.createSpan({ cls: 'pm-req-lang', text: lang.toUpperCase() })
+        block.createDiv({ cls: 'pm-req-wording', text: body })
+      }
+    }
+    if (change.now) {
+      row.addEventListener(
+        'click',
+        safeAsync(() => openRequirementModal(this.plugin, change.now?.filePath ?? ''))
+      )
+    }
   }
 
   /* ---- Traceability --------------------------------------------------------- */
@@ -698,6 +871,8 @@ function flagLabel(flag: ReqFlag): string {
       return t('req.flag.missing')
     case 'suspect':
       return t('req.flag.suspect')
+    case 'quality':
+      return t('req.flag.quality')
     default:
       return t('common.all')
   }
@@ -736,4 +911,52 @@ function gapIcon(gap: CoverageGap): string {
 /** A note's name, since a full path in a table cell is mostly folders. */
 function noteName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '')
+}
+
+function changeLabel(kind: BaselineChangeKind): string {
+  switch (kind) {
+    case 'added':
+      return t('req.change.added')
+    case 'removed':
+      return t('req.change.removed')
+    case 'changed':
+      return t('req.change.changed')
+    default:
+      return t('req.change.unchanged')
+  }
+}
+
+function changeIcon(kind: BaselineChangeKind): string {
+  switch (kind) {
+    case 'added':
+      return 'plus'
+    case 'removed':
+      return 'minus'
+    default:
+      return 'pencil'
+  }
+}
+
+function fieldLabel(field: 'status' | 'title'): string {
+  return field === 'status' ? t('req.field.status') : t('req.field.wording')
+}
+
+/** The words, with what came and went marked in place. */
+function renderDiff(host: HTMLElement, parts: DiffPart[]): void {
+  for (const part of parts) {
+    if (part.kind === 'same') host.createSpan({ text: part.text })
+    else host.createSpan({ cls: `pm-req-diff-${part.kind}`, text: part.text })
+  }
+}
+
+/** What the filters were, in words, for the record a baseline leaves behind. */
+function describeFilter(filter: ReqFilterState): string {
+  const bits: string[] = []
+  if (filter.category) bits.push(`category: ${filter.category}`)
+  if (filter.type) bits.push(`type: ${filter.type}`)
+  if (filter.status) bits.push(`status: ${filter.status}`)
+  if (filter.criticality) bits.push(`criticality: ${filter.criticality}`)
+  if (filter.search.trim()) bits.push(`search: ${filter.search.trim()}`)
+  if (filter.flag !== 'all') bits.push(`flag: ${filter.flag}`)
+  return bits.join(' · ')
 }

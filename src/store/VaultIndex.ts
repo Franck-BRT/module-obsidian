@@ -7,6 +7,7 @@ import { today } from '../dates'
 import { reaches } from './Scheduler'
 import type { Requirement } from './requirements/Requirement'
 import { hydrateRequirement, REQUIREMENT_FRONTMATTER_KEY } from './requirements/reqYaml'
+import { BASELINE_FRONTMATTER_KEY } from './requirements/Baseline'
 import {
   COLLECTION_FRONTMATTER_KEY,
   FRONTMATTER_KEY,
@@ -66,6 +67,17 @@ export interface CollectionRef {
   rule?: FilterState
   include: string[]
   exclude: string[]
+}
+
+/** A baseline as its frontmatter describes it. What it holds is read on demand. */
+export interface BaselineRef {
+  path: string
+  id: string
+  name: string
+  at: string
+  by: string
+  scope: string
+  count: number
 }
 
 export interface TaskRef {
@@ -154,6 +166,12 @@ export class VaultIndex {
    * indexed and what is shown, and so nothing for the two to disagree about.
    */
   private requirements = new Map<string, Requirement>()
+  /**
+   * The baselines, by what their frontmatter says. Their entries live in the body and
+   * are read only when one is actually compared: a shelf of them is a shelf of copies of
+   * the whole library, and indexing that would be indexing the library five times over.
+   */
+  private baselines = new Map<string, BaselineRef>()
   private changeHandlers = new Set<() => void>()
   private cachedTree: { parents: Map<string, string | null>; children: Map<string, string[]> } = {
     parents: new Map(),
@@ -179,6 +197,7 @@ export class VaultIndex {
     this.tasksByProject.clear()
     this.collections.clear()
     this.requirements.clear()
+    this.baselines.clear()
     this.treeDirty = true
     this.dependentsDirty = true
     for (const file of this.app.vault.getMarkdownFiles()) this.read(file)
@@ -502,7 +521,7 @@ export class VaultIndex {
     else if (frontmatter[COLLECTION_FRONTMATTER_KEY] === true) this.addCollection(path, file, frontmatter)
     else if (frontmatter[REQUIREMENT_FRONTMATTER_KEY] === true) {
       this.requirements.set(path, hydrateRequirement(frontmatter, path))
-    }
+    } else if (frontmatter[BASELINE_FRONTMATTER_KEY] === true) this.addBaseline(path, file, frontmatter)
   }
 
   private addProject(path: string, file: TFile, frontmatter: Record<string, unknown>): void {
@@ -568,6 +587,23 @@ export class VaultIndex {
     return [...this.requirements.values()].filter((requirement) =>
       requirement.links.some((link) => link.to.toUpperCase() === wanted)
     )
+  }
+
+  /** The baselines, newest first: the one somebody wants is nearly always the last taken. */
+  baselineRefs(): BaselineRef[] {
+    return [...this.baselines.values()].sort((a, b) => b.at.localeCompare(a.at))
+  }
+
+  private addBaseline(path: string, file: TFile, frontmatter: Record<string, unknown>): void {
+    this.baselines.set(path, {
+      path,
+      id: str(frontmatter.id, file.basename),
+      name: str(frontmatter.name, file.basename),
+      at: str(frontmatter.at),
+      by: str(frontmatter.by),
+      scope: str(frontmatter.scope),
+      count: typeof frontmatter.count === 'number' ? frontmatter.count : 0
+    })
   }
 
   /** Every requirement id the vault currently holds. What was deleted is not here. */
@@ -774,7 +810,9 @@ export class VaultIndex {
       this.treeDirty = true
       return true
     }
-    return this.collections.delete(normalized) || this.requirements.delete(normalized)
+    return (
+      this.collections.delete(normalized) || this.requirements.delete(normalized) || this.baselines.delete(normalized)
+    )
   }
 
   /**

@@ -1,5 +1,6 @@
 import type { Requirement } from '../../store/requirements/Requirement'
 import { isStale, isUnreviewedMachine, missingLanguages, textOf } from '../../store/requirements/Requirement'
+import { needsReview } from '../../store/requirements/reqQuality'
 
 /**
  * Narrowing a library down to what is being looked for.
@@ -10,7 +11,7 @@ import { isStale, isUnreviewedMachine, missingLanguages, textOf } from '../../st
  */
 
 /** What a row can be singled out for, beyond its own fields. */
-export type ReqFlag = 'all' | 'stale' | 'unreviewed' | 'missing' | 'suspect'
+export type ReqFlag = 'all' | 'stale' | 'unreviewed' | 'missing' | 'suspect' | 'quality'
 
 export interface ReqFilterState {
   search: string
@@ -75,6 +76,10 @@ function matchesFlag(requirement: Requirement, flag: ReqFlag, langs: string[]): 
       return missingLanguages(requirement, langs).length > 0
     case 'suspect':
       return requirement.links.some((link) => link.suspect === true)
+    case 'quality':
+      // Judged on each wording in its own language: a French sentence run through the
+      // English rules is found clean, which is worse than not looking.
+      return Object.entries(requirement.text).some(([lang, held]) => needsReview(held.body, lang))
   }
 }
 

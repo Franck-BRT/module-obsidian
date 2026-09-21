@@ -516,3 +516,121 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Quality ------------------------------------------------------------------ */
+
+.pm-req-quality {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.pm-req-review {
+  font-size: var(--font-smallest);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.pm-req-quality-ok {
+  font-size: var(--font-smallest);
+  color: var(--color-green);
+}
+
+/* Each finding carries its own icon as well as its own colour: an error and a warning
+   told apart by hue alone is one undifferentiated complaint. */
+.pm-req-quality-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-smallest);
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  border: 1px solid currentColor;
+}
+
+.pm-req-quality-item--error {
+  color: var(--color-red);
+}
+
+.pm-req-quality-item--warning {
+  color: var(--color-orange);
+}
+
+/* ---- Baselines ----------------------------------------------------------------- */
+
+.pm-req-baseline-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+.pm-req-baselines .pm-req-row {
+  grid-template-columns: minmax(12rem, 1fr) 7rem 9rem minmax(8rem, 1fr);
+}
+
+.pm-req-baseline-name {
+  font-weight: var(--font-medium);
+}
+
+.pm-req-compare-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-4-2);
+  flex-wrap: wrap;
+  padding: 0 var(--size-4-3) var(--size-2-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pm-req-changes {
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+.pm-req-change {
+  padding: var(--size-2-3) 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+}
+
+.pm-req-change:hover {
+  background: var(--background-modifier-hover);
+}
+
+.pm-req-change-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-2-2);
+  flex-wrap: wrap;
+}
+
+.pm-req-change-field,
+.pm-req-change-wording {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-2-2);
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.pm-req-state--added {
+  color: var(--color-green);
+  border-color: var(--color-green);
+}
+
+.pm-req-state--removed {
+  color: var(--color-red);
+  border-color: var(--color-red);
+}
+
+.pm-req-state--changed {
+  color: var(--color-orange);
+  border-color: var(--color-orange);
+}
+
+@media (width <= 900px) {
+  .pm-req-baselines .pm-req-row {
+    grid-template-columns: 1fr;
+  }
+}

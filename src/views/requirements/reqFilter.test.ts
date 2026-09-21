@@ -86,6 +86,20 @@ describe('filterRequirements', () => {
     const out = filterRequirements([suspect, sound], { ...EMPTY_REQ_FILTER, flag: 'suspect' }, LANGS)
     expect(out.map((r) => r.id)).toEqual(['REQ-A-0008'])
   })
+  it('singles out a wording a reviewer would stop on', () => {
+    const vague = setText(req({ id: 'REQ-A-0010' }), 'fr', 'Le système ouvre la trappe.', 'a')
+    const sound = setText(req({ id: 'REQ-A-0011' }), 'fr', 'Le système doit ouvrir la trappe en 3 s.', 'a')
+    const out = filterRequirements([vague, sound], { ...EMPTY_REQ_FILTER, flag: 'quality' }, LANGS)
+    expect(out.map((r) => r.id)).toEqual(['REQ-A-0010'])
+  })
+
+  // A French sentence run through the English rules is found clean, which is worse than
+  // not looking at it.
+  it('judges each wording in its own language', () => {
+    const french = setText(req({ id: 'REQ-A-0012' }), 'fr', 'Le système doit ouvrir la trappe en 3 s.', 'a')
+    const out = filterRequirements([french], { ...EMPTY_REQ_FILTER, flag: 'quality' }, LANGS)
+    expect(out).toEqual([])
+  })
 })
 
 describe('isReqFilterActive', () => {

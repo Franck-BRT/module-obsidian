@@ -15,6 +15,8 @@ import {
 } from '../../store/requirements/Requirement'
 import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
 import { safeAsync } from '../../utils'
+import { checkWording, type QualityFinding, type QualityRule } from '../../store/requirements/reqQuality'
+import { mergeFindings, RequirementReviewer } from '../../store/requirements/reqQualityLlm'
 import { renderPropRow } from '../../ui/FormField'
 import { pickOption } from '../../modals/PickerModals'
 import { pickRequirement } from './RequirementPicker'
@@ -38,6 +40,9 @@ class RequirementModal extends Modal {
   private dirty = false
   /** What the gateway reported about each language it wrote, for as long as this is open. */
   private reports = new Map<string, TranslationOutcome>()
+  /** What the model made of each wording, once somebody asked it. */
+  private review = new Map<string, QualityFinding[]>()
+  private readonly reviewer: RequirementReviewer
   private bodyEl!: HTMLElement
 
   constructor(
@@ -47,6 +52,7 @@ class RequirementModal extends Modal {
   ) {
     super(plugin.app)
     this.draft = loaded
+    this.reviewer = new RequirementReviewer(() => plugin.settings)
   }
 
   onOpen(): void {
@@ -313,6 +319,7 @@ class RequirementModal extends Modal {
 
       const report = this.reports.get(lang)
       if (report) this.renderReport(box, report)
+      this.renderQuality(box, lang, area.value)
     }
   }
 
@@ -549,6 +556,54 @@ class RequirementModal extends Modal {
     }
   }
 
+  /**
+   * What a reviewer would stop on, said under the wording it is about.
+   *
+   * The rules run here and now, with no network and no waiting, because a check that is
+   * sometimes unavailable is one nobody comes to rely on. The model is offered beside
+   * them, for the things a word list cannot see.
+   */
+  private renderQuality(box: HTMLElement, lang: string, body: string): void {
+    const rules = checkWording(body, lang)
+    const findings = mergeFindings(rules, this.review.get(lang) ?? [])
+    const host = box.createDiv('pm-req-quality')
+    if (this.reviewer.available) {
+      const button = host.createEl('button', { cls: 'pm-req-review', text: t('req.review') })
+      button.disabled = body.trim() === ''
+      button.addEventListener(
+        'click',
+        safeAsync(() => this.runReview(lang, body, button))
+      )
+    }
+    if (!findings.length) {
+      if (body.trim()) host.createSpan({ cls: 'pm-req-quality-ok', text: t('req.qualityClean') })
+      return
+    }
+    for (const finding of findings) {
+      const el = host.createSpan({ cls: `pm-req-quality-item pm-req-quality-item--${finding.severity}` })
+      setIcon(el.createSpan({ cls: 'pm-glyph-icon' }), finding.severity === 'error' ? 'circle-alert' : 'triangle-alert')
+      const label = qualityLabel(finding.rule)
+      el.createSpan({ text: finding.term ? `${label} : ${finding.term}` : label })
+      // A model's sentence is its own; the rules are described by their name, which is
+      // the same every time and so can be learnt.
+      if (finding.message) el.title = finding.message
+    }
+  }
+
+  private async runReview(lang: string, body: string, button: HTMLButtonElement): Promise<void> {
+    button.disabled = true
+    button.setText(t('req.reviewing'))
+    try {
+      this.review.set(lang, await this.reviewer.review(body, lang))
+    } catch (error) {
+      new Notice(t('req.reviewFailed', { reason: error instanceof Error ? error.message : '' }))
+      button.disabled = false
+      button.setText(t('req.review'))
+      return
+    }
+    this.render()
+  }
+
   private author(): string {
     return this.plugin.settings.globalTeamMembers[0] ?? ''
   }
@@ -591,4 +646,25 @@ function renderDiff(host: HTMLElement, parts: DiffPart[]): void {
 /** A note's name, since a full path down the side of an editor is mostly folders. */
 function noteName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '')
+}
+
+function qualityLabel(rule: QualityRule): string {
+  switch (rule) {
+    case 'no-modal':
+      return t('req.quality.noModal')
+    case 'multiple':
+      return t('req.quality.multiple')
+    case 'weak-word':
+      return t('req.quality.weakWord')
+    case 'and-or':
+      return t('req.quality.andOr')
+    case 'passive-no-actor':
+      return t('req.quality.passiveNoActor')
+    case 'tbd':
+      return t('req.quality.tbd')
+    case 'unquantified':
+      return t('req.quality.unquantified')
+    default:
+      return t('req.quality.tooLong')
+  }
 }
