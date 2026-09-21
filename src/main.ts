@@ -1,5 +1,6 @@
 import { ZoneRadar } from './store/ZoneRadar'
 import { MarkdownView, Plugin, Notice } from 'obsidian'
+import type { Editor } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
   makeDefaultFilter,
@@ -66,6 +67,9 @@ import { MessageView, PM_MESSAGE_VIEW_TYPE } from './views/MessageView'
 import { RequirementsView, PM_REQUIREMENTS_VIEW_TYPE } from './views/requirements/RequirementsView'
 import { RequirementStore } from './store/requirements/RequirementStore'
 import { RequirementTranslator } from './store/requirements/RequirementTranslator'
+import { registerReqBlock } from './views/requirements/reqBlockRenderer'
+import { pickRequirement } from './views/requirements/RequirementPicker'
+import { insertRequirement } from './views/requirements/insertReq'
 
 export default class PMPlugin extends Plugin {
   settings: PMSettings = { ...DEFAULT_SETTINGS }
@@ -152,6 +156,7 @@ export default class PMPlugin extends Plugin {
     // Claiming the extension is what stops a click handing the message back to Outlook.
     this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
+    registerReqBlock(this)
     if (__STYLEGUIDE__) registerStyleguide(this)
 
     this.app.workspace.onLayoutReady(
@@ -184,6 +189,14 @@ export default class PMPlugin extends Plugin {
       name: t('req.libraryTitle'),
       callback: () => {
         void this.openRequirements()
+      }
+    })
+
+    this.addCommand({
+      id: 'insert-requirement',
+      name: t('req.insert'),
+      editorCallback: (editor: Editor) => {
+        void this.insertRequirementAt(editor)
       }
     })
 
@@ -523,6 +536,31 @@ export default class PMPlugin extends Plugin {
    * who opens it from three different buttons should end up looking at the one they
    * already had open.
    */
+  /**
+   * Quotes a requirement where the author is writing.
+   *
+   * Into the block the cursor is already in when there is one, because quoting happens in
+   * runs: a paragraph of prose, then three requirements, then more prose. Starting a
+   * second block beside the first would be technically the same document and visibly a
+   * mess.
+   */
+  async insertRequirementAt(editor: Editor): Promise<void> {
+    const library = this.index.requirementRefs()
+    if (!library.length) {
+      new Notice(t('req.empty'))
+      return
+    }
+    const chosen = await pickRequirement(this.app, library)
+    if (!chosen) return
+    const cursor = editor.getCursor()
+    const insertion = insertRequirement(editor.getValue().split('\n'), cursor.line, chosen.id)
+    if (!insertion) {
+      new Notice(t('req.alreadyQuoted', { id: chosen.id }))
+      return
+    }
+    editor.replaceRange(insertion.insert, insertion.at)
+  }
+
   async openRequirements(): Promise<void> {
     const existing = this.app.workspace.getLeavesOfType(PM_REQUIREMENTS_VIEW_TYPE)[0]
     const leaf = existing ?? this.app.workspace.getLeaf('tab')

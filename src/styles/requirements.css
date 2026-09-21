@@ -297,3 +297,77 @@
     display: none;
   }
 }
+
+/* ---- Requirements quoted inside a document -----------------------------------
+   Set apart from the prose around it by a rule down the side, the way a block
+   quotation is: what is inside comes from somewhere else, and a reader has to be
+   able to tell at a glance which words the document is answerable for. */
+
+.pm-reqblock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3);
+  margin: var(--size-4-3) 0;
+  padding-left: var(--size-4-3);
+  border-left: 3px solid var(--background-modifier-border);
+}
+
+.pm-reqblock-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pm-reqblock-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--size-2-2);
+}
+
+.pm-reqblock-id {
+  text-decoration: none;
+  color: var(--text-accent);
+}
+
+.pm-reqblock-id:hover {
+  text-decoration: underline;
+}
+
+.pm-reqblock-title {
+  font-weight: var(--font-medium);
+}
+
+.pm-reqblock-text {
+  margin: 0;
+}
+
+.pm-reqblock-text--absent {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.pm-reqblock-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pm-reqblock-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-smaller);
+}
+
+.pm-reqblock-notice--warn {
+  color: var(--color-orange);
+}
+
+.pm-reqblock-notice--hint {
+  color: var(--text-muted);
+}
+
+.pm-req-suggestion .pm-req-id {
+  margin-right: var(--size-2-2);
+}

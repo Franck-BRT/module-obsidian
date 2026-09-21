@@ -2,6 +2,7 @@ import { ItemView, Menu, Notice, setIcon, WorkspaceLeaf } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Requirement } from '../../store/requirements/Requirement'
 import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
+import { REQ_BLOCK_LANGUAGE } from '../../store/requirements/reqBlock'
 import {
   displayText,
   isStale,
@@ -428,6 +429,16 @@ export class RequirementsView extends ItemView {
         .setTitle(t('req.copyId'))
         .setIcon('copy')
         .onClick(safeAsync(() => navigator.clipboard.writeText(requirement.id)))
+    )
+    // Ready to paste into a specification, because that is what an identifier is copied
+    // for nine times out of ten.
+    menu.addItem((item) =>
+      item
+        .setTitle(t('req.copyBlock'))
+        .setIcon('clipboard-list')
+        .onClick(
+          safeAsync(() => navigator.clipboard.writeText(`\`\`\`${REQ_BLOCK_LANGUAGE}\n${requirement.id}\n\`\`\`\n`))
+        )
     )
     menu.addSeparator()
     menu.addItem((item) =>
