@@ -22,7 +22,8 @@ import {
  */
 
 export type ReqHeadPart =
-  | { kind: 'id'; id: string }
+  /** `id` is the name the document used; `canonical` is the library's, when they differ. */
+  | { kind: 'id'; id: string; canonical: string }
   | { kind: 'title'; text: string }
   | { kind: 'chip'; glyph: ReqGlyph }
   | { kind: 'rating'; stars: number; score: number }
@@ -41,7 +42,13 @@ export type ReqHeadPart =
  * returned at all: two breaks in a row, or one at either end, are somebody dragging
  * things about, not somebody asking for a blank line in a specification.
  */
-export function reqHeadLines(requirement: Requirement, fields: ReqBlockField[], settings: PMSettings): ReqHeadPart[][] {
+export function reqHeadLines(
+  requirement: Requirement,
+  fields: ReqBlockField[],
+  settings: PMSettings,
+  /** What the document called it: an alias, where one was cited. Its own id otherwise. */
+  citedAs = ''
+): ReqHeadPart[][] {
   const lines: ReqHeadPart[][] = []
   let parts: ReqHeadPart[] = []
   const chip = (glyph: ReqGlyph): void => {
@@ -49,9 +56,11 @@ export function reqHeadLines(requirement: Requirement, fields: ReqBlockField[], 
   }
   for (const field of fields) {
     switch (field) {
-      case 'id':
-        parts.push({ kind: 'id', id: requirement.id })
+      case 'id': {
+        const name = citedAs.trim() || requirement.id
+        parts.push({ kind: 'id', id: name, canonical: name === requirement.id ? '' : requirement.id })
         break
+      }
       case 'title':
         if (requirement.title) parts.push({ kind: 'title', text: requirement.title })
         break

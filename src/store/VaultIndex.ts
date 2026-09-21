@@ -1,3 +1,4 @@
+import { findByName } from './requirements/reqAlias'
 import type { ImpactLevel, ProjectImpactRole } from './ZoneImpact'
 import type { App, Plugin, TAbstractFile } from 'obsidian'
 import { TFile, normalizePath } from 'obsidian'
@@ -568,11 +569,15 @@ export class VaultIndex {
     return this.requirements.get(normalizePath(path)) ?? null
   }
 
+  /**
+   * A requirement by any name it answers to.
+   *
+   * Aliases included, so a link or a document written in a project's own numbering leads
+   * to the same requirement as the library's own identifier. Nothing downstream has to
+   * know which of the two it was handed.
+   */
   requirementById(id: string): Requirement | null {
-    for (const requirement of this.requirements.values()) {
-      if (requirement.id === id) return requirement
-    }
-    return null
+    return findByName([...this.requirements.values()], id)
   }
 
   /**

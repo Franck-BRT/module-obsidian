@@ -21,6 +21,9 @@ export const XHTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 /** The attributes a requirement is exported with, in the order they are declared. */
 export const REQIF_ATTRIBUTES = [
   { id: 'ATT-ID', name: 'ReqIF.ForeignID', type: 'string' },
+  // The names this requirement also answers to. Exported because this is the file that
+  // leaves the building: the far end is often the very project whose numbering they are.
+  { id: 'ATT-ALIASES', name: 'Aliases', type: 'string' },
   { id: 'ATT-TITLE', name: 'ReqIF.Name', type: 'string' },
   { id: 'ATT-TEXT', name: 'ReqIF.Text', type: 'xhtml' },
   { id: 'ATT-CATEGORY', name: 'Category', type: 'string' },
@@ -102,6 +105,8 @@ function specObject(requirement: Requirement, lang: string): string {
     switch (attribute.id) {
       case 'ATT-ID':
         return attributeValue(attribute, requirement.id)
+      case 'ATT-ALIASES':
+        return attributeValue(attribute, requirement.aliases.join('; '))
       case 'ATT-TITLE':
         return attributeValue(attribute, requirement.title)
       case 'ATT-TEXT':

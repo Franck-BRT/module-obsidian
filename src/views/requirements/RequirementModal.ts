@@ -1,4 +1,4 @@
-import { Modal, Notice, setIcon } from 'obsidian'
+import { Menu, Modal, Notice, setIcon } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { ReqLink, ReqLinkKind, Requirement, VerificationMethod } from '../../store/requirements/Requirement'
 import {
@@ -14,6 +14,7 @@ import {
   VERIFICATION_METHODS
 } from '../../store/requirements/Requirement'
 import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
+import { addAlias, aliasWithPrefix, nameOwner, normalizeAlias, removeAlias } from '../../store/requirements/reqAlias'
 import { safeAsync } from '../../utils'
 import { checkWording, type QualityFinding, type QualityRule } from '../../store/requirements/reqQuality'
 import { assessRequirement, type QualityAxis, type QualityAxisId } from '../../store/requirements/reqScore'
@@ -103,6 +104,7 @@ class RequirementModal extends Modal {
     this.renderRating(this.bodyEl)
     this.renderTitle(this.bodyEl)
     this.renderFields(this.bodyEl.createDiv('pm-te-props').createDiv('pm-prop-grid'))
+    this.renderAliases(this.bodyEl)
     this.renderWordings(this.bodyEl)
     this.renderLinks(this.bodyEl)
     this.renderCitations(this.bodyEl)
@@ -577,6 +579,106 @@ class RequirementModal extends Modal {
    * somebody saying they have looked — the tool can tell that a relation may no longer
    * hold, and cannot tell that it still does.
    */
+  /**
+   * The other names this requirement answers to.
+   *
+   * Next to the fields rather than among them, because an alias is not a property of the
+   * requirement so much as a second door into it: one requirement, cited under whatever
+   * numbering the project reading it uses. The identifier above never moves — it is what
+   * the links, the counters and the baselines are written in — so this is the only way a
+   * requirement can be called something else without becoming something else.
+   */
+  private renderAliases(parent: HTMLElement): void {
+    const section = parent.createDiv('pm-req-section')
+    const head = section.createDiv('pm-req-section-head')
+    head.createSpan({ cls: 'pm-req-section-title', text: t('req.aliases') })
+    const fromProject = head.createEl('button', { cls: 'pm-req-add-link', text: t('req.aliasFromProject') })
+    fromProject.addEventListener('click', (event) => this.offerProjectAliases(event))
+
+    const row = section.createDiv('pm-req-alias-add')
+    const input = row.createEl('input', { type: 'text', cls: 'pm-prop-input' })
+    input.placeholder = t('req.aliasPlaceholder')
+    const submit = (): void => {
+      if (this.claimAlias(input.value)) input.value = ''
+    }
+    input.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key !== 'Enter') return
+      event.preventDefault()
+      submit()
+    })
+    const add = row.createEl('button', { cls: 'pm-req-add-link', text: t('req.addAlias') })
+    add.addEventListener('click', submit)
+
+    if (!this.draft.aliases.length) {
+      section.createDiv({ cls: 'pm-req-section-empty', text: t('req.noAliases') })
+      return
+    }
+    const list = section.createDiv('pm-req-alias-list')
+    for (const alias of this.draft.aliases) {
+      const chip = list.createSpan({ cls: 'pm-req-alias' })
+      chip.createSpan({ cls: 'pm-req-id', text: alias })
+      const drop = chip.createEl('button', { cls: 'pm-req-alias-drop', attr: { 'aria-label': t('req.aliasRemove') } })
+      setIcon(drop, 'x')
+      drop.addEventListener('click', () => {
+        this.draft = removeAlias(this.draft, alias)
+        this.dirty = true
+        this.render()
+      })
+    }
+  }
+
+  /**
+   * One alias per project, built from this requirement's own identifier.
+   *
+   * The category and the number are carried over: OMLX-SYS-0001 is REQ-SYS-0001 said in
+   * the project's vocabulary, and a number that shifted in translation would be a
+   * different requirement. Projects whose alias is already held, or already spoken for
+   * by another requirement, are not offered — the menu only shows what it can do.
+   */
+  private offerProjectAliases(event: MouseEvent): void {
+    const library = this.plugin.index.requirementRefs()
+    const held = new Set(this.draft.aliases.map((alias) => alias.toUpperCase()))
+    const menu = new Menu()
+    let offered = 0
+    for (const project of this.plugin.index.projectRefs()) {
+      const alias = aliasWithPrefix(this.draft.id, project.title)
+      if (!alias || held.has(alias) || nameOwner(library, alias, this.draft.id)) continue
+      offered += 1
+      menu.addItem((item) =>
+        item
+          .setTitle(`${project.title} — ${alias}`)
+          .setIcon(project.icon || 'folder')
+          .onClick(() => this.claimAlias(alias))
+      )
+    }
+    if (!offered) menu.addItem((item) => item.setTitle(t('req.aliasNoProject')).setDisabled(true))
+    const rect = (event.target as HTMLElement).getBoundingClientRect()
+    menu.showAtPosition({ x: rect.left, y: rect.bottom + 4 })
+  }
+
+  /**
+   * Takes a name for this requirement, or says who already has it.
+   *
+   * Refused rather than allowed to collide: two requirements answering to one name make
+   * a citation ambiguous, and a citation that resolves to whichever was read first is
+   * worse than one that fails.
+   */
+  private claimAlias(raw: string): boolean {
+    const alias = normalizeAlias(raw)
+    if (!alias) return false
+    const owner = nameOwner(this.plugin.index.requirementRefs(), alias, this.draft.id)
+    if (owner) {
+      new Notice(t('req.aliasTaken', { alias, id: owner.id }))
+      return false
+    }
+    const next = addAlias(this.draft, alias)
+    if (next === this.draft) return false
+    this.draft = next
+    this.dirty = true
+    this.render()
+    return true
+  }
+
   private renderLinks(parent: HTMLElement): void {
     const section = parent.createDiv('pm-req-section')
     const head = section.createDiv('pm-req-section-head')

@@ -26,6 +26,28 @@ const sample = () => {
   return req
 }
 
+describe('the other names on disk', () => {
+  it('comes back with the aliases it went in with', () => {
+    const original = makeRequirement({ id: 'REQ-SYS-0042', aliases: ['OMLX-SYS-0042'] })
+    expect(roundTrip(original).aliases).toEqual(['OMLX-SYS-0042'])
+  })
+
+  // A note is a file, and a file gets edited by hand.
+  it('reads an alias typed by hand the way one written here is written', () => {
+    const back = hydrateRequirement(
+      { id: 'REQ-SYS-0042', aliases: ['omlx sys 0042', 'REQ-SYS-0042', 'omlx-sys-0042'] },
+      'Requirements/REQ-SYS-0042.md'
+    )
+    // Normalized, the requirement's own name refused, and the repeat kept once: a name
+    // that resolved to two things would make every citation of it ambiguous.
+    expect(back.aliases).toEqual(['OMLX-SYS-0042'])
+  })
+
+  it('writes no alias line for a requirement that has none', () => {
+    expect(requirementFrontmatter(makeRequirement({ id: 'REQ-SYS-0042' })).aliases).toBeUndefined()
+  })
+})
+
 describe('a requirement on disk', () => {
   it('comes back with everything it went in with', () => {
     const original = sample()

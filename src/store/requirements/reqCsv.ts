@@ -1,3 +1,4 @@
+import { normalizeAlias } from './reqAlias'
 import {
   REQ_LINK_KINDS,
   VERIFICATION_METHODS,
@@ -48,6 +49,7 @@ export const CSV_COLUMNS = [
   'rationale',
   'owner',
   'tags',
+  'aliases',
   'sourceLang',
   'rev',
   'links'
@@ -93,6 +95,7 @@ export function toCsv(requirements: Requirement[], separator = ';'): string {
           requirement.rationale,
           requirement.owner,
           requirement.tags.join('; '),
+          requirement.aliases.join('; '),
           requirement.sourceLang,
           String(requirement.rev),
           linksField(requirement),
@@ -243,6 +246,7 @@ export interface CsvValues {
   rationale?: string
   owner?: string
   tags?: string[]
+  aliases?: string[]
   sourceLang?: string
   text: Record<string, string>
   links?: { kind: ReqLinkKind; to: string }[]
@@ -287,6 +291,7 @@ function valuesOf(row: Record<string, string>): CsvValues {
   set('owner', row.owner)
   if (row.sourceLang) values.sourceLang = row.sourceLang.toLowerCase()
   if (row.tags) values.tags = splitList(row.tags)
+  if (row.aliases) values.aliases = splitList(row.aliases).map((alias) => normalizeAlias(alias))
   if (row.links) values.links = readLinks(row.links)
   if (row.verification && VERIFICATION_METHODS.includes(row.verification as VerificationMethod)) {
     values.verification = row.verification as VerificationMethod
@@ -316,6 +321,7 @@ function wouldChange(values: CsvValues, requirement: Requirement): boolean {
     if (typeof incoming === 'string' && incoming !== requirement[key]) return true
   }
   if (values.tags && values.tags.join('|') !== requirement.tags.join('|')) return true
+  if (values.aliases && values.aliases.join('|') !== requirement.aliases.join('|')) return true
   if (values.links) {
     const held = new Set(requirement.links.map((link) => `${link.kind}:${link.to.toUpperCase()}`))
     if (values.links.some((link) => !held.has(`${link.kind}:${link.to.toUpperCase()}`))) return true

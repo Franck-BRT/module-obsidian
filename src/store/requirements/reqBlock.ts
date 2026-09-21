@@ -1,6 +1,7 @@
 import type { Requirement } from './Requirement'
 import { isStale, isUnreviewedMachine, textOf } from './Requirement'
 import { isReqBlockField, type ReqBlockField } from './reqBlockFields'
+import { namesOf } from './reqAlias'
 
 export {
   cleanBlockFields,
@@ -137,8 +138,20 @@ export function isEmptySpec(spec: ReqBlockSpec): boolean {
   )
 }
 
+/**
+ * One quoted requirement, and the name this document called it by.
+ *
+ * The two differ when a document cites an alias — the numbering its project uses — and
+ * the document is then drawn in its own vocabulary rather than in the library's, which
+ * is the only reason an alias is worth having.
+ */
+export interface ReqBlockRow {
+  requirement: Requirement
+  citedAs: string
+}
+
 export interface ReqBlockResult {
-  rows: Requirement[]
+  rows: ReqBlockRow[]
   /** Identifiers the block names that the library does not hold. Named, never swallowed. */
   missing: string[]
 }
@@ -146,7 +159,7 @@ export interface ReqBlockResult {
 function matchesSearch(requirement: Requirement, needle: string): boolean {
   const q = needle.toLowerCase()
   return (
-    requirement.id.toLowerCase().includes(q) ||
+    namesOf(requirement).some((name) => name.toLowerCase().includes(q)) ||
     requirement.title.toLowerCase().includes(q) ||
     Object.values(requirement.text).some((held) => held.body.toLowerCase().includes(q))
   )
@@ -165,18 +178,26 @@ function matchesSearch(requirement: Requirement, needle: string): boolean {
  */
 export function selectRequirements(spec: ReqBlockSpec, library: Requirement[]): ReqBlockResult {
   if (spec.ids.length) {
-    const byId = new Map(library.map((requirement) => [requirement.id.toUpperCase(), requirement]))
-    const rows: Requirement[] = []
+    // Every name at once, aliases included, so a specification written in a project's own
+    // numbering resolves without the library having to be renumbered for it.
+    const byName = new Map<string, Requirement>()
+    for (const requirement of library) {
+      for (const name of namesOf(requirement)) {
+        const key = name.toUpperCase()
+        if (!byName.has(key)) byName.set(key, requirement)
+      }
+    }
+    const rows: ReqBlockRow[] = []
     const missing: string[] = []
     for (const id of spec.ids) {
-      const found = byId.get(id.toUpperCase())
-      if (found) rows.push(found)
+      const found = byName.get(id.toUpperCase())
+      if (found) rows.push({ requirement: found, citedAs: id.toUpperCase() })
       else missing.push(id)
     }
     return { rows, missing }
   }
 
-  const rows = library.filter(
+  const matched = library.filter(
     (requirement) =>
       (spec.category === '' || requirement.category === spec.category) &&
       (spec.type === '' || requirement.type === spec.type) &&
@@ -187,13 +208,15 @@ export function selectRequirements(spec: ReqBlockSpec, library: Requirement[]): 
   )
   const key = (requirement: Requirement): string =>
     spec.sort === 'title' ? requirement.title || requirement.id : spec.sort === 'status' ? requirement.status : ''
-  rows.sort((a, b) => {
+  matched.sort((a, b) => {
     const primary = key(a).localeCompare(key(b), undefined, { numeric: true, sensitivity: 'base' })
     // Always the id as the tie-break, so a document that is regenerated twice reads the
     // same both times.
     return primary !== 0 ? primary : a.id.localeCompare(b.id, undefined, { numeric: true })
   })
-  return { rows, missing: [] }
+  // A selection names nothing, so there is no alias to honour: the library's own
+  // numbering is what a document that asked for "every SYS requirement" gets.
+  return { rows: matched.map((requirement) => ({ requirement, citedAs: requirement.id })), missing: [] }
 }
 
 export interface QuotedWording {

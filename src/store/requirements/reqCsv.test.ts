@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { addLink, makeRequirement, setText } from './Requirement'
+import { addAlias } from './reqAlias'
 import { countPlan, csvField, detectSeparator, parseCsv, planCsvImport, readCsvTable, toCsv } from './reqCsv'
 
 function req(id: string, fr: string, over: Parameters<typeof makeRequirement>[0] = {}) {
@@ -105,6 +106,13 @@ describe('toCsv', () => {
     expect(table.rows[1]['text.en']).toBe('The bus shall last 3 h.')
   })
 
+  // A spreadsheet that came back without them would silently drop the names a whole
+  // project's documents are written in.
+  it('carries the aliases across', () => {
+    const aliased = [addAlias(library[0], 'OMLX-SYS-0001')]
+    expect(readCsvTable(toCsv(aliased)).rows[0].aliases).toBe('OMLX-SYS-0001')
+  })
+
   it('carries the links across', () => {
     const linked = [addLink(library[0], 'derives-from', 'REQ-A-0002')]
     expect(readCsvTable(toCsv(linked)).rows[0].links).toBe('derives-from:REQ-A-0002')
@@ -145,6 +153,12 @@ describe('planCsvImport', () => {
   it('sees a row that would rewrite the words', () => {
     const rows = plan('id;text.fr\nREQ-A-0001;La trappe doit ouvrir en 5 s.\n')
     expect(rows[0].action).toBe('update')
+  })
+
+  it('sees a row that would give a requirement a name it does not have', () => {
+    const rows = plan('id;aliases;text.fr\nREQ-A-0001;OMLX-SYS-0001;La trappe doit ouvrir en 3 s.\n')
+    expect(rows[0].action).toBe('update')
+    expect(rows[0].values.aliases).toEqual(['OMLX-SYS-0001'])
   })
 
   it('sees a row that would change only a field', () => {

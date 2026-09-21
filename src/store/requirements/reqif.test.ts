@@ -51,6 +51,18 @@ describe('toReqif', () => {
     req('REQ-A-0002', 'Le bus doit tenir 3 h.', { title: 'Bus' })
   ]
 
+  // This is the file that leaves the building, and the far end is often the very project
+  // whose numbering the aliases are.
+  it('carries the other names the requirement answers to', () => {
+    const xml = toReqif([{ ...library[0], aliases: ['OMLX-SYS-0001', 'CLIENT-12'] }], OPTIONS)
+    expect(xml).toContain('LONG-NAME="Aliases"')
+    expect(xml).toContain('THE-VALUE="OMLX-SYS-0001; CLIENT-12"')
+  })
+
+  it('writes no alias value for a requirement that has none', () => {
+    expect(toReqif(library, OPTIONS)).not.toContain('ATTRIBUTE-DEFINITION-STRING-REF>ATT-ALIASES')
+  })
+
   it('writes a document with the sections a reader expects', () => {
     const xml = toReqif(library, OPTIONS)
     for (const section of [

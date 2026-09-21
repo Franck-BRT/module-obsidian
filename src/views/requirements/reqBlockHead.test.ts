@@ -53,7 +53,7 @@ describe('reqHeadLines', () => {
   it('carries the identifier and the title themselves, not just their place', () => {
     expect(reqHeadLines(req(), ['id', 'title'], settings)).toEqual([
       [
-        { kind: 'id', id: 'REQ-SYS-0001' },
+        { kind: 'id', id: 'REQ-SYS-0001', canonical: '' },
         { kind: 'title', text: 'Trappe' }
       ]
     ])
@@ -76,6 +76,21 @@ describe('reqHeadLines', () => {
     expect(rated.stars).toBeGreaterThan(poor.stars)
     // A percentage, so the tooltip reads "78 %" rather than "0.78".
     expect(Number.isInteger(rated.score)).toBe(true)
+  })
+
+  // The document is drawn in its own vocabulary: an alias it cited is the name it reads.
+  it('shows the name the document used, and says what it stands for', () => {
+    expect(reqHeadLines(req(), ['id'], settings, 'OMLX-SYS-0001')).toEqual([
+      [{ kind: 'id', id: 'OMLX-SYS-0001', canonical: 'REQ-SYS-0001' }]
+    ])
+  })
+
+  // Nothing to say when they are the same name: a tooltip repeating the line under it
+  // is noise.
+  it('has nothing to stand for when the document used the library’s own name', () => {
+    expect(reqHeadLines(req(), ['id'], settings, 'REQ-SYS-0001')).toEqual([
+      [{ kind: 'id', id: 'REQ-SYS-0001', canonical: '' }]
+    ])
   })
 
   it('starts the next line where a break was asked for', () => {

@@ -85,7 +85,10 @@ describe('selectRequirements', () => {
 
   it('quotes identifiers in the order the document wrote them', () => {
     const spec = parseReqBlock('ids: REQ-ELEC-0001, REQ-SYS-0001')
-    expect(selectRequirements(spec, library).rows.map((r) => r.id)).toEqual(['REQ-ELEC-0001', 'REQ-SYS-0001'])
+    expect(selectRequirements(spec, library).rows.map((r) => r.requirement.id)).toEqual([
+      'REQ-ELEC-0001',
+      'REQ-SYS-0001'
+    ])
   })
 
   it('does not care how the identifier was cased', () => {
@@ -96,7 +99,7 @@ describe('selectRequirements', () => {
   // document that quietly got shorter.
   it('names an identifier the library does not hold', () => {
     const result = selectRequirements(parseReqBlock('REQ-SYS-0001, REQ-SYS-0404'), library)
-    expect(result.rows.map((r) => r.id)).toEqual(['REQ-SYS-0001'])
+    expect(result.rows.map((r) => r.requirement.id)).toEqual(['REQ-SYS-0001'])
     expect(result.missing).toEqual(['REQ-SYS-0404'])
   })
 
@@ -106,25 +109,52 @@ describe('selectRequirements', () => {
 
   it('applies two narrowings together rather than either of them', () => {
     const rows = selectRequirements(parseReqBlock('category: SYS\nstatus: approved'), library).rows
-    expect(rows.map((r) => r.id)).toEqual(['REQ-SYS-0001'])
+    expect(rows.map((r) => r.requirement.id)).toEqual(['REQ-SYS-0001'])
   })
 
   it('wants every tag asked for, not any of them', () => {
     const tagged = [req({ id: 'REQ-A-0001', tags: ['sécurité', 'vol'] }), req({ id: 'REQ-A-0002', tags: ['sécurité'] })]
     const rows = selectRequirements(parseReqBlock('tags: sécurité, vol'), tagged).rows
-    expect(rows.map((r) => r.id)).toEqual(['REQ-A-0001'])
+    expect(rows.map((r) => r.requirement.id)).toEqual(['REQ-A-0001'])
   })
 
   it('sorts a selection so a document regenerated twice reads the same', () => {
     const spec = parseReqBlock('category: SYS\nsort: title')
-    expect(selectRequirements(spec, library).rows.map((r) => r.title)).toEqual(['Alimentation', 'Trappe'])
+    expect(selectRequirements(spec, library).rows.map((r) => r.requirement.title)).toEqual(['Alimentation', 'Trappe'])
+  })
+
+  // The whole point of an alias: a specification written in a project's own numbering
+  // resolves without the library being renumbered for it.
+  it('quotes a requirement by the name the project calls it', () => {
+    const aliased = [req({ id: 'REQ-SYS-0001', aliases: ['OMLX-SYS-0001'] })]
+    const result = selectRequirements(parseReqBlock('OMLX-SYS-0001'), aliased)
+    expect(result.rows.map((r) => r.requirement.id)).toEqual(['REQ-SYS-0001'])
+  })
+
+  it('says which name the document used, so the document can be drawn in its own words', () => {
+    const aliased = [req({ id: 'REQ-SYS-0001', aliases: ['OMLX-SYS-0001'] })]
+    expect(selectRequirements(parseReqBlock('omlx-sys-0001'), aliased).rows[0].citedAs).toBe('OMLX-SYS-0001')
+    expect(selectRequirements(parseReqBlock('REQ-SYS-0001'), aliased).rows[0].citedAs).toBe('REQ-SYS-0001')
+  })
+
+  // A selection named nothing, so there is no alias to honour.
+  it('gives a selection the library’s own numbering', () => {
+    const aliased = [req({ id: 'REQ-SYS-0001', category: 'SYS', aliases: ['OMLX-SYS-0001'] })]
+    expect(selectRequirements(parseReqBlock('category: SYS'), aliased).rows[0].citedAs).toBe('REQ-SYS-0001')
+  })
+
+  it('finds a requirement by its alias when searching', () => {
+    const aliased = [req({ id: 'REQ-SYS-0001', aliases: ['OMLX-SYS-0001'] }), req({ id: 'REQ-ELEC-0001' })]
+    expect(selectRequirements(parseReqBlock('search: OMLX'), aliased).rows.map((r) => r.requirement.id)).toEqual([
+      'REQ-SYS-0001'
+    ])
   })
 
   it('ignores a selection entirely when identifiers were named', () => {
     // Naming one and filtering at the same time is a contradiction; the names win,
     // because they are the more specific thing to have written.
     const spec: ReqBlockSpec = { ...parseReqBlock('REQ-SYS-0002'), status: 'approved' }
-    expect(selectRequirements(spec, library).rows.map((r) => r.id)).toEqual(['REQ-SYS-0002'])
+    expect(selectRequirements(spec, library).rows.map((r) => r.requirement.id)).toEqual(['REQ-SYS-0002'])
   })
 })
 

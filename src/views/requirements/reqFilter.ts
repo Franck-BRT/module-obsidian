@@ -1,5 +1,6 @@
 import type { Requirement } from '../../store/requirements/Requirement'
 import { isStale, isUnreviewedMachine, missingLanguages, textOf } from '../../store/requirements/Requirement'
+import { namesOf } from '../../store/requirements/reqAlias'
 import { needsReview } from '../../store/requirements/reqQuality'
 import { assessRequirement, isWeak } from '../../store/requirements/reqScore'
 
@@ -54,7 +55,7 @@ export function matchesReqSearch(requirement: Requirement, query: string): boole
   const needle = query.trim().toLowerCase()
   if (!needle) return true
   const haystack = [
-    requirement.id,
+    ...namesOf(requirement),
     requirement.title,
     requirement.source,
     requirement.rationale,

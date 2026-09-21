@@ -77,6 +77,14 @@ export interface Requirement {
   rationale: string
   owner: string
   tags: string[]
+  /**
+   * Other names this same requirement answers to.
+   *
+   * Not a second identity: one requirement, cited under the numbering a given project or
+   * customer uses. The id stays what it is — it is what the counters, the links and the
+   * baselines are written in — and an alias is what a document is allowed to call it.
+   */
+  aliases: string[]
   /** The language the requirement is authored in; every other wording is a translation. */
   sourceLang: string
   /** Bumped whenever the source wording changes. Translations are measured against it. */
@@ -115,6 +123,7 @@ export function makeRequirement(over: Partial<Requirement> = {}): Requirement {
     rationale: '',
     owner: '',
     tags: [],
+    aliases: [],
     sourceLang: 'fr',
     rev: 1,
     text: {},

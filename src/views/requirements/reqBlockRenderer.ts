@@ -9,6 +9,7 @@ import {
   resolveBlockFields,
   selectRequirements,
   type ReqBlockField,
+  type ReqBlockRow,
   type ReqBlockSpec
 } from '../../store/requirements/reqBlock'
 import { Chip } from '../../ui/primitives/Chip'
@@ -94,7 +95,7 @@ function renderReqBlock(plugin: PMPlugin, source: string, el: HTMLElement): void
 
   const { rows, missing } = selectRequirements(spec, plugin.index.requirementRefs())
   const fields = resolveBlockFields(spec.fields, plugin.settings.requirements.blockFields)
-  for (const requirement of rows) renderRow(plugin, root, requirement, spec, fields)
+  for (const row of rows) renderRow(plugin, root, row, spec, fields)
   // A requirement deleted under a document leaves a hole in the document, said in the
   // place the requirement used to be. Silence here would be the document quietly
   // getting shorter.
@@ -111,16 +112,17 @@ function notice(root: HTMLElement, icon: string, text: string, kind: 'warn' | 'h
 function renderRow(
   plugin: PMPlugin,
   root: HTMLElement,
-  requirement: Requirement,
+  row_: ReqBlockRow,
   spec: ReqBlockSpec,
   fields: ReqBlockField[]
 ): void {
+  const requirement = row_.requirement
   const row = root.createDiv('pm-reqblock-row')
 
   // One pass, in the order asked for, identifier and title included. Drawing either of
   // them ahead of the loop — which is what this did until somebody put the rating first
   // and watched it come out third — makes the order a suggestion.
-  for (const line of reqHeadLines(requirement, fields, plugin.settings)) {
+  for (const line of reqHeadLines(requirement, fields, plugin.settings, row_.citedAs)) {
     const head = row.createDiv('pm-reqblock-head')
     for (const part of line) drawPart(plugin, head, requirement, part)
   }
@@ -148,6 +150,9 @@ function drawPart(plugin: PMPlugin, head: HTMLElement, requirement: Requirement,
       // A link, because the point of quoting rather than pasting is being able to go and
       // see the requirement itself.
       const id = head.createEl('a', { cls: 'pm-req-id pm-reqblock-id', text: part.id, href: '#' })
+      // The name the document uses, with the library's own on the tooltip when they are
+      // not the same: a reader looking at OMLX-SYS-0001 can find out what it is here.
+      if (part.canonical) id.title = part.canonical
       id.addEventListener(
         'click',
         safeAsync(async (event: MouseEvent) => {

@@ -1146,3 +1146,48 @@
 .pm-req-newcat-chips .pm-chip {
   cursor: pointer;
 }
+
+/* The other names a requirement answers to. */
+.pm-req-alias-add {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  margin-bottom: var(--size-2-2);
+}
+
+.pm-req-alias-add .pm-prop-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pm-req-alias-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2);
+}
+
+.pm-req-alias {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+}
+
+.pm-req-alias-drop {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: none;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+  color: var(--text-faint);
+  --icon-size: 12px;
+}
+
+.pm-req-alias-drop:hover {
+  color: var(--text-error);
+}

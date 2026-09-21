@@ -1,5 +1,6 @@
 import type { Requirement, ReqLink, ReqRevision, ReqText, VerificationMethod } from './Requirement'
 import { makeRequirement, REQ_LINK_KINDS, VERIFICATION_METHODS } from './Requirement'
+import { cleanAliases } from './reqAlias'
 
 /**
  * A requirement on disk.
@@ -25,6 +26,7 @@ export const REQUIREMENT_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'rationale',
   'owner',
   'tags',
+  'aliases',
   'sourceLang',
   'rev',
   'text',
@@ -116,8 +118,9 @@ export function hydrateRequirement(frontmatter: Record<string, unknown>, filePat
       if (held) text[lang] = held
     }
   }
+  const id = str(frontmatter.id, filePath)
   return makeRequirement({
-    id: str(frontmatter.id, filePath),
+    id,
     title: str(frontmatter.title),
     category: str(frontmatter.category),
     type: str(frontmatter.type),
@@ -128,6 +131,10 @@ export function hydrateRequirement(frontmatter: Record<string, unknown>, filePat
     rationale: str(frontmatter.rationale),
     owner: str(frontmatter.owner),
     tags: strList(frontmatter.tags),
+    // Read through the same rules that write them: a note edited by hand can hold an
+    // alias in lower case, or the requirement's own id, and either would make a name
+    // resolve to two things.
+    aliases: cleanAliases(frontmatter.aliases, id),
     sourceLang: str(frontmatter.sourceLang, 'fr'),
     rev,
     text,
@@ -174,6 +181,7 @@ export function requirementFrontmatter(requirement: Requirement): Record<string,
   }
   if (requirement.verification !== 'none') fm.verification = requirement.verification
   if (requirement.tags.length) fm.tags = requirement.tags
+  if (requirement.aliases.length) fm.aliases = requirement.aliases
   if (requirement.links.length) fm.links = requirement.links
   if (requirement.history.length) fm.history = requirement.history
   return fm

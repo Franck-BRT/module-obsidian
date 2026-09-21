@@ -1,3 +1,4 @@
+import { cleanAliases } from './reqAlias'
 import { normalizePath, TFile, type App } from 'obsidian'
 import type { Requirement } from './Requirement'
 import { addLink, makeRequirement, setText } from './Requirement'
@@ -33,6 +34,9 @@ function applyValues(requirement: Requirement, values: CsvValues, by: string): R
     ...(values.rationale === undefined ? {} : { rationale: values.rationale }),
     ...(values.owner === undefined ? {} : { owner: values.owner }),
     ...(values.tags === undefined ? {} : { tags: values.tags }),
+    // Cleaned against the identifier it is landing on, so a spreadsheet cannot give a
+    // requirement its own name a second time.
+    ...(values.aliases === undefined ? {} : { aliases: cleanAliases(values.aliases, requirement.id) }),
     ...(values.sourceLang === undefined ? {} : { sourceLang: values.sourceLang })
   }
   // Through setText, never by assignment: an imported wording has to bump the revision

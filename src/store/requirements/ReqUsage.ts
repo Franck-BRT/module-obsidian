@@ -36,7 +36,7 @@ export function resolveUsage(notes: NoteSpecs[], library: Requirement[]): Map<st
     // is still one document citing it.
     const quoted = new Set<string>()
     for (const spec of note.specs) {
-      for (const requirement of selectRequirements(spec, library).rows) quoted.add(requirement.id)
+      for (const row of selectRequirements(spec, library).rows) quoted.add(row.requirement.id)
     }
     for (const id of quoted) {
       const paths = usage.get(id)
