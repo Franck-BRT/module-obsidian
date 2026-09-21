@@ -30,6 +30,8 @@ import { renderSelectControl } from '../../ui/composites/properties'
 import { t } from '../../i18n'
 import { reqLanguages, reqLinkKindLabel, verificationLabel } from './reqPalette'
 import { renderStars } from './reqStars'
+import { openPromptModal } from './PromptModal'
+import type { PromptKey } from './promptDefs'
 
 /**
  * One requirement, open for editing.
@@ -49,6 +51,14 @@ class RequirementModal extends Modal {
   /** The model's own reading of this requirement, once somebody asked for one. */
   private deep: DeepReview | null = null
   private reviewing = false
+  /**
+   * Which languages have an action in flight.
+   *
+   * Held here rather than on the buttons: an instruction saved from the modal re-runs the
+   * action, and by then the button that started it has been redrawn away.
+   */
+  private checking = new Set<string>()
+  private translating = new Set<string>()
   private readonly reviewer: RequirementReviewer
   private bodyEl!: HTMLElement
 
@@ -283,14 +293,17 @@ class RequirementModal extends Modal {
       if (lang !== this.draft.sourceLang && this.plugin.translator.available) {
         const held = textOf(this.draft, lang)
         if (held === null || isStale(this.draft, lang)) {
+          const running = this.translating.has(lang)
           const translate = label.createEl('button', {
             cls: 'pm-req-translate',
-            text: held === null ? t('req.translate') : t('req.retranslate')
+            text: running ? t('req.translating') : held === null ? t('req.translate') : t('req.retranslate')
           })
+          translate.disabled = running
           translate.addEventListener(
             'click',
-            safeAsync(() => this.translate(lang, translate))
+            safeAsync(() => this.translate(lang))
           )
+          this.promptButton(label, 'translatePrompt', () => this.translate(lang))
         }
       }
       if (isUnreviewedMachine(this.draft, lang)) {
@@ -361,25 +374,27 @@ class RequirementModal extends Modal {
    * asking a gateway to translate a sentence the reader has just replaced on screen would
    * produce a draft of something that no longer exists.
    */
-  private async translate(lang: string, button: HTMLButtonElement): Promise<void> {
+  private async translate(lang: string): Promise<void> {
     if (this.dirty) await this.save()
-    button.disabled = true
-    button.setText(t('req.translating'))
-    const current = await this.plugin.requirements.load(this.path)
-    if (!current) {
-      new Notice(t('req.notFound'))
-      return
+    this.translating.add(lang)
+    this.render()
+    try {
+      const current = await this.plugin.requirements.load(this.path)
+      if (!current) {
+        new Notice(t('req.notFound'))
+        return
+      }
+      const outcome = await this.plugin.translator.translate(current, lang)
+      if (!outcome.ok) {
+        new Notice(t('req.translateFailed', { reason: outcome.error ?? '' }))
+        return
+      }
+      this.reports.set(lang, outcome)
+      const reloaded = await this.plugin.requirements.load(this.path)
+      if (reloaded) this.draft = reloaded
+    } finally {
+      this.translating.delete(lang)
     }
-    const outcome = await this.plugin.translator.translate(current, lang)
-    if (!outcome.ok) {
-      new Notice(t('req.translateFailed', { reason: outcome.error ?? '' }))
-      button.disabled = false
-      button.setText(t('req.translate'))
-      return
-    }
-    this.reports.set(lang, outcome)
-    const reloaded = await this.plugin.requirements.load(this.path)
-    if (reloaded) this.draft = reloaded
     this.render()
   }
 
@@ -494,6 +509,7 @@ class RequirementModal extends Modal {
         'click',
         safeAsync(() => this.runDeepReview())
       )
+      this.promptButton(head, 'reviewPrompt', () => this.runDeepReview())
     }
     if (!this.deep) {
       block.createDiv({
@@ -745,12 +761,17 @@ class RequirementModal extends Modal {
     const findings = mergeFindings(rules, this.review.get(lang) ?? [])
     const host = box.createDiv('pm-req-quality')
     if (this.reviewer.available) {
-      const button = host.createEl('button', { cls: 'pm-req-review', text: t('req.review') })
-      button.disabled = body.trim() === ''
+      const running = this.checking.has(lang)
+      const button = host.createEl('button', {
+        cls: 'pm-req-review',
+        text: running ? t('req.reviewing') : t('req.review')
+      })
+      button.disabled = running || body.trim() === ''
       button.addEventListener(
         'click',
-        safeAsync(() => this.runReview(lang, body, button))
+        safeAsync(() => this.runReview(lang, body))
       )
+      this.promptButton(host, 'checkPrompt', () => this.runReview(lang, this.wordingOf(lang)))
     }
     if (!findings.length) {
       if (body.trim()) host.createSpan({ cls: 'pm-req-quality-ok', text: t('req.qualityClean') })
@@ -767,18 +788,44 @@ class RequirementModal extends Modal {
     }
   }
 
-  private async runReview(lang: string, body: string, button: HTMLButtonElement): Promise<void> {
-    button.disabled = true
-    button.setText(t('req.reviewing'))
+  private async runReview(lang: string, body: string): Promise<void> {
+    if (!body.trim()) return
+    this.checking.add(lang)
+    this.render()
     try {
       this.review.set(lang, await this.reviewer.review(body, lang))
     } catch (error) {
       new Notice(t('req.reviewFailed', { reason: error instanceof Error ? error.message : '' }))
-      button.disabled = false
-      button.setText(t('req.review'))
-      return
+    } finally {
+      this.checking.delete(lang)
     }
     this.render()
+  }
+
+  /** The wording as it stands, for an action re-run after the editor was redrawn. */
+  private wordingOf(lang: string): string {
+    return textOf(this.draft, lang)?.body ?? ''
+  }
+
+  /**
+   * The button beside an action that opens the instruction behind it.
+   *
+   * Beside, not instead: the action is what the reader came for, and the instruction is
+   * what they reach for when the answer was poor. Saving from there re-runs the action,
+   * so the change can be judged against the requirement that prompted it.
+   */
+  private promptButton(parent: HTMLElement, key: PromptKey, rerun?: () => Promise<void>): void {
+    const button = parent.createEl('button', {
+      cls: 'pm-req-prompt-edit',
+      attr: { 'aria-label': t('req.editPrompt'), title: t('req.editPrompt') }
+    })
+    setIcon(button, 'sliders-horizontal')
+    button.addEventListener('click', () => {
+      openPromptModal(this.plugin, key, (again) => {
+        this.render()
+        if (again && rerun) void rerun()
+      })
+    })
   }
 
   private author(): string {

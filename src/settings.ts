@@ -12,8 +12,7 @@ import {
 import { flattenTasks } from './store/TaskTreeOps'
 import { safeAsync, saveShortcutLabel } from './utils'
 import { LlmClient } from './store/llm'
-import { DEFAULT_CHECK_PROMPT, DEFAULT_REVIEW_PROMPT, REVIEW_PROMPT_KEYS } from './store/requirements/reqQualityLlm'
-import { DEFAULT_TRANSLATION_PROMPT } from './store/requirements/translate'
+import { PROMPT_DEFS, type PromptDef } from './views/requirements/promptDefs'
 import {
   countTaskNotesPaletteChanges,
   getTaskNotesApi,
@@ -730,23 +729,7 @@ export class PMSettingTab extends PluginSettingTab {
             )
           }
         },
-        this.promptPage('reviewPrompt', t('settings.req.prompt'), t('settings.req.promptDesc'), DEFAULT_REVIEW_PROMPT, [
-          ...REVIEW_PROMPT_KEYS
-        ]),
-        this.promptPage(
-          'checkPrompt',
-          t('settings.req.checkPrompt'),
-          t('settings.req.checkPromptDesc'),
-          DEFAULT_CHECK_PROMPT,
-          ['lang', 'rules']
-        ),
-        this.promptPage(
-          'translatePrompt',
-          t('settings.req.translatePrompt'),
-          t('settings.req.translatePromptDesc'),
-          DEFAULT_TRANSLATION_PROMPT,
-          ['from', 'to', 'title', 'glossary']
-        ),
+        ...PROMPT_DEFS.map((def) => this.promptPage(def)),
         this.reqPalettePage('types'),
         this.reqPalettePage('statuses')
       ]
@@ -768,27 +751,22 @@ export class PMSettingTab extends PluginSettingTab {
    * One shape for all three, because three pages that drifted apart would be three
    * different answers to the same question.
    */
-  private promptPage(
-    key: 'reviewPrompt' | 'checkPrompt' | 'translatePrompt',
-    name: string,
-    desc: string,
-    fallback: string,
-    keys: string[]
-  ): SettingDefinitionPage {
+  private promptPage(def: PromptDef): SettingDefinitionPage {
     const reqs = this.plugin.settings.requirements
+    const { key, fallback } = def
     return {
       type: 'page',
-      name,
-      desc,
+      name: def.label(),
+      desc: def.desc(),
       displayValue: () => (reqs[key].trim() ? t('settings.req.promptCustom') : t('settings.req.promptDefault')),
       items: [
         {
           name: t('settings.req.promptKeys'),
-          desc: keys.map((placeholder) => `{${placeholder}}`).join('  ·  '),
+          desc: def.keys.map((placeholder) => `{${placeholder}}`).join('  ·  '),
           render: () => undefined
         },
         {
-          name,
+          name: def.label(),
           desc: t('settings.req.promptHint'),
           render: (setting: Setting) => {
             setting.setClass('pm-settings-prompt')

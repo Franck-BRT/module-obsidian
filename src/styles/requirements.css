@@ -1053,3 +1053,77 @@
   flex-direction: column;
   align-items: stretch;
 }
+
+/* ---- Editing an instruction where it is used ------------------------------------- */
+
+/* Quiet beside the action it belongs to: the action is what the reader came for, and
+   this is what they reach for when the answer was poor. */
+.pm-req-prompt-edit {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  --icon-size: 13px;
+}
+
+.pm-req-prompt-edit:hover {
+  color: var(--text-muted);
+}
+
+.pm-req-prompt-modal {
+  --dialog-width: 46rem;
+}
+
+.pm-req-prompt-desc {
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+  margin-bottom: var(--size-2-3);
+}
+
+.pm-req-prompt-keys {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: var(--size-2-2);
+}
+
+/* Clickable, because hunting for the right spelling of a placeholder is not part of
+   writing a sentence. */
+.pm-req-prompt-key {
+  font-family: var(--font-monospace);
+  font-size: var(--font-smallest);
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.pm-req-prompt-key:hover {
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+.pm-req-prompt-area {
+  width: 100%;
+  min-height: 20rem;
+  font-family: var(--font-monospace);
+  font-size: var(--font-smaller);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.pm-req-prompt-modal .pm-te-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  margin-top: var(--size-2-3);
+}
+
+.pm-req-prompt-spacer {
+  flex: 1 1 auto;
+}
