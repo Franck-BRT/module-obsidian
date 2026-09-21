@@ -48,13 +48,14 @@ export type ReqBlockField = (typeof REQ_BLOCK_FIELDS)[number]
 /**
  * What a block shows when it was not told.
  *
- * The rating is not among them, and that is the one deliberate absence: a `pm-req` block
- * ends up in specifications that are sent to suppliers, and how well a requirement is
- * *written* is this organisation's business rather than theirs. It is one word away —
- * `fields: id, text, status, rating` — for the documents where it belongs, which are the
- * internal reviews.
+ * The rating is among them: a requirement quoted into a document is a requirement being
+ * read by somebody who can still fix it, and the point of the stars is that they are seen
+ * without being asked for. The trade-off stays visible though — a `pm-req` block can end
+ * up in a specification sent to a supplier, and how well a requirement is *written* is
+ * this organisation's business rather than theirs. One line drops it there:
+ * `fields: id, text, status`.
  */
-export const DEFAULT_REQ_BLOCK_FIELDS: ReqBlockField[] = ['id', 'text', 'status']
+export const DEFAULT_REQ_BLOCK_FIELDS: ReqBlockField[] = ['id', 'text', 'status', 'rating']
 
 function splitList(raw: string): string[] {
   return raw

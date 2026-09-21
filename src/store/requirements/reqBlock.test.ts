@@ -42,10 +42,16 @@ describe('parseReqBlock', () => {
     expect(parseReqBlock('fields: id, text, rating').fields).toEqual(['id', 'text', 'rating'])
   })
 
-  // A `pm-req` block ends up in specifications sent to suppliers, and how well a
-  // requirement is written is this organisation's business rather than theirs.
-  it('does not show the rating unless a block asked for it', () => {
-    expect(DEFAULT_REQ_BLOCK_FIELDS).not.toContain('rating')
+  // The stars are worth seeing without being asked for, so a block that named no columns
+  // draws them.
+  it('shows the rating in a block that named no columns', () => {
+    expect(DEFAULT_REQ_BLOCK_FIELDS).toContain('rating')
+  })
+
+  // And a document that must not carry it — a specification going out to a supplier —
+  // drops it by naming its columns.
+  it('drops the rating from a block that named its columns without it', () => {
+    expect(parseReqBlock('fields: id, text, status').fields).toEqual(['id', 'text', 'status'])
   })
 
   it('reports a key it does not know rather than ignoring it', () => {

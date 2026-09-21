@@ -142,8 +142,8 @@ function renderRow(
       chip(head, { label: verificationLabel(requirement.verification), color: '', icon: 'check-check' })
     }
     if (field === 'rating') {
-      // Asked for explicitly, so it is drawn plainly: the stars, and the percentage on
-      // the tooltip for whoever wants the number behind them.
+      // Drawn plainly: the stars, and the percentage on the tooltip for whoever wants the
+      // number behind them.
       const report = assessRequirement(requirement, reqLanguages(plugin.settings))
       renderStars(head, report.stars, 'pm-req-stars--small').title = t('req.ratingOf', {
         score: Math.round(report.score * 100)
