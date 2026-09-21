@@ -33,9 +33,27 @@ export interface ReqBlockSpec {
   unknown: string[]
 }
 
-export const REQ_BLOCK_FIELDS = ['id', 'title', 'text', 'type', 'status', 'criticality', 'verification'] as const
+export const REQ_BLOCK_FIELDS = [
+  'id',
+  'title',
+  'text',
+  'type',
+  'status',
+  'criticality',
+  'verification',
+  'rating'
+] as const
 export type ReqBlockField = (typeof REQ_BLOCK_FIELDS)[number]
 
+/**
+ * What a block shows when it was not told.
+ *
+ * The rating is not among them, and that is the one deliberate absence: a `pm-req` block
+ * ends up in specifications that are sent to suppliers, and how well a requirement is
+ * *written* is this organisation's business rather than theirs. It is one word away —
+ * `fields: id, text, status, rating` — for the documents where it belongs, which are the
+ * internal reviews.
+ */
 export const DEFAULT_REQ_BLOCK_FIELDS: ReqBlockField[] = ['id', 'text', 'status']
 
 function splitList(raw: string): string[] {

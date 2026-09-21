@@ -40,6 +40,6 @@ describe('the prompt definitions', () => {
 
   it('finds one by key, and refuses a key it does not have', () => {
     expect(promptDef('checkPrompt').key).toBe('checkPrompt')
-    expect(() => promptDef('nothing' as PromptKey)).toThrow()
+    expect(() => promptDef('nothing' as PromptKey)).toThrow('no prompt definition')
   })
 })

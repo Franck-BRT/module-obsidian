@@ -15,7 +15,9 @@ import { Chip } from '../../ui/primitives/Chip'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
-import { reqCriticalityGlyph, reqStatusGlyph, reqTypeGlyph, verificationLabel } from './reqPalette'
+import { reqCriticalityGlyph, reqLanguages, reqStatusGlyph, reqTypeGlyph, verificationLabel } from './reqPalette'
+import { renderStars } from './reqStars'
+import { assessRequirement } from '../../store/requirements/reqScore'
 
 /**
  * Requirements quoted inside a document.
@@ -138,6 +140,14 @@ function renderRow(
     if (field === 'criticality') chip(head, reqCriticalityGlyph(plugin.settings, requirement.criticality))
     if (field === 'verification' && requirement.verification !== 'none') {
       chip(head, { label: verificationLabel(requirement.verification), color: '', icon: 'check-check' })
+    }
+    if (field === 'rating') {
+      // Asked for explicitly, so it is drawn plainly: the stars, and the percentage on
+      // the tooltip for whoever wants the number behind them.
+      const report = assessRequirement(requirement, reqLanguages(plugin.settings))
+      renderStars(head, report.stars, 'pm-req-stars--small').title = t('req.ratingOf', {
+        score: Math.round(report.score * 100)
+      })
     }
   }
 

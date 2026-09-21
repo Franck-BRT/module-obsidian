@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { makeRequirement, setText } from './Requirement'
-import { isEmptySpec, parseReqBlock, quotedWording, selectRequirements, type ReqBlockSpec } from './reqBlock'
+import {
+  DEFAULT_REQ_BLOCK_FIELDS,
+  isEmptySpec,
+  parseReqBlock,
+  quotedWording,
+  selectRequirements,
+  type ReqBlockSpec
+} from './reqBlock'
 
 const req = (over: Parameters<typeof makeRequirement>[0] = {}) => makeRequirement({ sourceLang: 'fr', ...over })
 
@@ -29,6 +36,16 @@ describe('parseReqBlock', () => {
 
   it('keeps only the columns it knows how to draw', () => {
     expect(parseReqBlock('fields: id, text, couleur, status').fields).toEqual(['id', 'text', 'status'])
+  })
+
+  it('knows the rating is a column a document can ask for', () => {
+    expect(parseReqBlock('fields: id, text, rating').fields).toEqual(['id', 'text', 'rating'])
+  })
+
+  // A `pm-req` block ends up in specifications sent to suppliers, and how well a
+  // requirement is written is this organisation's business rather than theirs.
+  it('does not show the rating unless a block asked for it', () => {
+    expect(DEFAULT_REQ_BLOCK_FIELDS).not.toContain('rating')
   })
 
   it('reports a key it does not know rather than ignoring it', () => {
