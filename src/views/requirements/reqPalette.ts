@@ -1,4 +1,5 @@
 import type { PMSettings, ReqPaletteConfig } from '../../types'
+import type { ReqBlockField } from '../../store/requirements/reqBlockFields'
 import { t } from '../../i18n'
 
 /**
@@ -73,6 +74,34 @@ export function reqLinkKindLabel(kind: string): string {
       return t('req.link.duplicates')
     default:
       return t('req.link.satisfiedBy')
+  }
+}
+
+/**
+ * A column of a `pm-req` block, named for a reader.
+ *
+ * Exhaustive rather than a lookup, so a column added to the vocabulary cannot reach the
+ * settings page as its own identifier: the compiler asks for a name at the same time as
+ * the feature.
+ */
+export function reqBlockFieldLabel(field: ReqBlockField): string {
+  switch (field) {
+    case 'id':
+      return t('req.field.id')
+    case 'title':
+      return t('req.field.title')
+    case 'text':
+      return t('req.field.wording')
+    case 'type':
+      return t('req.field.type')
+    case 'status':
+      return t('req.field.status')
+    case 'criticality':
+      return t('req.field.criticality')
+    case 'verification':
+      return t('req.field.verification')
+    case 'rating':
+      return t('req.field.rating')
   }
 }
 

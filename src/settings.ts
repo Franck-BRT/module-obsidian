@@ -13,6 +13,8 @@ import { flattenTasks } from './store/TaskTreeOps'
 import { safeAsync, saveShortcutLabel } from './utils'
 import { LlmClient } from './store/llm'
 import { PROMPT_DEFS, type PromptDef } from './views/requirements/promptDefs'
+import { DEFAULT_REQ_BLOCK_FIELDS, REQ_BLOCK_FIELDS } from './store/requirements/reqBlockFields'
+import { reqBlockFieldLabel } from './views/requirements/reqPalette'
 import {
   countTaskNotesPaletteChanges,
   getTaskNotesApi,
@@ -729,9 +731,93 @@ export class PMSettingTab extends PluginSettingTab {
             )
           }
         },
+        this.reqBlockFieldsPage(),
         ...PROMPT_DEFS.map((def) => this.promptPage(def)),
         this.reqPalettePage('types'),
         this.reqPalettePage('statuses')
+      ]
+    }
+  }
+
+  /**
+   * The columns a quoted requirement shows, as a list rather than a text field.
+   *
+   * Order is part of the answer — a block reads `REQ-SYS-0001  Titre  Approuvée  ★★★★☆`
+   * in the order written — so the affordance has to be one that can be dragged, and a
+   * comma-separated string in a text box is not one.
+   *
+   * Emptying it is allowed, and falls back to the list this plugin ships with rather
+   * than drawing nothing: a block reduced to a blank rectangle would look like a bug in
+   * the document, in a document nobody would think to blame the settings for.
+   */
+  private reqBlockFieldsPage(): SettingDefinitionPage {
+    const reqs = this.plugin.settings.requirements
+    const chosen = reqs.blockFields
+    return {
+      type: 'page',
+      name: t('settings.req.blockFields'),
+      desc: t('settings.req.blockFieldsDesc'),
+      displayValue: () =>
+        chosen.length ? chosen.map((field) => reqBlockFieldLabel(field)).join(', ') : t('settings.req.promptDefault'),
+      items: [
+        {
+          type: 'list',
+          heading: t('settings.req.blockFields'),
+          emptyState: t('settings.req.blockFieldsEmpty'),
+          items: chosen.map((field) => ({
+            name: reqBlockFieldLabel(field),
+            render: () => undefined
+          })),
+          onReorder: (from, to) => this.reorder(chosen, from, to),
+          onDelete: (index) => {
+            chosen.splice(index, 1)
+            this.persist()
+            this.update()
+          },
+          addItem: {
+            name: t('settings.req.blockFieldsAdd'),
+            action: (el: HTMLElement) => {
+              const rest = REQ_BLOCK_FIELDS.filter((field) => !chosen.includes(field))
+              const menu = new Menu()
+              // Said rather than left as an empty menu that opens onto nothing.
+              if (rest.length === 0) {
+                menu.addItem((item) => item.setTitle(t('settings.req.blockFieldsAll')).setDisabled(true))
+              }
+              for (const field of rest) {
+                menu.addItem((item) =>
+                  item.setTitle(reqBlockFieldLabel(field)).onClick(() => {
+                    chosen.push(field)
+                    this.persist()
+                    this.update()
+                  })
+                )
+              }
+              const rect = el.getBoundingClientRect()
+              menu.showAtPosition({ x: rect.left, y: rect.bottom + 4 })
+            }
+          }
+        },
+        {
+          name: t('settings.req.blockFieldsReset'),
+          desc: t('settings.req.blockFieldsResetDesc'),
+          render: (setting: Setting) => {
+            setting.addButton((button) =>
+              button.setButtonText(t('settings.req.blockFieldsRestore')).onClick(() => {
+                // Rewritten in place rather than replaced: the list above holds this very
+                // array, and handing the settings a different one would leave it editing
+                // the old one.
+                chosen.splice(0, chosen.length, ...DEFAULT_REQ_BLOCK_FIELDS)
+                this.persist()
+                this.update()
+              })
+            )
+          }
+        },
+        {
+          name: t('settings.req.blockFieldsOrder'),
+          desc: t('settings.req.blockFieldsOrderDesc'),
+          render: () => undefined
+        }
       ]
     }
   }

@@ -71,6 +71,7 @@ import { ReqUsageIndex } from './store/requirements/ReqUsage'
 import { BaselineStore } from './store/requirements/BaselineStore'
 import { ReqPorter } from './store/requirements/ReqPorter'
 import { ReqEmbeddingIndex } from './store/requirements/ReqEmbeddings'
+import { cleanBlockFields } from './store/requirements/reqBlockFields'
 import { registerReqBlock } from './views/requirements/reqBlockRenderer'
 import { registerReqEditorMenu } from './views/requirements/reqEditorMenu'
 import { pickRequirement } from './views/requirements/RequirementPicker'
@@ -471,6 +472,10 @@ export default class PMPlugin extends Plugin {
     for (const key of ['reviewPrompt', 'checkPrompt', 'translatePrompt'] as const) {
       if (typeof this.settings.requirements[key] !== 'string') this.settings.requirements[key] = ''
     }
+    // Normalized once, on the way in: a hand-edited data.json or a list written by an
+    // older build can name a column this one has never heard of, and the settings page
+    // would then be editing something it cannot draw.
+    this.settings.requirements.blockFields = cleanBlockFields(this.settings.requirements.blockFields)
     if (!this.settings.projectFilters) this.settings.projectFilters = {}
     if (!this.settings.scopeViews) this.settings.scopeViews = {}
     if (!this.settings.collapsedTasks) this.settings.collapsedTasks = {}

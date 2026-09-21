@@ -1180,6 +1180,7 @@ export const en = {
   'req.flag.missing': 'Missing languages',
   'req.flag.suspect': 'Links to check',
   'req.field.id': 'Identifier',
+  'req.field.title': 'Title',
   'req.field.wording': 'Statement',
   'req.field.category': 'Category',
   'req.field.type': 'Type',
@@ -1260,6 +1261,19 @@ export const en = {
   'settings.req.newType': 'New type',
   'settings.req.newStatus': 'New status',
   'settings.req.paletteEmpty': 'No entries yet.',
+  'settings.req.blockFields': 'Columns of a pm-req block',
+  'settings.req.blockFieldsDesc':
+    'What a pm-req block shows when it does not name its own columns. A block\'s own "fields:" line still wins, for the documents that have to differ.',
+  'settings.req.blockFieldsEmpty':
+    'No columns chosen: blocks show the built-in list (identifier, statement, status, rating).',
+  'settings.req.blockFieldsAdd': 'Add a column',
+  'settings.req.blockFieldsAll': 'Every column is already in the list.',
+  'settings.req.blockFieldsReset': 'Back to the built-in list',
+  'settings.req.blockFieldsResetDesc': 'Identifier, statement, status, rating.',
+  'settings.req.blockFieldsRestore': 'Restore',
+  'settings.req.blockFieldsOrder': 'Display order',
+  'settings.req.blockFieldsOrderDesc':
+    'Drag the columns to reorder them. Identifier, title, status, criticality, verification and rating sit on the header line; the statement always comes below.',
 
   'default.status.todo': 'To Do',
   'default.status.inProgress': 'In Progress',

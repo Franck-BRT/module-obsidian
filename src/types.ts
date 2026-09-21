@@ -1,4 +1,5 @@
 import type { ImpactLevel, ProjectImpactRole } from './store/ZoneImpact'
+import { DEFAULT_REQ_BLOCK_FIELDS, type ReqBlockField } from './store/requirements/reqBlockFields'
 import { today } from './dates'
 import type { TaskIndex } from './store/TaskIndex'
 import type { WorkCalendar } from './store/WorkCalendar'
@@ -533,6 +534,15 @@ export interface RequirementSettings {
   /** How many things to do the editor proposes at once. Three is a plan; eight is a backlog. */
   reviewProposals: number
   /**
+   * The columns a `pm-req` block draws when it did not name any itself.
+   *
+   * Held here rather than compiled in because what belongs in a quoted requirement is a
+   * house decision: an internal review wants the rating, a specification going out to a
+   * supplier does not. A block's own `fields:` line still wins over it, so one document
+   * can always differ from the vault without changing the vault.
+   */
+  blockFields: ReqBlockField[]
+  /**
    * The instruction the model is given when reviewing a requirement.
    *
    * Empty means the one this plugin ships with. What it cannot change is the output
@@ -575,6 +585,7 @@ export const DEFAULT_REQUIREMENT_SETTINGS: RequirementSettings = {
   counters: {},
   reviewTarget: 80,
   reviewProposals: 3,
+  blockFields: [...DEFAULT_REQ_BLOCK_FIELDS],
   reviewPrompt: '',
   checkPrompt: '',
   translatePrompt: ''

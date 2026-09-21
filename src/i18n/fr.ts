@@ -1155,6 +1155,7 @@ export const fr: Catalog = {
   'req.flag.missing': 'Langues manquantes',
   'req.flag.suspect': 'Liens à vérifier',
   'req.field.id': 'Identifiant',
+  'req.field.title': 'Titre',
   'req.field.wording': 'Énoncé',
   'req.field.category': 'Catégorie',
   'req.field.type': 'Type',
@@ -1236,6 +1237,19 @@ export const fr: Catalog = {
   'settings.req.newType': 'Nouveau type',
   'settings.req.newStatus': 'Nouveau statut',
   'settings.req.paletteEmpty': 'Aucune entrée pour le moment.',
+  'settings.req.blockFields': 'Colonnes du bloc pm-req',
+  'settings.req.blockFieldsDesc':
+    "Ce qu'un bloc pm-req affiche quand il ne nomme pas ses colonnes lui-même. Une ligne « fields: » dans un bloc reste prioritaire, pour les documents qui doivent différer.",
+  'settings.req.blockFieldsEmpty':
+    "Aucune colonne choisie : les blocs affichent la liste d'origine (identifiant, énoncé, statut, note).",
+  'settings.req.blockFieldsAdd': 'Ajouter une colonne',
+  'settings.req.blockFieldsAll': 'Toutes les colonnes sont déjà dans la liste.',
+  'settings.req.blockFieldsReset': "Revenir à la liste d'origine",
+  'settings.req.blockFieldsResetDesc': 'Identifiant, énoncé, statut, note.',
+  'settings.req.blockFieldsRestore': 'Rétablir',
+  'settings.req.blockFieldsOrder': "Ordre d'affichage",
+  'settings.req.blockFieldsOrderDesc':
+    "Glissez les colonnes pour les réordonner. Identifiant, titre, statut, criticité, vérification et note se suivent sur la ligne d'en-tête ; l'énoncé vient toujours en dessous.",
 
   'default.status.todo': 'À faire',
   'default.status.inProgress': 'En cours',

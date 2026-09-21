@@ -2,11 +2,11 @@ import { MarkdownRenderChild, setIcon } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Requirement } from '../../store/requirements/Requirement'
 import {
-  DEFAULT_REQ_BLOCK_FIELDS,
   isEmptySpec,
   parseReqBlock,
   quotedWording,
   REQ_BLOCK_LANGUAGE,
+  resolveBlockFields,
   selectRequirements,
   type ReqBlockField,
   type ReqBlockSpec
@@ -94,7 +94,7 @@ function renderReqBlock(plugin: PMPlugin, source: string, el: HTMLElement): void
   }
 
   const { rows, missing } = selectRequirements(spec, plugin.index.requirementRefs())
-  const fields = spec.fields.length ? spec.fields : DEFAULT_REQ_BLOCK_FIELDS
+  const fields = resolveBlockFields(spec.fields, plugin.settings.requirements.blockFields)
   for (const requirement of rows) renderRow(plugin, root, requirement, spec, fields)
   // A requirement deleted under a document leaves a hole in the document, said in the
   // place the requirement used to be. Silence here would be the document quietly

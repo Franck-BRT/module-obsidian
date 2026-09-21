@@ -1,5 +1,15 @@
 import type { Requirement } from './Requirement'
 import { isStale, isUnreviewedMachine, textOf } from './Requirement'
+import { isReqBlockField, type ReqBlockField } from './reqBlockFields'
+
+export {
+  cleanBlockFields,
+  DEFAULT_REQ_BLOCK_FIELDS,
+  isReqBlockField,
+  REQ_BLOCK_FIELDS,
+  resolveBlockFields,
+  type ReqBlockField
+} from './reqBlockFields'
 
 /**
  * A `pm-req` block: requirements pulled into a document rather than copied into it.
@@ -26,36 +36,12 @@ export interface ReqBlockSpec {
   search: string
   /** Which wording to show. Empty means each requirement's own source language. */
   lang: string
-  /** Which columns to draw, in order. Empty means the sensible default. */
+  /** Which columns to draw, in order. Empty means the list the settings hold. */
   fields: ReqBlockField[]
   sort: 'id' | 'title' | 'status'
   /** Keys the block used that mean nothing here, so the block can say so rather than ignore them. */
   unknown: string[]
 }
-
-export const REQ_BLOCK_FIELDS = [
-  'id',
-  'title',
-  'text',
-  'type',
-  'status',
-  'criticality',
-  'verification',
-  'rating'
-] as const
-export type ReqBlockField = (typeof REQ_BLOCK_FIELDS)[number]
-
-/**
- * What a block shows when it was not told.
- *
- * The rating is among them: a requirement quoted into a document is a requirement being
- * read by somebody who can still fix it, and the point of the stars is that they are seen
- * without being asked for. The trade-off stays visible though — a `pm-req` block can end
- * up in a specification sent to a supplier, and how well a requirement is *written* is
- * this organisation's business rather than theirs. One line drops it there:
- * `fields: id, text, status`.
- */
-export const DEFAULT_REQ_BLOCK_FIELDS: ReqBlockField[] = ['id', 'text', 'status', 'rating']
 
 function splitList(raw: string): string[] {
   return raw
@@ -126,9 +112,7 @@ export function parseReqBlock(source: string): ReqBlockSpec {
         spec.lang = value.toLowerCase()
         break
       case 'fields':
-        spec.fields = splitList(value.toLowerCase()).filter((field): field is ReqBlockField =>
-          REQ_BLOCK_FIELDS.includes(field as ReqBlockField)
-        )
+        spec.fields = splitList(value.toLowerCase()).filter(isReqBlockField)
         break
       case 'sort':
         spec.sort = value === 'title' || value === 'status' ? value : 'id'
