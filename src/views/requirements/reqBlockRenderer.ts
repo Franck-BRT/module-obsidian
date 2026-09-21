@@ -15,9 +15,8 @@ import { Chip } from '../../ui/primitives/Chip'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
-import { reqCriticalityGlyph, reqLanguages, reqStatusGlyph, reqTypeGlyph, verificationLabel } from './reqPalette'
 import { renderStars } from './reqStars'
-import { assessRequirement } from '../../store/requirements/reqScore'
+import { reqHeadParts } from './reqBlockHead'
 
 /**
  * Requirements quoted inside a document.
@@ -119,35 +118,35 @@ function renderRow(
   const row = root.createDiv('pm-reqblock-row')
   const head = row.createDiv('pm-reqblock-head')
 
-  if (fields.includes('id')) {
-    // A link, because the point of quoting rather than pasting is being able to go and
-    // see the requirement itself.
-    const id = head.createEl('a', { cls: 'pm-req-id pm-reqblock-id', text: requirement.id, href: '#' })
-    id.addEventListener(
-      'click',
-      safeAsync(async (event: MouseEvent) => {
-        event.preventDefault()
-        await openRequirementModal(plugin, requirement.filePath ?? '')
-      })
-    )
-  }
-  if (fields.includes('title') && requirement.title) {
-    head.createSpan({ cls: 'pm-reqblock-title', text: requirement.title })
-  }
-  for (const field of fields) {
-    if (field === 'type') chip(head, reqTypeGlyph(plugin.settings, requirement.type))
-    if (field === 'status') chip(head, reqStatusGlyph(plugin.settings, requirement.status))
-    if (field === 'criticality') chip(head, reqCriticalityGlyph(plugin.settings, requirement.criticality))
-    if (field === 'verification' && requirement.verification !== 'none') {
-      chip(head, { label: verificationLabel(requirement.verification), color: '', icon: 'check-check' })
-    }
-    if (field === 'rating') {
-      // Drawn plainly: the stars, and the percentage on the tooltip for whoever wants the
-      // number behind them.
-      const report = assessRequirement(requirement, reqLanguages(plugin.settings))
-      renderStars(head, report.stars, 'pm-req-stars--small').title = t('req.ratingOf', {
-        score: Math.round(report.score * 100)
-      })
+  // One pass, in the order asked for, identifier and title included. Drawing either of
+  // them ahead of the loop — which is what this did until somebody put the rating first
+  // and watched it come out third — makes the order a suggestion.
+  for (const part of reqHeadParts(requirement, fields, plugin.settings)) {
+    switch (part.kind) {
+      case 'id': {
+        // A link, because the point of quoting rather than pasting is being able to go
+        // and see the requirement itself.
+        const id = head.createEl('a', { cls: 'pm-req-id pm-reqblock-id', text: part.id, href: '#' })
+        id.addEventListener(
+          'click',
+          safeAsync(async (event: MouseEvent) => {
+            event.preventDefault()
+            await openRequirementModal(plugin, requirement.filePath ?? '')
+          })
+        )
+        break
+      }
+      case 'title':
+        head.createSpan({ cls: 'pm-reqblock-title', text: part.text })
+        break
+      case 'chip':
+        chip(head, part.glyph)
+        break
+      case 'rating':
+        // The stars, with the percentage on the tooltip for whoever wants the number
+        // behind them.
+        renderStars(head, part.stars, 'pm-req-stars--small').title = t('req.ratingOf', { score: part.score })
+        break
     }
   }
 
