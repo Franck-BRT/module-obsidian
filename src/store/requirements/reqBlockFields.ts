@@ -15,9 +15,25 @@ export const REQ_BLOCK_FIELDS = [
   'status',
   'criticality',
   'verification',
-  'rating'
+  'rating',
+  'break'
 ] as const
 export type ReqBlockField = (typeof REQ_BLOCK_FIELDS)[number]
+
+/**
+ * Not a column: where the head line ends and the next one starts.
+ *
+ * A quoted requirement with six columns on one line is a line nobody reads to the end,
+ * and the reader is the one who knows which of them belong together. It is in the same
+ * list as the columns because it is placed the same way — dragged into position among
+ * them — and it is the one entry that may appear more than once.
+ */
+export const REQ_BLOCK_BREAK = 'break'
+
+/** Whether anything here would actually be drawn. A list of nothing but breaks is empty. */
+export function hasColumn(fields: readonly ReqBlockField[]): boolean {
+  return fields.some((field) => field !== REQ_BLOCK_BREAK)
+}
 
 export function isReqBlockField(value: unknown): value is ReqBlockField {
   return typeof value === 'string' && REQ_BLOCK_FIELDS.includes(value as ReqBlockField)
@@ -45,7 +61,16 @@ export const DEFAULT_REQ_BLOCK_FIELDS: readonly ReqBlockField[] = ['id', 'text',
  */
 export function cleanBlockFields(raw: unknown): ReqBlockField[] {
   if (!Array.isArray(raw)) return []
-  return [...new Set(raw.filter(isReqBlockField))]
+  const seen = new Set<ReqBlockField>()
+  const kept: ReqBlockField[] = []
+  for (const field of raw.filter(isReqBlockField)) {
+    // Every column once — a column drawn twice is a bug the reader would have to explain
+    // to themselves — but as many line breaks as were asked for: three lines need two.
+    if (field !== REQ_BLOCK_BREAK && seen.has(field)) continue
+    seen.add(field)
+    kept.push(field)
+  }
+  return kept
 }
 
 /**
@@ -57,9 +82,9 @@ export function cleanBlockFields(raw: unknown): ReqBlockField[] {
  * so that an empty list is a block that still reads rather than a blank one.
  */
 export function resolveBlockFields(asked: ReqBlockField[], configured: unknown): ReqBlockField[] {
-  if (asked.length) return asked
+  if (hasColumn(asked)) return asked
   const kept = cleanBlockFields(configured)
   // A copy of the built-in list, never the list itself: it is one array shared by every
   // block in the vault, and a caller that sorted it in place would rearrange all of them.
-  return kept.length ? kept : [...DEFAULT_REQ_BLOCK_FIELDS]
+  return hasColumn(kept) ? kept : [...DEFAULT_REQ_BLOCK_FIELDS]
 }

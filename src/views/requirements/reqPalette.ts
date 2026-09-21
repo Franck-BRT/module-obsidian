@@ -102,6 +102,8 @@ export function reqBlockFieldLabel(field: ReqBlockField): string {
       return t('req.field.verification')
     case 'rating':
       return t('req.field.rating')
+    case 'break':
+      return t('req.field.break')
   }
 }
 

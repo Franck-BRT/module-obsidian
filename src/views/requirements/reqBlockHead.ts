@@ -28,7 +28,7 @@ export type ReqHeadPart =
   | { kind: 'rating'; stars: number; score: number }
 
 /**
- * What the head shows, in the order it was asked for.
+ * What the head shows, one line at a time, in the order it was asked for.
  *
  * Nothing empty is kept: a requirement with no status must not leave a blank chip behind,
  * because a row of empty outlines reads as a requirement with something missing rather
@@ -36,9 +36,14 @@ export type ReqHeadPart =
  *
  * `text` is not a column — it is a paragraph under the head — so it is dropped here
  * rather than turned into a part nobody would know how to draw on one line.
+ *
+ * A line break starts the next line, and a line that ended up with nothing on it is not
+ * returned at all: two breaks in a row, or one at either end, are somebody dragging
+ * things about, not somebody asking for a blank line in a specification.
  */
-export function reqHeadParts(requirement: Requirement, fields: ReqBlockField[], settings: PMSettings): ReqHeadPart[] {
-  const parts: ReqHeadPart[] = []
+export function reqHeadLines(requirement: Requirement, fields: ReqBlockField[], settings: PMSettings): ReqHeadPart[][] {
+  const lines: ReqHeadPart[][] = []
+  let parts: ReqHeadPart[] = []
   const chip = (glyph: ReqGlyph): void => {
     if (glyph.label) parts.push({ kind: 'chip', glyph })
   }
@@ -71,7 +76,12 @@ export function reqHeadParts(requirement: Requirement, fields: ReqBlockField[], 
       }
       case 'text':
         break
+      case 'break':
+        if (parts.length) lines.push(parts)
+        parts = []
+        break
     }
   }
-  return parts
+  if (parts.length) lines.push(parts)
+  return lines
 }

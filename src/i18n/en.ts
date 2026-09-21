@@ -1030,7 +1030,7 @@ export const en = {
   'req.pick': 'Search requirements…',
   'req.alreadyQuoted': '{id} is already quoted in this block.',
   'req.block.empty':
-    'This block asks for nothing. Write one identifier per line, or a selection: category, type, status, criticality, tags, search. Then lang, fields and sort for the display. The columns available: id, title, text, type, status, criticality, verification, rating.',
+    'This block asks for nothing. Write one identifier per line, or a selection: category, type, status, criticality, tags, search. Then lang, fields and sort for the display. The columns available: id, title, text, type, status, criticality, verification, rating, and break to start the next line.',
   'req.block.missing': '{id}: no requirement carries that identifier.',
   'req.block.none': 'No requirement matches.',
   'req.block.unknownKeys': 'Unknown key, ignored: {list}',
@@ -1181,6 +1181,7 @@ export const en = {
   'req.flag.suspect': 'Links to check',
   'req.field.id': 'Identifier',
   'req.field.title': 'Title',
+  'req.field.break': 'Line break',
   'req.field.wording': 'Statement',
   'req.field.category': 'Category',
   'req.field.type': 'Type',

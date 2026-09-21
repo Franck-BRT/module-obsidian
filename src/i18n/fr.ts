@@ -1008,7 +1008,7 @@ export const fr: Catalog = {
   'req.pick': 'Chercher une exigence…',
   'req.alreadyQuoted': '{id} est déjà cité dans ce bloc.',
   'req.block.empty':
-    "Ce bloc ne demande rien. Écrivez un identifiant par ligne, ou une sélection : category, type, status, criticality, tags, search. Puis lang, fields et sort pour l'affichage. Les colonnes possibles : id, title, text, type, status, criticality, verification, rating.",
+    "Ce bloc ne demande rien. Écrivez un identifiant par ligne, ou une sélection : category, type, status, criticality, tags, search. Puis lang, fields et sort pour l'affichage. Les colonnes possibles : id, title, text, type, status, criticality, verification, rating, et break pour passer à la ligne.",
   'req.block.missing': '{id} : aucune exigence ne porte cet identifiant.',
   'req.block.none': 'Aucune exigence ne correspond.',
   'req.block.unknownKeys': 'Clé inconnue, ignorée : {list}',
@@ -1156,6 +1156,7 @@ export const fr: Catalog = {
   'req.flag.suspect': 'Liens à vérifier',
   'req.field.id': 'Identifiant',
   'req.field.title': 'Titre',
+  'req.field.break': 'Retour à la ligne',
   'req.field.wording': 'Énoncé',
   'req.field.category': 'Catégorie',
   'req.field.type': 'Type',

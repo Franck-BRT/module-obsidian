@@ -13,7 +13,7 @@ import { flattenTasks } from './store/TaskTreeOps'
 import { safeAsync, saveShortcutLabel } from './utils'
 import { LlmClient } from './store/llm'
 import { PROMPT_DEFS, type PromptDef } from './views/requirements/promptDefs'
-import { DEFAULT_REQ_BLOCK_FIELDS, REQ_BLOCK_FIELDS } from './store/requirements/reqBlockFields'
+import { DEFAULT_REQ_BLOCK_FIELDS, REQ_BLOCK_BREAK, REQ_BLOCK_FIELDS } from './store/requirements/reqBlockFields'
 import { reqBlockFieldLabel } from './views/requirements/reqPalette'
 import {
   countTaskNotesPaletteChanges,
@@ -801,7 +801,9 @@ export class PMSettingTab extends PluginSettingTab {
           addItem: {
             name: t('settings.req.blockFieldsAdd'),
             action: (el: HTMLElement) => {
-              const rest = REQ_BLOCK_FIELDS.filter((field) => !chosen.includes(field))
+              // A line break may be added again and again — three lines need two of them —
+              // where a column already in the list would only be drawn twice.
+              const rest = REQ_BLOCK_FIELDS.filter((field) => field === REQ_BLOCK_BREAK || !chosen.includes(field))
               const menu = new Menu()
               // Said rather than left as an empty menu that opens onto nothing.
               if (rest.length === 0) {

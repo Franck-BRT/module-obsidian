@@ -16,6 +16,17 @@ describe('cleanBlockFields', () => {
     expect(cleanBlockFields(['id', 'text', 'id'])).toEqual(['id', 'text'])
   })
 
+  // Three lines need two of them, so this is the one entry that repeats.
+  it('keeps every line break it was given', () => {
+    expect(cleanBlockFields(['id', 'break', 'title', 'break', 'rating'])).toEqual([
+      'id',
+      'break',
+      'title',
+      'break',
+      'rating'
+    ])
+  })
+
   it('makes nothing at all out of something that is not a list', () => {
     expect(cleanBlockFields('id, text')).toEqual([])
     expect(cleanBlockFields(undefined)).toEqual([])
@@ -36,6 +47,13 @@ describe('resolveBlockFields', () => {
   it('falls back to the built-in list rather than drawing nothing', () => {
     expect(resolveBlockFields([], [])).toEqual(DEFAULT_REQ_BLOCK_FIELDS)
     expect(resolveBlockFields([], ['couleur'])).toEqual(DEFAULT_REQ_BLOCK_FIELDS)
+  })
+
+  // Line breaks alone would draw two empty lines and nothing else, which reads as a
+  // broken document rather than as a list somebody emptied.
+  it('treats a list of nothing but line breaks as nothing at all', () => {
+    expect(resolveBlockFields([], ['break', 'break'])).toEqual(DEFAULT_REQ_BLOCK_FIELDS)
+    expect(resolveBlockFields(['break'], ['id', 'title'])).toEqual(['id', 'title'])
   })
 
   it('does not hand out the built-in list itself, which a caller could then sort', () => {

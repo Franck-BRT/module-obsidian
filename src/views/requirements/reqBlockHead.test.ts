@@ -1,17 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS, type PMSettings } from '../../types'
 import { makeRequirement, setText } from '../../store/requirements/Requirement'
-import { reqHeadParts } from './reqBlockHead'
+import { reqHeadLines } from './reqBlockHead'
 
 const settings: PMSettings = DEFAULT_SETTINGS
 
 const req = (over: Parameters<typeof makeRequirement>[0] = {}) =>
   makeRequirement({ id: 'REQ-SYS-0001', title: 'Trappe', status: 'draft', ...over })
 
-const kinds = (fields: Parameters<typeof reqHeadParts>[1], requirement = req()) =>
-  reqHeadParts(requirement, fields, settings).map((part) => part.kind)
+/** The one line a head has when nothing asked for another. */
+const kinds = (fields: Parameters<typeof reqHeadLines>[1], requirement = req()) =>
+  (reqHeadLines(requirement, fields, settings)[0] ?? []).map((part) => part.kind)
 
-describe('reqHeadParts', () => {
+/** Every line, as its parts' kinds. */
+const lines = (fields: Parameters<typeof reqHeadLines>[1], requirement = req()) =>
+  reqHeadLines(requirement, fields, settings).map((line) => line.map((part) => part.kind))
+
+describe('reqHeadLines', () => {
   // The bug this file exists because of: the identifier and the title were drawn ahead
   // of the loop, so they came first whatever the settings said.
   it('draws them in the order asked for, identifier and title included', () => {
@@ -27,7 +32,7 @@ describe('reqHeadParts', () => {
   })
 
   it('draws nothing at all for a block that asked for nothing', () => {
-    expect(reqHeadParts(req(), [], settings)).toEqual([])
+    expect(reqHeadLines(req(), [], settings)).toEqual([])
   })
 
   // A row of empty outlines reads as a requirement with something missing, rather than
@@ -46,9 +51,11 @@ describe('reqHeadParts', () => {
   })
 
   it('carries the identifier and the title themselves, not just their place', () => {
-    expect(reqHeadParts(req(), ['id', 'title'], settings)).toEqual([
-      { kind: 'id', id: 'REQ-SYS-0001' },
-      { kind: 'title', text: 'Trappe' }
+    expect(reqHeadLines(req(), ['id', 'title'], settings)).toEqual([
+      [
+        { kind: 'id', id: 'REQ-SYS-0001' },
+        { kind: 'title', text: 'Trappe' }
+      ]
     ])
   })
 
@@ -60,8 +67,8 @@ describe('reqHeadParts', () => {
       'a'
     )
     const weak = setText(req(), 'fr', 'Ça devrait être rapide, si possible (TBD).', 'a')
-    const [rated] = reqHeadParts(good, ['rating'], settings)
-    const [poor] = reqHeadParts(weak, ['rating'], settings)
+    const [[rated]] = reqHeadLines(good, ['rating'], settings)
+    const [[poor]] = reqHeadLines(weak, ['rating'], settings)
     expect(rated).toMatchObject({ kind: 'rating' })
     expect(poor).toMatchObject({ kind: 'rating' })
     if (rated.kind !== 'rating' || poor.kind !== 'rating') throw new Error('not a rating')
@@ -71,10 +78,32 @@ describe('reqHeadParts', () => {
     expect(Number.isInteger(rated.score)).toBe(true)
   })
 
+  it('starts the next line where a break was asked for', () => {
+    expect(lines(['id', 'title', 'break', 'status', 'rating'])).toEqual([
+      ['id', 'title'],
+      ['chip', 'rating']
+    ])
+  })
+
+  it('makes as many lines as there were breaks', () => {
+    expect(lines(['id', 'break', 'title', 'break', 'rating'])).toEqual([['id'], ['title'], ['rating']])
+  })
+
+  // Two breaks in a row, or one at either end, are somebody dragging things about.
+  it('returns no line for a line nothing landed on', () => {
+    expect(lines(['break', 'id', 'break', 'break', 'rating', 'break'])).toEqual([['id'], ['rating']])
+  })
+
+  // The break is placed among the columns, so it can end up next to one this
+  // requirement has nothing to put in.
+  it('does not open a line for a column that drew nothing', () => {
+    expect(lines(['id', 'break', 'status'], req({ status: '' }))).toEqual([['id']])
+  })
+
   // A status deleted from the palette is still the status the note carries, and hiding
   // it would be the tool lying about the note.
   it('shows a status the palette no longer holds as itself', () => {
-    const parts = reqHeadParts(req({ status: 'à-revoir' }), ['status'], settings)
-    expect(parts).toEqual([{ kind: 'chip', glyph: { label: 'à-revoir', color: '#8b8c92', icon: 'circle-dashed' } }])
+    const parts = reqHeadLines(req({ status: 'à-revoir' }), ['status'], settings)
+    expect(parts).toEqual([[{ kind: 'chip', glyph: { label: 'à-revoir', color: '#8b8c92', icon: 'circle-dashed' } }]])
   })
 })

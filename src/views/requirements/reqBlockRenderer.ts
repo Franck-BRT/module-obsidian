@@ -16,7 +16,7 @@ import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
 import { renderStars } from './reqStars'
-import { reqHeadParts } from './reqBlockHead'
+import { reqHeadLines, type ReqHeadPart } from './reqBlockHead'
 
 /**
  * Requirements quoted inside a document.
@@ -116,38 +116,13 @@ function renderRow(
   fields: ReqBlockField[]
 ): void {
   const row = root.createDiv('pm-reqblock-row')
-  const head = row.createDiv('pm-reqblock-head')
 
   // One pass, in the order asked for, identifier and title included. Drawing either of
   // them ahead of the loop — which is what this did until somebody put the rating first
   // and watched it come out third — makes the order a suggestion.
-  for (const part of reqHeadParts(requirement, fields, plugin.settings)) {
-    switch (part.kind) {
-      case 'id': {
-        // A link, because the point of quoting rather than pasting is being able to go
-        // and see the requirement itself.
-        const id = head.createEl('a', { cls: 'pm-req-id pm-reqblock-id', text: part.id, href: '#' })
-        id.addEventListener(
-          'click',
-          safeAsync(async (event: MouseEvent) => {
-            event.preventDefault()
-            await openRequirementModal(plugin, requirement.filePath ?? '')
-          })
-        )
-        break
-      }
-      case 'title':
-        head.createSpan({ cls: 'pm-reqblock-title', text: part.text })
-        break
-      case 'chip':
-        chip(head, part.glyph)
-        break
-      case 'rating':
-        // The stars, with the percentage on the tooltip for whoever wants the number
-        // behind them.
-        renderStars(head, part.stars, 'pm-req-stars--small').title = t('req.ratingOf', { score: part.score })
-        break
-    }
+  for (const line of reqHeadLines(requirement, fields, plugin.settings)) {
+    const head = row.createDiv('pm-reqblock-head')
+    for (const part of line) drawPart(plugin, head, requirement, part)
   }
 
   if (!fields.includes('text')) return
@@ -165,6 +140,35 @@ function renderRow(
   if (quoted.stale) mark(marks, 'history', t('req.flag.stale'), 'stale')
   if (quoted.unreviewed) mark(marks, 'bot', t('req.machineWording'), 'machine')
   if (!marks.hasChildNodes()) marks.remove()
+}
+
+function drawPart(plugin: PMPlugin, head: HTMLElement, requirement: Requirement, part: ReqHeadPart): void {
+  switch (part.kind) {
+    case 'id': {
+      // A link, because the point of quoting rather than pasting is being able to go and
+      // see the requirement itself.
+      const id = head.createEl('a', { cls: 'pm-req-id pm-reqblock-id', text: part.id, href: '#' })
+      id.addEventListener(
+        'click',
+        safeAsync(async (event: MouseEvent) => {
+          event.preventDefault()
+          await openRequirementModal(plugin, requirement.filePath ?? '')
+        })
+      )
+      break
+    }
+    case 'title':
+      head.createSpan({ cls: 'pm-reqblock-title', text: part.text })
+      break
+    case 'chip':
+      chip(head, part.glyph)
+      break
+    case 'rating':
+      // The stars, with the percentage on the tooltip for whoever wants the number
+      // behind them.
+      renderStars(head, part.stars, 'pm-req-stars--small').title = t('req.ratingOf', { score: part.score })
+      break
+  }
 }
 
 function chip(parent: HTMLElement, glyph: { label: string; color: string; icon: string }): void {
