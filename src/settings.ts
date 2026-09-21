@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting, debounce } from 'obsidian'
+import { App, Menu, Notice, PluginSettingTab, Setting, debounce } from 'obsidian'
 import type { SettingDefinitionItem, SettingDefinitionPage } from 'obsidian'
 import type PMPlugin from './main'
 import {
@@ -10,7 +10,8 @@ import {
   TYPE_BADGE_MODES
 } from './types'
 import { flattenTasks } from './store/TaskTreeOps'
-import { saveShortcutLabel } from './utils'
+import { safeAsync, saveShortcutLabel } from './utils'
+import { LlmClient } from './store/llm'
 import {
   countTaskNotesPaletteChanges,
   getTaskNotesApi,
@@ -43,6 +44,8 @@ export class PMSettingTab extends PluginSettingTab {
   plugin: PMPlugin
   /** A folder name is typed one character at a time; each sweep costs the whole vault. */
   private readonly rebuildIndex: () => void
+  /** What the gateway said it offers, once somebody has asked it. */
+  private llmModels: string[] = []
 
   constructor(app: App, plugin: PMPlugin) {
     super(app, plugin)
@@ -348,6 +351,11 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
+        heading: t('settings.group.llm'),
+        items: [this.llmPage()]
+      },
+      {
+        type: 'group',
         heading: t('settings.group.integrations'),
         visible: () => isTaskNotesInstalled(this.app),
         items: [this.taskNotesPage()]
@@ -573,6 +581,187 @@ export class PMSettingTab extends PluginSettingTab {
    * their own geography, which the tool has no business guessing at. Until one exists the
    * impact view has nothing to say, and says so.
    */
+  /**
+   * A language model the plugin may ask things of.
+   *
+   * Off until it is turned on, and with no address until one is given: nothing about a
+   * requirement leaves this vault by accident. One model per use rather than one for
+   * everything, because the model that reasons in steps is what should judge whether two
+   * requirements contradict each other and the last thing that should translate a
+   * sentence.
+   */
+  private llmPage(): SettingDefinitionPage {
+    const llm = this.plugin.settings.llm
+    const set = <K extends keyof PMSettings['llm']>(key: K, value: PMSettings['llm'][K]): void => {
+      llm[key] = value
+      this.persist()
+    }
+    return {
+      type: 'page',
+      name: t('settings.llm.name'),
+      desc: t('settings.llm.desc'),
+      displayValue: () => (llm.enabled ? t('settings.llm.on') : t('settings.llm.off')),
+      items: [
+        {
+          name: t('settings.llm.enabled'),
+          desc: t('settings.llm.enabledDesc'),
+          render: (setting: Setting) => {
+            setting.addToggle((toggle) =>
+              toggle.setValue(llm.enabled).onChange((value) => {
+                set('enabled', value)
+                this.update()
+              })
+            )
+          }
+        },
+        {
+          name: t('settings.llm.baseUrl'),
+          desc: t('settings.llm.baseUrlDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text
+                // oxlint-disable-next-line obsidianmd/ui/sentence-case -- an address, not a sentence
+                .setPlaceholder(t('settings.llm.baseUrlHint'))
+                .setValue(llm.baseUrl)
+                .onChange((value) => set('baseUrl', value.trim()))
+            )
+          }
+        },
+        {
+          name: t('settings.llm.apiKey'),
+          desc: t('settings.llm.apiKeyDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) => {
+              text.setPlaceholder(t('settings.llm.apiKeyNone')).setValue(llm.apiKey)
+              // A key is a secret even when this gateway wants none of it.
+              text.inputEl.type = 'password'
+              text.onChange((value) => set('apiKey', value.trim()))
+            })
+          }
+        },
+        {
+          name: t('settings.llm.test'),
+          desc: t('settings.llm.testDesc'),
+          render: (setting: Setting) => this.renderLlmTest(setting)
+        },
+        ...this.llmModelRows(),
+        {
+          name: t('settings.llm.temperature'),
+          desc: t('settings.llm.temperatureDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text.setValue(String(llm.temperature)).onChange((value) => {
+                const parsed = Number.parseFloat(value)
+                if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 2) set('temperature', parsed)
+              })
+            )
+          }
+        },
+        {
+          name: t('settings.llm.timeout'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text.setValue(String(llm.timeoutSeconds)).onChange((value) => {
+                const parsed = Number.parseInt(value, 10)
+                if (Number.isFinite(parsed) && parsed > 0) set('timeoutSeconds', parsed)
+              })
+            )
+          }
+        }
+      ]
+    }
+  }
+
+  /**
+   * One row per use, each offering whatever the gateway said it has.
+   *
+   * The names are fetched rather than typed: a model name copied by hand from a wiki page
+   * is a 404 three weeks later, and the gateway already publishes the list.
+   */
+  private llmModelRows(): SettingDefinitionItem[] {
+    const llm = this.plugin.settings.llm
+    const uses = [
+      { key: 'modelText' as const, name: t('settings.llm.modelText'), desc: t('settings.llm.modelTextDesc') },
+      {
+        key: 'modelTranslate' as const,
+        name: t('settings.llm.modelTranslate'),
+        desc: t('settings.llm.modelTranslateDesc')
+      },
+      { key: 'modelEmbed' as const, name: t('settings.llm.modelEmbed'), desc: t('settings.llm.modelEmbedDesc') },
+      { key: 'modelOcr' as const, name: t('settings.llm.modelOcr'), desc: t('settings.llm.modelOcrDesc') }
+    ]
+    return uses.map((use) => ({
+      name: use.name,
+      desc: use.desc,
+      render: (setting: Setting) => {
+        setting.addText((text) =>
+          text
+            .setPlaceholder(this.llmModels[0] ?? '')
+            .setValue(llm[use.key])
+            .onChange((value) => {
+              llm[use.key] = value.trim()
+              this.persist()
+            })
+        )
+        // Only once the list has been fetched: a menu of nothing teaches nothing.
+        if (!this.llmModels.length) return
+        setting.addExtraButton((button) => {
+          button.setIcon('list').setTooltip(t('settings.llm.pick'))
+          // The component's own onClick is handed no event, and a menu has to hang off
+          // something, so the button's element is listened to directly.
+          button.extraSettingsEl.addEventListener('click', (event: MouseEvent) => {
+            const menu = new Menu()
+            for (const model of this.llmModels) {
+              menu.addItem((item) =>
+                item
+                  .setTitle(model)
+                  .setChecked(model === llm[use.key])
+                  .onClick(() => {
+                    llm[use.key] = model
+                    this.persist()
+                    this.update()
+                  })
+              )
+            }
+            menu.showAtMouseEvent(event)
+          })
+        })
+      }
+    }))
+  }
+
+  /**
+   * The only honest connection test: ask for the model list.
+   *
+   * It is the one call that needs nothing configured beyond the address, and it answers
+   * the two questions at once — can this machine reach the gateway, and what does it
+   * offer. The answer fills the model pickers above.
+   */
+  private renderLlmTest(setting: Setting): void {
+    const status = setting.descEl.createDiv({ cls: 'pm-prop-hint' })
+    if (this.llmModels.length) {
+      status.setText(t('settings.llm.found', { count: this.llmModels.length }))
+    }
+    setting.addButton((button) =>
+      button.setButtonText(t('settings.llm.test')).onClick(
+        safeAsync(async () => {
+          status.removeClass('pm-prop-hint--warn')
+          status.setText(t('settings.llm.testing'))
+          try {
+            const models = await new LlmClient({ settings: this.plugin.settings.llm }).models()
+            this.llmModels = models
+            status.setText(t('settings.llm.found', { count: models.length }))
+            this.update()
+          } catch (error) {
+            this.llmModels = []
+            status.addClass('pm-prop-hint--warn')
+            status.setText(error instanceof Error ? error.message : String(error))
+          }
+        })
+      )
+    )
+  }
+
   private zonesPage(): SettingDefinitionPage {
     const zones = this.plugin.settings.zones
     return {

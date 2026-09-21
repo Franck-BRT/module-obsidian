@@ -446,6 +446,43 @@ export function priorityIconSetLabels(): Record<PriorityIconSet, string> {
   }
 }
 
+/**
+ * An OpenAI-compatible gateway the plugin can ask things of.
+ *
+ * One model per use rather than one for everything: a model that reasons in steps is what
+ * you want judging whether two requirements contradict each other, and the last thing you
+ * want translating a sentence. Embeddings and OCR are different models again.
+ */
+export interface LlmSettings {
+  /** Off until the reader turns it on: nothing leaves the vault by default. */
+  enabled: boolean
+  /** The gateway's root, ending in /v1. */
+  baseUrl: string
+  /** Empty where the gateway wants none, which is the case for the one this was built for. */
+  apiKey: string
+  modelText: string
+  modelTranslate: string
+  modelEmbed: string
+  modelOcr: string
+  /** Zero by default: a check that answers differently twice is not a check. */
+  temperature: number
+  maxTokens: number
+  timeoutSeconds: number
+}
+
+export const DEFAULT_LLM_SETTINGS: LlmSettings = {
+  enabled: false,
+  baseUrl: '',
+  apiKey: '',
+  modelText: '',
+  modelTranslate: '',
+  modelEmbed: '',
+  modelOcr: '',
+  temperature: 0,
+  maxTokens: 1024,
+  timeoutSeconds: 60
+}
+
 export interface PMSettings {
   /** Where new projects are created. Projects are discovered vault-wide, wherever they live. */
   projectsFolder: string
@@ -468,6 +505,8 @@ export interface PMSettings {
   meetingKinds: MeetingKindConfig[]
   /** The places work happens, for telling one project it is about to meet another. */
   zones: ZoneConfig[]
+  /** Where the plugin can ask a language model something, and with which models. */
+  llm: LlmSettings
   /** Which tickets say their kind on their own row: none, the ones that are not plain tasks, or all. */
   typeBadges: TypeBadgeMode
   /** Icons for priorities that don't carry their own. */
@@ -757,6 +796,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   docStates: DEFAULT_DOC_STATES,
   meetingKinds: DEFAULT_MEETING_KINDS,
   zones: [],
+  llm: DEFAULT_LLM_SETTINGS,
   typeBadges: 'distinct',
   priorities: DEFAULT_PRIORITIES,
   priorityIcons: 'chevrons',
