@@ -156,3 +156,24 @@ describe('quantityDrift', () => {
     expect(hasDrifted(quantityDrift('une masse de 3,5 kg', 'a mass of 3.5 kg'))).toBe(false)
   })
 })
+
+describe('the translation instruction as a template', () => {
+  it('fills the two languages', () => {
+    expect(translationSystemPrompt('fr', 'en', {}, 'From {from} to {to}.')).toContain('From French to English.')
+  })
+
+  it('appends the fields the editor reads back, whatever the instruction says', () => {
+    const prompt = translationSystemPrompt('fr', 'en', {}, 'Faites au mieux.')
+    expect(prompt).toContain('"text"')
+    expect(prompt).toContain('"notes"')
+  })
+
+  it('falls back rather than sending an empty instruction', () => {
+    expect(translationSystemPrompt('fr', 'en', {}, '  ')).toContain('modal force')
+  })
+
+  it('carries the glossary where the instruction asks for it', () => {
+    const prompt = translationSystemPrompt('fr', 'en', { glossary: ['Ariane 6'] }, 'Termes : {glossary}')
+    expect(prompt).toContain('Ariane 6')
+  })
+})

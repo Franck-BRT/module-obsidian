@@ -98,7 +98,8 @@ export class RequirementTranslator {
             source.body,
             requirement.sourceLang,
             lang,
-            requirement.title ? { title: requirement.title } : {}
+            requirement.title ? { title: requirement.title } : {},
+            this.getSettings().requirements.translatePrompt
           )
         )
       )

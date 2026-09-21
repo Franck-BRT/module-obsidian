@@ -1,5 +1,6 @@
 import type { ChatRequest } from '../llm'
 import { LlmError } from '../llm'
+import { fillPrompt } from './promptTemplate'
 
 /**
  * Translating a requirement, which is not the same job as translating a sentence.
@@ -69,22 +70,56 @@ export interface TranslationContext {
  * softened, a constraint added out of helpfulness, an identifier localised, a comma
  * decimal separator silently read as a thousands separator.
  */
-export function translationSystemPrompt(from: string, to: string, context: TranslationContext = {}): string {
-  const lines = [
-    `You translate requirements from ${languageName(from)} into ${languageName(to)} for a systems-engineering requirements library.`,
-    'Return one requirement statement, not a paraphrase and not a commentary.',
-    'Preserve the modal force exactly: an obligation stays an obligation, a recommendation stays a recommendation. Never soften or strengthen it.',
-    'Add no constraint the source does not state, and drop none that it does.',
-    'Keep every number exactly as it is; convert only the decimal separator to the target convention.',
-    'Keep units, symbols, acronyms, product names and identifiers unchanged.',
-    'Do not explain, do not add a preamble, do not wrap the answer in quotes.',
-    'Answer as JSON with "text" holding the translation and "notes" holding anything genuinely ambiguous in the source, or an empty string when nothing is.'
-  ]
-  if (context.title?.trim()) lines.push(`The requirement is titled: ${context.title.trim()}`)
-  if (context.glossary?.length) {
-    lines.push(`Leave these terms exactly as written: ${context.glossary.join(', ')}.`)
+export const DEFAULT_TRANSLATION_PROMPT = [
+  'You translate requirements from {from} into {to} for a systems-engineering requirements library.',
+  'Return one requirement statement, not a paraphrase and not a commentary.',
+  'Preserve the modal force exactly: an obligation stays an obligation, a recommendation stays a recommendation. Never soften or strengthen it.',
+  'Add no constraint the source does not state, and drop none that it does.',
+  'Keep every number exactly as it is; convert only the decimal separator to the target convention.',
+  'Keep units, symbols, acronyms, product names and identifiers unchanged.',
+  'Do not explain, do not add a preamble, do not wrap the answer in quotes.',
+  '{title}',
+  '{glossary}'
+].join('\n')
+
+export function translationPromptValues(
+  from: string,
+  to: string,
+  context: TranslationContext = {}
+): Record<string, string> {
+  return {
+    from: languageName(from),
+    to: languageName(to),
+    title: context.title?.trim() ? `The requirement is titled: ${context.title.trim()}` : '',
+    glossary: context.glossary?.length ? `Leave these terms exactly as written: ${context.glossary.join(', ')}.` : ''
   }
-  return lines.join('\n')
+}
+
+/** The two fields the editor reads back. Not the reader's to rename. */
+export function translationOutputContract(): string {
+  return 'Answer as JSON with "text" holding the translation and "notes" holding anything genuinely ambiguous in the source, or an empty string when nothing is.'
+}
+
+/**
+ * The instruction, as a specification rather than a request.
+ *
+ * Each line of it exists because of a way requirement translation goes wrong: force
+ * softened, a constraint added out of helpfulness, an identifier localised, a comma
+ * decimal separator silently read as a thousands separator. All of it is editable,
+ * because a house with its own translation conventions has its own lines to add.
+ */
+export function translationSystemPrompt(
+  from: string,
+  to: string,
+  context: TranslationContext = {},
+  template = DEFAULT_TRANSLATION_PROMPT
+): string {
+  return fillPrompt(
+    template,
+    DEFAULT_TRANSLATION_PROMPT,
+    translationPromptValues(from, to, context),
+    translationOutputContract()
+  )
 }
 
 export function buildTranslationRequest(
@@ -92,12 +127,13 @@ export function buildTranslationRequest(
   body: string,
   from: string,
   to: string,
-  context: TranslationContext = {}
+  context: TranslationContext = {},
+  template = DEFAULT_TRANSLATION_PROMPT
 ): ChatRequest & { schema: { name: string; schema: unknown } } {
   return {
     model,
     messages: [
-      { role: 'system', content: translationSystemPrompt(from, to, context) },
+      { role: 'system', content: translationSystemPrompt(from, to, context, template) },
       { role: 'user', content: body }
     ],
     schema: TRANSLATION_SCHEMA,

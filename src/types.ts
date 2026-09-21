@@ -540,6 +540,10 @@ export interface RequirementSettings {
    * on — which is appended afterwards and is a machine interface rather than an opinion.
    */
   reviewPrompt: string
+  /** The instruction for the per-wording check, the one offered under each language. */
+  checkPrompt: string
+  /** The instruction for drafting a translation. */
+  translatePrompt: string
 }
 
 export const DEFAULT_REQ_TYPES: ReqPaletteConfig[] = [
@@ -571,7 +575,9 @@ export const DEFAULT_REQUIREMENT_SETTINGS: RequirementSettings = {
   counters: {},
   reviewTarget: 80,
   reviewProposals: 3,
-  reviewPrompt: ''
+  reviewPrompt: '',
+  checkPrompt: '',
+  translatePrompt: ''
 }
 
 export function seedReqTypes(): ReqPaletteConfig[] {

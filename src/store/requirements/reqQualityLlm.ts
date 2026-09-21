@@ -4,6 +4,7 @@ import { LlmClient, LlmError } from '../llm'
 import { languageName } from './translate'
 import { QUALITY_RULES, type QualityFinding, type QualityRule } from './reqQuality'
 import { QUALITY_AXES } from './reqScore'
+import { fillPrompt } from './promptTemplate'
 
 /**
  * Asking a model what the word lists cannot see.
@@ -43,10 +44,27 @@ export const QUALITY_SCHEMA = {
   }
 } as const
 
-export function qualitySystemPrompt(lang: string): string {
+/**
+ * The instruction for the per-wording check.
+ *
+ * Shorter than the full review and asked for a different thing: this one judges a single
+ * statement with no rubric behind it, which is what makes it usable on a translation as
+ * well as on a source.
+ */
+export const DEFAULT_CHECK_PROMPT = [
+  'You review requirements written in {lang} for a systems-engineering library.',
+  'Judge one statement. Report only defects that would be raised in a requirements review.',
+  'Say nothing about spelling, style or tone. Report an empty list when the statement is sound.',
+  'Write each message as one short sentence in the language of the statement, naming what to change.'
+].join('\n')
+
+export function checkPromptValues(lang: string): Record<string, string> {
+  return { lang: languageName(lang), rules: QUALITY_RULES.join(', ') }
+}
+
+/** The defect names the badges match on. Not the reader's to rename. */
+export function checkOutputContract(): string {
   return [
-    `You review requirements written in ${languageName(lang)} for a systems-engineering library.`,
-    'Judge one statement. Report only defects that would be raised in a requirements review.',
     'Use these defect names and no others:',
     '- no-modal: the sentence states no obligation.',
     '- multiple: it states more than one obligation and should be split.',
@@ -56,9 +74,12 @@ export function qualitySystemPrompt(lang: string): string {
     '- tbd: it contains a decision nobody has taken.',
     '- unquantified: it compares or bounds something without a figure.',
     '- too-long: it has become a paragraph rather than a statement.',
-    'Say nothing about spelling, style or tone. Report an empty list when the statement is sound.',
-    'Write each message as one short sentence in the language of the statement, naming what to change.'
+    'Answer as JSON with one field, "findings", holding those defects.'
   ].join('\n')
+}
+
+export function qualitySystemPrompt(lang: string, template = DEFAULT_CHECK_PROMPT): string {
+  return fillPrompt(template, DEFAULT_CHECK_PROMPT, checkPromptValues(lang), checkOutputContract())
 }
 
 interface RawFinding {
@@ -152,7 +173,7 @@ export class RequirementReviewer {
       await this.client().chatJson({
         model: this.getSettings().llm.modelText,
         messages: [
-          { role: 'system', content: qualitySystemPrompt(lang) },
+          { role: 'system', content: qualitySystemPrompt(lang, this.getSettings().requirements.checkPrompt) },
           { role: 'user', content: body }
         ],
         schema: QUALITY_SCHEMA,
@@ -264,16 +285,6 @@ export const DEFAULT_REVIEW_PROMPT = [
 /** The placeholders the instruction may use, for a settings page that has to list them. */
 export const REVIEW_PROMPT_KEYS = ['lang', 'score', 'target', 'count', 'weak', 'title', 'rules'] as const
 
-/**
- * Fills the placeholders, and leaves everything else alone.
- *
- * Only the names it knows are replaced: a brace somebody typed in prose is prose, and a
- * template that silently ate it would be a template nobody could write French in.
- */
-export function applyPromptTemplate(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (whole, key: string) => (key in values ? values[key] : whole))
-}
-
 export function reviewPromptValues(context: ReviewContext): Record<string, string> {
   return {
     lang: languageName(context.lang),
@@ -308,18 +319,7 @@ export function reviewOutputContract(context: ReviewContext): string {
 }
 
 export function deepReviewPrompt(context: ReviewContext, template = DEFAULT_REVIEW_PROMPT): string {
-  const values = reviewPromptValues(context)
-  const body = (template.trim() || DEFAULT_REVIEW_PROMPT)
-    .split('\n')
-    .map((line) => ({ line, filled: applyPromptTemplate(line, values) }))
-    // A line that was nothing but a placeholder, and whose placeholder had nothing to
-    // say, disappears rather than leaving a blank in the middle of the instruction. A
-    // blank line somebody typed on purpose has no placeholder in it and is kept.
-    .filter(({ line, filled }) => filled.trim() !== '' || !/\{\w+\}/.test(line))
-    .map(({ filled }) => filled)
-    .join('\n')
-    .trim()
-  return `${body}\n\n${reviewOutputContract(context)}`
+  return fillPrompt(template, DEFAULT_REVIEW_PROMPT, reviewPromptValues(context), reviewOutputContract(context))
 }
 
 function readProposals(raw: unknown): ReviewProposal[] {

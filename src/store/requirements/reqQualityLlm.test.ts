@@ -205,3 +205,23 @@ describe('the instruction as a template', () => {
     }
   })
 })
+
+describe('the check instruction as a template', () => {
+  it('fills the language', () => {
+    expect(qualitySystemPrompt('fr', 'Review in {lang}.')).toContain('Review in French.')
+  })
+
+  // The names the badges match on: a check that renamed them would find defects the
+  // interface cannot draw.
+  it('appends the defect vocabulary whatever the instruction says', () => {
+    const prompt = qualitySystemPrompt('fr', 'Faites au mieux.')
+    for (const rule of ['no-modal', 'weak-word', 'passive-no-actor', 'unquantified']) {
+      expect(prompt).toContain(rule)
+    }
+    expect(prompt).toContain('"findings"')
+  })
+
+  it('falls back rather than sending an empty instruction', () => {
+    expect(qualitySystemPrompt('fr', '   ')).toContain('systems-engineering library')
+  })
+})

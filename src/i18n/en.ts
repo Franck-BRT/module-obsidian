@@ -1242,6 +1242,12 @@ export const en = {
     '"Load" copies it into the field so it can be adjusted; "Clear" goes back to it without keeping a copy.',
   'settings.req.promptLoad': 'Load',
   'settings.req.promptClear': 'Clear',
+  'settings.req.checkPrompt': 'Check instruction',
+  'settings.req.checkPromptDesc':
+    'What the model is asked by the "Analyse" button under each wording. The list of defect names is appended afterwards and cannot be changed.',
+  'settings.req.translatePrompt': 'Translation instruction',
+  'settings.req.translatePromptDesc':
+    'What the model is asked when it drafts a translation. The two fields it must return are appended afterwards and cannot be changed.',
   'settings.req.types': 'Requirement types',
   'settings.req.statuses': 'Requirement statuses',
   'settings.req.addType': 'Add type',

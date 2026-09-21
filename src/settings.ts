@@ -12,7 +12,8 @@ import {
 import { flattenTasks } from './store/TaskTreeOps'
 import { safeAsync, saveShortcutLabel } from './utils'
 import { LlmClient } from './store/llm'
-import { DEFAULT_REVIEW_PROMPT, REVIEW_PROMPT_KEYS } from './store/requirements/reqQualityLlm'
+import { DEFAULT_CHECK_PROMPT, DEFAULT_REVIEW_PROMPT, REVIEW_PROMPT_KEYS } from './store/requirements/reqQualityLlm'
+import { DEFAULT_TRANSLATION_PROMPT } from './store/requirements/translate'
 import {
   countTaskNotesPaletteChanges,
   getTaskNotesApi,
@@ -729,7 +730,23 @@ export class PMSettingTab extends PluginSettingTab {
             )
           }
         },
-        this.reviewPromptPage(),
+        this.promptPage('reviewPrompt', t('settings.req.prompt'), t('settings.req.promptDesc'), DEFAULT_REVIEW_PROMPT, [
+          ...REVIEW_PROMPT_KEYS
+        ]),
+        this.promptPage(
+          'checkPrompt',
+          t('settings.req.checkPrompt'),
+          t('settings.req.checkPromptDesc'),
+          DEFAULT_CHECK_PROMPT,
+          ['lang', 'rules']
+        ),
+        this.promptPage(
+          'translatePrompt',
+          t('settings.req.translatePrompt'),
+          t('settings.req.translatePromptDesc'),
+          DEFAULT_TRANSLATION_PROMPT,
+          ['from', 'to', 'title', 'glossary']
+        ),
         this.reqPalettePage('types'),
         this.reqPalettePage('statuses')
       ]
@@ -737,43 +754,51 @@ export class PMSettingTab extends PluginSettingTab {
   }
 
   /**
-   * The instruction the model is given when it reviews a requirement.
+   * An instruction the model is given, as something the reader owns.
    *
-   * Editable because every line of it is a judgement about how requirements should be
-   * reviewed, and those judgements belong to the organisation doing the reviewing: a
-   * house writing to ECSS conventions wants different advice from one writing a purchase
-   * specification.
+   * Editable because every line of one is a judgement about how this organisation works,
+   * and those judgements are not this plugin's to make: a house writing to ECSS
+   * conventions wants different advice from one writing a purchase specification.
    *
-   * What is not editable, and is said so on the page, is the output contract. That is the
-   * list of fields the editor reads back and the defect names its badges match on — an
-   * instruction reworded by accident there is a review that arrives and shows nothing,
-   * for reasons nobody can see from the outside.
+   * What is not editable, and the page says so rather than leaving it to be discovered,
+   * is the output contract. The fields the interface reads back and the defect names its
+   * badges match on are a machine interface, and an instruction reworded there by
+   * accident is a feature that arrives and shows nothing.
+   *
+   * One shape for all three, because three pages that drifted apart would be three
+   * different answers to the same question.
    */
-  private reviewPromptPage(): SettingDefinitionPage {
+  private promptPage(
+    key: 'reviewPrompt' | 'checkPrompt' | 'translatePrompt',
+    name: string,
+    desc: string,
+    fallback: string,
+    keys: string[]
+  ): SettingDefinitionPage {
     const reqs = this.plugin.settings.requirements
     return {
       type: 'page',
-      name: t('settings.req.prompt'),
-      desc: t('settings.req.promptDesc'),
-      displayValue: () => (reqs.reviewPrompt.trim() ? t('settings.req.promptCustom') : t('settings.req.promptDefault')),
+      name,
+      desc,
+      displayValue: () => (reqs[key].trim() ? t('settings.req.promptCustom') : t('settings.req.promptDefault')),
       items: [
         {
           name: t('settings.req.promptKeys'),
-          desc: REVIEW_PROMPT_KEYS.map((key) => `{${key}}`).join('  ·  '),
+          desc: keys.map((placeholder) => `{${placeholder}}`).join('  ·  '),
           render: () => undefined
         },
         {
-          name: t('settings.req.prompt'),
+          name,
           desc: t('settings.req.promptHint'),
           render: (setting: Setting) => {
             setting.setClass('pm-settings-prompt')
             setting.addTextArea((area) => {
-              area.inputEl.rows = 16
+              area.inputEl.rows = 14
               area
-                .setPlaceholder(DEFAULT_REVIEW_PROMPT)
-                .setValue(reqs.reviewPrompt)
+                .setPlaceholder(fallback)
+                .setValue(reqs[key])
                 .onChange((value) => {
-                  reqs.reviewPrompt = value
+                  reqs[key] = value
                   this.persist()
                 })
             })
@@ -787,14 +812,16 @@ export class PMSettingTab extends PluginSettingTab {
               button.setButtonText(t('settings.req.promptLoad')).onClick(() => {
                 // Loaded rather than emptied: somebody meaning to adjust two lines should
                 // not have to go and find the original to adjust them from.
-                reqs.reviewPrompt = DEFAULT_REVIEW_PROMPT
+                reqs[key] = fallback
                 this.persist()
                 this.update()
               })
             )
             setting.addButton((button) =>
               button.setButtonText(t('settings.req.promptClear')).onClick(() => {
-                reqs.reviewPrompt = ''
+                // Cleared rather than overwritten with a copy, so a later improvement to
+                // the shipped instruction still reaches anybody who has not overridden it.
+                reqs[key] = ''
                 this.persist()
                 this.update()
               })

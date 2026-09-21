@@ -1218,6 +1218,12 @@ export const fr: Catalog = {
     "« Charger » la recopie dans le champ pour la retoucher ; « Effacer » revient à celle d'origine sans en garder de copie.",
   'settings.req.promptLoad': 'Charger',
   'settings.req.promptClear': 'Effacer',
+  'settings.req.checkPrompt': 'Instruction de contrôle',
+  'settings.req.checkPromptDesc':
+    "Ce qui est demandé au modèle par le bouton « Analyser » sous chaque rédaction. La liste des noms de défauts est ajoutée ensuite et n'est pas modifiable.",
+  'settings.req.translatePrompt': 'Instruction de traduction',
+  'settings.req.translatePromptDesc':
+    "Ce qui est demandé au modèle quand il rédige une traduction. Les deux champs qu'il doit renvoyer sont ajoutés ensuite et ne sont pas modifiables.",
   'settings.req.types': "Types d'exigence",
   'settings.req.statuses': "Statuts d'exigence",
   'settings.req.addType': 'Ajouter un type',
