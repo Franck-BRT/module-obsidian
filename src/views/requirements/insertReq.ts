@@ -1,4 +1,5 @@
 import { REQ_BLOCK_LANGUAGE } from '../../store/requirements/reqBlock'
+import { idsInBlock, reqBlockAt } from '../../store/requirements/reqFence'
 
 /**
  * Putting a citation where the author is writing.
@@ -10,74 +11,11 @@ import { REQ_BLOCK_LANGUAGE } from '../../store/requirements/reqBlock'
  * rather than clicked through.
  */
 
-const FENCE = /^(\s*)(`{3,}|~{3,})\s*(\S*)\s*$/
-
-export interface FencedBlock {
-  /** The line the opening fence is on. */
-  open: number
-  /** The line the closing fence is on, or the last line when the block was never closed. */
-  close: number
-  closed: boolean
-}
-
-/**
- * The `pm-req` block the cursor is in, if it is in one.
- *
- * Counted from the top of the note rather than searched outward from the cursor: a fence
- * looks the same opening and closing, so the only way to know which one a line sits after
- * is to have read the ones before it.
- */
-export function reqBlockAt(lines: string[], cursorLine: number): FencedBlock | null {
-  let open = -1
-  let language = ''
-  let marker = ''
-  for (let i = 0; i < lines.length; i++) {
-    const match = FENCE.exec(lines[i])
-    if (!match) continue
-    if (open === -1) {
-      open = i
-      marker = match[2][0]
-      language = match[3].toLowerCase()
-      continue
-    }
-    // A closing fence carries no language and must be of the same kind as its opening.
-    if (match[3] !== '' || match[2][0] !== marker) continue
-    if (language === REQ_BLOCK_LANGUAGE && cursorLine >= open && cursorLine <= i) {
-      return { open, close: i, closed: true }
-    }
-    open = -1
-    language = ''
-  }
-  if (open !== -1 && language === REQ_BLOCK_LANGUAGE && cursorLine >= open) {
-    return { open, close: lines.length - 1, closed: false }
-  }
-  return null
-}
-
 export interface ReqInsertion {
   /** The text to put in. */
   insert: string
   /** Where to put it, as a line and a column. */
   at: { line: number; ch: number }
-}
-
-/** Every identifier a block already quotes, so a second pick does not quote it twice. */
-export function idsInBlock(lines: string[], block: FencedBlock): string[] {
-  const body = lines.slice(block.open + 1, block.closed ? block.close : lines.length)
-  const ids: string[] = []
-  for (const line of body) {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) continue
-    const at = trimmed.indexOf(':')
-    const key = at === -1 ? '' : trimmed.slice(0, at).trim().toLowerCase()
-    if (at !== -1 && key !== 'id' && key !== 'ids') continue
-    const value = at === -1 ? trimmed : trimmed.slice(at + 1)
-    for (const piece of value.split(/[,;]/)) {
-      const id = piece.trim()
-      if (id) ids.push(id.toUpperCase())
-    }
-  }
-  return ids
 }
 
 /**

@@ -556,6 +556,20 @@ export class VaultIndex {
     return null
   }
 
+  /**
+   * The requirements that assert something about this one.
+   *
+   * The direction traceability is actually read in: not "what does this derive from",
+   * which the requirement itself says, but "who is relying on what this says", which
+   * nothing says until the whole library has been looked at.
+   */
+  requirementsLinkingTo(id: string): Requirement[] {
+    const wanted = id.toUpperCase()
+    return [...this.requirements.values()].filter((requirement) =>
+      requirement.links.some((link) => link.to.toUpperCase() === wanted)
+    )
+  }
+
   /** Every requirement id the vault currently holds. What was deleted is not here. */
   requirementIds(): string[] {
     return [...this.requirements.values()].map((requirement) => requirement.id)

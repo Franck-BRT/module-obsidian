@@ -1,10 +1,14 @@
 import { Modal, Notice, setIcon } from 'obsidian'
 import type PMPlugin from '../../main'
-import type { Requirement, VerificationMethod } from '../../store/requirements/Requirement'
+import type { ReqLink, ReqLinkKind, Requirement, VerificationMethod } from '../../store/requirements/Requirement'
 import {
   acceptText,
+  addLink,
+  clearSuspect,
   isStale,
   isUnreviewedMachine,
+  removeLink,
+  REQ_LINK_KINDS,
   setText,
   textOf,
   VERIFICATION_METHODS
@@ -12,9 +16,14 @@ import {
 import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
 import { safeAsync } from '../../utils'
 import { renderPropRow } from '../../ui/FormField'
+import { pickOption } from '../../modals/PickerModals'
+import { pickRequirement } from './RequirementPicker'
+import { revisionTimeline } from '../../store/requirements/reqHistory'
+import { diffCounts, type DiffPart } from '../../store/requirements/reqDiff'
+import { formatDateShort } from '../../dates'
 import { renderSelectControl } from '../../ui/composites/properties'
 import { t } from '../../i18n'
-import { reqLanguages, verificationLabel } from './reqPalette'
+import { reqLanguages, reqLinkKindLabel, verificationLabel } from './reqPalette'
 
 /**
  * One requirement, open for editing.
@@ -71,6 +80,9 @@ class RequirementModal extends Modal {
     this.renderTitle(this.bodyEl)
     this.renderFields(this.bodyEl.createDiv('pm-te-props').createDiv('pm-prop-grid'))
     this.renderWordings(this.bodyEl)
+    this.renderLinks(this.bodyEl)
+    this.renderCitations(this.bodyEl)
+    this.renderHistory(this.bodyEl)
   }
 
   private renderTitle(parent: HTMLElement): void {
@@ -356,6 +368,187 @@ class RequirementModal extends Modal {
     this.render()
   }
 
+  /* ---- Links -------------------------------------------------------------- */
+
+  /**
+   * What this requirement says about the others.
+   *
+   * A link the far end has moved under is shown as such and can only be cleared by
+   * somebody saying they have looked — the tool can tell that a relation may no longer
+   * hold, and cannot tell that it still does.
+   */
+  private renderLinks(parent: HTMLElement): void {
+    const section = parent.createDiv('pm-req-section')
+    const head = section.createDiv('pm-req-section-head')
+    head.createSpan({ cls: 'pm-req-section-title', text: t('req.links') })
+    const add = head.createEl('button', { cls: 'pm-req-add-link', text: t('req.addLink') })
+    add.addEventListener(
+      'click',
+      safeAsync(() => this.addLink())
+    )
+
+    if (!this.draft.links.length) {
+      section.createDiv({ cls: 'pm-req-section-empty', text: t('req.noLinks') })
+      return
+    }
+    for (const link of this.draft.links) this.renderLink(section, link)
+  }
+
+  private renderLink(section: HTMLElement, link: ReqLink): void {
+    const row = section.createDiv('pm-req-link')
+    row.createSpan({ cls: 'pm-req-link-kind', text: reqLinkKindLabel(link.kind) })
+
+    const target = this.plugin.index.requirementById(link.to)
+    if (target) {
+      const open = row.createEl('a', { cls: 'pm-req-id', text: link.to, href: '#' })
+      open.addEventListener(
+        'click',
+        safeAsync(async (event: MouseEvent) => {
+          event.preventDefault()
+          await openRequirementModal(this.plugin, target.filePath ?? '')
+        })
+      )
+      if (target.title) row.createSpan({ cls: 'pm-req-link-title', text: target.title })
+    } else {
+      // Shown as itself rather than dropped: a ticket id, or a requirement that is gone.
+      row.createSpan({ cls: 'pm-req-id', text: link.to })
+    }
+
+    if (link.suspect) {
+      const badge = row.createSpan({ cls: 'pm-req-state pm-req-state--suspect' })
+      setIcon(badge.createSpan({ cls: 'pm-glyph-icon' }), 'unlink')
+      badge.createSpan({ text: t('req.suspectLink') })
+      const revalidate = row.createEl('button', { cls: 'pm-req-accept', text: t('req.revalidate') })
+      revalidate.addEventListener('click', () => {
+        this.draft = clearSuspect(this.draft, link.kind, link.to)
+        this.dirty = true
+        this.render()
+      })
+    }
+
+    const drop = row.createEl('button', { cls: 'pm-req-drop-link', attr: { 'aria-label': t('common.delete') } })
+    setIcon(drop, 'x')
+    drop.addEventListener('click', () => {
+      this.draft = removeLink(this.draft, link.kind, link.to)
+      this.dirty = true
+      this.render()
+    })
+  }
+
+  /**
+   * Asks what kind of relation, then what it points at.
+   *
+   * In that order because the kind decides what the target can be: everything but
+   * "satisfied by" points at another requirement, and that one points at work.
+   */
+  private async addLink(): Promise<void> {
+    const kind = await pickOption<ReqLinkKind>(
+      this.app,
+      t('req.linkKind'),
+      REQ_LINK_KINDS.map((id) => ({ id, label: reqLinkKindLabel(id), icon: 'link' }))
+    )
+    if (!kind) return
+    const to = kind === 'satisfied-by' ? await this.pickTicket() : await this.pickTarget()
+    if (!to) return
+    this.draft = addLink(this.draft, kind, to)
+    this.dirty = true
+    this.render()
+  }
+
+  private async pickTarget(): Promise<string | null> {
+    const library = this.plugin.index.requirementRefs().filter((one) => one.id !== this.draft.id)
+    if (!library.length) {
+      new Notice(t('req.noOtherRequirement'))
+      return null
+    }
+    return (await pickRequirement(this.app, library))?.id ?? null
+  }
+
+  private async pickTicket(): Promise<string | null> {
+    const tickets = this.plugin.index.allTaskRefs().filter((ref) => !ref.archived)
+    if (!tickets.length) {
+      new Notice(t('req.noTicket'))
+      return null
+    }
+    return await pickOption<string>(
+      this.app,
+      t('req.pickTicket'),
+      tickets.map((ref) => ({ id: ref.id, label: ref.title, icon: 'square-check' }))
+    )
+  }
+
+  /* ---- Where it is quoted -------------------------------------------------- */
+
+  /**
+   * The documents that quote this requirement.
+   *
+   * Filled in after the fact, because answering it means reading the notes of the vault
+   * and the editor must open now. An empty section would read as "quoted nowhere", which
+   * is a different statement from "not counted yet", so it says which.
+   */
+  private renderCitations(parent: HTMLElement): void {
+    const section = parent.createDiv('pm-req-section')
+    section.createDiv('pm-req-section-head').createSpan({ cls: 'pm-req-section-title', text: t('req.citedIn') })
+    const body = section.createDiv({ cls: 'pm-req-section-empty', text: t('req.citedCounting') })
+
+    safeAsync(() => this.fillCitations(body))()
+  }
+
+  private async fillCitations(body: HTMLElement): Promise<void> {
+    await this.plugin.reqUsage.refresh()
+    // The editor may have been closed, or redrawn, under that read.
+    if (!body.isConnected) return
+    const paths = this.plugin.reqUsage.usage().get(this.draft.id) ?? []
+    body.empty()
+    if (!paths.length) {
+      body.setText(t('req.citedNowhere'))
+      return
+    }
+    body.removeClass('pm-req-section-empty')
+    for (const path of paths) {
+      const link = body.createDiv('pm-req-citation').createEl('a', { text: noteName(path), href: '#' })
+      link.addEventListener(
+        'click',
+        safeAsync(async (event: MouseEvent) => {
+          event.preventDefault()
+          await this.app.workspace.openLinkText(path, '', 'tab')
+        })
+      )
+    }
+  }
+
+  /* ---- History ------------------------------------------------------------- */
+
+  /**
+   * What each revision did to the words.
+   *
+   * A history that says "changed on 3 March by Franck" is a log. The question anybody
+   * asks of a requirement is whether the obligation moved, and only the words answer it.
+   */
+  private renderHistory(parent: HTMLElement): void {
+    const languages = reqLanguages(this.plugin.settings)
+    const steps = languages.flatMap((lang) => revisionTimeline(this.draft, lang))
+    if (!steps.length) return
+
+    const section = parent.createDiv('pm-req-section')
+    section.createDiv('pm-req-section-head').createSpan({ cls: 'pm-req-section-title', text: t('req.history') })
+    // Newest first: the change somebody is looking for is nearly always the last one.
+    for (const step of [...steps].reverse()) {
+      const row = section.createDiv('pm-req-revision')
+      const head = row.createDiv('pm-req-revision-head')
+      head.createSpan({ cls: 'pm-req-lang', text: step.lang.toUpperCase() })
+      head.createSpan({ cls: 'pm-req-rev', text: t('req.revision', { rev: step.rev }) })
+      if (step.at) head.createSpan({ cls: 'pm-req-rev', text: formatDateShort(step.at.slice(0, 10)) })
+      if (step.by) head.createSpan({ cls: 'pm-req-rev', text: step.by })
+      const counts = diffCounts(step.diff)
+      head.createSpan({
+        cls: 'pm-req-rev',
+        text: t('req.diffCounts', { added: counts.added, removed: counts.removed })
+      })
+      renderDiff(row.createDiv('pm-req-diff'), step.diff)
+    }
+  }
+
   private author(): string {
     return this.plugin.settings.globalTeamMembers[0] ?? ''
   }
@@ -380,4 +573,22 @@ export async function openRequirementModal(plugin: PMPlugin, path: string): Prom
     return
   }
   new RequirementModal(plugin, path, loaded).open()
+}
+
+/** The words, with what came and went marked in place. */
+function renderDiff(host: HTMLElement, parts: DiffPart[]): void {
+  for (const part of parts) {
+    if (part.kind === 'same') {
+      host.createSpan({ text: part.text })
+      continue
+    }
+    // Marked by shape as well as colour — struck through, underlined — so a change is
+    // still a change to a reader who cannot tell the two hues apart.
+    host.createSpan({ cls: `pm-req-diff-${part.kind}`, text: part.text })
+  }
+}
+
+/** A note's name, since a full path down the side of an editor is mostly folders. */
+function noteName(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '')
 }

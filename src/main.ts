@@ -67,6 +67,7 @@ import { MessageView, PM_MESSAGE_VIEW_TYPE } from './views/MessageView'
 import { RequirementsView, PM_REQUIREMENTS_VIEW_TYPE } from './views/requirements/RequirementsView'
 import { RequirementStore } from './store/requirements/RequirementStore'
 import { RequirementTranslator } from './store/requirements/RequirementTranslator'
+import { ReqUsageIndex } from './store/requirements/ReqUsage'
 import { registerReqBlock } from './views/requirements/reqBlockRenderer'
 import { registerReqEditorMenu } from './views/requirements/reqEditorMenu'
 import { pickRequirement } from './views/requirements/RequirementPicker'
@@ -80,6 +81,8 @@ export default class PMPlugin extends Plugin {
   requirements!: RequirementStore
   /** Drafts translations with the gateway, when one is configured. */
   translator!: RequirementTranslator
+  /** Which documents quote which requirements, read from the notes and remembered. */
+  reqUsage!: ReqUsageIndex
   documents!: DocumentStore
   index!: VaultIndex
   notifier!: Notifier
@@ -141,6 +144,7 @@ export default class PMPlugin extends Plugin {
       this.index
     )
     this.translator = new RequirementTranslator(() => this.settings, this.requirements)
+    this.reqUsage = new ReqUsageIndex(this.app, () => this.index.requirementRefs())
     this.store.registerVaultSync(this)
     this.notifier = new Notifier(this)
     this.autoArchiver = new AutoArchiver(this)

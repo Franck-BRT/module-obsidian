@@ -4,7 +4,7 @@ import { makeFakeApp, type FakeVault } from '../../../test/fakeVault'
 import { DEFAULT_REQUIREMENT_SETTINGS, DEFAULT_SETTINGS, type RequirementSettings } from '../../types'
 import { VaultIndex } from '../VaultIndex'
 import { RequirementStore } from './RequirementStore'
-import { setText } from './Requirement'
+import { addLink, clearSuspect, setText } from './Requirement'
 
 /**
  * The whole chain, end to end: minting an id, writing the note, Obsidian parsing it,
@@ -153,6 +153,50 @@ describe('RequirementStore against a vault', () => {
     const path = created?.filePath ?? ''
     const saved = await store.save(path, (requirement) => ({ ...requirement, owner: 'franck' }))
     expect(saved?.path).toBe(path)
+  })
+
+  describe('when a requirement is rewritten under the ones relying on it', () => {
+    async function pair() {
+      const base = await store.create({ title: 'Base', category: 'SYS' })
+      const basePath = base?.filePath ?? ''
+      await store.save(basePath, (requirement) => setText(requirement, 'fr', 'Version un.', 'a'))
+      const derived = await store.create({ title: 'Dérivée', category: 'SYS' })
+      const derivedPath = derived?.filePath ?? ''
+      await store.save(derivedPath, (requirement) =>
+        setText(addLink(requirement, 'derives-from', base?.id ?? ''), 'fr', 'Dépend de la base.', 'a')
+      )
+      index.build()
+      return { basePath, derivedPath, baseId: base?.id ?? '' }
+    }
+
+    it('marks the link the far end was written against', async () => {
+      const { basePath, derivedPath } = await pair()
+      await store.save(basePath, (requirement) => setText(requirement, 'fr', 'Version deux.', 'a'))
+
+      const derived = await store.load(derivedPath)
+      expect(derived?.links[0].suspect).toBe(true)
+    })
+
+    it('leaves them alone when only a status moved', async () => {
+      const { basePath, derivedPath } = await pair()
+      await store.save(basePath, (requirement) => ({ ...requirement, status: 'approved' }))
+      expect((await store.load(derivedPath))?.links[0].suspect).toBeUndefined()
+    })
+
+    // A translation is the requirement catching up with itself, not a new obligation, so
+    // nothing downstream was written against words that have changed.
+    it('leaves them alone when a translation was written', async () => {
+      const { basePath, derivedPath } = await pair()
+      await store.save(basePath, (requirement) => setText(requirement, 'en', 'Version one.', 'a'))
+      expect((await store.load(derivedPath))?.links[0].suspect).toBeUndefined()
+    })
+
+    it('only a person takes the mark off', async () => {
+      const { basePath, derivedPath, baseId } = await pair()
+      await store.save(basePath, (requirement) => setText(requirement, 'fr', 'Version deux.', 'a'))
+      await store.save(derivedPath, (requirement) => clearSuspect(requirement, 'derives-from', baseId))
+      expect((await store.load(derivedPath))?.links[0].suspect).toBeUndefined()
+    })
   })
 
   it('refuses a note that is not a requirement', async () => {

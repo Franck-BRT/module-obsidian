@@ -4,6 +4,14 @@ import type { Requirement } from '../../store/requirements/Requirement'
 import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
 import { REQ_BLOCK_LANGUAGE } from '../../store/requirements/reqBlock'
 import {
+  COVERAGE_GAPS,
+  coverageOf,
+  countGaps,
+  hasGap,
+  type Coverage,
+  type CoverageGap
+} from '../../store/requirements/ReqCoverage'
+import {
   displayText,
   isStale,
   isUnreviewedMachine,
@@ -52,6 +60,17 @@ export class RequirementsView extends ItemView {
   private toolbarEl!: HTMLElement
   private bodyEl!: HTMLElement
   private redrawTimer: number | null = null
+  /**
+   * Which question the view is answering: what the library says, or what it is tied to.
+   *
+   * Two views of one list rather than two views, because the filters and the search mean
+   * the same thing in both and a reader narrowing to a category should not lose it by
+   * asking what covers it.
+   */
+  private mode: 'library' | 'trace' = 'library'
+  private gapFilter: CoverageGap | null = null
+  /** Null until the notes have been read once; an empty map is a real answer, null is not. */
+  private usage: Map<string, string[]> | null = null
   /** True while a bulk translation is running, which is what the same button then stops. */
   private running = false
   private stopRequested = false
@@ -122,7 +141,15 @@ export class RequirementsView extends ItemView {
       return
     }
 
+    this.renderBody(all, langs)
+  }
+
+  private renderBody(all: Requirement[], langs: string[]): void {
     const shown = sortRequirements(filterRequirements(all, this.filter, langs), this.sortKey, this.sortDir, this.lang)
+    if (this.mode === 'trace') {
+      this.renderTrace(this.bodyEl, shown, langs)
+      return
+    }
     if (!shown.length) {
       new EmptyState(this.bodyEl).setIcon('🔍').setTitle(t('req.noneHere')).setBody(t('req.noneHereHint'))
       return
@@ -182,6 +209,35 @@ export class RequirementsView extends ItemView {
     // Counted against the whole library rather than against what the other filters leave,
     // so the numbers say what there is instead of rearranging themselves as they are used.
     const flags = bar.createDiv('pm-req-flags')
+    if (this.mode === 'trace') {
+      this.renderGapBar(flags, all, langs)
+    } else {
+      this.renderFlagBar(flags, all, langs)
+    }
+
+    const right = bar.createDiv('pm-req-toolbar-right')
+    this.renderModeSwitch(right)
+    this.renderRightBar(right, all, langs)
+  }
+
+  /** The two questions, side by side, because they are asked of the same narrowed list. */
+  private renderModeSwitch(parent: HTMLElement): void {
+    const group = parent.createDiv('pm-req-modes')
+    const mode = (id: 'library' | 'trace', label: string): void => {
+      new ChipButton(group)
+        .setLabel(label)
+        .setShape('pill')
+        .setActive(this.mode === id)
+        .onClick(() => {
+          this.mode = id
+          this.render()
+        })
+    }
+    mode('library', t('req.modeLibrary'))
+    mode('trace', t('req.modeTrace'))
+  }
+
+  private renderFlagBar(flags: HTMLElement, all: Requirement[], langs: string[]): void {
     new ChipButton(flags)
       .setLabel(`${t('common.all')} · ${all.length}`)
       .setShape('pill')
@@ -204,8 +260,9 @@ export class RequirementsView extends ItemView {
           this.renderBodyOnly()
         })
     }
+  }
 
-    const right = bar.createDiv('pm-req-toolbar-right')
+  private renderRightBar(right: HTMLElement, all: Requirement[], langs: string[]): void {
     if (langs.length > 1) {
       const picker = right.createDiv('pm-req-langs')
       for (const lang of langs) {
@@ -286,15 +343,117 @@ export class RequirementsView extends ItemView {
 
   /** Redraws the rows without rebuilding the bar, so typing in the search keeps focus. */
   private renderBodyOnly(): void {
-    const all = this.plugin.index.requirementRefs()
-    const langs = reqLanguages(this.plugin.settings)
     this.bodyEl.empty()
-    const shown = sortRequirements(filterRequirements(all, this.filter, langs), this.sortKey, this.sortDir, this.lang)
-    if (!shown.length) {
-      new EmptyState(this.bodyEl).setIcon('🔍').setTitle(t('req.noneHere')).setBody(t('req.noneHereHint'))
+    this.renderBody(this.plugin.index.requirementRefs(), reqLanguages(this.plugin.settings))
+  }
+
+  /* ---- Traceability --------------------------------------------------------- */
+
+  /**
+   * What each requirement is tied to, and where it is tied to nothing.
+   *
+   * The reason a library is kept apart from the documents that quote it: not to admire
+   * the links, but to find the requirement nobody implements, nothing verifies and no
+   * document states — which is invisible one requirement at a time and obvious when the
+   * library is laid out at once.
+   */
+  private renderTrace(parent: HTMLElement, list: Requirement[], langs: string[]): void {
+    if (this.usage === null) {
+      // Said rather than shown empty: "not counted yet" and "quoted nowhere" are
+      // different statements, and only one of them is a finding.
+      parent.createDiv({ cls: 'pm-req-counting', text: t('req.citedCounting') })
+      safeAsync(() => this.countUsage())()
       return
     }
-    this.renderTable(this.bodyEl, shown, langs)
+    const rows = coverageOf({ library: list, usage: this.usage, languages: langs })
+    const shown = this.gapFilter === null ? rows : rows.filter((row) => hasGap(row, this.gapFilter as CoverageGap))
+    if (!shown.length) {
+      new EmptyState(parent).setIcon('🔍').setTitle(t('req.noneHere')).setBody(t('req.noneHereHint'))
+      return
+    }
+
+    const table = parent.createDiv('pm-req-table pm-req-trace')
+    const head = table.createDiv('pm-req-row pm-req-row--head')
+    for (const label of [
+      t('req.field.id'),
+      t('req.field.wording'),
+      t('req.citedIn'),
+      t('req.satisfiedBy'),
+      t('req.field.state')
+    ]) {
+      head.createDiv('pm-req-cell').createSpan({ text: label })
+    }
+    for (const row of shown) this.renderTraceRow(table, row)
+  }
+
+  private renderTraceRow(table: HTMLElement, row: Coverage): void {
+    const el = table.createDiv('pm-req-row')
+    el.createDiv('pm-req-cell').createSpan({ cls: 'pm-req-id', text: row.requirement.id })
+
+    const text = el.createDiv('pm-req-cell pm-req-cell--text')
+    const held = displayText(row.requirement, this.lang)
+    text.createDiv({ cls: 'pm-req-wording', text: row.requirement.title || held?.body || t('req.noWording') })
+
+    const cited = el.createDiv('pm-req-cell pm-req-cell--links')
+    for (const path of row.citedIn) cited.createSpan({ cls: 'pm-req-trace-item', text: noteName(path) })
+    if (!row.citedIn.length) cited.createSpan({ cls: 'pm-req-blank', text: '—' })
+
+    const satisfied = el.createDiv('pm-req-cell pm-req-cell--links')
+    for (const id of row.satisfiedBy) satisfied.createSpan({ cls: 'pm-req-trace-item', text: this.ticketName(id) })
+    for (const id of row.derivedBy) satisfied.createSpan({ cls: 'pm-req-trace-item', text: id })
+    if (!row.satisfiedBy.length && !row.derivedBy.length) satisfied.createSpan({ cls: 'pm-req-blank', text: '—' })
+
+    const state = el.createDiv('pm-req-cell pm-req-cell--state')
+    for (const gap of row.gaps) {
+      const badge = state.createSpan({ cls: 'pm-req-state pm-req-state--gap' })
+      setIcon(badge.createSpan({ cls: 'pm-glyph-icon' }), gapIcon(gap))
+      badge.createSpan({ text: gapLabel(gap) })
+    }
+    if (!row.gaps.length) {
+      const badge = state.createSpan({ cls: 'pm-req-state pm-req-state--ok' })
+      setIcon(badge.createSpan({ cls: 'pm-glyph-icon' }), 'check')
+      badge.createSpan({ text: t('req.covered') })
+    }
+
+    el.addEventListener(
+      'click',
+      safeAsync(() => openRequirementModal(this.plugin, row.requirement.filePath ?? ''))
+    )
+  }
+
+  /** A ticket's title where the vault still has it, its bare id where it does not. */
+  private ticketName(id: string): string {
+    return this.plugin.index.task(id)?.title ?? id
+  }
+
+  private async countUsage(): Promise<void> {
+    await this.plugin.reqUsage.refresh()
+    this.usage = this.plugin.reqUsage.usage()
+    this.render()
+  }
+
+  private renderGapBar(bar: HTMLElement, all: Requirement[], langs: string[]): void {
+    if (this.usage === null) return
+    const counts = countGaps(coverageOf({ library: all, usage: this.usage, languages: langs }))
+    new ChipButton(bar)
+      .setLabel(`${t('common.all')} · ${all.length}`)
+      .setShape('pill')
+      .setActive(this.gapFilter === null)
+      .onClick(() => {
+        this.gapFilter = null
+        this.render()
+      })
+    for (const gap of COVERAGE_GAPS) {
+      if (!counts[gap]) continue
+      new ChipButton(bar)
+        .setLabel(`${gapLabel(gap)} · ${counts[gap]}`)
+        .setShape('pill')
+        .setActive(this.gapFilter === gap)
+        .onClick(() => {
+          this.gapFilter = this.gapFilter === gap ? null : gap
+          this.render()
+        })
+    }
   }
 
   private renderTable(parent: HTMLElement, list: Requirement[], langs: string[]): void {
@@ -542,4 +701,39 @@ function flagLabel(flag: ReqFlag): string {
     default:
       return t('common.all')
   }
+}
+
+function gapLabel(gap: CoverageGap): string {
+  switch (gap) {
+    case 'uncited':
+      return t('req.gap.uncited')
+    case 'unsatisfied':
+      return t('req.gap.unsatisfied')
+    case 'unverified':
+      return t('req.gap.unverified')
+    case 'suspect':
+      return t('req.gap.suspect')
+    default:
+      return t('req.gap.unwritten')
+  }
+}
+
+function gapIcon(gap: CoverageGap): string {
+  switch (gap) {
+    case 'uncited':
+      return 'file-x'
+    case 'unsatisfied':
+      return 'unplug'
+    case 'unverified':
+      return 'check-check'
+    case 'suspect':
+      return 'unlink'
+    default:
+      return 'pencil-off'
+  }
+}
+
+/** A note's name, since a full path in a table cell is mostly folders. */
+function noteName(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '')
 }

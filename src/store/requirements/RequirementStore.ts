@@ -6,7 +6,7 @@ import type { VaultIndex } from '../VaultIndex'
 import { parseFrontmatter } from '../YamlParser'
 import { foreignFrontmatter } from '../YamlSerializer'
 import type { Requirement } from './Requirement'
-import { makeRequirement } from './Requirement'
+import { makeRequirement, markLinksToward } from './Requirement'
 import { DEFAULT_ID_SCHEME, formatReqId, idCategory, nextReqId, parseReqId, reqFileName, type IdScheme } from './reqId'
 import { requirementBodyRemainder, serializeRequirement } from './reqNote'
 import { hydrateRequirement, REQUIREMENT_FRONTMATTER_KEY, REQUIREMENT_FRONTMATTER_KEYS } from './reqYaml'
@@ -125,10 +125,37 @@ export class RequirementStore {
     path: string,
     change: (requirement: Requirement) => Requirement
   ): Promise<{ requirement: Requirement; path: string } | null> {
+    const before = await this.load(path)
     const saved = await this.update(path, change)
     if (!saved) return null
+    // Only when the source wording actually moved. Every other edit — a status, an owner,
+    // a translation catching up — leaves what the neighbours said about it true.
+    if (before && saved.rev !== before.rev) await this.markDependentsSuspect(saved.id)
     const moved = (await this.syncFileName({ ...saved, filePath: path })) ?? path
     return { requirement: { ...saved, filePath: moved }, path: moved }
+  }
+
+  /**
+   * Tells the requirements that rely on this one that they were written against words it
+   * no longer has.
+   *
+   * The far ends are marked rather than the near one, because that is the direction a
+   * review has to act in: REQ-A says it derives from REQ-B, REQ-B was rewritten, and it
+   * is REQ-A that now needs somebody to look. Only a person clears the mark — the tool
+   * can see that a relation may no longer hold and cannot see that it still does.
+   *
+   * Reports the ids it marked, and marks nothing twice: a requirement already flagged is
+   * left untouched rather than rewritten, or a vault would never settle.
+   */
+  async markDependentsSuspect(id: string): Promise<string[]> {
+    const marked: string[] = []
+    for (const dependent of this.index.requirementsLinkingTo(id)) {
+      const path = dependent.filePath
+      if (!path) continue
+      const saved = await this.update(path, (current) => markLinksToward(current, id))
+      if (saved) marked.push(saved.id)
+    }
+    return marked
   }
 
   /**

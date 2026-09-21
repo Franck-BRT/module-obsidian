@@ -371,3 +371,148 @@
 .pm-req-suggestion .pm-req-id {
   margin-right: var(--size-2-2);
 }
+
+/* ---- Links, citations, history ------------------------------------------------ */
+
+.pm-req-section {
+  margin-top: var(--size-4-4);
+}
+
+.pm-req-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-4-2);
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: var(--size-2-2);
+  margin-bottom: var(--size-2-3);
+}
+
+.pm-req-section-empty {
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+}
+
+.pm-req-add-link,
+.pm-req-drop-link {
+  font-size: var(--font-smallest);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.pm-req-add-link {
+  margin-left: auto;
+}
+
+.pm-req-drop-link {
+  margin-left: auto;
+  display: inline-flex;
+  padding: 2px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+.pm-req-link {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  padding: 3px 0;
+  flex-wrap: wrap;
+}
+
+.pm-req-link-kind {
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+  min-width: 8rem;
+}
+
+.pm-req-link-title {
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+}
+
+.pm-req-citation {
+  padding: 2px 0;
+}
+
+.pm-req-citation a {
+  cursor: pointer;
+}
+
+/* A revision reads as a paragraph with the change marked in it, not as two paragraphs
+   side by side: the question is what moved, and a before-and-after makes the reader
+   find that out for themselves. */
+.pm-req-revision {
+  padding: var(--size-2-3) 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pm-req-revision-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-2-2);
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.pm-req-diff {
+  font-size: var(--font-ui-small);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* Shape as well as colour: struck through and underlined, so a change is still a change
+   to a reader who cannot tell the two hues apart. */
+.pm-req-diff-removed {
+  color: var(--color-red);
+  text-decoration: line-through;
+  background: rgb(from var(--color-red) r g b / 8%);
+}
+
+.pm-req-diff-added {
+  color: var(--color-green);
+  text-decoration: underline;
+  background: rgb(from var(--color-green) r g b / 8%);
+}
+
+/* ---- Traceability --------------------------------------------------------- */
+
+.pm-req-modes {
+  display: flex;
+  gap: 4px;
+}
+
+.pm-req-counting {
+  padding: var(--size-4-4);
+  color: var(--text-muted);
+}
+
+.pm-req-trace .pm-req-row {
+  grid-template-columns: 9rem minmax(10rem, 1fr) minmax(8rem, 0.8fr) minmax(8rem, 0.8fr) 12rem;
+}
+
+.pm-req-cell--links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pm-req-trace-item {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-req-state--gap {
+  color: var(--color-orange);
+  border-color: var(--color-orange);
+}
+
+@media (width <= 900px) {
+  .pm-req-trace .pm-req-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -225,3 +225,83 @@ export function isUnreviewedMachine(requirement: Requirement, lang: string): boo
   const held = textOf(requirement, lang)
   return held !== null && held.origin === 'machine' && !held.reviewed
 }
+
+/* ---- Links ---------------------------------------------------------------- */
+
+function sameLink(link: ReqLink, kind: ReqLinkKind, to: string): boolean {
+  return link.kind === kind && link.to.toUpperCase() === to.toUpperCase()
+}
+
+/**
+ * Adds a relation, once.
+ *
+ * The same pair asserted twice is the same assertion, and a requirement that says it
+ * derives from REQ-SYS-0001 three times is a traceability matrix with three cells where
+ * there is one fact.
+ */
+export function addLink(requirement: Requirement, kind: ReqLinkKind, to: string): Requirement {
+  const target = to.trim()
+  if (!target || target.toUpperCase() === requirement.id.toUpperCase()) return requirement
+  if (requirement.links.some((link) => sameLink(link, kind, target))) return requirement
+  return {
+    ...requirement,
+    links: [...requirement.links, { kind, to: target }],
+    updatedAt: new Date().toISOString()
+  }
+}
+
+export function removeLink(requirement: Requirement, kind: ReqLinkKind, to: string): Requirement {
+  const links = requirement.links.filter((link) => !sameLink(link, kind, to))
+  if (links.length === requirement.links.length) return requirement
+  return { ...requirement, links, updatedAt: new Date().toISOString() }
+}
+
+/**
+ * A person saying they have looked at a link the far end moved under.
+ *
+ * Only a person can do this. The tool can tell that a relation may no longer hold; it
+ * cannot tell that it still does, and clearing the mark on its own would turn the whole
+ * mechanism into decoration.
+ */
+export function clearSuspect(requirement: Requirement, kind: ReqLinkKind, to: string): Requirement {
+  if (!requirement.links.some((link) => sameLink(link, kind, to) && link.suspect)) return requirement
+  return {
+    ...requirement,
+    links: requirement.links.map((link) => {
+      if (!sameLink(link, kind, to)) return link
+      const { suspect: _dropped, ...rest } = link
+      return rest
+    }),
+    updatedAt: new Date().toISOString()
+  }
+}
+
+/**
+ * Marks every link pointing at a requirement that has just moved.
+ *
+ * This is the direction that matters. A requirement marking its own links when its words
+ * change says "what I derive from may have shifted under me"; this says "what I say about
+ * that requirement was written against words it no longer has", which is the one a review
+ * has to act on.
+ */
+export function markLinksToward(requirement: Requirement, movedId: string): Requirement {
+  if (!requirement.links.some((link) => link.to.toUpperCase() === movedId.toUpperCase() && !link.suspect)) {
+    return requirement
+  }
+  return {
+    ...requirement,
+    links: requirement.links.map((link) =>
+      link.to.toUpperCase() === movedId.toUpperCase() ? { ...link, suspect: true } : link
+    ),
+    updatedAt: new Date().toISOString()
+  }
+}
+
+/** The relations of one kind this requirement asserts. */
+export function linksOfKind(requirement: Requirement, kind: ReqLinkKind): ReqLink[] {
+  return requirement.links.filter((link) => link.kind === kind)
+}
+
+export function hasSuspectLinks(requirement: Requirement): boolean {
+  return requirement.links.some((link) => link.suspect === true)
+}
