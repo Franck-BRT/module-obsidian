@@ -465,6 +465,9 @@ export default class PMPlugin extends Plugin {
     if (!saved?.requirements?.types?.length) this.settings.requirements.types = seedReqTypes()
     if (!saved?.requirements?.statuses?.length) this.settings.requirements.statuses = seedReqStatuses()
     if (!this.settings.requirements.counters) this.settings.requirements.counters = {}
+    // A vault that predates the target has no opinion about it, and zero is not one.
+    if (!this.settings.requirements.reviewTarget) this.settings.requirements.reviewTarget = 80
+    if (!this.settings.requirements.reviewProposals) this.settings.requirements.reviewProposals = 3
     if (!this.settings.projectFilters) this.settings.projectFilters = {}
     if (!this.settings.scopeViews) this.settings.scopeViews = {}
     if (!this.settings.collapsedTasks) this.settings.collapsedTasks = {}

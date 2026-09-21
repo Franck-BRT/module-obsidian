@@ -522,6 +522,16 @@ export interface RequirementSettings {
    * one written, or every document that ever cited it would now cite something else.
    */
   counters: Record<string, number>
+  /**
+   * The rating a requirement is expected to reach, as a percentage.
+   *
+   * A target rather than a rule: nothing is refused for falling short of it. It decides
+   * what the editor proposes and how many proposals it asks the model for, which is the
+   * only thing a number like this can honestly do.
+   */
+  reviewTarget: number
+  /** How many things to do the editor proposes at once. Three is a plan; eight is a backlog. */
+  reviewProposals: number
 }
 
 export const DEFAULT_REQ_TYPES: ReqPaletteConfig[] = [
@@ -550,7 +560,9 @@ export const DEFAULT_REQUIREMENT_SETTINGS: RequirementSettings = {
   idWidth: 4,
   types: DEFAULT_REQ_TYPES,
   statuses: DEFAULT_REQ_STATUSES,
-  counters: {}
+  counters: {},
+  reviewTarget: 80,
+  reviewProposals: 3
 }
 
 export function seedReqTypes(): ReqPaletteConfig[] {

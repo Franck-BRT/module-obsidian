@@ -17,6 +17,8 @@ import type { TranslationOutcome } from '../../store/requirements/RequirementTra
 import { safeAsync } from '../../utils'
 import { checkWording, type QualityFinding, type QualityRule } from '../../store/requirements/reqQuality'
 import { assessRequirement, type QualityAxis, type QualityAxisId } from '../../store/requirements/reqScore'
+import { improvementPlan, type ImprovementPlan } from '../../store/requirements/reqAdvice'
+import type { DeepReview } from '../../store/requirements/reqQualityLlm'
 import { mergeFindings, RequirementReviewer } from '../../store/requirements/reqQualityLlm'
 import { renderPropRow } from '../../ui/FormField'
 import { pickOption } from '../../modals/PickerModals'
@@ -44,6 +46,9 @@ class RequirementModal extends Modal {
   private reports = new Map<string, TranslationOutcome>()
   /** What the model made of each wording, once somebody asked it. */
   private review = new Map<string, QualityFinding[]>()
+  /** The model's own reading of this requirement, once somebody asked for one. */
+  private deep: DeepReview | null = null
+  private reviewing = false
   private readonly reviewer: RequirementReviewer
   private bodyEl!: HTMLElement
 
@@ -399,8 +404,137 @@ class RequirementModal extends Modal {
     head.createSpan({ cls: 'pm-req-rating-score', text: `${Math.round(report.score * 100)} %` })
     head.createSpan({ cls: 'pm-req-rev', text: ratingWord(report.stars) })
 
+    const settings = this.plugin.settings.requirements
+    const plan = improvementPlan(report, settings.reviewTarget / 100, settings.reviewProposals)
+    head.createSpan({ cls: 'pm-req-rev', text: t('req.target', { target: settings.reviewTarget }) })
+
     const grid = section.createDiv('pm-req-axes')
     for (const axis of report.axes) this.renderAxis(grid, axis)
+
+    this.renderPlan(section, plan)
+    this.renderModelReading(section)
+  }
+
+  /**
+   * What to do next, and what each would be worth.
+   *
+   * The arithmetic is the rubric's, which is why the numbers can be trusted: a gain is
+   * exactly what closing that axis adds to the score, not an estimate. The model, when it
+   * has been asked, fills in the sentence — the one thing a rubric cannot write.
+   */
+  private renderPlan(section: HTMLElement, plan: ImprovementPlan): void {
+    if (plan.met) {
+      const met = section.createDiv('pm-req-plan-met')
+      setIcon(met.createSpan({ cls: 'pm-glyph-icon' }), 'check')
+      met.createSpan({ text: t('req.targetMet', { target: Math.round(plan.target * 100) }) })
+      return
+    }
+    if (!plan.improvements.length) return
+
+    const block = section.createDiv('pm-req-plan')
+    const head = block.createDiv('pm-req-plan-head')
+    head.createSpan({
+      cls: 'pm-req-section-title',
+      text: t('req.planTitle', { count: plan.improvements.length, target: Math.round(plan.target * 100) })
+    })
+    // Said plainly when the three biggest fixes still fall short, rather than leaving the
+    // reader to do the arithmetic and find out afterwards.
+    if (!plan.enough) {
+      head.createSpan({ cls: 'pm-req-rev', text: t('req.planShort', { reachable: Math.round(plan.reachable * 100) }) })
+    }
+
+    for (const improvement of plan.improvements) {
+      const row = block.createDiv('pm-req-plan-row')
+      row.createSpan({ cls: 'pm-req-plan-gain', text: `+${Math.round(improvement.gain * 100)}` })
+      const body = row.createDiv('pm-req-plan-body')
+      body.createSpan({ cls: 'pm-req-plan-axis', text: axisLabel(improvement.axis) })
+      const said = this.deep?.proposals.find((proposal) => proposal.axis === improvement.axis)
+      body.createSpan({
+        cls: 'pm-req-plan-action',
+        // The model's sentence when there is one, and the rubric's own list of what is
+        // missing when there is not: never nothing, because a proposal with no advice in
+        // it is a row that wastes a reading.
+        text: said ? said.action : improvement.misses.map((miss) => missLabel(miss)).join(', ')
+      })
+      if (said?.rewrite) this.renderRewrite(body, said.rewrite)
+    }
+  }
+
+  /**
+   * A rewritten statement, with a button that takes it.
+   *
+   * Applied through the same door a typed wording goes through, so it lands marked as a
+   * machine's and unreviewed: accepting a suggestion is not the same as having read it,
+   * and the library is built on somebody being answerable for every statement.
+   */
+  private renderRewrite(parent: HTMLElement, rewrite: string): void {
+    const box = parent.createDiv('pm-req-rewrite')
+    box.createDiv({ cls: 'pm-req-rewrite-text', text: rewrite })
+    const take = box.createEl('button', { cls: 'pm-req-accept', text: t('req.applyRewrite') })
+    take.addEventListener('click', () => {
+      this.draft = setText(this.draft, this.draft.sourceLang, rewrite, this.author() || 'llm', 'machine')
+      this.dirty = true
+      this.render()
+    })
+  }
+
+  /** The model's own reading, kept apart from the rubric's and labelled as its own. */
+  private renderModelReading(section: HTMLElement): void {
+    const block = section.createDiv('pm-req-reading')
+    const head = block.createDiv('pm-req-reading-head')
+    setIcon(head.createSpan({ cls: 'pm-glyph-icon' }), 'bot')
+    head.createSpan({ cls: 'pm-req-section-title', text: t('req.modelReading') })
+    if (this.reviewer.available) {
+      const ask = head.createEl('button', {
+        cls: 'pm-req-review',
+        text: this.reviewing ? t('req.reviewing') : this.deep ? t('req.reviewAgain') : t('req.reviewDeep')
+      })
+      ask.disabled = this.reviewing
+      ask.addEventListener(
+        'click',
+        safeAsync(() => this.runDeepReview())
+      )
+    }
+    if (!this.deep) {
+      block.createDiv({
+        cls: 'pm-req-section-empty',
+        text: this.reviewer.available ? t('req.modelNotAsked') : t('req.modelOff')
+      })
+      return
+    }
+    if (this.deep.assessment) block.createDiv({ cls: 'pm-req-reading-text', text: this.deep.assessment })
+  }
+
+  private async runDeepReview(): Promise<void> {
+    const source = textOf(this.draft, this.draft.sourceLang)
+    if (!source?.body.trim()) {
+      new Notice(t('req.noWording'))
+      return
+    }
+    const settings = this.plugin.settings.requirements
+    const report = assessRequirement(this.draft, reqLanguages(this.plugin.settings))
+    const plan = improvementPlan(report, settings.reviewTarget / 100, settings.reviewProposals)
+
+    this.reviewing = true
+    this.render()
+    try {
+      this.deep = await this.reviewer.deepReview(source.body, {
+        lang: this.draft.sourceLang,
+        title: this.draft.title,
+        weak: plan.improvements.map((entry) => ({ axis: entry.axis, misses: entry.misses, gain: entry.gain })),
+        score: report.score,
+        target: plan.target,
+        count: settings.reviewProposals
+      })
+      // The defect list the model returned is folded into the badges, where the rules'
+      // own findings already are: one list of defects, not two.
+      this.review.set(this.draft.sourceLang, this.deep.findings)
+    } catch (error) {
+      new Notice(t('req.reviewFailed', { reason: error instanceof Error ? error.message : '' }))
+    } finally {
+      this.reviewing = false
+    }
+    this.render()
   }
 
   private renderAxis(grid: HTMLElement, axis: QualityAxis): void {

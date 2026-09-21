@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { LlmError } from '../llm'
 import { checkWording, type QualityFinding } from './reqQuality'
-import { mergeFindings, qualitySystemPrompt, readQualityFindings } from './reqQualityLlm'
+import {
+  deepReviewPrompt,
+  mergeFindings,
+  qualitySystemPrompt,
+  readDeepReview,
+  readQualityFindings
+} from './reqQualityLlm'
 
 describe('qualitySystemPrompt', () => {
   it('names the language of the statement', () => {
@@ -62,5 +68,84 @@ describe('mergeFindings', () => {
       { rule: 'unquantified', severity: 'warning', term: '', fromModel: true, message: 'Quel délai ?' }
     ]
     expect(mergeFindings(rules, model).some((finding) => finding.rule === 'unquantified')).toBe(true)
+  })
+})
+
+describe('deepReviewPrompt', () => {
+  const context = {
+    lang: 'fr',
+    title: 'Trappe',
+    weak: [
+      { axis: 'unambiguous', misses: ['weak-word'], gain: 0.12 },
+      { axis: 'verifiable', misses: ['verification'], gain: 0.1 }
+    ],
+    score: 0.52,
+    target: 0.8,
+    count: 3
+  }
+
+  // A reviewer told "this scores 52 and loses most on ambiguity" writes different advice
+  // from one shown a bare sentence.
+  it('hands over the verdict rather than hiding it', () => {
+    const prompt = deepReviewPrompt(context)
+    expect(prompt).toContain('52 %')
+    expect(prompt).toContain('80 %')
+    expect(prompt).toContain('unambiguous: missing weak-word (worth 12 points)')
+  })
+
+  it('asks for as many proposals as the reader wanted', () => {
+    expect(deepReviewPrompt({ ...context, count: 2 })).toContain('exactly 2')
+  })
+
+  it('names the language the answer is to be written in', () => {
+    expect(deepReviewPrompt(context)).toContain('French')
+  })
+
+  // The one thing a rewrite must never do is quietly decide a figure nobody has agreed.
+  it('forbids inventing what the original does not state', () => {
+    expect(deepReviewPrompt(context)).toContain('Never invent a figure')
+  })
+})
+
+describe('readDeepReview', () => {
+  const full = {
+    assessment: '  La formulation reste vague.  ',
+    findings: [{ rule: 'weak-word', severity: 'warning', term: 'rapide', message: 'Préciser.' }],
+    proposals: [
+      {
+        axis: 'unambiguous',
+        action: 'Remplacer « rapide » par un délai.',
+        rewrite: 'Le système doit répondre en 3 s.'
+      },
+      { axis: 'verifiable', action: 'Choisir une méthode de vérification.' }
+    ]
+  }
+
+  it('reads the prose, the defects and what to do', () => {
+    const review = readDeepReview(full)
+    expect(review.assessment).toBe('La formulation reste vague.')
+    expect(review.findings).toHaveLength(1)
+    expect(review.proposals[0].rewrite).toBe('Le système doit répondre en 3 s.')
+    expect(review.proposals[1].rewrite).toBeUndefined()
+  })
+
+  // A sound requirement has neither, and that is a real answer.
+  it('accepts a review with nothing to fix', () => {
+    expect(readDeepReview({ assessment: 'Rien à redire.', findings: [], proposals: [] }).proposals).toEqual([])
+  })
+
+  it('drops a proposal naming an axis the rubric does not have', () => {
+    const review = readDeepReview({ ...full, proposals: [{ axis: 'élégance', action: 'Faire mieux.' }] })
+    expect(review.proposals).toEqual([])
+  })
+
+  it('drops a proposal with nothing to do in it', () => {
+    const review = readDeepReview({ ...full, proposals: [{ axis: 'verifiable', action: '   ' }] })
+    expect(review.proposals).toEqual([])
+  })
+
+  it('refuses a reply that said nothing at all', () => {
+    expect(() => readDeepReview({ assessment: '', findings: [], proposals: [] })).toThrow(LlmError)
+    expect(() => readDeepReview(null)).toThrow(LlmError)
   })
 })

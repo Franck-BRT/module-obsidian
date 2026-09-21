@@ -696,6 +696,38 @@ export class PMSettingTab extends PluginSettingTab {
             )
           }
         },
+        {
+          name: t('settings.req.target'),
+          desc: t('settings.req.targetDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text.setValue(String(reqs.reviewTarget)).onChange((value) => {
+                const parsed = Number.parseInt(value, 10)
+                // Bounded rather than refused: a target of 0 or 120 is a typo, and the
+                // field should not sit there holding one.
+                if (Number.isFinite(parsed) && parsed >= 10 && parsed <= 100) {
+                  reqs.reviewTarget = parsed
+                  this.persist()
+                }
+              })
+            )
+          }
+        },
+        {
+          name: t('settings.req.proposals'),
+          desc: t('settings.req.proposalsDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text.setValue(String(reqs.reviewProposals)).onChange((value) => {
+                const parsed = Number.parseInt(value, 10)
+                if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 6) {
+                  reqs.reviewProposals = parsed
+                  this.persist()
+                }
+              })
+            )
+          }
+        },
         this.reqPalettePage('types'),
         this.reqPalettePage('statuses')
       ]
