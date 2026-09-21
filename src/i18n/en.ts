@@ -128,7 +128,6 @@ export const en = {
   'count.tasksWord': 'Tickets',
   'program.new': 'New programme',
   'program.name': 'Programme name',
-  'program.newButton': '+ new programme',
   'program.one': 'Programme',
   'program.noProjects': 'No project in this programme yet.',
   'program.addProject': 'Add a project',
@@ -140,7 +139,6 @@ export const en = {
   'count.projectsIn': { one: '{count} project', other: '{count} projects' },
   'template.one': 'Template',
   'template.section': 'Project templates',
-  'template.newButton': '+ new template',
   'template.new': 'New template',
   'template.name': 'Template name',
   'template.from': 'From a template',
@@ -472,6 +470,7 @@ export const en = {
   'project.dueFilter': 'Due: {label}',
   'project.overdueCount': { one: '{count} overdue', other: '{count} overdue' },
   'project.newButton': '+ new project',
+  'project.newMenu': '+ new',
   'project.behindCount': { one: '{count} with tasks past due', other: '{count} with tasks past due' },
   'project.members': 'Members',
   'project.lookingFor': 'Looking for projects',
@@ -737,7 +736,6 @@ export const en = {
 
   // Collections: named sets of tasks drawn from across projects.
   'collection.new': 'Create collection',
-  'collection.newButton': '+ new collection',
   'collection.name': 'Collection name',
   'collection.section': 'Collections',
   'collection.addTo': 'Add to collection',

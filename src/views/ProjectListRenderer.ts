@@ -37,24 +37,42 @@ export function renderProjectListToolbar(ctx: ProjectListContext): void {
   const line = countLine(ctx)
   if (line) left.createSpan({ cls: 'pm-project-list-count', text: line })
 
+  // One button that asks what kind, rather than one per kind. Four of them had grown
+  // along this row, three of them ghosts beside the one anybody presses, and a fifth
+  // would have had nowhere to go.
   new ButtonComponent(ctx.toolbarEl)
-    .setButtonText(t('project.newButton'))
+    .setButtonText(t('project.newMenu'))
     .setCta()
-    .onClick(() => openProjectCreate(ctx.plugin))
+    .onClick((event) => showNewMenu(event, ctx))
+}
+
+/**
+ * What this page can make, and what each of them is.
+ *
+ * All four are notes in the vault and three of them are projects on disk, which is
+ * exactly why the row had stopped explaining itself: four buttons side by side say the
+ * tool makes four unrelated things. A menu says it makes one thing in four shapes, and
+ * has room for the words that tell them apart.
+ */
+function showNewMenu(event: MouseEvent, ctx: ProjectListContext): void {
+  const menu = new Menu()
+  const add = (label: string, icon: string, run: () => void): void => {
+    menu.addItem((item) => item.setTitle(label).setIcon(icon).onClick(run))
+  }
+  add(t('common.project'), 'folder-kanban', () => openProjectCreate(ctx.plugin))
   // The same form, for the container a project can sit in.
-  new ButtonComponent(ctx.toolbarEl)
-    .setButtonText(t('program.newButton'))
-    .onClick(() => openProjectCreate(ctx.plugin, true))
+  add(t('program.one'), 'folder-tree', () => openProjectCreate(ctx.plugin, true))
   // And for the shape a project can start from.
-  new ButtonComponent(ctx.toolbarEl)
-    .setButtonText(t('template.newButton'))
-    .onClick(() => openProjectCreate(ctx.plugin, false, '', true))
-  // A collection gathers tasks that already have a project, so it belongs on this row
-  // rather than inside one: it was reachable only from the command palette, and its
-  // list on the page below appears only once one exists — which it never did.
-  new ButtonComponent(ctx.toolbarEl)
-    .setButtonText(t('collection.newButton'))
-    .onClick(safeAsync(() => ctx.plugin.createCollection()))
+  add(t('template.one'), 'file-stack', () => openProjectCreate(ctx.plugin, false, '', true))
+  menu.addSeparator()
+  // Below the rule because it is the one that is not a project: a synthesis gathers
+  // tasks that already have one.
+  add(
+    t('scope.collection'),
+    'list-checks',
+    safeAsync(() => ctx.plugin.createCollection())
+  )
+  menu.showAtMouseEvent(event)
 }
 
 function countLine(ctx: ProjectListContext): string {
