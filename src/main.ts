@@ -68,6 +68,7 @@ import { RequirementsView, PM_REQUIREMENTS_VIEW_TYPE } from './views/requirement
 import { RequirementStore } from './store/requirements/RequirementStore'
 import { RequirementTranslator } from './store/requirements/RequirementTranslator'
 import { registerReqBlock } from './views/requirements/reqBlockRenderer'
+import { registerReqEditorMenu } from './views/requirements/reqEditorMenu'
 import { pickRequirement } from './views/requirements/RequirementPicker'
 import { insertRequirement } from './views/requirements/insertReq'
 
@@ -157,6 +158,7 @@ export default class PMPlugin extends Plugin {
     this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
     registerReqBlock(this)
+    registerReqEditorMenu(this)
     if (__STYLEGUIDE__) registerStyleguide(this)
 
     this.app.workspace.onLayoutReady(
