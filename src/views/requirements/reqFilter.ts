@@ -1,6 +1,7 @@
 import type { Requirement } from '../../store/requirements/Requirement'
 import { isStale, isUnreviewedMachine, missingLanguages, textOf } from '../../store/requirements/Requirement'
 import { needsReview } from '../../store/requirements/reqQuality'
+import { assessRequirement, isWeak } from '../../store/requirements/reqScore'
 
 /**
  * Narrowing a library down to what is being looked for.
@@ -11,7 +12,7 @@ import { needsReview } from '../../store/requirements/reqQuality'
  */
 
 /** What a row can be singled out for, beyond its own fields. */
-export type ReqFlag = 'all' | 'stale' | 'unreviewed' | 'missing' | 'suspect' | 'quality'
+export type ReqFlag = 'all' | 'stale' | 'unreviewed' | 'missing' | 'suspect' | 'quality' | 'weak'
 
 export interface ReqFilterState {
   search: string
@@ -80,6 +81,8 @@ function matchesFlag(requirement: Requirement, flag: ReqFlag, langs: string[]): 
       // Judged on each wording in its own language: a French sentence run through the
       // English rules is found clean, which is worse than not looking.
       return Object.entries(requirement.text).some(([lang, held]) => needsReview(held.body, lang))
+    case 'weak':
+      return isWeak(assessRequirement(requirement, langs))
   }
 }
 
@@ -101,10 +104,13 @@ export function reqCategories(list: Requirement[]): string[] {
   return [...seen].sort((a, b) => a.localeCompare(b))
 }
 
-export type ReqSortKey = 'id' | 'title' | 'category' | 'type' | 'status' | 'criticality' | 'updated'
+export type ReqSortKey = 'id' | 'title' | 'category' | 'type' | 'status' | 'criticality' | 'updated' | 'rating'
 
 function valueOf(requirement: Requirement, key: ReqSortKey, lang: string): string {
   switch (key) {
+    // Never reached: a rating is a number and is sorted as one, in sortRequirements.
+    case 'rating':
+      return ''
     case 'id':
       return requirement.id
     case 'title':
@@ -133,13 +139,22 @@ export function sortRequirements(
   list: Requirement[],
   key: ReqSortKey,
   dir: 'asc' | 'desc',
-  lang: string
+  lang: string,
+  langs: string[] = [lang]
 ): Requirement[] {
   const sign = dir === 'asc' ? 1 : -1
   const collate = (a: string, b: string): number =>
     a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  // Scored once each rather than once per comparison: a sort asks for n log n of those,
+  // and assessing a requirement reads every wording it has.
+  const scores =
+    key === 'rating'
+      ? new Map(list.map((requirement) => [requirement.id, assessRequirement(requirement, langs).score]))
+      : null
   return [...list].sort((a, b) => {
-    const primary = collate(valueOf(a, key, lang), valueOf(b, key, lang))
+    const primary = scores
+      ? (scores.get(a.id) ?? 0) - (scores.get(b.id) ?? 0)
+      : collate(valueOf(a, key, lang), valueOf(b, key, lang))
     return primary !== 0 ? primary * sign : collate(a.id, b.id)
   })
 }

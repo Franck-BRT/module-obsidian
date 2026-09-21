@@ -1113,6 +1113,7 @@ export const fr: Catalog = {
   'req.twinsNone': 'Aucun doublon repéré',
   'req.twinsNoneHint':
     'Élargissez la recherche, ou demandez la comparaison du sens pour trouver les exigences écrites deux fois dans des mots différents.',
+  'req.ratingOf': 'Note : {score} %',
   'req.ratingStars': { one: '{stars} étoile sur 5', other: '{stars} étoiles sur 5' },
   'req.rating.excellent': 'Exemplaire',
   'req.rating.good': 'Solide',
@@ -1129,6 +1130,7 @@ export const fr: Catalog = {
   'req.axisFull': 'Rien à ajouter',
   'req.miss.language': 'Rédaction {lang}',
   'req.miss.links': 'Aucun lien',
+  'req.flag.weak': 'Moins de 3 étoiles',
   'req.flag.quality': 'À revoir',
   'req.flag.stale': 'Traductions en retard',
   'req.flag.unreviewed': 'À relire',
@@ -1145,6 +1147,7 @@ export const fr: Catalog = {
   'req.field.owner': 'Responsable',
   'req.field.rationale': 'Justification',
   'req.field.tags': 'Étiquettes',
+  'req.field.rating': 'Note',
   'req.field.state': 'État',
   'req.type.functional': 'Fonctionnelle',
   'req.type.performance': 'Performance',

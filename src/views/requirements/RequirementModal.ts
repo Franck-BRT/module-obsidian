@@ -27,6 +27,7 @@ import { formatDateShort } from '../../dates'
 import { renderSelectControl } from '../../ui/composites/properties'
 import { t } from '../../i18n'
 import { reqLanguages, reqLinkKindLabel, verificationLabel } from './reqPalette'
+import { renderStars } from './reqStars'
 
 /**
  * One requirement, open for editing.
@@ -392,14 +393,7 @@ class RequirementModal extends Modal {
     const section = parent.createDiv('pm-req-rating')
 
     const head = section.createDiv('pm-req-rating-head')
-    const stars = head.createDiv({
-      cls: 'pm-req-stars',
-      attr: { 'aria-label': t('req.ratingStars', { stars: report.stars }) }
-    })
-    for (let index = 0; index < 5; index++) {
-      const star = stars.createSpan({ cls: index < report.stars ? 'pm-req-star pm-req-star--on' : 'pm-req-star' })
-      setIcon(star, 'star')
-    }
+    renderStars(head, report.stars)
     // The number beside the stars, because five shapes cannot tell 61 % from 68 % and a
     // reader who is choosing what to fix next needs to.
     head.createSpan({ cls: 'pm-req-rating-score', text: `${Math.round(report.score * 100)} %` })

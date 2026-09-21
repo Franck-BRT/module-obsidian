@@ -48,7 +48,7 @@
 /* One grid for the head and every row, so the columns cannot drift apart. */
 .pm-req-row {
   display: grid;
-  grid-template-columns: 9rem minmax(12rem, 1fr) 8rem 8rem 7rem 10rem;
+  grid-template-columns: 9rem minmax(12rem, 1fr) 8rem 8rem 7rem 6rem 10rem;
   gap: var(--size-4-2);
   align-items: baseline;
   padding: var(--size-2-3) var(--size-2-2);
@@ -822,6 +822,16 @@
 
 .pm-req-twin-side .pm-req-wording {
   -webkit-line-clamp: 2;
+}
+
+.pm-req-cell--rating {
+  display: flex;
+  align-items: center;
+}
+
+/* Small enough to sit in a table row without shouting, large enough to count. */
+.pm-req-stars--small .pm-req-star {
+  --icon-size: 12px;
 }
 
 /* ---- The rating ------------------------------------------------------------------

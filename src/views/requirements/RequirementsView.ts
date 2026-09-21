@@ -61,6 +61,8 @@ import { confirmDialog, promptText } from '../../ui/ModalFactory'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
+import { renderStars } from './reqStars'
+import { assessRequirement } from '../../store/requirements/reqScore'
 import { reqCriticalityGlyph, reqLanguages, reqStatusGlyph, reqTypeGlyph } from './reqPalette'
 import {
   EMPTY_REQ_FILTER,
@@ -75,7 +77,7 @@ import {
 
 export const PM_REQUIREMENTS_VIEW_TYPE = 'pm-requirements'
 
-const FLAGS: ReqFlag[] = ['stale', 'unreviewed', 'missing', 'suspect', 'quality']
+const FLAGS: ReqFlag[] = ['weak', 'stale', 'unreviewed', 'missing', 'suspect', 'quality']
 
 /**
  * The requirements library.
@@ -188,7 +190,13 @@ export class RequirementsView extends ItemView {
   }
 
   private renderBody(all: Requirement[], langs: string[]): void {
-    const shown = sortRequirements(filterRequirements(all, this.filter, langs), this.sortKey, this.sortDir, this.lang)
+    const shown = sortRequirements(
+      filterRequirements(all, this.filter, langs),
+      this.sortKey,
+      this.sortDir,
+      this.lang,
+      langs
+    )
     if (this.mode === 'tree') {
       this.renderTree(this.bodyEl, all, shown)
       return
@@ -748,7 +756,13 @@ export class RequirementsView extends ItemView {
    * read back without losing something and saying nothing about it.
    */
   private showPortMenu(event: MouseEvent, all: Requirement[], langs: string[]): void {
-    const shown = sortRequirements(filterRequirements(all, this.filter, langs), this.sortKey, this.sortDir, this.lang)
+    const shown = sortRequirements(
+      filterRequirements(all, this.filter, langs),
+      this.sortKey,
+      this.sortDir,
+      this.lang,
+      langs
+    )
     const menu = new Menu()
     const add = (label: string, icon: string, run: () => void): void => {
       menu.addItem((item) => item.setTitle(label).setIcon(icon).onClick(run))
@@ -1096,6 +1110,7 @@ export class RequirementsView extends ItemView {
     column('type', t('req.field.type'), 'pm-req-cell--type')
     column('status', t('req.field.status'), 'pm-req-cell--status')
     column('criticality', t('req.field.criticality'), 'pm-req-cell--crit')
+    column('rating', t('req.field.rating'), 'pm-req-cell--rating')
     head.createDiv('pm-req-cell pm-req-cell--state').createSpan({ text: t('req.field.state') })
 
     for (const requirement of list) this.renderRow(table, requirement, langs)
@@ -1125,6 +1140,14 @@ export class RequirementsView extends ItemView {
     this.renderGlyphCell(row, 'pm-req-cell--status', status.label, status.color, status.icon)
     const crit = reqCriticalityGlyph(this.plugin.settings, requirement.criticality)
     this.renderGlyphCell(row, 'pm-req-cell--crit', crit.label, crit.color, crit.icon)
+
+    // The rating where the eye already is, so a library can be triaged without opening
+    // anything. The percentage rides on the row's tooltip rather than taking a column.
+    const rating = assessRequirement(requirement, langs)
+    const cell = row.createDiv('pm-req-cell pm-req-cell--rating')
+    renderStars(cell, rating.stars, 'pm-req-stars--small').title = t('req.ratingOf', {
+      score: Math.round(rating.score * 100)
+    })
 
     const state = row.createDiv('pm-req-cell pm-req-cell--state')
     this.renderState(state, requirement, langs)
@@ -1317,6 +1340,8 @@ function flagLabel(flag: ReqFlag): string {
       return t('req.flag.suspect')
     case 'quality':
       return t('req.flag.quality')
+    case 'weak':
+      return t('req.flag.weak')
     default:
       return t('common.all')
   }

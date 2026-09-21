@@ -1138,6 +1138,7 @@ export const en = {
   'req.twinsNone': 'No duplicates found',
   'req.twinsNoneHint':
     'Look wider, or ask for the meaning to be compared, which finds the requirements written twice in different words.',
+  'req.ratingOf': 'Rating: {score} %',
   'req.ratingStars': { one: '{stars} star out of 5', other: '{stars} stars out of 5' },
   'req.rating.excellent': 'Exemplary',
   'req.rating.good': 'Solid',
@@ -1154,6 +1155,7 @@ export const en = {
   'req.axisFull': 'Nothing to add',
   'req.miss.language': '{lang} wording',
   'req.miss.links': 'No links',
+  'req.flag.weak': 'Below 3 stars',
   'req.flag.quality': 'To rewrite',
   'req.flag.stale': 'Translations behind',
   'req.flag.unreviewed': 'To review',
@@ -1170,6 +1172,7 @@ export const en = {
   'req.field.owner': 'Owner',
   'req.field.rationale': 'Rationale',
   'req.field.tags': 'Tags',
+  'req.field.rating': 'Rating',
   'req.field.state': 'State',
   'req.type.functional': 'Functional',
   'req.type.performance': 'Performance',

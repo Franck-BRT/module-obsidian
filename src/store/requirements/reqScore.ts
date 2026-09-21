@@ -209,6 +209,19 @@ export function assessRequirement(requirement: Requirement, langs: string[]): Qu
   return { axes, score, stars: Math.round(score * 5), findings }
 }
 
+/**
+ * Below this, a requirement wants rewriting rather than finishing.
+ *
+ * Three of five: at two, at least one of the wording axes has collapsed, and no amount
+ * of filling in the record makes up for a statement that obliges nobody or says two
+ * things at once.
+ */
+export const WEAK_STARS = 3
+
+export function isWeak(report: QualityReport): boolean {
+  return report.stars < WEAK_STARS
+}
+
 /** The weight an axis carries, for a view that wants to show it. */
 export function axisWeight(id: QualityAxisId): number {
   return WEIGHTS[id]

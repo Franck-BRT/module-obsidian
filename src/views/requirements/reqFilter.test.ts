@@ -100,6 +100,29 @@ describe('filterRequirements', () => {
     const out = filterRequirements([french], { ...EMPTY_REQ_FILTER, flag: 'quality' }, LANGS)
     expect(out).toEqual([])
   })
+
+  it('singles out a requirement a reviewer would send back', () => {
+    const weak = setText(req({ id: 'REQ-A-0020' }), 'fr', 'Le système ouvre la trappe.', 'a')
+    const sound = setText(
+      req({
+        id: 'REQ-A-0021',
+        category: 'SYS',
+        type: 'functional',
+        status: 'approved',
+        criticality: 'high',
+        verification: 'test',
+        source: 'CdC §4',
+        rationale: 'Pour évacuer.',
+        owner: 'franck',
+        links: [{ kind: 'satisfied-by', to: 'task-1' }]
+      }),
+      'fr',
+      "L'opérateur doit ouvrir la trappe en moins de 3 s.",
+      'a'
+    )
+    const out = filterRequirements([weak, sound], { ...EMPTY_REQ_FILTER, flag: 'weak' }, ['fr'])
+    expect(out.map((r) => r.id)).toEqual(['REQ-A-0020'])
+  })
 })
 
 describe('isReqFilterActive', () => {
@@ -138,6 +161,24 @@ describe('sortRequirements', () => {
     ]
     const once = sortRequirements(list, 'status', 'desc', 'fr').map((r) => r.id)
     expect(once).toEqual(['REQ-SYS-0001', 'REQ-SYS-0002', 'REQ-SYS-0003'])
+  })
+
+  it('orders by rating as a number, not as the text of one', () => {
+    const weak = setText(req({ id: 'REQ-A-0030' }), 'fr', 'Le système ouvre la trappe.', 'a')
+    const better = setText(
+      req({ id: 'REQ-A-0031', verification: 'test', owner: 'franck', category: 'SYS' }),
+      'fr',
+      'Le système doit ouvrir la trappe en 3 s.',
+      'a'
+    )
+    expect(sortRequirements([weak, better], 'rating', 'asc', 'fr', ['fr']).map((r) => r.id)).toEqual([
+      'REQ-A-0030',
+      'REQ-A-0031'
+    ])
+    expect(sortRequirements([weak, better], 'rating', 'desc', 'fr', ['fr']).map((r) => r.id)).toEqual([
+      'REQ-A-0031',
+      'REQ-A-0030'
+    ])
   })
 
   it('leaves the list it was given alone', () => {
