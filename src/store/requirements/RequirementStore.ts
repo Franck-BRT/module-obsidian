@@ -7,7 +7,16 @@ import { parseFrontmatter } from '../YamlParser'
 import { foreignFrontmatter } from '../YamlSerializer'
 import type { Requirement } from './Requirement'
 import { makeRequirement, markLinksToward } from './Requirement'
-import { DEFAULT_ID_SCHEME, formatReqId, idCategory, nextReqId, parseReqId, reqFileName, type IdScheme } from './reqId'
+import {
+  DEFAULT_ID_SCHEME,
+  formatReqId,
+  idCategory,
+  isReqId,
+  nextReqId,
+  parseReqId,
+  reqFileName,
+  type IdScheme
+} from './reqId'
 import { requirementBodyRemainder, serializeRequirement } from './reqNote'
 import { hydrateRequirement, REQUIREMENT_FRONTMATTER_KEY, REQUIREMENT_FRONTMATTER_KEYS } from './reqYaml'
 
@@ -38,6 +47,20 @@ export function allocateReqId(
   const fromCounter = (counters[key] ?? 0) + 1
   const number = Math.max(fromLibrary, fromCounter)
   return { id: formatReqId(scheme, key, number), counters: { ...counters, [key]: number } }
+}
+
+/**
+ * The counters, raised to clear an identifier that came from outside.
+ *
+ * Only where the prefix is this library's: a file numbered under somebody else's scheme
+ * is not something to count, and folding it into our own count would push every future
+ * identifier up by however large their numbers happen to be.
+ */
+export function counterPast(scheme: IdScheme, counters: Record<string, number>, id: string): Record<string, number> {
+  const parsed = parseReqId(id)
+  if (!parsed || parsed.prefix !== scheme.prefix.toUpperCase()) return counters
+  const held = counters[parsed.category] ?? 0
+  return parsed.number > held ? { ...counters, [parsed.category]: parsed.number } : counters
 }
 
 export function schemeOf(settings: RequirementSettings): IdScheme {
@@ -72,13 +95,16 @@ export class RequirementStore {
    */
   async create(over: Partial<Requirement> = {}): Promise<Requirement | null> {
     const settings = this.getSettings()
-    const { id, counters } = allocateReqId(
-      schemeOf(settings),
-      over.category ?? '',
-      this.index.requirementIds(),
-      settings.counters
-    )
-    settings.counters = counters
+    const scheme = schemeOf(settings)
+    const wanted = (over.id ?? '').trim()
+    // An identifier the caller brings — an import carrying a supplier's numbering — is
+    // kept rather than replaced, because renumbering somebody's requirements breaks every
+    // reference in their documents. The counter is carried past it either way, so nothing
+    // is ever minted onto a number that has already been used.
+    const brought = isReqId(wanted) ? wanted : ''
+    const allocated = allocateReqId(scheme, over.category ?? '', this.index.requirementIds(), settings.counters)
+    const id = brought || allocated.id
+    settings.counters = brought ? counterPast(scheme, settings.counters, brought) : allocated.counters
     await this.saveSettings()
 
     const sourceLang = over.sourceLang ?? settings.languages[0] ?? 'fr'

@@ -634,3 +634,56 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Import and export ---------------------------------------------------------- */
+
+.pm-req-port {
+  display: inline-flex;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.pm-req-import {
+  --dialog-width: 44rem;
+}
+
+.pm-req-import-counts {
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+  padding-bottom: var(--size-2-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Capped and scrolled: a file of four hundred rows must not push the button that writes
+   them off the bottom of the screen. */
+.pm-req-import-rows {
+  max-height: 22rem;
+  overflow-y: auto;
+  margin: var(--size-2-3) 0;
+}
+
+.pm-req-import-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-2-2);
+  padding: 3px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pm-req-import-row .pm-req-wording {
+  flex: 1 1 auto;
+  -webkit-line-clamp: 1;
+}
+
+/* A row that will not be written is dimmed, so the eye goes to the ones that will. */
+.pm-req-import-row--unchanged,
+.pm-req-import-row--invalid {
+  opacity: 0.6;
+}
+
+.pm-req-import .pm-te-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-2-2);
+}

@@ -69,6 +69,7 @@ import { RequirementStore } from './store/requirements/RequirementStore'
 import { RequirementTranslator } from './store/requirements/RequirementTranslator'
 import { ReqUsageIndex } from './store/requirements/ReqUsage'
 import { BaselineStore } from './store/requirements/BaselineStore'
+import { ReqPorter } from './store/requirements/ReqPorter'
 import { registerReqBlock } from './views/requirements/reqBlockRenderer'
 import { registerReqEditorMenu } from './views/requirements/reqEditorMenu'
 import { pickRequirement } from './views/requirements/RequirementPicker'
@@ -86,6 +87,8 @@ export default class PMPlugin extends Plugin {
   reqUsage!: ReqUsageIndex
   /** The library as it stood on the days somebody signed for it. */
   baselines!: BaselineStore
+  /** Hands the library out, and takes it back. */
+  porter!: ReqPorter
   documents!: DocumentStore
   index!: VaultIndex
   notifier!: Notifier
@@ -149,6 +152,7 @@ export default class PMPlugin extends Plugin {
     this.translator = new RequirementTranslator(() => this.settings, this.requirements)
     this.reqUsage = new ReqUsageIndex(this.app, () => this.index.requirementRefs())
     this.baselines = new BaselineStore(this.app, () => this.settings.requirements.folder)
+    this.porter = new ReqPorter(this.app, this.requirements, this.index, () => this.settings.requirements.folder)
     this.store.registerVaultSync(this)
     this.notifier = new Notifier(this)
     this.autoArchiver = new AutoArchiver(this)

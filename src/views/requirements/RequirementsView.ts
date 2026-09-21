@@ -27,6 +27,12 @@ import {
 } from '../../store/requirements/Baseline'
 import type { DiffPart } from '../../store/requirements/reqDiff'
 import { formatDateShort } from '../../dates'
+import { toCsv } from '../../store/requirements/reqCsv'
+import { toReqif } from '../../store/requirements/reqif'
+import { toMarkdownDocument } from '../../store/requirements/reqMarkdown'
+import { exportFileName } from '../../store/requirements/ReqPorter'
+import { pickVaultFile } from '../../modals/PickerModals'
+import { openReqImport } from './ReqImportModal'
 import { EmptyState } from '../../ui/primitives/EmptyState'
 import { ChipButton } from '../../ui/primitives/ChipButton'
 import { Chip } from '../../ui/primitives/Chip'
@@ -319,6 +325,10 @@ export class RequirementsView extends ItemView {
       }
     }
 
+    const port = right.createEl('button', { cls: 'pm-req-port', attr: { 'aria-label': t('req.exchange') } })
+    setIcon(port, 'arrow-down-up')
+    port.addEventListener('click', (event) => this.showPortMenu(event, all, langs))
+
     const add = right.createEl('button', { cls: 'pm-req-new mod-cta' })
     setIcon(add.createSpan({ cls: 'pm-glyph-icon' }), 'plus')
     add.createSpan({ text: t('req.new') })
@@ -358,6 +368,73 @@ export class RequirementsView extends ItemView {
   private renderBodyOnly(): void {
     this.bodyEl.empty()
     this.renderBody(this.plugin.index.requirementRefs(), reqLanguages(this.plugin.settings))
+  }
+
+  /* ---- In and out ----------------------------------------------------------- */
+
+  /**
+   * Handing the library to somebody who does not have this plugin, and taking it back.
+   *
+   * Three ways out, for three different readers: a table for whoever works in a
+   * spreadsheet, ReqIF for whoever has a requirements tool, and a document for whoever
+   * just has to read it. One way in, because CSV is the only one of the three this can
+   * read back without losing something and saying nothing about it.
+   */
+  private showPortMenu(event: MouseEvent, all: Requirement[], langs: string[]): void {
+    const shown = sortRequirements(filterRequirements(all, this.filter, langs), this.sortKey, this.sortDir, this.lang)
+    const menu = new Menu()
+    const add = (label: string, icon: string, run: () => void): void => {
+      menu.addItem((item) => item.setTitle(label).setIcon(icon).onClick(run))
+    }
+    add(
+      t('req.exportCsv', { count: shown.length }),
+      'table',
+      safeAsync(() => this.exportAs(shown, 'csv'))
+    )
+    add(
+      t('req.exportReqif', { count: shown.length }),
+      'file-code',
+      safeAsync(() => this.exportAs(shown, 'reqif'))
+    )
+    add(
+      t('req.exportMarkdown', { count: shown.length }),
+      'file-text',
+      safeAsync(() => this.exportAs(shown, 'md'))
+    )
+    menu.addSeparator()
+    add(
+      t('req.importCsv'),
+      'upload',
+      safeAsync(() => this.importCsv())
+    )
+    menu.showAtMouseEvent(event)
+  }
+
+  private async exportAs(shown: Requirement[], format: 'csv' | 'reqif' | 'md'): Promise<void> {
+    if (!shown.length) {
+      new Notice(t('req.noneHere'))
+      return
+    }
+    const title = t('req.libraryTitle')
+    const contents =
+      format === 'csv'
+        ? toCsv(shown)
+        : format === 'reqif'
+          ? toReqif(shown, { lang: this.lang, title })
+          : toMarkdownDocument(shown, { lang: this.lang, title })
+    const path = await this.plugin.porter.writeExport(exportFileName(title, format), contents)
+    new Notice(t('req.exported', { path }))
+    // Opened straight away: an export nobody looks at is an export nobody notices is
+    // wrong, and the reader is about to send it to somebody.
+    if (format === 'md') await this.app.workspace.openLinkText(path, '', 'tab')
+  }
+
+  private async importCsv(): Promise<void> {
+    const file = await pickVaultFile(this.app, t('req.importPick'), (candidate) =>
+      ['csv', 'txt', 'tsv'].includes(candidate.extension.toLowerCase())
+    )
+    if (!file) return
+    openReqImport(this.plugin, file.name, await this.app.vault.cachedRead(file), () => this.render())
   }
 
   /* ---- Baselines ------------------------------------------------------------ */
