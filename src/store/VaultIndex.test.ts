@@ -19,6 +19,14 @@ function taskNote(id: string, title: string, projectId: string, status = 'todo',
   return `---\npm-task: true\nid: ${id}\nprojectId: ${projectId}\ntitle: ${title}\nstatus: ${status}\n${dueLine}---\n\n`
 }
 
+function requirementNote(id: string, title: string): string {
+  return `---\npm-requirement: true\nid: ${id}\ntitle: "${title}"\nsourceLang: fr\nrev: 1\n---\n\n# ${id}\n`
+}
+
+function collectionNote(id: string, title: string): string {
+  return `---\npm-collection: true\nid: ${id}\ntitle: ${title}\n---\n\n# ${title}\n`
+}
+
 /** Collects the registrations a Plugin would clean up, so events can be driven in tests. */
 function fakePlugin(): Plugin {
   return { registerEvent: () => undefined } as unknown as Plugin
@@ -368,6 +376,41 @@ describe('VaultIndex', () => {
       expect(expectDefined(index.task('t1')).path).toBe('Projects/Plan_tasks/a.md')
       expect(index.taskRefs('Projects/Plan.md').map((r) => r.id)).toEqual(['t1'])
       expect(index.projectPathForTask('Projects/Plan_tasks/a.md')).toBe('Projects/Plan.md')
+    })
+
+    /**
+     * The plugin renames a requirement's note itself, the moment its title is written, so
+     * this is not a rare hand edit — it is what happens to every requirement that is
+     * given a name. An index left pointing at the old path makes the row open on nothing.
+     */
+    it('follows a renamed requirement file', async () => {
+      await vault.create('Requirements/REQ-SYS-0001.md', requirementNote('REQ-SYS-0001', ''))
+      await vault.rename(
+        expectDefined(vault.getAbstractFileByPath('Requirements/REQ-SYS-0001.md')),
+        'Requirements/REQ-SYS-0001 Trappe.md'
+      )
+
+      expect(index.requirementRefs().map((r) => r.filePath)).toEqual(['Requirements/REQ-SYS-0001 Trappe.md'])
+      expect(index.requirementAt('Requirements/REQ-SYS-0001.md')).toBeNull()
+      // The path is a field of the requirement as well as the key it is filed under, and
+      // it is the field the editor opens by.
+      expect(expectDefined(index.requirementById('REQ-SYS-0001')).filePath).toBe('Requirements/REQ-SYS-0001 Trappe.md')
+    })
+
+    it('follows a requirement moved with its folder', async () => {
+      await vault.create('Requirements/REQ-SYS-0001.md', requirementNote('REQ-SYS-0001', 'Trappe'))
+      await vault.rename(expectDefined(vault.getAbstractFileByPath('Requirements')), 'Exigences')
+
+      expect(index.requirementRefs().map((r) => r.filePath)).toEqual(['Exigences/REQ-SYS-0001.md'])
+      expect(index.requirementAt('Requirements/REQ-SYS-0001.md')).toBeNull()
+    })
+
+    it('follows a renamed collection file', async () => {
+      await vault.create('Projects/Synthese.md', collectionNote('c1', 'Synthèse'))
+      await vault.rename(expectDefined(vault.getAbstractFileByPath('Projects/Synthese.md')), 'Projects/Revue.md')
+
+      expect(index.collectionRefs().map((r) => r.path)).toEqual(['Projects/Revue.md'])
+      expect(index.collectionRef('Projects/Synthese.md')).toBeNull()
     })
 
     it('follows a project moved with its folder', async () => {

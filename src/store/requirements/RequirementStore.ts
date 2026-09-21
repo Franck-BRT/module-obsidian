@@ -115,6 +115,23 @@ export class RequirementStore {
   }
 
   /**
+   * Writes, then moves the note if its name no longer matches what it holds.
+   *
+   * Reports where the requirement now lives, which is not always where it was asked to be
+   * written: naming a requirement renames its note, and an editor that goes on saving to
+   * the path it opened would write its next edit to a file that is no longer there.
+   */
+  async save(
+    path: string,
+    change: (requirement: Requirement) => Requirement
+  ): Promise<{ requirement: Requirement; path: string } | null> {
+    const saved = await this.update(path, change)
+    if (!saved) return null
+    const moved = (await this.syncFileName({ ...saved, filePath: path })) ?? path
+    return { requirement: { ...saved, filePath: moved }, path: moved }
+  }
+
+  /**
    * Renames the note to match the id and title, keeping every link to it.
    *
    * The id leads the file name, so a folder of requirements sorts the way a register

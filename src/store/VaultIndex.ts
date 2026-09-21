@@ -647,9 +647,24 @@ export class VaultIndex {
     const to = normalizePath(newPath)
     const project = this.projects.get(from)
     const task = this.tasks.get(from)
-    if (!project && !task) return false
+    const collection = this.collections.get(from)
+    const requirement = this.requirements.get(from)
+    if (!project && !task && !collection && !requirement) return false
     this.forget(from)
     if (this.isExcluded(to)) return true
+    if (collection) {
+      collection.path = to
+      this.collections.set(to, collection)
+      return true
+    }
+    if (requirement) {
+      // The path is a field of the requirement as well as the key it is filed under, and
+      // it is the field the library opens a row by. Moving one without the other leaves a
+      // row that points at a file that is no longer there — which is what happens to
+      // every requirement that is given a title, because naming one renames its note.
+      this.requirements.set(to, { ...requirement, filePath: to })
+      return true
+    }
     if (project) {
       project.path = to
       this.projects.set(to, project)
@@ -675,7 +690,9 @@ export class VaultIndex {
     const to = normalizePath(newPath) + '/'
     const projects = [...this.projects.values()].filter((ref) => ref.path.startsWith(from))
     const tasks = [...this.tasks.values()].filter((ref) => ref.path.startsWith(from))
-    if (!projects.length && !tasks.length) return false
+    const collections = [...this.collections.values()].filter((ref) => ref.path.startsWith(from))
+    const requirements = [...this.requirements.values()].filter((ref) => (ref.filePath ?? '').startsWith(from))
+    if (!projects.length && !tasks.length && !collections.length && !requirements.length) return false
     // Projects first: a task's owner is resolved from the folder it now sits in.
     for (const ref of projects) {
       this.forget(ref.path)
@@ -692,6 +709,17 @@ export class VaultIndex {
       this.tasks.set(ref.path, ref)
       this.taskById.set(ref.id, ref)
       this.own(ref)
+    }
+    for (const ref of collections) {
+      this.forget(ref.path)
+      ref.path = to + ref.path.slice(from.length)
+      this.collections.set(ref.path, ref)
+    }
+    for (const ref of requirements) {
+      const was = ref.filePath ?? ''
+      this.forget(was)
+      const moved = to + was.slice(from.length)
+      this.requirements.set(moved, { ...ref, filePath: moved })
     }
     return true
   }

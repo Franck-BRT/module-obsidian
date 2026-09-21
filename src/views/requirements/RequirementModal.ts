@@ -362,8 +362,12 @@ class RequirementModal extends Modal {
 
   private async save(): Promise<void> {
     this.dirty = false
-    const saved = await this.plugin.requirements.update(this.path, () => this.draft)
-    if (saved) await this.plugin.requirements.syncFileName({ ...saved, filePath: this.path })
+    const saved = await this.plugin.requirements.save(this.path, () => this.draft)
+    if (!saved) return
+    // Where it went, not where it was: writing a title renames the note under this
+    // editor, and the next save has to follow it rather than address a file that is gone.
+    this.path = saved.path
+    this.draft = saved.requirement
   }
 }
 

@@ -130,6 +130,31 @@ describe('RequirementStore against a vault', () => {
     expect(vault.getAbstractFileByPath(moved ?? '')).not.toBeNull()
   })
 
+  // Naming a requirement renames its note, so an editor that keeps the path it opened
+  // writes its next edit to a file that is no longer there, and loses it without a word.
+  it('says where the requirement went when saving moved it', async () => {
+    const created = await store.create({ title: '', category: 'SYS' })
+    const first = created?.filePath ?? ''
+    expect(first).toBe('Requirements/REQ-SYS-0001.md')
+
+    const saved = await store.save(first, (requirement) => ({ ...requirement, title: 'Trappe' }))
+    expect(saved?.path).toBe('Requirements/REQ-SYS-0001 Trappe.md')
+    expect(saved?.requirement.filePath).toBe('Requirements/REQ-SYS-0001 Trappe.md')
+    expect(vault.getAbstractFileByPath(first)).toBeNull()
+
+    // And a second save, made where the first one said, still lands.
+    const again = await store.save(saved?.path ?? '', (requirement) => ({ ...requirement, status: 'approved' }))
+    expect(again?.requirement.status).toBe('approved')
+    expect((await store.load(again?.path ?? ''))?.status).toBe('approved')
+  })
+
+  it('reports the same path when nothing about the name moved', async () => {
+    const created = await store.create({ title: 'Trappe', category: 'SYS' })
+    const path = created?.filePath ?? ''
+    const saved = await store.save(path, (requirement) => ({ ...requirement, owner: 'franck' }))
+    expect(saved?.path).toBe(path)
+  })
+
   it('refuses a note that is not a requirement', async () => {
     await vault.create('Notes/plain.md', '---\ntitle: Plain\n---\n\nnothing here\n')
     expect(await store.load('Notes/plain.md')).toBeNull()
