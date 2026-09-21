@@ -128,7 +128,9 @@ export class RequirementReviewer {
       await this.client().chatJson({
         model: this.getSettings().llm.modelText,
         messages: [
-          { role: 'system', content: deepReviewPrompt(context) },
+          // The reader's own instruction when they have written one, and the shipped one
+          // when they have not.
+          { role: 'system', content: deepReviewPrompt(context, this.getSettings().requirements.reviewPrompt) },
           { role: 'user', content: body }
         ],
         schema: DEEP_REVIEW_SCHEMA,
@@ -231,26 +233,93 @@ export interface ReviewContext {
  * and loses most on ambiguity" writes different advice from one shown a bare sentence,
  * and the whole point is advice that moves the number the reader is looking at.
  */
-export function deepReviewPrompt(context: ReviewContext): string {
-  const lines = [
-    `You review requirements written in ${languageName(context.lang)} for a systems-engineering library.`,
-    'A rubric has already scored this one. Its verdict is below; do not dispute it, work from it.',
-    `Current score: ${Math.round(context.score * 100)} %. The reviewer wants it above ${Math.round(context.target * 100)} %.`,
-    'The axes it loses on, with what each is missing and what fixing it is worth:',
-    ...context.weak.map(
-      (entry) =>
-        `- ${entry.axis}: missing ${entry.misses.join(', ') || 'nothing named'} (worth ${Math.round(entry.gain * 100)} points)`
-    ),
-    '',
+/**
+ * The instruction, as something the reader owns.
+ *
+ * Everything here is a judgement about how requirements should be reviewed, and those
+ * judgements belong to the organisation doing the reviewing, not to this plugin: a house
+ * that writes to ECSS conventions wants different advice from one writing a purchase
+ * specification. So this is a default, editable in the settings, with the rubric's verdict
+ * woven in through placeholders.
+ *
+ * What is *not* here is the output contract. That is a machine interface — the fields the
+ * editor reads back and the defect names the badges are drawn from — and an instruction
+ * somebody rewords by accident is a review that stops parsing for reasons nobody can see.
+ * It is appended after this, always.
+ */
+export const DEFAULT_REVIEW_PROMPT = [
+  'You review requirements written in {lang} for a systems-engineering library.',
+  'A rubric has already scored this one. Its verdict is below; do not dispute it, work from it.',
+  'Current score: {score} %. The reviewer wants it above {target} %.',
+  'The axes it loses on, with what each is missing and what fixing it is worth:',
+  '{weak}',
+  '',
+  'Write the assessment in {lang}: two to four sentences on what this requirement does and does not say. Plain, specific, no praise.',
+  'Each proposal names one of the axes above and says in one sentence what to change.',
+  'Where the action is to restate the requirement, rewrite the whole statement in {lang} — one sentence, one obligation, every figure and unit from the original kept exactly.',
+  'Never invent a figure, a unit, an actor or a constraint the original does not state. Where one is missing, say in the action that it has to be decided, and leave it out of any rewrite.',
+  '{title}'
+].join('\n')
+
+/** The placeholders the instruction may use, for a settings page that has to list them. */
+export const REVIEW_PROMPT_KEYS = ['lang', 'score', 'target', 'count', 'weak', 'title', 'rules'] as const
+
+/**
+ * Fills the placeholders, and leaves everything else alone.
+ *
+ * Only the names it knows are replaced: a brace somebody typed in prose is prose, and a
+ * template that silently ate it would be a template nobody could write French in.
+ */
+export function applyPromptTemplate(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (whole, key: string) => (key in values ? values[key] : whole))
+}
+
+export function reviewPromptValues(context: ReviewContext): Record<string, string> {
+  return {
+    lang: languageName(context.lang),
+    score: String(Math.round(context.score * 100)),
+    target: String(Math.round(context.target * 100)),
+    count: String(context.count),
+    weak: context.weak
+      .map(
+        (entry) =>
+          `- ${entry.axis}: missing ${entry.misses.join(', ') || 'nothing named'} (worth ${Math.round(entry.gain * 100)} points)`
+      )
+      .join('\n'),
+    title: context.title.trim() ? `The requirement is titled: ${context.title.trim()}` : '',
+    rules: QUALITY_RULES.join(', ')
+  }
+}
+
+/**
+ * The fields the editor reads back, and the vocabulary its badges are drawn from.
+ *
+ * Not editable, and not because the reader cannot be trusted: these are the names the
+ * interface matches on, and a review that renames them is a review that arrives and shows
+ * nothing.
+ */
+export function reviewOutputContract(context: ReviewContext): string {
+  return [
     'Answer as JSON with three fields.',
-    `"assessment": two to four sentences in ${languageName(context.lang)} on what this requirement does and does not say. Plain, specific, no praise.`,
-    '"findings": the defects you see, using only these names: ' + QUALITY_RULES.join(', ') + '.',
-    `"proposals": exactly ${context.count}, each naming one of the axes above, each with an "action" of one sentence saying what to change.`,
-    `Where the action is to restate the requirement, add "rewrite" holding the whole statement rewritten in ${languageName(context.lang)} — one sentence, one obligation, every figure and unit from the original kept exactly.`,
-    'Never invent a figure, a unit, an actor or a constraint the original does not state. Where one is missing, say in the action that it has to be decided, and leave it out of any rewrite.'
-  ]
-  if (context.title.trim()) lines.push(`The requirement is titled: ${context.title.trim()}`)
-  return lines.join('\n')
+    '"assessment": the assessment described above, as one string.',
+    `"findings": the defects you see, using only these names: ${QUALITY_RULES.join(', ')}.`,
+    `"proposals": exactly ${context.count}, each with "axis" (one of: ${QUALITY_AXES.join(', ')}), "action", and "rewrite" where there is one.`
+  ].join('\n')
+}
+
+export function deepReviewPrompt(context: ReviewContext, template = DEFAULT_REVIEW_PROMPT): string {
+  const values = reviewPromptValues(context)
+  const body = (template.trim() || DEFAULT_REVIEW_PROMPT)
+    .split('\n')
+    .map((line) => ({ line, filled: applyPromptTemplate(line, values) }))
+    // A line that was nothing but a placeholder, and whose placeholder had nothing to
+    // say, disappears rather than leaving a blank in the middle of the instruction. A
+    // blank line somebody typed on purpose has no placeholder in it and is kept.
+    .filter(({ line, filled }) => filled.trim() !== '' || !/\{\w+\}/.test(line))
+    .map(({ filled }) => filled)
+    .join('\n')
+    .trim()
+  return `${body}\n\n${reviewOutputContract(context)}`
 }
 
 function readProposals(raw: unknown): ReviewProposal[] {

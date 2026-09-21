@@ -532,6 +532,14 @@ export interface RequirementSettings {
   reviewTarget: number
   /** How many things to do the editor proposes at once. Three is a plan; eight is a backlog. */
   reviewProposals: number
+  /**
+   * The instruction the model is given when reviewing a requirement.
+   *
+   * Empty means the one this plugin ships with. What it cannot change is the output
+   * contract — the fields the editor reads back and the defect names its badges match
+   * on — which is appended afterwards and is a machine interface rather than an opinion.
+   */
+  reviewPrompt: string
 }
 
 export const DEFAULT_REQ_TYPES: ReqPaletteConfig[] = [
@@ -562,7 +570,8 @@ export const DEFAULT_REQUIREMENT_SETTINGS: RequirementSettings = {
   statuses: DEFAULT_REQ_STATUSES,
   counters: {},
   reviewTarget: 80,
-  reviewProposals: 3
+  reviewProposals: 3,
+  reviewPrompt: ''
 }
 
 export function seedReqTypes(): ReqPaletteConfig[] {

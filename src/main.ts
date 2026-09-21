@@ -468,6 +468,7 @@ export default class PMPlugin extends Plugin {
     // A vault that predates the target has no opinion about it, and zero is not one.
     if (!this.settings.requirements.reviewTarget) this.settings.requirements.reviewTarget = 80
     if (!this.settings.requirements.reviewProposals) this.settings.requirements.reviewProposals = 3
+    if (typeof this.settings.requirements.reviewPrompt !== 'string') this.settings.requirements.reviewPrompt = ''
     if (!this.settings.projectFilters) this.settings.projectFilters = {}
     if (!this.settings.scopeViews) this.settings.scopeViews = {}
     if (!this.settings.collapsedTasks) this.settings.collapsedTasks = {}

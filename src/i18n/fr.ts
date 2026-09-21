@@ -1206,6 +1206,18 @@ export const fr: Catalog = {
     "Le pourcentage qu'une exigence est censée atteindre. Rien n'est refusé en dessous : cela décide de ce que l'éditeur propose.",
   'settings.req.proposals': 'Nombre de propositions',
   'settings.req.proposalsDesc': "Combien d'améliorations l'éditeur propose à la fois, de 1 à 6.",
+  'settings.req.prompt': "Instruction d'analyse",
+  'settings.req.promptDesc':
+    "Ce qui est demandé au modèle quand il analyse une exigence. Le contrat de sortie — les champs que l'éditeur relit et les noms de défauts de ses badges — est ajouté ensuite et n'est pas modifiable : le réécrire produirait une analyse qui arrive et n'affiche rien.",
+  'settings.req.promptDefault': "Celle d'origine",
+  'settings.req.promptCustom': 'Personnalisée',
+  'settings.req.promptKeys': 'Variables disponibles',
+  'settings.req.promptHint': "Laissez vide pour l'instruction d'origine.",
+  'settings.req.promptReset': "Repartir de l'instruction d'origine",
+  'settings.req.promptResetDesc':
+    "« Charger » la recopie dans le champ pour la retoucher ; « Effacer » revient à celle d'origine sans en garder de copie.",
+  'settings.req.promptLoad': 'Charger',
+  'settings.req.promptClear': 'Effacer',
   'settings.req.types': "Types d'exigence",
   'settings.req.statuses': "Statuts d'exigence",
   'settings.req.addType': 'Ajouter un type',

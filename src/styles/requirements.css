@@ -1033,3 +1033,23 @@
   line-height: 1.55;
   color: var(--text-normal);
 }
+
+/* A prompt is a paragraph, not a field: the editor gets the width of the page and the
+   monospace of something that will be read by a machine. */
+.pm-settings-prompt textarea {
+  width: 100%;
+  min-height: 18rem;
+  font-family: var(--font-monospace);
+  font-size: var(--font-smaller);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.pm-settings-prompt .setting-item-control {
+  flex: 1 1 100%;
+}
+
+.pm-settings-prompt {
+  flex-direction: column;
+  align-items: stretch;
+}

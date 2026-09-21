@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { LlmError } from '../llm'
 import { checkWording, type QualityFinding } from './reqQuality'
 import {
+  DEFAULT_REVIEW_PROMPT,
   deepReviewPrompt,
   mergeFindings,
   qualitySystemPrompt,
   readDeepReview,
-  readQualityFindings
+  readQualityFindings,
+  REVIEW_PROMPT_KEYS
 } from './reqQualityLlm'
 
 describe('qualitySystemPrompt', () => {
@@ -147,5 +149,59 @@ describe('readDeepReview', () => {
   it('refuses a reply that said nothing at all', () => {
     expect(() => readDeepReview({ assessment: '', findings: [], proposals: [] })).toThrow(LlmError)
     expect(() => readDeepReview(null)).toThrow(LlmError)
+  })
+})
+
+describe('the instruction as a template', () => {
+  const context = {
+    lang: 'fr',
+    title: 'Trappe',
+    weak: [{ axis: 'unambiguous', misses: ['weak-word'], gain: 0.12 }],
+    score: 0.52,
+    target: 0.8,
+    count: 3
+  }
+
+  it('fills the placeholders it knows', () => {
+    const prompt = deepReviewPrompt(context, 'Review in {lang}, get past {target} %, give {count}.')
+    expect(prompt).toContain('Review in French, get past 80 %, give 3.')
+  })
+
+  // A brace somebody typed in prose is prose, and a template that ate it would be one
+  // nobody could write French in.
+  it('leaves a name it does not know exactly as it was typed', () => {
+    expect(deepReviewPrompt(context, 'Écrire {joliment} en {lang}.')).toContain('Écrire {joliment} en French.')
+  })
+
+  it('weaves in the rubric verdict where the template asks for it', () => {
+    expect(deepReviewPrompt(context, 'Axes: {weak}')).toContain('unambiguous: missing weak-word (worth 12 points)')
+  })
+
+  it('says nothing about a title there is none of, and leaves no hole', () => {
+    const prompt = deepReviewPrompt({ ...context, title: '' }, 'Before.\n{title}\nAfter.')
+    expect(prompt).toContain('Before.\nAfter.')
+  })
+
+  // The fields the editor reads back and the names its badges match on: a review that
+  // renamed them would arrive and show nothing.
+  it('appends the output contract whatever the template says', () => {
+    const prompt = deepReviewPrompt(context, 'Faites au mieux.')
+    expect(prompt).toContain('"assessment"')
+    expect(prompt).toContain('"proposals": exactly 3')
+    expect(prompt).toContain('weak-word')
+  })
+
+  it('falls back to the default rather than sending an empty instruction', () => {
+    expect(deepReviewPrompt(context, '   ')).toContain('systems-engineering library')
+  })
+
+  it('uses the default when none was given', () => {
+    expect(deepReviewPrompt(context)).toBe(deepReviewPrompt(context, DEFAULT_REVIEW_PROMPT))
+  })
+
+  it('offers every placeholder the default uses', () => {
+    for (const match of DEFAULT_REVIEW_PROMPT.matchAll(/\{(\w+)\}/g)) {
+      expect(REVIEW_PROMPT_KEYS).toContain(match[1])
+    }
   })
 })

@@ -1230,6 +1230,18 @@ export const en = {
     'The percentage a requirement is expected to reach. Nothing is refused below it: it decides what the editor proposes.',
   'settings.req.proposals': 'Number of proposals',
   'settings.req.proposalsDesc': 'How many improvements the editor proposes at once, from 1 to 6.',
+  'settings.req.prompt': 'Review instruction',
+  'settings.req.promptDesc':
+    'What the model is asked when it reviews a requirement. The output contract — the fields the editor reads back and the defect names its badges match on — is appended afterwards and cannot be changed: rewording it would produce a review that arrives and shows nothing.',
+  'settings.req.promptDefault': 'The shipped one',
+  'settings.req.promptCustom': 'Custom',
+  'settings.req.promptKeys': 'Available placeholders',
+  'settings.req.promptHint': 'Leave empty for the shipped instruction.',
+  'settings.req.promptReset': 'Start again from the shipped instruction',
+  'settings.req.promptResetDesc':
+    '"Load" copies it into the field so it can be adjusted; "Clear" goes back to it without keeping a copy.',
+  'settings.req.promptLoad': 'Load',
+  'settings.req.promptClear': 'Clear',
   'settings.req.types': 'Requirement types',
   'settings.req.statuses': 'Requirement statuses',
   'settings.req.addType': 'Add type',

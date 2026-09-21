@@ -12,6 +12,7 @@ import {
 import { flattenTasks } from './store/TaskTreeOps'
 import { safeAsync, saveShortcutLabel } from './utils'
 import { LlmClient } from './store/llm'
+import { DEFAULT_REVIEW_PROMPT, REVIEW_PROMPT_KEYS } from './store/requirements/reqQualityLlm'
 import {
   countTaskNotesPaletteChanges,
   getTaskNotesApi,
@@ -728,8 +729,78 @@ export class PMSettingTab extends PluginSettingTab {
             )
           }
         },
+        this.reviewPromptPage(),
         this.reqPalettePage('types'),
         this.reqPalettePage('statuses')
+      ]
+    }
+  }
+
+  /**
+   * The instruction the model is given when it reviews a requirement.
+   *
+   * Editable because every line of it is a judgement about how requirements should be
+   * reviewed, and those judgements belong to the organisation doing the reviewing: a
+   * house writing to ECSS conventions wants different advice from one writing a purchase
+   * specification.
+   *
+   * What is not editable, and is said so on the page, is the output contract. That is the
+   * list of fields the editor reads back and the defect names its badges match on — an
+   * instruction reworded by accident there is a review that arrives and shows nothing,
+   * for reasons nobody can see from the outside.
+   */
+  private reviewPromptPage(): SettingDefinitionPage {
+    const reqs = this.plugin.settings.requirements
+    return {
+      type: 'page',
+      name: t('settings.req.prompt'),
+      desc: t('settings.req.promptDesc'),
+      displayValue: () => (reqs.reviewPrompt.trim() ? t('settings.req.promptCustom') : t('settings.req.promptDefault')),
+      items: [
+        {
+          name: t('settings.req.promptKeys'),
+          desc: REVIEW_PROMPT_KEYS.map((key) => `{${key}}`).join('  ·  '),
+          render: () => undefined
+        },
+        {
+          name: t('settings.req.prompt'),
+          desc: t('settings.req.promptHint'),
+          render: (setting: Setting) => {
+            setting.setClass('pm-settings-prompt')
+            setting.addTextArea((area) => {
+              area.inputEl.rows = 16
+              area
+                .setPlaceholder(DEFAULT_REVIEW_PROMPT)
+                .setValue(reqs.reviewPrompt)
+                .onChange((value) => {
+                  reqs.reviewPrompt = value
+                  this.persist()
+                })
+            })
+          }
+        },
+        {
+          name: t('settings.req.promptReset'),
+          desc: t('settings.req.promptResetDesc'),
+          render: (setting: Setting) => {
+            setting.addButton((button) =>
+              button.setButtonText(t('settings.req.promptLoad')).onClick(() => {
+                // Loaded rather than emptied: somebody meaning to adjust two lines should
+                // not have to go and find the original to adjust them from.
+                reqs.reviewPrompt = DEFAULT_REVIEW_PROMPT
+                this.persist()
+                this.update()
+              })
+            )
+            setting.addButton((button) =>
+              button.setButtonText(t('settings.req.promptClear')).onClick(() => {
+                reqs.reviewPrompt = ''
+                this.persist()
+                this.update()
+              })
+            )
+          }
+        }
       ]
     }
   }
