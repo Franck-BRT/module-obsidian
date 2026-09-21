@@ -5,6 +5,8 @@ import type { CustomFieldDef, FilterState, PMSettings, StatusConfig, ViewMode } 
 import { VIEW_MODES } from '../types'
 import { today } from '../dates'
 import { reaches } from './Scheduler'
+import type { Requirement } from './requirements/Requirement'
+import { hydrateRequirement, REQUIREMENT_FRONTMATTER_KEY } from './requirements/reqYaml'
 import {
   COLLECTION_FRONTMATTER_KEY,
   FRONTMATTER_KEY,
@@ -143,6 +145,15 @@ export class VaultIndex {
   private taskById = new Map<string, TaskRef>()
   private tasksByProject = new Map<string, Set<string>>()
   private collections = new Map<string, CollectionRef>()
+  /**
+   * The requirements library, whole.
+   *
+   * Every field of a requirement lives in frontmatter, which Obsidian has already parsed,
+   * so indexing one costs nothing beyond what is read anyway — and keeping the whole
+   * requirement rather than a summary of it means there is no adapter between what is
+   * indexed and what is shown, and so nothing for the two to disagree about.
+   */
+  private requirements = new Map<string, Requirement>()
   private changeHandlers = new Set<() => void>()
   private cachedTree: { parents: Map<string, string | null>; children: Map<string, string[]> } = {
     parents: new Map(),
@@ -167,6 +178,7 @@ export class VaultIndex {
     this.taskById.clear()
     this.tasksByProject.clear()
     this.collections.clear()
+    this.requirements.clear()
     this.treeDirty = true
     this.dependentsDirty = true
     for (const file of this.app.vault.getMarkdownFiles()) this.read(file)
@@ -488,6 +500,9 @@ export class VaultIndex {
     if (frontmatter[FRONTMATTER_KEY] === true && !insideTaskFolder(path)) this.addProject(path, file, frontmatter)
     else if (frontmatter[TASK_FRONTMATTER_KEY] === true) this.addTask(path, frontmatter)
     else if (frontmatter[COLLECTION_FRONTMATTER_KEY] === true) this.addCollection(path, file, frontmatter)
+    else if (frontmatter[REQUIREMENT_FRONTMATTER_KEY] === true) {
+      this.requirements.set(path, hydrateRequirement(frontmatter, path))
+    }
   }
 
   private addProject(path: string, file: TFile, frontmatter: Record<string, unknown>): void {
@@ -523,6 +538,27 @@ export class VaultIndex {
 
   collectionRef(path: string): CollectionRef | null {
     return this.collections.get(normalizePath(path)) ?? null
+  }
+
+  /** The whole library, in id order, which is the order a register is read in. */
+  requirementRefs(): Requirement[] {
+    return [...this.requirements.values()].sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
+  }
+
+  requirementAt(path: string): Requirement | null {
+    return this.requirements.get(normalizePath(path)) ?? null
+  }
+
+  requirementById(id: string): Requirement | null {
+    for (const requirement of this.requirements.values()) {
+      if (requirement.id === id) return requirement
+    }
+    return null
+  }
+
+  /** Every requirement id the vault currently holds. What was deleted is not here. */
+  requirementIds(): string[] {
+    return [...this.requirements.values()].map((requirement) => requirement.id)
   }
 
   private addCollection(path: string, file: TFile, frontmatter: Record<string, unknown>): void {
@@ -696,7 +732,7 @@ export class VaultIndex {
       this.treeDirty = true
       return true
     }
-    return this.collections.delete(normalized)
+    return this.collections.delete(normalized) || this.requirements.delete(normalized)
   }
 
   /**

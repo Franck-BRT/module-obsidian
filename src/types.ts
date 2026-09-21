@@ -483,6 +483,101 @@ export const DEFAULT_LLM_SETTINGS: LlmSettings = {
   timeoutSeconds: 60
 }
 
+/** Anything the reader can restyle: an id that never changes, and the look they chose. */
+export interface ReqPaletteConfig {
+  id: string
+  label: string
+  color: string
+  icon: string
+}
+
+/**
+ * The requirements library.
+ *
+ * Separate from the plans on purpose: a requirement outlives the project that first wrote
+ * it down, gets cited by documents this vault will never see, and is reused across
+ * programmes. So it lives in its own folder, under its own identifiers, and the plans
+ * point at it rather than owning it.
+ */
+export interface RequirementSettings {
+  /** Where new requirements are written. They are discovered vault-wide all the same. */
+  folder: string
+  /**
+   * The languages requirements may be written in, the first being the one new ones are
+   * authored in. Not a fixed list: an organisation that works in three languages should
+   * not have to pick two.
+   */
+  languages: string[]
+  /** What every id starts with, e.g. REQ in REQ-SYS-0042. */
+  idPrefix: string
+  /** How many digits an id's number is padded to. Widening it later breaks nothing. */
+  idWidth: number
+  types: ReqPaletteConfig[]
+  statuses: ReqPaletteConfig[]
+  /**
+   * The highest number ever handed out in each category.
+   *
+   * Kept here rather than worked out from the library, because the library only holds
+   * what still exists: a requirement that was deleted must never hand its id to the next
+   * one written, or every document that ever cited it would now cite something else.
+   */
+  counters: Record<string, number>
+}
+
+export const DEFAULT_REQ_TYPES: ReqPaletteConfig[] = [
+  { id: 'functional', label: 'Functional', color: '#6e62cd', icon: 'cog' },
+  { id: 'performance', label: 'Performance', color: '#b16a08', icon: 'gauge' },
+  { id: 'interface', label: 'Interface', color: '#367794', icon: 'plug' },
+  { id: 'operational', label: 'Operational', color: '#06915f', icon: 'play' },
+  { id: 'constraint', label: 'Constraint', color: '#8b8c92', icon: 'lock' },
+  { id: 'safety', label: 'Safety', color: '#f83e54', icon: 'shield' }
+]
+
+export const DEFAULT_REQ_STATUSES: ReqPaletteConfig[] = [
+  { id: 'draft', label: 'Draft', color: '#8b8c92', icon: 'pencil' },
+  { id: 'proposed', label: 'Proposed', color: '#367794', icon: 'send' },
+  { id: 'approved', label: 'Approved', color: '#06915f', icon: 'check' },
+  { id: 'implemented', label: 'Implemented', color: '#6e62cd', icon: 'hammer' },
+  { id: 'verified', label: 'Verified', color: '#15803d', icon: 'badge-check' },
+  { id: 'rejected', label: 'Rejected', color: '#f83e54', icon: 'x' },
+  { id: 'obsolete', label: 'Obsolete', color: '#6b6b70', icon: 'archive' }
+]
+
+export const DEFAULT_REQUIREMENT_SETTINGS: RequirementSettings = {
+  folder: 'Requirements',
+  languages: ['fr', 'en'],
+  idPrefix: 'REQ',
+  idWidth: 4,
+  types: DEFAULT_REQ_TYPES,
+  statuses: DEFAULT_REQ_STATUSES,
+  counters: {}
+}
+
+export function seedReqTypes(): ReqPaletteConfig[] {
+  const labels: Record<string, string> = {
+    functional: t('req.type.functional'),
+    performance: t('req.type.performance'),
+    interface: t('req.type.interface'),
+    operational: t('req.type.operational'),
+    constraint: t('req.type.constraint'),
+    safety: t('req.type.safety')
+  }
+  return DEFAULT_REQ_TYPES.map((entry) => ({ ...entry, label: labels[entry.id] ?? entry.label }))
+}
+
+export function seedReqStatuses(): ReqPaletteConfig[] {
+  const labels: Record<string, string> = {
+    draft: t('req.status.draft'),
+    proposed: t('req.status.proposed'),
+    approved: t('req.status.approved'),
+    implemented: t('req.status.implemented'),
+    verified: t('req.status.verified'),
+    rejected: t('req.status.rejected'),
+    obsolete: t('req.status.obsolete')
+  }
+  return DEFAULT_REQ_STATUSES.map((entry) => ({ ...entry, label: labels[entry.id] ?? entry.label }))
+}
+
 export interface PMSettings {
   /** Where new projects are created. Projects are discovered vault-wide, wherever they live. */
   projectsFolder: string
@@ -507,6 +602,8 @@ export interface PMSettings {
   zones: ZoneConfig[]
   /** Where the plugin can ask a language model something, and with which models. */
   llm: LlmSettings
+  /** The requirements library: where it lives, in which languages, under which ids. */
+  requirements: RequirementSettings
   /** Which tickets say their kind on their own row: none, the ones that are not plain tasks, or all. */
   typeBadges: TypeBadgeMode
   /** Icons for priorities that don't carry their own. */
@@ -797,6 +894,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   meetingKinds: DEFAULT_MEETING_KINDS,
   zones: [],
   llm: DEFAULT_LLM_SETTINGS,
+  requirements: DEFAULT_REQUIREMENT_SETTINGS,
   typeBadges: 'distinct',
   priorities: DEFAULT_PRIORITIES,
   priorityIcons: 'chevrons',

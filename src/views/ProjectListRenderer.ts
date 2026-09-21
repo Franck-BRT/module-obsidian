@@ -1,4 +1,4 @@
-import { Menu, ButtonComponent } from 'obsidian'
+import { Menu, ButtonComponent, ExtraButtonComponent } from 'obsidian'
 import type PMPlugin from '../main'
 import type { CollectionRef, ProjectRef } from '../store'
 import { collectionMemberIds } from '../store'
@@ -36,6 +36,15 @@ export function renderProjectListToolbar(ctx: ProjectListContext): void {
   left.createEl('h2', { text: t('view.projectsTitle'), cls: 'pm-toolbar-title' })
   const line = countLine(ctx)
   if (line) left.createSpan({ cls: 'pm-project-list-count', text: line })
+
+  // The library is a place rather than something this page makes, so it gets a button
+  // of its own instead of a line in the menu below.
+  new ExtraButtonComponent(ctx.toolbarEl)
+    .setIcon('list-checks')
+    .setTooltip(t('req.libraryTitle'))
+    .onClick(() => {
+      void ctx.plugin.openRequirements()
+    })
 
   // One button that asks what kind, rather than one per kind. Four of them had grown
   // along this row, three of them ghosts beside the one anybody presses, and a fifth

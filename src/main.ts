@@ -8,6 +8,9 @@ import {
   seedPriorities,
   seedStatuses,
   seedMeetingKinds,
+  seedReqStatuses,
+  seedReqTypes,
+  DEFAULT_REQUIREMENT_SETTINGS,
   seedTypes,
   withMissingTypes,
   type PMSettings,
@@ -60,11 +63,15 @@ import { setLocale, t } from './i18n'
 import { setImpactLookup, setTicketAppearance } from './store/TicketPalette'
 import { pickMessageForTicket, registerMessageFileMenu } from './views/messageToTicket'
 import { MessageView, PM_MESSAGE_VIEW_TYPE } from './views/MessageView'
+import { RequirementsView, PM_REQUIREMENTS_VIEW_TYPE } from './views/requirements/RequirementsView'
+import { RequirementStore } from './store/requirements/RequirementStore'
 
 export default class PMPlugin extends Plugin {
   settings: PMSettings = { ...DEFAULT_SETTINGS }
   store!: TaskSource
   collections!: CollectionStore
+  /** The requirements library: written once, cited everywhere. */
+  requirements!: RequirementStore
   documents!: DocumentStore
   index!: VaultIndex
   notifier!: Notifier
@@ -119,6 +126,12 @@ export default class PMPlugin extends Plugin {
     this.store = new ProjectStore(this.app, () => this.settings, this.index)
     this.collections = new CollectionStore(this.app, this.index)
     this.documents = new DocumentStore(this.app)
+    this.requirements = new RequirementStore(
+      this.app,
+      () => this.settings.requirements,
+      () => this.saveSettings(),
+      this.index
+    )
     this.store.registerVaultSync(this)
     this.notifier = new Notifier(this)
     this.autoArchiver = new AutoArchiver(this)
@@ -131,6 +144,7 @@ export default class PMPlugin extends Plugin {
     this.registerView(PM_DASHBOARD_VIEW_TYPE, (leaf) => new DashboardView(leaf, this))
     this.registerView(PM_TASK_VIEW_TYPE, (leaf) => new TaskView(leaf, this))
     this.registerView(PM_MESSAGE_VIEW_TYPE, (leaf) => new MessageView(leaf, this))
+    this.registerView(PM_REQUIREMENTS_VIEW_TYPE, (leaf) => new RequirementsView(leaf, this))
     // Claiming the extension is what stops a click handing the message back to Outlook.
     this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
@@ -159,6 +173,14 @@ export default class PMPlugin extends Plugin {
       id: 'message-to-ticket',
       name: t('email.toTicket'),
       callback: safeAsync(() => pickMessageForTicket(this))
+    })
+
+    this.addCommand({
+      id: 'open-requirements',
+      name: t('req.libraryTitle'),
+      callback: () => {
+        void this.openRequirements()
+      }
     })
 
     this.addCommand({
@@ -401,6 +423,13 @@ export default class PMPlugin extends Plugin {
     this.settings.types = saved?.types?.length ? withMissingTypes(this.settings.types, seedTypes()) : seedTypes()
     if (!saved?.docStates?.length) this.settings.docStates = seedDocStates()
     if (!saved?.meetingKinds?.length) this.settings.meetingKinds = seedMeetingKinds()
+    // Merged field by field rather than taken whole: the assign above is shallow, so a
+    // settings file written before a field of this group existed would otherwise arrive
+    // without it and with no default behind it.
+    this.settings.requirements = { ...DEFAULT_REQUIREMENT_SETTINGS, ...(saved?.requirements ?? {}) }
+    if (!saved?.requirements?.types?.length) this.settings.requirements.types = seedReqTypes()
+    if (!saved?.requirements?.statuses?.length) this.settings.requirements.statuses = seedReqStatuses()
+    if (!this.settings.requirements.counters) this.settings.requirements.counters = {}
     if (!this.settings.projectFilters) this.settings.projectFilters = {}
     if (!this.settings.scopeViews) this.settings.scopeViews = {}
     if (!this.settings.collapsedTasks) this.settings.collapsedTasks = {}
@@ -483,6 +512,20 @@ export default class PMPlugin extends Plugin {
   }
 
   /** Prompts for a name and opens the empty collection, ready to be filled. */
+  /**
+   * The requirements library, in a tab of its own.
+   *
+   * Reused rather than reopened: the library is a place, not a document, and a reader
+   * who opens it from three different buttons should end up looking at the one they
+   * already had open.
+   */
+  async openRequirements(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(PM_REQUIREMENTS_VIEW_TYPE)[0]
+    const leaf = existing ?? this.app.workspace.getLeaf('tab')
+    if (!existing) await leaf.setViewState({ type: PM_REQUIREMENTS_VIEW_TYPE, state: {} })
+    await this.app.workspace.revealLeaf(leaf)
+  }
+
   async createCollection(): Promise<void> {
     const title = await promptText(this.app, t('collection.new'), t('collection.name'), '')
     if (!title) return

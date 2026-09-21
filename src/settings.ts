@@ -19,6 +19,7 @@ import {
   isTaskNotesInstalled
 } from './integrations/tasknotes'
 import { renderPaletteFields, renderStatusDoneToggle } from './ui/PaletteListEditor'
+import { isSettingsPath, readSettingsPath, writeSettingsPath } from './store/settingsPath'
 import { viewModeOptions } from './views/viewModes'
 import { renderCustomFieldFields, renderCustomFieldOptions } from './ui/CustomFieldListEditor'
 import { renderPersonPicker } from './ui/PersonPicker'
@@ -351,6 +352,11 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
+        heading: t('settings.group.requirements'),
+        items: [this.requirementsPage()]
+      },
+      {
+        type: 'group',
         heading: t('settings.group.llm'),
         items: [this.llmPage()]
       },
@@ -363,7 +369,30 @@ export class PMSettingTab extends PluginSettingTab {
     ]
   }
 
+  /**
+   * A setting that lives inside a group, such as `requirements.folder`.
+   *
+   * Obsidian's resolver reads a flat key off the settings object, which is right for
+   * every setting that predates the groups. A path is resolved here instead, and only
+   * when it leads to something that already exists — so a mistyped key falls through to
+   * the flat reader rather than quietly creating a setting nobody will ever find again.
+   */
+  getControlValue(key: string): unknown {
+    if (!isSettingsPath(key)) return super.getControlValue(key)
+    const read = readSettingsPath(this.plugin.settings as unknown as Record<string, unknown>, key)
+    return read.found ? read.value : super.getControlValue(key)
+  }
+
   async setControlValue(key: string, value: unknown): Promise<void> {
+    if (
+      isSettingsPath(key) &&
+      writeSettingsPath(this.plugin.settings as unknown as Record<string, unknown>, key, value)
+    ) {
+      await this.plugin.saveSettings()
+      this.plugin.refreshViews()
+      this.refreshDomState()
+      return
+    }
     await super.setControlValue(key, value)
     // Today's pass ran against the old window, so it has to run again to reflect the new one.
     if (key === 'autoArchiveDays') {
@@ -590,6 +619,142 @@ export class PMSettingTab extends PluginSettingTab {
    * requirements contradict each other and the last thing that should translate a
    * sentence.
    */
+  /**
+   * The requirements library.
+   *
+   * The two settings here that cannot be undone later are the folder and the identifier
+   * scheme, so both say what they govern rather than merely naming themselves: a
+   * requirement's id is quoted in documents that leave the building, and changing the
+   * prefix afterwards does not go back and change those.
+   */
+  private requirementsPage(): SettingDefinitionPage {
+    const reqs = this.plugin.settings.requirements
+    return {
+      type: 'page',
+      name: t('settings.req.name'),
+      desc: t('settings.req.desc'),
+      displayValue: () => reqs.folder || t('settings.req.folderPlaceholder'),
+      items: [
+        {
+          name: t('settings.req.folder'),
+          desc: t('settings.req.folderDesc'),
+          control: {
+            type: 'folder',
+            key: 'requirements.folder',
+            defaultValue: 'Requirements',
+            placeholder: t('settings.req.folderPlaceholder')
+          }
+        },
+        {
+          name: t('settings.req.languages'),
+          desc: t('settings.req.languagesDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text
+                .setPlaceholder(t('settings.req.languagesPlaceholder'))
+                .setValue(reqs.languages.join(', '))
+                .onChange((value) => {
+                  const langs = value
+                    .split(',')
+                    .map((lang) => lang.trim().toLowerCase())
+                    .filter((lang) => lang !== '')
+                  // Never emptied: a library with no language has nowhere to put a wording,
+                  // and half-typing "fr, en" passes through the empty string on the way.
+                  reqs.languages = langs.length ? [...new Set(langs)] : reqs.languages
+                  this.persist()
+                })
+            )
+          }
+        },
+        {
+          name: t('settings.req.idPrefix'),
+          desc: t('settings.req.idPrefixDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text
+                .setPlaceholder('REQ')
+                .setValue(reqs.idPrefix)
+                .onChange((value) => {
+                  reqs.idPrefix = value
+                  this.persist()
+                })
+            )
+          }
+        },
+        {
+          name: t('settings.req.idWidth'),
+          desc: t('settings.req.idWidthDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text.setValue(String(reqs.idWidth)).onChange((value) => {
+                const parsed = Number.parseInt(value, 10)
+                if (Number.isFinite(parsed) && parsed > 0 && parsed <= 9) {
+                  reqs.idWidth = parsed
+                  this.persist()
+                }
+              })
+            )
+          }
+        },
+        this.reqPalettePage('types'),
+        this.reqPalettePage('statuses')
+      ]
+    }
+  }
+
+  /**
+   * What a requirement can be, and where it can stand.
+   *
+   * Both are the reader's lists rather than the tool's vocabulary, so both can be added
+   * to and taken from. Deleting an entry leaves the requirements that used it alone:
+   * a requirement whose status vanished still has that status, and reassigning it
+   * silently would be the tool lying about what the note says.
+   */
+  private reqPalettePage(which: 'types' | 'statuses'): SettingDefinitionPage {
+    const entries = this.plugin.settings.requirements[which]
+    const name = which === 'types' ? t('settings.req.types') : t('settings.req.statuses')
+    const add = which === 'types' ? t('settings.req.addType') : t('settings.req.addStatus')
+    const fresh = which === 'types' ? t('settings.req.newType') : t('settings.req.newStatus')
+    return {
+      type: 'page',
+      name,
+      displayValue: () => t('count.statuses', { count: entries.length }),
+      items: [
+        {
+          type: 'list',
+          heading: name,
+          emptyState: t('settings.req.paletteEmpty'),
+          items: entries.map((entry) => ({
+            name: entry.label,
+            render: (setting: Setting) => {
+              setting.setClass('pm-palette-row')
+              renderPaletteFields(setting.controlEl, entry, () => this.persist())
+            }
+          })),
+          onReorder: (from, to) => this.reorder(entries, from, to),
+          onDelete: (index) => {
+            entries.splice(index, 1)
+            this.persist()
+            this.update()
+          },
+          addItem: {
+            name: add,
+            action: () => {
+              entries.push({
+                id: 'req-' + makeId().slice(0, 6),
+                label: fresh,
+                color: '#8b8c92',
+                icon: which === 'types' ? 'shapes' : 'circle-dashed'
+              })
+              this.persist()
+              this.update()
+            }
+          }
+        }
+      ]
+    }
+  }
+
   private llmPage(): SettingDefinitionPage {
     const llm = this.plugin.settings.llm
     const set = <K extends keyof PMSettings['llm']>(key: K, value: PMSettings['llm'][K]): void => {

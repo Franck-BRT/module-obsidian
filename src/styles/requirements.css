@@ -1,0 +1,269 @@
+/* ---- The requirements library ------------------------------------------------
+   A register, read down: the identifier leads every row because that is what a
+   document cites, and the statement is given the width, because that is what a
+   reader is actually scanning for. */
+
+.pm-req-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  flex-wrap: wrap;
+}
+
+.pm-req-search {
+  flex: 1 1 14rem;
+  min-width: 10rem;
+}
+
+.pm-req-filters,
+.pm-req-flags,
+.pm-req-langs,
+.pm-req-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pm-req-toolbar-right {
+  margin-left: auto;
+}
+
+.pm-req-new {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+}
+
+.pm-req-content {
+  overflow-y: auto;
+}
+
+.pm-req-table {
+  display: flex;
+  flex-direction: column;
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+/* One grid for the head and every row, so the columns cannot drift apart. */
+.pm-req-row {
+  display: grid;
+  grid-template-columns: 9rem minmax(12rem, 1fr) 8rem 8rem 7rem 10rem;
+  gap: var(--size-4-2);
+  align-items: baseline;
+  padding: var(--size-2-3) var(--size-2-2);
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.pm-req-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.pm-req-row:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.pm-req-row--head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: default;
+}
+
+.pm-req-row--head:hover {
+  background: var(--background-primary);
+}
+
+.pm-req-cell {
+  min-width: 0;
+}
+
+.pm-req-cell--sortable {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.pm-req-sort {
+  display: inline-flex;
+  --icon-size: 12px;
+}
+
+/* Monospaced, because an identifier is read character by character and compared
+   against one written on paper. */
+.pm-req-id {
+  font-family: var(--font-monospace);
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.pm-req-title {
+  font-weight: var(--font-medium);
+}
+
+.pm-req-wording {
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pm-req-wording--absent {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.pm-req-blank {
+  color: var(--text-faint);
+}
+
+/* A wording shown in a language the reader did not ask for says so, rather than
+   passing itself off as the translation. */
+.pm-req-fallback,
+.pm-req-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-smallest);
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.pm-req-cell--state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Each state carries its own icon as well as its own colour: told apart by hue
+   alone, "behind its source" and "written by a machine" would be one warning. */
+.pm-req-state--stale {
+  color: var(--color-orange);
+  border-color: var(--color-orange);
+}
+
+.pm-req-state--machine {
+  color: var(--color-purple);
+  border-color: var(--color-purple);
+}
+
+.pm-req-state--missing {
+  color: var(--text-muted);
+  border-style: dashed;
+}
+
+.pm-req-state--suspect {
+  color: var(--color-red);
+  border-color: var(--color-red);
+}
+
+.pm-req-state--ok {
+  color: var(--color-green);
+  border-color: transparent;
+}
+
+.pm-req-state--source {
+  color: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+}
+
+/* ---- The editor ----------------------------------------------------------- */
+
+.pm-req-modal .pm-te-header {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+}
+
+.pm-req-copy {
+  display: inline-flex;
+  padding: 2px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.pm-req-wordings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3);
+  margin-top: var(--size-4-4);
+}
+
+.pm-req-wordings-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-4-2);
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: var(--size-2-2);
+}
+
+.pm-req-section-title {
+  font-weight: var(--font-medium);
+}
+
+.pm-req-rev {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+}
+
+.pm-req-wording-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: var(--size-2-2);
+}
+
+.pm-req-lang {
+  font-family: var(--font-monospace);
+  font-size: var(--font-smaller);
+  font-weight: var(--font-semibold);
+}
+
+.pm-req-make-source,
+.pm-req-accept {
+  font-size: var(--font-smallest);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.pm-req-wording-input {
+  width: 100%;
+  resize: vertical;
+  font-size: var(--font-ui-small);
+}
+
+/* The table becomes unreadable long before the pane is narrow, so it stops being
+   a table: the statement stays, the rest wraps under it. */
+@media (width <= 900px) {
+  .pm-req-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .pm-req-row--head {
+    display: none;
+  }
+  /* Stacked, an empty cell is an orphan dash on a line of its own, which reads as a
+     value rather than as the absence of one. In the table it is a column that has to
+     stay aligned; here it is nothing, so it shows nothing. */
+  .pm-req-cell:has(> .pm-req-blank) {
+    display: none;
+  }
+}
