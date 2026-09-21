@@ -65,6 +65,7 @@ import { pickMessageForTicket, registerMessageFileMenu } from './views/messageTo
 import { MessageView, PM_MESSAGE_VIEW_TYPE } from './views/MessageView'
 import { RequirementsView, PM_REQUIREMENTS_VIEW_TYPE } from './views/requirements/RequirementsView'
 import { RequirementStore } from './store/requirements/RequirementStore'
+import { RequirementTranslator } from './store/requirements/RequirementTranslator'
 
 export default class PMPlugin extends Plugin {
   settings: PMSettings = { ...DEFAULT_SETTINGS }
@@ -72,6 +73,8 @@ export default class PMPlugin extends Plugin {
   collections!: CollectionStore
   /** The requirements library: written once, cited everywhere. */
   requirements!: RequirementStore
+  /** Drafts translations with the gateway, when one is configured. */
+  translator!: RequirementTranslator
   documents!: DocumentStore
   index!: VaultIndex
   notifier!: Notifier
@@ -132,6 +135,7 @@ export default class PMPlugin extends Plugin {
       () => this.saveSettings(),
       this.index
     )
+    this.translator = new RequirementTranslator(() => this.settings, this.requirements)
     this.store.registerVaultSync(this)
     this.notifier = new Notifier(this)
     this.autoArchiver = new AutoArchiver(this)
@@ -426,7 +430,7 @@ export default class PMPlugin extends Plugin {
     // Merged field by field rather than taken whole: the assign above is shallow, so a
     // settings file written before a field of this group existed would otherwise arrive
     // without it and with no default behind it.
-    this.settings.requirements = { ...DEFAULT_REQUIREMENT_SETTINGS, ...(saved?.requirements ?? {}) }
+    this.settings.requirements = { ...DEFAULT_REQUIREMENT_SETTINGS, ...saved?.requirements }
     if (!saved?.requirements?.types?.length) this.settings.requirements.types = seedReqTypes()
     if (!saved?.requirements?.statuses?.length) this.settings.requirements.statuses = seedReqStatuses()
     if (!this.settings.requirements.counters) this.settings.requirements.counters = {}

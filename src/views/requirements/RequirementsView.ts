@@ -1,7 +1,14 @@
-import { ItemView, Menu, setIcon, WorkspaceLeaf } from 'obsidian'
+import { ItemView, Menu, Notice, setIcon, WorkspaceLeaf } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Requirement } from '../../store/requirements/Requirement'
-import { displayText, isStale, isUnreviewedMachine, missingLanguages } from '../../store/requirements/Requirement'
+import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
+import {
+  displayText,
+  isStale,
+  isUnreviewedMachine,
+  missingLanguages,
+  textOf
+} from '../../store/requirements/Requirement'
 import { EmptyState } from '../../ui/primitives/EmptyState'
 import { ChipButton } from '../../ui/primitives/ChipButton'
 import { Chip } from '../../ui/primitives/Chip'
@@ -44,6 +51,9 @@ export class RequirementsView extends ItemView {
   private toolbarEl!: HTMLElement
   private bodyEl!: HTMLElement
   private redrawTimer: number | null = null
+  /** True while a bulk translation is running, which is what the same button then stops. */
+  private running = false
+  private stopRequested = false
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -217,6 +227,27 @@ export class RequirementsView extends ItemView {
           this.render()
         })
     }
+    // Offered only when there is a gateway to ask and something for it to do: a button
+    // that explains on click why it cannot work is a button that should not be drawn.
+    if (this.plugin.translator.available) {
+      const jobs = this.pendingJobs(all, langs)
+      if (jobs.length || this.running) {
+        const bulk = right.createEl('button', { cls: 'pm-req-bulk' })
+        setIcon(bulk.createSpan({ cls: 'pm-glyph-icon' }), this.running ? 'square' : 'languages')
+        bulk.createSpan({
+          text: this.running ? t('req.bulkStop') : t('req.bulkTranslate', { count: jobs.length })
+        })
+        bulk.addEventListener(
+          'click',
+          this.running
+            ? () => {
+                this.stopRequested = true
+              }
+            : safeAsync(() => this.runBulk(jobs))
+        )
+      }
+    }
+
     const add = right.createEl('button', { cls: 'pm-req-new mod-cta' })
     setIcon(add.createSpan({ cls: 'pm-glyph-icon' }), 'plus')
     add.createSpan({ text: t('req.new') })
@@ -420,6 +451,65 @@ export class RequirementsView extends ItemView {
     if (!ok || !requirement.filePath) return
     const file = this.app.vault.getAbstractFileByPath(requirement.filePath)
     if (file) await this.app.fileManager.trashFile(file)
+  }
+
+  /**
+   * Every wording the gateway could usefully write, for the rows in view.
+   *
+   * Missing and behind, never level: a translation that already matches its source is
+   * somebody's work, and offering to replace it with a machine draft is offering to
+   * undo it.
+   */
+  private pendingJobs(all: Requirement[], langs: string[]): { requirement: Requirement; lang: string }[] {
+    const shown = filterRequirements(all, this.filter, langs)
+    const jobs: { requirement: Requirement; lang: string }[] = []
+    for (const requirement of shown) {
+      // Nothing to translate from: a requirement whose source was never written.
+      if (!textOf(requirement, requirement.sourceLang)) continue
+      for (const lang of langs) {
+        if (lang === requirement.sourceLang) continue
+        if (textOf(requirement, lang) === null || isStale(requirement, lang)) jobs.push({ requirement, lang })
+      }
+    }
+    return jobs
+  }
+
+  /**
+   * The whole shelf, with a way out.
+   *
+   * Asked first, because this is the one action here that leaves the vault: it sends the
+   * text of every requirement in view to a service, and the reader has to agree to that
+   * knowing how many. It ends on the review filter rather than on a tidy summary, because
+   * what a run produces is not translations — it is drafts somebody now has to read.
+   */
+  private async runBulk(jobs: { requirement: Requirement; lang: string }[]): Promise<void> {
+    const ok = await confirmDialog(this.app, t('req.bulkConfirm', { count: jobs.length }), t('common.continue'))
+    if (!ok) return
+
+    this.running = true
+    this.stopRequested = false
+    this.render()
+    const notice = new Notice(t('req.bulkProgress', { done: 0, total: jobs.length }), 0)
+    let outcomes: TranslationOutcome[] = []
+    try {
+      outcomes = await this.plugin.translator.translateMany(
+        jobs,
+        (progress) => notice.setMessage(t('req.bulkProgress', { done: progress.done, total: progress.total })),
+        () => this.stopRequested
+      )
+    } finally {
+      notice.hide()
+      this.running = false
+      this.stopRequested = false
+    }
+
+    const done = outcomes.filter((outcome) => outcome.ok).length
+    const flagged = outcomes.filter((outcome) => outcome.drift).length
+    const failed = outcomes.length - done
+    new Notice(t('req.bulkDone', { done, flagged, failed }))
+    // Landed on what now needs a person, rather than on the list they started from.
+    if (done) this.filter = { ...this.filter, flag: 'unreviewed' }
+    this.render()
   }
 
   private async createRequirement(): Promise<void> {

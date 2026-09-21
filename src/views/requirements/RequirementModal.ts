@@ -9,6 +9,8 @@ import {
   textOf,
   VERIFICATION_METHODS
 } from '../../store/requirements/Requirement'
+import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
+import { safeAsync } from '../../utils'
 import { renderPropRow } from '../../ui/FormField'
 import { renderSelectControl } from '../../ui/composites/properties'
 import { t } from '../../i18n'
@@ -25,6 +27,8 @@ import { reqLanguages, verificationLabel } from './reqPalette'
 class RequirementModal extends Modal {
   private draft: Requirement
   private dirty = false
+  /** What the gateway reported about each language it wrote, for as long as this is open. */
+  private reports = new Map<string, TranslationOutcome>()
   private bodyEl!: HTMLElement
 
   constructor(
@@ -247,6 +251,22 @@ class RequirementModal extends Modal {
           text: t('req.staleFrom', { rev: String(textOf(this.draft, lang)?.fromRev ?? this.draft.rev) })
         })
       }
+      // Offered where the wording is, and only where it is worth offering: on the source
+      // there is nothing to translate, and on a translation already level with its source
+      // a button would invite the reader to overwrite good work with a draft.
+      if (lang !== this.draft.sourceLang && this.plugin.translator.available) {
+        const held = textOf(this.draft, lang)
+        if (held === null || isStale(this.draft, lang)) {
+          const translate = label.createEl('button', {
+            cls: 'pm-req-translate',
+            text: held === null ? t('req.translate') : t('req.retranslate')
+          })
+          translate.addEventListener(
+            'click',
+            safeAsync(() => this.translate(lang, translate))
+          )
+        }
+      }
       if (isUnreviewedMachine(this.draft, lang)) {
         const badge = label.createSpan({ cls: 'pm-req-state pm-req-state--machine' })
         setIcon(badge.createSpan({ cls: 'pm-glyph-icon' }), 'bot')
@@ -278,7 +298,62 @@ class RequirementModal extends Modal {
       // On blur, not on every keystroke: a revision per character would be a history
       // nobody can read.
       area.addEventListener('blur', commit)
+
+      const report = this.reports.get(lang)
+      if (report) this.renderReport(box, report)
     }
+  }
+
+  /**
+   * What the machine did to the figures, said under the words it wrote.
+   *
+   * A translation that reads perfectly and has lost a minus sign is the failure this
+   * whole feature has to be honest about, so the warning sits with the draft rather than
+   * in a notification that has already gone.
+   */
+  private renderReport(box: HTMLElement, report: TranslationOutcome): void {
+    if (report.drift) {
+      const warn = box.createDiv('pm-req-drift')
+      setIcon(warn.createSpan({ cls: 'pm-glyph-icon' }), 'triangle-alert')
+      const parts: string[] = []
+      if (report.drift.missing.length) parts.push(t('req.driftMissing', { list: report.drift.missing.join(', ') }))
+      if (report.drift.added.length) parts.push(t('req.driftAdded', { list: report.drift.added.join(', ') }))
+      warn.createSpan({ text: parts.join(' · ') })
+    }
+    if (report.notes) {
+      const note = box.createDiv('pm-req-note')
+      setIcon(note.createSpan({ cls: 'pm-glyph-icon' }), 'message-square')
+      note.createSpan({ text: report.notes })
+    }
+  }
+
+  /**
+   * Asks the gateway for this language, and shows what came back.
+   *
+   * The pending edits are saved first: the translation is made from the note on disk, and
+   * asking a gateway to translate a sentence the reader has just replaced on screen would
+   * produce a draft of something that no longer exists.
+   */
+  private async translate(lang: string, button: HTMLButtonElement): Promise<void> {
+    if (this.dirty) await this.save()
+    button.disabled = true
+    button.setText(t('req.translating'))
+    const current = await this.plugin.requirements.load(this.path)
+    if (!current) {
+      new Notice(t('req.notFound'))
+      return
+    }
+    const outcome = await this.plugin.translator.translate(current, lang)
+    if (!outcome.ok) {
+      new Notice(t('req.translateFailed', { reason: outcome.error ?? '' }))
+      button.disabled = false
+      button.setText(t('req.translate'))
+      return
+    }
+    this.reports.set(lang, outcome)
+    const reloaded = await this.plugin.requirements.load(this.path)
+    if (reloaded) this.draft = reloaded
+    this.render()
   }
 
   private author(): string {

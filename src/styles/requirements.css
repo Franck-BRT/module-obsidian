@@ -238,10 +238,40 @@
 }
 
 .pm-req-make-source,
-.pm-req-accept {
+.pm-req-accept,
+.pm-req-translate {
   font-size: var(--font-smallest);
   padding: 2px 8px;
   cursor: pointer;
+}
+
+/* The warning sits under the words it is about, not in a notification that has already
+   gone by the time the reader looks up. */
+.pm-req-drift,
+.pm-req-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-s);
+  font-size: var(--font-smallest);
+}
+
+.pm-req-drift {
+  color: var(--color-orange);
+  border: 1px solid var(--color-orange);
+}
+
+.pm-req-note {
+  color: var(--text-muted);
+  border: 1px dashed var(--background-modifier-border);
+}
+
+.pm-req-bulk {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
 }
 
 .pm-req-wording-input {
