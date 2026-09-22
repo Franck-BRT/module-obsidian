@@ -65,6 +65,7 @@ import { openRequirementModal } from './RequirementModal'
 import { NewRequirementModal } from './NewRequirementModal'
 import { deriveRequirement } from './deriveReq'
 import { exportLibraryDocx } from './exportDocx'
+import { exportLibraryXlsx } from './exportXlsx'
 import { DeriveManyModal } from './DeriveManyModal'
 import { derivedFrom } from '../../store/requirements/reqDerive'
 import { renderStars } from './reqStars'
@@ -848,6 +849,20 @@ export class RequirementsView extends ItemView {
         })
       )
     }
+    add(
+      t('req.exportXlsx', { count: shown.length }),
+      'table-2',
+      safeAsync(async () => {
+        if (!shown.length) {
+          new Notice(t('req.noneHere'))
+          return
+        }
+        await exportLibraryXlsx(this.plugin, shown, this.usage, gapLabel, noteName)
+        // Started on the way out, never waited for: the next export has the citations,
+        // and this one said plainly that it went without them.
+        if (this.usage === null) void this.countUsage()
+      })
+    )
     menu.addSeparator()
     add(
       t('req.importCsv'),
