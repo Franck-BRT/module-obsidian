@@ -97,3 +97,16 @@ describe('countGaps', () => {
     expect(countGaps(rows)).toEqual({ uncited: 1, unsatisfied: 2, unverified: 1, suspect: 0, unwritten: 0 })
   })
 })
+
+describe('coverage through another name', () => {
+  // A requirement covered by three children written in a project's numbering would
+  // otherwise read as covered by nothing.
+  it('counts a child that named its parent by an alias', () => {
+    const parent = makeRequirement({ id: 'REQ-THERM-0001', aliases: ['OMLX-THERM-0001'] })
+    const child = makeRequirement({ id: 'REQ-LOG-0001', links: [{ kind: 'derives-from', to: 'OMLX-THERM-0001' }] })
+    const rows = coverageOf({ library: [parent, child], usage: new Map(), languages: ['fr'] })
+    const covered = rows.find((row) => row.requirement.id === 'REQ-THERM-0001')
+    expect(covered?.derivedBy).toEqual(['REQ-LOG-0001'])
+    expect(covered?.gaps).not.toContain('unsatisfied')
+  })
+})

@@ -1,4 +1,5 @@
 import type { Requirement } from './Requirement'
+import { namesOf } from './reqAlias'
 
 /**
  * The library as a tree of derivations.
@@ -51,17 +52,25 @@ function parentsOf(requirement: Requirement): string[] {
  */
 export function buildReqForest(library: Requirement[]): ReqForest {
   const byId = new Map(library.map((requirement) => [requirement.id.toUpperCase(), requirement]))
+  // Every name a requirement answers to, pointing at the one identifier it is filed
+  // under: a child written in a project's numbering hangs under the same parent as one
+  // written in the library's, and is not accused of naming a parent that does not exist.
+  const canonical = new Map<string, string>()
+  for (const requirement of library) {
+    for (const name of namesOf(requirement)) canonical.set(name.toUpperCase(), requirement.id.toUpperCase())
+  }
   const childrenOf = new Map<string, string[]>()
   const parentCount = new Map<string, number>()
   const dangling: { id: string; parent: string }[] = []
 
   for (const requirement of library) {
     const key = requirement.id.toUpperCase()
-    for (const parent of parentsOf(requirement)) {
+    for (const named of parentsOf(requirement)) {
+      const parent = canonical.get(named) ?? named
       if (!byId.has(parent)) {
         // Named rather than dropped: a branch that disappears because its parent was
         // deleted looks exactly like a branch that was never written.
-        dangling.push({ id: requirement.id, parent })
+        dangling.push({ id: requirement.id, parent: named })
         continue
       }
       const siblings = childrenOf.get(parent)

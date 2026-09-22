@@ -1,3 +1,4 @@
+import { namesOf } from './reqAlias'
 import type { Requirement } from './Requirement'
 
 /**
@@ -47,10 +48,17 @@ const PARENT_KINDS = new Set(['derives-from', 'refines'])
 export function coverageOf(inputs: CoverageInputs): Coverage[] {
   const { library, usage, languages } = inputs
   const derivedBy = new Map<string, string[]>()
+  // Resolved through every name a requirement answers to, so a link written in a
+  // project's own numbering counts toward the same parent as one written in the
+  // library's — otherwise a requirement covered by three children reads as uncovered.
+  const canonical = new Map<string, string>()
+  for (const requirement of library) {
+    for (const name of namesOf(requirement)) canonical.set(name.toUpperCase(), requirement.id.toUpperCase())
+  }
   for (const requirement of library) {
     for (const link of requirement.links) {
       if (!PARENT_KINDS.has(link.kind)) continue
-      const parent = link.to.toUpperCase()
+      const parent = canonical.get(link.to.toUpperCase()) ?? link.to.toUpperCase()
       const children = derivedBy.get(parent)
       if (children) children.push(requirement.id)
       else derivedBy.set(parent, [requirement.id])

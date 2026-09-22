@@ -206,3 +206,28 @@ describe('pruneForest', () => {
     expect(forest.roots[0].children).toHaveLength(1)
   })
 })
+
+describe('a parent named by one of its other names', () => {
+  const parent = makeRequirement({ id: 'REQ-THERM-0001', aliases: ['OMLX-THERM-0001'] })
+  const child = makeRequirement({
+    id: 'REQ-LOG-0001',
+    links: [{ kind: 'derives-from', to: 'OMLX-THERM-0001' }]
+  })
+
+  // A link written in a project's numbering leads to the same requirement everywhere
+  // else, so a tree that called it dangling would be accusing a link that is fine.
+  it('hangs the child under the requirement that answers to that name', () => {
+    const forest = buildReqForest([parent, child])
+    expect(forest.roots.map((node) => node.requirement.id)).toEqual(['REQ-THERM-0001'])
+    expect(forest.roots[0].children.map((node) => node.requirement.id)).toEqual(['REQ-LOG-0001'])
+    expect(forest.dangling).toEqual([])
+    expect(forest.isolated).toEqual([])
+  })
+
+  // Named as the child wrote it, not as the library would have: the reader has to find
+  // that string in the note.
+  it('still reports a name nothing answers to, as it was written', () => {
+    const orphan = makeRequirement({ id: 'REQ-LOG-0002', links: [{ kind: 'derives-from', to: 'CLIENT-SRD-9.9' }] })
+    expect(buildReqForest([parent, orphan]).dangling).toEqual([{ id: 'REQ-LOG-0002', parent: 'CLIENT-SRD-9.9' }])
+  })
+})
