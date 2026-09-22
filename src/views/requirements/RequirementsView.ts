@@ -56,6 +56,7 @@ import { openReqImport } from './ReqImportModal'
 import { EmptyState } from '../../ui/primitives/EmptyState'
 import { ChipButton } from '../../ui/primitives/ChipButton'
 import { Chip } from '../../ui/primitives/Chip'
+import { Checkbox } from '../../ui/primitives/Checkbox'
 import { renderSelectControl } from '../../ui/composites/properties'
 import { confirmDialog, promptText } from '../../ui/ModalFactory'
 import { safeAsync } from '../../utils'
@@ -73,6 +74,7 @@ import {
   EMPTY_REQ_FILTER,
   filterRequirements,
   isReqFilterActive,
+  pickedTargets,
   reqCategories,
   sortRequirements,
   type ReqFilterState,
@@ -95,6 +97,15 @@ const FLAGS: ReqFlag[] = ['weak', 'stale', 'unreviewed', 'missing', 'suspect', '
  */
 export class RequirementsView extends ItemView {
   private filter: ReqFilterState = { ...EMPTY_REQ_FILTER }
+  /**
+   * The rows somebody ticked, by identifier.
+   *
+   * Kept across the modes rather than cleared with them: the reason to tick four
+   * requirements in the library is usually to do something to them somewhere else —
+   * freeze them as a reference, derive them — and a selection that evaporated on the way
+   * to the button would be a selection nobody could use.
+   */
+  private picked = new Set<string>()
   /** Which wording the rows show. Not a setting: it is a way of reading, chosen and changed. */
   private lang: string
   private sortKey: ReqSortKey = 'id'
@@ -220,6 +231,22 @@ export class RequirementsView extends ItemView {
       return
     }
     this.renderTable(this.bodyEl, shown, langs)
+  }
+
+  /**
+   * What a bulk action acts on: the ticked rows, or everything the filters left.
+   *
+   * Narrowed by the selection rather than replaced by it, so a tick that scrolled out of
+   * the filtered list cannot quietly put a requirement back into a reference.
+   */
+  private targets(shown: Requirement[]): Requirement[] {
+    return pickedTargets(shown, this.picked)
+  }
+
+  /** Redraws the bar alone, so a tick updates the counts without moving the list. */
+  private refreshToolbar(): void {
+    const langs = reqLanguages(this.plugin.settings)
+    this.renderToolbar(this.plugin.index.requirementRefs(), langs)
   }
 
   private renderToolbar(all: Requirement[], langs: string[]): void {
@@ -374,14 +401,28 @@ export class RequirementsView extends ItemView {
     // On what the filters have left on screen, like the baseline button beside it: the
     // count is in the label and again in the dialog, because writing twelve notes by
     // accident is not something to find out about afterwards.
-    const selection = this.mode === 'library' ? filterRequirements(all, this.filter, langs) : []
+    // Said where the actions are, because what a button is about to act on is the one
+    // thing a reader must not have to remember.
+    if (this.picked.size) {
+      new ChipButton(right)
+        .setLabel(t('req.selected', { count: this.picked.size }))
+        .setAriaLabel(t('req.clearSelection'))
+        .setShape('pill')
+        .setActive(true)
+        .onClick(() => {
+          this.picked.clear()
+          this.render()
+        })
+    }
+
+    const selection = this.mode === 'library' ? this.targets(filterRequirements(all, this.filter, langs)) : []
     if (selection.length > 1) {
       const branch = right.createEl('button', { cls: 'pm-req-bulk' })
       setIcon(branch.createSpan({ cls: 'pm-glyph-icon' }), 'git-branch-plus')
       branch.createSpan({ text: t('req.deriveMany', { count: selection.length }) })
       // Read again on click rather than trusted from the label: the search box redraws
       // the list without the toolbar, so the count above can be a keystroke behind.
-      branch.addEventListener('click', () => this.deriveMany(filterRequirements(all, this.filter, langs)))
+      branch.addEventListener('click', () => this.deriveMany(this.targets(filterRequirements(all, this.filter, langs))))
     }
 
     const port = right.createEl('button', { cls: 'pm-req-port', attr: { 'aria-label': t('req.exchange') } })
@@ -856,10 +897,11 @@ export class RequirementsView extends ItemView {
     setIcon(take.createSpan({ cls: 'pm-glyph-icon' }), 'camera')
     // Says how many it would freeze, because what it freezes is what the filters have
     // left on screen and that is easy to forget having set.
-    take.createSpan({ text: t('req.takeBaseline', { count: shown.length }) })
+    const chosen = this.targets(shown)
+    take.createSpan({ text: t('req.takeBaseline', { count: chosen.length }) })
     take.addEventListener(
       'click',
-      safeAsync(() => this.takeBaseline(shown))
+      safeAsync(() => this.takeBaseline(this.targets(shown)))
     )
 
     if (this.baseline) {
@@ -887,11 +929,43 @@ export class RequirementsView extends ItemView {
       })
       row.createDiv('pm-req-cell').createSpan({ cls: 'pm-req-rev', text: t('req.baselineCount', { count: ref.count }) })
       row.createDiv('pm-req-cell').createSpan({ cls: 'pm-req-rev', text: ref.scope })
+      const drop = row.createDiv('pm-req-cell pm-req-cell--drop').createEl('button', {
+        cls: 'pm-req-baseline-drop',
+        attr: { 'aria-label': t('req.deleteBaseline') }
+      })
+      setIcon(drop, 'trash')
+      drop.addEventListener(
+        'click',
+        safeAsync(async (event: MouseEvent) => {
+          // Or opening the baseline would be the last thing a reader sees before being
+          // asked whether to delete it.
+          event.stopPropagation()
+          await this.deleteBaseline(ref.path, ref.name)
+        })
+      )
       row.addEventListener(
         'click',
         safeAsync(() => this.openBaseline(ref.path))
       )
     }
+  }
+
+  /**
+   * Throws a reference away, once somebody has said so in as many words.
+   *
+   * The name is in the question, because a list of references all taken the same week
+   * reads alike, and "are you sure" is not a question anybody reads. What it does not
+   * touch is said too: a reference holds a copy of what the requirements said, so
+   * deleting one deletes a record and nothing else.
+   */
+  private async deleteBaseline(path: string, name: string): Promise<void> {
+    const ok = await confirmDialog(this.app, t('req.deleteBaselineAsk', { name }))
+    if (!ok) return
+    if (!(await this.plugin.baselines.delete(path))) return
+    if (this.baseline?.filePath === path) this.baseline = null
+    this.plugin.index.build()
+    new Notice(t('req.baselineDeleted', { name }))
+    this.render()
   }
 
   private async openBaseline(path: string): Promise<void> {
@@ -1113,6 +1187,20 @@ export class RequirementsView extends ItemView {
   private renderTable(parent: HTMLElement, list: Requirement[], langs: string[]): void {
     const table = parent.createDiv('pm-req-table')
     const head = table.createDiv('pm-req-row pm-req-row--head')
+    // All of what is on screen, never all of the library: a tick box over a filtered
+    // list that quietly took the other nine hundred would be a trap.
+    const all = list.length > 0 && list.every((requirement) => this.picked.has(requirement.id))
+    const headPick = head.createDiv('pm-req-cell pm-req-cell--pick')
+    new Checkbox(headPick)
+      .setChecked(all)
+      .setAriaLabel(t('req.selectAll'))
+      .onChange(() => {
+        for (const requirement of list) {
+          if (all) this.picked.delete(requirement.id)
+          else this.picked.add(requirement.id)
+        }
+        this.render()
+      })
     const column = (key: ReqSortKey, label: string, cls: string): void => {
       const cell = head.createDiv(`pm-req-cell ${cls} pm-req-cell--sortable`)
       cell.createSpan({ text: label })
@@ -1142,6 +1230,22 @@ export class RequirementsView extends ItemView {
   private renderRow(table: HTMLElement, requirement: Requirement, langs: string[]): void {
     const row = table.createDiv('pm-req-row')
     row.tabIndex = 0
+    if (this.picked.has(requirement.id)) row.addClass('pm-req-row--picked')
+
+    const pick = row.createDiv('pm-req-cell pm-req-cell--pick')
+    // The cell swallows the click: the row opens the requirement, and a tick that opened
+    // the editor as well would be a tick nobody dares use.
+    pick.addEventListener('click', (event) => event.stopPropagation())
+    new Checkbox(pick)
+      .setChecked(this.picked.has(requirement.id))
+      .setAriaLabel(t('req.selectRow', { id: requirement.id }))
+      .onChange((checked) => {
+        if (checked) this.picked.add(requirement.id)
+        else this.picked.delete(requirement.id)
+        row.toggleClass('pm-req-row--picked', checked)
+        this.refreshToolbar()
+      })
+
     row.createDiv('pm-req-cell pm-req-cell--id').createSpan({ cls: 'pm-req-id', text: requirement.id })
 
     const textCell = row.createDiv('pm-req-cell pm-req-cell--text')

@@ -48,7 +48,7 @@
 /* One grid for the head and every row, so the columns cannot drift apart. */
 .pm-req-row {
   display: grid;
-  grid-template-columns: 9rem minmax(12rem, 1fr) 8rem 8rem 7rem 6rem 10rem;
+  grid-template-columns: 2rem 9rem minmax(12rem, 1fr) 8rem 8rem 7rem 6rem 10rem;
   gap: var(--size-4-2);
   align-items: baseline;
   padding: var(--size-2-3) var(--size-2-2);
@@ -568,7 +568,7 @@
 }
 
 .pm-req-baselines .pm-req-row {
-  grid-template-columns: minmax(12rem, 1fr) 7rem 9rem minmax(8rem, 1fr);
+  grid-template-columns: minmax(12rem, 1fr) 7rem 9rem minmax(8rem, 1fr) 2rem;
 }
 
 .pm-req-baseline-name {
@@ -1200,4 +1200,37 @@
   max-height: 6rem;
   overflow-y: auto;
   margin-bottom: var(--size-2-3);
+}
+
+/* The ticking column, and a row that has been ticked. */
+.pm-req-cell--pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.pm-req-row--picked {
+  background: var(--background-modifier-hover);
+}
+
+.pm-req-cell--drop {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pm-req-baseline-drop {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: none;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+  color: var(--text-faint);
+  --icon-size: 14px;
+}
+
+.pm-req-baseline-drop:hover {
+  color: var(--text-error);
 }

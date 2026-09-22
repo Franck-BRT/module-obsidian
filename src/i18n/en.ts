@@ -1098,6 +1098,14 @@ export const en = {
   'req.baselineName': 'Baseline name',
   'req.baselineCount': { one: '{count} requirement', other: '{count} requirements' },
   'req.allBaselines': 'All baselines',
+  'req.deleteBaseline': 'Delete this baseline',
+  'req.deleteBaselineAsk':
+    'Delete the baseline “{name}”? The requirements are untouched: a baseline holds only a copy of what they said.',
+  'req.baselineDeleted': '“{name}” deleted.',
+  'req.selected': { one: '{count} selected ✕', other: '{count} selected ✕' },
+  'req.clearSelection': 'Clear the selection',
+  'req.selectAll': 'Select everything on screen',
+  'req.selectRow': 'Select {id}',
   'req.noBaseline': 'No baselines',
   'req.noBaselineHint':
     'A baseline freezes the words of the library as they stand today, so a review can be returned to afterwards.',

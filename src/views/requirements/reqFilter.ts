@@ -159,3 +159,16 @@ export function sortRequirements(
     return primary !== 0 ? primary * sign : collate(a.id, b.id)
   })
 }
+
+/**
+ * What a bulk action acts on: the rows somebody ticked, or everything the filters left.
+ *
+ * Narrowed by the selection rather than replaced by it. A tick made before a filter was
+ * typed must not put a requirement back into a reference that the reader can no longer
+ * see — the list on screen is what they are agreeing to, and nothing may arrive from
+ * behind it.
+ */
+export function pickedTargets(shown: Requirement[], picked: ReadonlySet<string>): Requirement[] {
+  if (!picked.size) return shown
+  return shown.filter((requirement) => picked.has(requirement.id))
+}

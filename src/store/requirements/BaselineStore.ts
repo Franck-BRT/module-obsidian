@@ -53,6 +53,21 @@ export class BaselineStore {
     return { ...baseline, filePath: path }
   }
 
+  /**
+   * Throws one away.
+   *
+   * To the vault's own trash, never straight off the disk: a baseline is a record of what
+   * was agreed, and somebody deleting the wrong one at five o'clock on a Friday has to be
+   * able to get it back. The requirements are not touched — a baseline holds a copy of
+   * what they said, never the notes themselves.
+   */
+  async delete(path: string): Promise<boolean> {
+    const file = this.app.vault.getAbstractFileByPath(normalizePath(path))
+    if (!(file instanceof TFile)) return false
+    await this.app.fileManager.trashFile(file)
+    return true
+  }
+
   /** The whole baseline, entries and all. The index holds only what is in frontmatter. */
   async load(path: string): Promise<Baseline | null> {
     const file = this.app.vault.getAbstractFileByPath(normalizePath(path))

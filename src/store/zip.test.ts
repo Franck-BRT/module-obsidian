@@ -63,7 +63,7 @@ describe('zip', () => {
     )
 
   it('starts with the signature a reader looks for', () => {
-    expect([...made().slice(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04])
+    expect(Array.from(made().slice(0, 4))).toEqual([0x50, 0x4b, 0x03, 0x04])
   })
 
   it('comes back out entry by entry, checked against its own pointers', () => {
@@ -88,6 +88,6 @@ describe('zip', () => {
 
   it('has something to write even when there is nothing in it', () => {
     const empty = zip([])
-    expect([...empty.slice(0, 4)]).toEqual([0x50, 0x4b, 0x05, 0x06])
+    expect(Array.from(empty.slice(0, 4))).toEqual([0x50, 0x4b, 0x05, 0x06])
   })
 })

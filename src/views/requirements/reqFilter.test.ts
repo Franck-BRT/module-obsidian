@@ -5,6 +5,7 @@ import {
   filterRequirements,
   isReqFilterActive,
   matchesReqSearch,
+  pickedTargets,
   reqCategories,
   sortRequirements
 } from './reqFilter'
@@ -194,5 +195,23 @@ describe('sortRequirements', () => {
       'REQ-SYS-0001',
       'REQ-SYS-0002'
     ])
+  })
+})
+
+describe('pickedTargets', () => {
+  const list = [makeRequirement({ id: 'REQ-A-0001' }), makeRequirement({ id: 'REQ-A-0002' })]
+
+  it('is everything on screen when nothing was ticked', () => {
+    expect(pickedTargets(list, new Set())).toEqual(list)
+  })
+
+  it('is what was ticked, in the order the screen had it', () => {
+    expect(pickedTargets(list, new Set(['REQ-A-0002'])).map((r) => r.id)).toEqual(['REQ-A-0002'])
+  })
+
+  // The list on screen is what the reader is agreeing to; nothing may arrive from behind
+  // it because it was ticked before a filter was typed.
+  it('never brings back something the filters have taken away', () => {
+    expect(pickedTargets([list[0]], new Set(['REQ-A-0001', 'REQ-A-0002'])).map((r) => r.id)).toEqual(['REQ-A-0001'])
   })
 })

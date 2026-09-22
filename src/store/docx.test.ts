@@ -38,7 +38,7 @@ describe('the parts of a Word file', () => {
   })
 
   it('is a zip, whatever is in it', () => {
-    expect([...buildDocx(doc).slice(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04])
+    expect(Array.from(buildDocx(doc).slice(0, 4))).toEqual([0x50, 0x4b, 0x03, 0x04])
   })
 })
 

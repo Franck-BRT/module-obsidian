@@ -1076,6 +1076,14 @@ export const fr: Catalog = {
   'req.baselineName': 'Nom de la référence',
   'req.baselineCount': { one: '{count} exigence', other: '{count} exigences' },
   'req.allBaselines': 'Toutes les références',
+  'req.deleteBaseline': 'Supprimer la référence',
+  'req.deleteBaselineAsk':
+    "Supprimer la référence « {name} » ? Les exigences ne sont pas touchées : une référence ne contient qu'une copie de ce qu'elles disaient.",
+  'req.baselineDeleted': '« {name} » supprimée.',
+  'req.selected': { one: '{count} sélectionnée ✕', other: '{count} sélectionnées ✕' },
+  'req.clearSelection': 'Vider la sélection',
+  'req.selectAll': 'Sélectionner tout ce qui est affiché',
+  'req.selectRow': 'Sélectionner {id}',
   'req.noBaseline': 'Aucune référence',
   'req.noBaselineHint':
     "Une référence fige les mots de la bibliothèque tels qu'ils sont aujourd'hui, pour pouvoir y revenir après une revue.",
