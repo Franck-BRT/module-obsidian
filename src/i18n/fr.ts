@@ -963,6 +963,10 @@ export const fr: Catalog = {
   'priorityIcons.none': 'Aucune',
 
   'req.libraryTitle': "Bibliothèque d'exigences",
+  'req.noCategory': 'Sans catégorie',
+  'req.exportWord': { one: 'Exporter {count} en Word', other: 'Exporter les {count} en Word' },
+  'req.exportNoteWord': 'Exporter cette note en Word (exigences comprises)',
+  'req.exportNoteNone': 'Cette note ne cite aucune exigence.',
   'req.new': 'Nouvelle exigence',
   'req.edit': "Modifier l'exigence",
   'req.openNote': 'Ouvrir la note',

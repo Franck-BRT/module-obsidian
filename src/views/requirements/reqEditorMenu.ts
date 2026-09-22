@@ -1,8 +1,13 @@
+import { TFile } from 'obsidian'
 import type PMPlugin from '../../main'
+import { reqBlockRanges } from '../../store/requirements/reqFence'
+import { safeAsync } from '../../utils'
+import { exportNoteDocx } from './exportDocx'
 import { t } from '../../i18n'
 
 /**
- * "Insérer une exigence", where an author right-clicks while writing.
+ * "Insérer une exigence" and "Exporter en Word", where an author right-clicks while
+ * writing.
  *
  * The command palette is where a feature lives; a context menu is where it is found. A
  * specification is written by someone whose hands are in the prose, and asking them to
@@ -15,7 +20,7 @@ import { t } from '../../i18n'
  */
 export function registerReqEditorMenu(plugin: PMPlugin): void {
   plugin.registerEvent(
-    plugin.app.workspace.on('editor-menu', (menu, editor) => {
+    plugin.app.workspace.on('editor-menu', (menu, editor, view) => {
       menu.addItem((item) =>
         item
           .setTitle(t('req.insert'))
@@ -24,6 +29,16 @@ export function registerReqEditorMenu(plugin: PMPlugin): void {
           .onClick(() => {
             void plugin.insertRequirementAt(editor)
           })
+      )
+      // Offered only where it would do something: a note quoting no requirement is a
+      // note Word has nothing this plugin can add to.
+      const file = view.file
+      if (!(file instanceof TFile) || !reqBlockRanges(editor.getValue().split('\n')).length) return
+      menu.addItem((item) =>
+        item
+          .setTitle(t('req.exportNoteWord'))
+          .setIcon('file-type')
+          .onClick(safeAsync(() => exportNoteDocx(plugin, file)))
       )
     })
   )

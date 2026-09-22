@@ -985,6 +985,10 @@ export const en = {
 
   // Seeded into a fresh install's settings, and editable from there on.
   'req.libraryTitle': 'Requirements library',
+  'req.noCategory': 'No category',
+  'req.exportWord': { one: 'Export {count} to Word', other: 'Export all {count} to Word' },
+  'req.exportNoteWord': 'Export this note to Word (with its requirements)',
+  'req.exportNoteNone': 'This note quotes no requirement.',
   'req.new': 'New requirement',
   'req.edit': 'Edit requirement',
   'req.openNote': 'Open note',

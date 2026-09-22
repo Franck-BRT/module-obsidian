@@ -74,6 +74,8 @@ import { ReqEmbeddingIndex } from './store/requirements/ReqEmbeddings'
 import { cleanBlockFields } from './store/requirements/reqBlockFields'
 import { registerReqBlock } from './views/requirements/reqBlockRenderer'
 import { registerReqEditorMenu } from './views/requirements/reqEditorMenu'
+import { exportNoteDocx } from './views/requirements/exportDocx'
+import { reqBlockRanges } from './store/requirements/reqFence'
 import { pickRequirement } from './views/requirements/RequirementPicker'
 import { insertRequirement } from './views/requirements/insertReq'
 
@@ -217,6 +219,23 @@ export default class PMPlugin extends Plugin {
       editorCallback: (editor: Editor) => {
         void this.insertRequirementAt(editor)
       }
+    })
+
+    this.addCommand({
+      id: 'export-note-docx',
+      name: t('req.exportNoteWord'),
+      callback: safeAsync(async () => {
+        const file = this.app.workspace.getActiveFile()
+        if (!file) return
+        const content = await this.app.vault.cachedRead(file)
+        // Said rather than written: a Word file holding the note's prose and none of its
+        // requirements is not what the command was asked for.
+        if (!reqBlockRanges(content.split('\n')).length) {
+          new Notice(t('req.exportNoteNone'))
+          return
+        }
+        await exportNoteDocx(this, file)
+      })
     })
 
     this.addCommand({

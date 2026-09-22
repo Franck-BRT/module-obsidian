@@ -63,6 +63,7 @@ import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
 import { NewRequirementModal } from './NewRequirementModal'
 import { deriveRequirement } from './deriveReq'
+import { exportLibraryDocx } from './exportDocx'
 import { DeriveManyModal } from './DeriveManyModal'
 import { derivedFrom } from '../../store/requirements/reqDerive'
 import { renderStars } from './reqStars'
@@ -793,6 +794,17 @@ export class RequirementsView extends ItemView {
       'file-text',
       safeAsync(() => this.exportAs(shown, 'md'))
     )
+    add(
+      t('req.exportWord', { count: shown.length }),
+      'file-type',
+      safeAsync(async () => {
+        if (!shown.length) {
+          new Notice(t('req.noneHere'))
+          return
+        }
+        await exportLibraryDocx(this.plugin, shown, this.lang)
+      })
+    )
     menu.addSeparator()
     add(
       t('req.importCsv'),
@@ -813,7 +825,7 @@ export class RequirementsView extends ItemView {
         ? toCsv(shown)
         : format === 'reqif'
           ? toReqif(shown, { lang: this.lang, title })
-          : toMarkdownDocument(shown, { lang: this.lang, title })
+          : toMarkdownDocument(shown, { lang: this.lang, title, noCategory: t('req.noCategory') })
     const path = await this.plugin.porter.writeExport(exportFileName(title, format), contents)
     new Notice(t('req.exported', { path }))
     // Opened straight away: an export nobody looks at is an export nobody notices is

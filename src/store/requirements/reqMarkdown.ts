@@ -14,6 +14,8 @@ export interface MarkdownOptions {
   title: string
   /** Which wording to write out. The source language stands in where it was not written. */
   lang: string
+  /** What to head the requirements filed under no category at all. */
+  noCategory: string
   at?: string
 }
 
@@ -43,7 +45,7 @@ export function toMarkdownDocument(requirements: Requirement[], options: Markdow
     // grouping the reader already has in the identifiers in front of them.
     if (requirement.category !== category) {
       category = requirement.category
-      lines.push(`## ${category || 'Sans catégorie'}`, '')
+      lines.push(`## ${category || options.noCategory}`, '')
     }
     lines.push(`### ${requirement.id}${requirement.title ? ` — ${requirement.title}` : ''}`)
     const meta = metaLine(requirement)

@@ -6,7 +6,12 @@ function req(id: string, fr: string, over: Parameters<typeof makeRequirement>[0]
   return setText(makeRequirement({ id, sourceLang: 'fr', ...over }), 'fr', fr, 'franck')
 }
 
-const OPTIONS = { title: 'Spécification', lang: 'fr', at: '2026-03-14T10:00:00.000Z' }
+const OPTIONS = {
+  title: 'Spécification',
+  lang: 'fr',
+  noCategory: 'Sans catégorie',
+  at: '2026-03-14T10:00:00.000Z'
+}
 
 describe('toMarkdownDocument', () => {
   const library = [
@@ -42,7 +47,13 @@ describe('toMarkdownDocument', () => {
     expect(toMarkdownDocument([makeRequirement({ id: 'REQ-SYS-0009' })], OPTIONS)).toContain('*—*')
   })
 
+  // Named by the caller, in the reader's language, rather than by a French string
+  // compiled into a store module.
   it('names a category nobody gave', () => {
-    expect(toMarkdownDocument([req('REQ-GEN-0001', 'Sans catégorie.')], OPTIONS)).toContain('## Sans catégorie')
+    const document = toMarkdownDocument([req('REQ-GEN-0001', 'Rien de classé.')], {
+      ...OPTIONS,
+      noCategory: 'Hors catégorie'
+    })
+    expect(document).toContain('## Hors catégorie')
   })
 })

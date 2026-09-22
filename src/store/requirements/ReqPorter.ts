@@ -110,14 +110,30 @@ export class ReqPorter {
    * Into the vault rather than through a save dialog, because Obsidian has no save dialog
    * on every platform it runs on and because a file in the vault is one the reader can
    * find again tomorrow without remembering where they put it.
+   *
+   * Two of them, because a Word file is not text: a ZIP written through the text API
+   * comes back corrupted — every byte above 127 replaced on the way in — and the archive
+   * no longer opens.
    */
-  async writeExport(name: string, contents: string): Promise<string> {
+  async writeBinaryExport(name: string, data: ArrayBuffer): Promise<string> {
+    const path = await this.exportPath(name)
+    const existing = this.app.vault.getAbstractFileByPath(path)
+    if (existing instanceof TFile) await this.app.vault.modifyBinary(existing, data)
+    else await this.app.vault.createBinary(path, data)
+    return path
+  }
+
+  private async exportPath(name: string): Promise<string> {
     const folder = this.getFolder()
     const home = normalizePath(folder ? `${folder}/_exports` : '_exports')
     if (!this.app.vault.getAbstractFileByPath(home)) {
       await this.app.vault.createFolder(home).catch(() => {})
     }
-    const path = normalizePath(`${home}/${name}`)
+    return normalizePath(`${home}/${name}`)
+  }
+
+  async writeExport(name: string, contents: string): Promise<string> {
+    const path = await this.exportPath(name)
     const existing = this.app.vault.getAbstractFileByPath(path)
     // Overwritten rather than numbered: an export is a copy of what is in the library
     // right now, and a folder of Export-1, Export-2, Export-3 helps nobody.

@@ -1,4 +1,8 @@
 import type { Requirement } from './Requirement'
+import { escapeXml } from '../xml'
+
+// Re-exported because this is where the requirements side has always found it.
+export { escapeXml }
 
 /**
  * ReqIF, the format requirements tools exchange through.
@@ -35,15 +39,6 @@ export const REQIF_ATTRIBUTES = [
   { id: 'ATT-RATIONALE', name: 'Rationale', type: 'string' },
   { id: 'ATT-REV', name: 'Revision', type: 'integer' }
 ] as const
-
-export function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-}
 
 /**
  * A wording as XHTML, which is what ReqIF.Text is.
