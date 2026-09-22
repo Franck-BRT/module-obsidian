@@ -835,17 +835,19 @@ export class RequirementsView extends ItemView {
       'file-text',
       safeAsync(() => this.exportAs(shown, 'md'))
     )
-    add(
-      t('req.exportWord', { count: shown.length }),
-      'file-type',
-      safeAsync(async () => {
-        if (!shown.length) {
-          new Notice(t('req.noneHere'))
-          return
-        }
-        await exportLibraryDocx(this.plugin, shown, this.lang)
-      })
-    )
+    for (const format of ['docx', 'pdf'] as const) {
+      add(
+        format === 'pdf' ? t('req.exportPdf', { count: shown.length }) : t('req.exportWord', { count: shown.length }),
+        format === 'pdf' ? 'file-text' : 'file-type',
+        safeAsync(async () => {
+          if (!shown.length) {
+            new Notice(t('req.noneHere'))
+            return
+          }
+          await exportLibraryDocx(this.plugin, shown, this.lang, format)
+        })
+      )
+    }
     menu.addSeparator()
     add(
       t('req.importCsv'),

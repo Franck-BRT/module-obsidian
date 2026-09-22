@@ -221,22 +221,24 @@ export default class PMPlugin extends Plugin {
       }
     })
 
-    this.addCommand({
-      id: 'export-note-docx',
-      name: t('req.exportNoteWord'),
-      callback: safeAsync(async () => {
-        const file = this.app.workspace.getActiveFile()
-        if (!file) return
-        const content = await this.app.vault.cachedRead(file)
-        // Said rather than written: a Word file holding the note's prose and none of its
-        // requirements is not what the command was asked for.
-        if (!reqBlockRanges(content.split('\n')).length) {
-          new Notice(t('req.exportNoteNone'))
-          return
-        }
-        await exportNoteDocx(this, file)
+    for (const format of ['docx', 'pdf'] as const) {
+      this.addCommand({
+        id: `export-note-${format}`,
+        name: format === 'pdf' ? t('req.exportNotePdf') : t('req.exportNoteWord'),
+        callback: safeAsync(async () => {
+          const file = this.app.workspace.getActiveFile()
+          if (!file) return
+          const content = await this.app.vault.cachedRead(file)
+          // Said rather than written: a document holding the note's prose and none of its
+          // requirements is not what the command was asked for.
+          if (!reqBlockRanges(content.split('\n')).length) {
+            new Notice(t('req.exportNoteNone'))
+            return
+          }
+          await exportNoteDocx(this, file, format)
+        })
       })
-    })
+    }
 
     this.addCommand({
       id: 'new-collection',

@@ -34,12 +34,14 @@ export function registerReqEditorMenu(plugin: PMPlugin): void {
       // note Word has nothing this plugin can add to.
       const file = view.file
       if (!(file instanceof TFile) || !reqBlockRanges(editor.getValue().split('\n')).length) return
-      menu.addItem((item) =>
-        item
-          .setTitle(t('req.exportNoteWord'))
-          .setIcon('file-type')
-          .onClick(safeAsync(() => exportNoteDocx(plugin, file)))
-      )
+      for (const format of ['docx', 'pdf'] as const) {
+        menu.addItem((item) =>
+          item
+            .setTitle(format === 'pdf' ? t('req.exportNotePdf') : t('req.exportNoteWord'))
+            .setIcon(format === 'pdf' ? 'file-text' : 'file-type')
+            .onClick(safeAsync(() => exportNoteDocx(plugin, file, format)))
+        )
+      }
     })
   )
 }

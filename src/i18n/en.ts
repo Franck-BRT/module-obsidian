@@ -987,6 +987,8 @@ export const en = {
   'req.libraryTitle': 'Requirements library',
   'req.noCategory': 'No category',
   'req.exportWord': { one: 'Export {count} to Word', other: 'Export all {count} to Word' },
+  'req.exportPdf': { one: 'Export {count} to PDF', other: 'Export all {count} to PDF' },
+  'req.exportNotePdf': 'Export this note to PDF (with its requirements)',
   'req.exportNoteWord': 'Export this note to Word (with its requirements)',
   'req.exportNoteNone': 'This note quotes no requirement.',
   'req.new': 'New requirement',

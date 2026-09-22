@@ -965,6 +965,8 @@ export const fr: Catalog = {
   'req.libraryTitle': "Bibliothèque d'exigences",
   'req.noCategory': 'Sans catégorie',
   'req.exportWord': { one: 'Exporter {count} en Word', other: 'Exporter les {count} en Word' },
+  'req.exportPdf': { one: 'Exporter {count} en PDF', other: 'Exporter les {count} en PDF' },
+  'req.exportNotePdf': 'Exporter cette note en PDF (exigences comprises)',
   'req.exportNoteWord': 'Exporter cette note en Word (exigences comprises)',
   'req.exportNoteNone': 'Cette note ne cite aucune exigence.',
   'req.new': 'Nouvelle exigence',
