@@ -65,7 +65,7 @@ import { openRequirementModal } from './RequirementModal'
 import { NewRequirementModal } from './NewRequirementModal'
 import { deriveRequirement } from './deriveReq'
 import { exportLibraryDocx } from './exportDocx'
-import { exportLibraryXlsx } from './exportXlsx'
+import { exportLibraryPptx, exportLibraryXlsx } from './exportXlsx'
 import { DeriveManyModal } from './DeriveManyModal'
 import { derivedFrom } from '../../store/requirements/reqDerive'
 import { renderStars } from './reqStars'
@@ -861,6 +861,17 @@ export class RequirementsView extends ItemView {
         // Started on the way out, never waited for: the next export has the citations,
         // and this one said plainly that it went without them.
         if (this.usage === null) void this.countUsage()
+      })
+    )
+    add(
+      t('req.exportPptx', { count: shown.length }),
+      'presentation',
+      safeAsync(async () => {
+        if (!shown.length) {
+          new Notice(t('req.noneHere'))
+          return
+        }
+        await exportLibraryPptx(this.plugin, shown, this.lang)
       })
     )
     menu.addSeparator()

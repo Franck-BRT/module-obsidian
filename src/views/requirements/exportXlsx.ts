@@ -2,6 +2,9 @@ import { Notice } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Requirement } from '../../store/requirements/Requirement'
 import { buildXlsx } from '../../store/xlsx'
+import { buildPptx } from '../../store/pptx'
+import { libraryDeck, type PptxWords } from '../../store/requirements/reqPptx'
+import { assessRequirement } from '../../store/requirements/reqScore'
 import { coverageOf, type CoverageGap } from '../../store/requirements/ReqCoverage'
 import { libraryWorkbook, type XlsxWords } from '../../store/requirements/reqXlsx'
 import { exportFileName } from '../../store/requirements/ReqPorter'
@@ -77,6 +80,47 @@ export async function exportLibraryXlsx(
   const bytes = buildXlsx(sheets)
   const path = await plugin.porter.writeBinaryExport(
     exportFileName(t('req.libraryTitle'), 'xlsx'),
+    bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+  )
+  new Notice(t('req.exported', { path }))
+}
+
+/**
+ * The library as a deck, in the reader's words.
+ *
+ * The rating is written in full — "4/5 · 90 %" — rather than as stars: a deck is shown on
+ * whatever machine is in the room, and a glyph the room's font does not hold is a box on
+ * the wall in front of everybody.
+ */
+function pptxWords(plugin: PMPlugin): PptxWords {
+  const langs = reqLanguages(plugin.settings)
+  return {
+    title: t('req.libraryTitle'),
+    subtitle: (count) => t('req.baselineCount', { count }),
+    glyph: (requirement, field) => {
+      if (field === 'type') return reqTypeGlyph(plugin.settings, requirement.type).label
+      if (field === 'status') return reqStatusGlyph(plugin.settings, requirement.status).label
+      if (field === 'criticality') return reqCriticalityGlyph(plugin.settings, requirement.criticality).label
+      return requirement.verification === 'none' ? '' : verificationLabel(requirement.verification)
+    },
+    rating: (requirement) => {
+      const report = assessRequirement(requirement, langs)
+      return `${report.stars}/5 · ${Math.round(report.score * 100)} %`
+    },
+    rationale: t('req.field.rationale'),
+    source: t('req.field.source'),
+    noWording: t('req.noWording'),
+    noCategory: t('req.noCategory'),
+    section: t('req.field.category')
+  }
+}
+
+/** One slide per requirement, for the review it will be walked through in. */
+export async function exportLibraryPptx(plugin: PMPlugin, requirements: Requirement[], lang: string): Promise<void> {
+  const deck = libraryDeck(requirements, lang, pptxWords(plugin))
+  const bytes = buildPptx(deck)
+  const path = await plugin.porter.writeBinaryExport(
+    exportFileName(t('req.libraryTitle'), 'pptx'),
     bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
   )
   new Notice(t('req.exported', { path }))
