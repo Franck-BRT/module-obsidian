@@ -221,7 +221,7 @@ export default class PMPlugin extends Plugin {
       }
     })
 
-    for (const format of ['docx', 'pdf', 'md'] as const) {
+    for (const format of ['docx', 'pdf', 'md', 'html'] as const) {
       this.addCommand({
         id: `export-note-${format}`,
         name: noteExportLabel(format),

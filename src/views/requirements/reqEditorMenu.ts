@@ -34,7 +34,7 @@ export function registerReqEditorMenu(plugin: PMPlugin): void {
       // note Word has nothing this plugin can add to.
       const file = view.file
       if (!(file instanceof TFile) || !reqBlockRanges(editor.getValue().split('\n')).length) return
-      for (const format of ['docx', 'pdf', 'md'] as const) {
+      for (const format of ['docx', 'pdf', 'md', 'html'] as const) {
         menu.addItem((item) =>
           item
             .setTitle(noteExportLabel(format))
@@ -47,12 +47,14 @@ export function registerReqEditorMenu(plugin: PMPlugin): void {
 }
 
 /** Named where the reader is, in their own words: the catalogue cannot read a ternary. */
-export function noteExportLabel(format: 'docx' | 'pdf' | 'md'): string {
+export function noteExportLabel(format: 'docx' | 'pdf' | 'md' | 'html'): string {
   if (format === 'pdf') return t('req.exportNotePdf')
-  return format === 'md' ? t('req.exportNoteMarkdown') : t('req.exportNoteWord')
+  if (format === 'md') return t('req.exportNoteMarkdown')
+  return format === 'html' ? t('req.exportNoteHtml') : t('req.exportNoteWord')
 }
 
-export function noteExportIcon(format: 'docx' | 'pdf' | 'md'): string {
+export function noteExportIcon(format: 'docx' | 'pdf' | 'md' | 'html'): string {
   if (format === 'pdf') return 'file-text'
-  return format === 'md' ? 'file-down' : 'file-type'
+  if (format === 'md') return 'file-down'
+  return format === 'html' ? 'globe' : 'file-type'
 }

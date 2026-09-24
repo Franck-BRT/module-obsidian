@@ -5,6 +5,8 @@ import type { ReqBlockField } from '../../store/requirements/reqBlockFields'
 import { buildDocx, type DocxDocument } from '../../store/docx'
 import { buildPdf } from '../../store/pdf'
 import { toMarkdown } from '../../store/markdownDoc'
+import { toHtml } from '../../store/htmlDoc'
+import { isReqId } from '../../store/requirements/reqId'
 import { libraryDocx, noteDocx, type DocxWords } from '../../store/requirements/reqDocx'
 import { resolveBlockFields } from '../../store/requirements/reqBlockFields'
 import { assessRequirement } from '../../store/requirements/reqScore'
@@ -60,7 +62,7 @@ export function docxGlyph(plugin: PMPlugin): (requirement: Requirement, field: R
   }
 }
 
-export type DocFormat = 'docx' | 'pdf' | 'md'
+export type DocFormat = 'docx' | 'pdf' | 'md' | 'html'
 
 /**
  * The same document, written as whichever of the three was asked for.
@@ -75,9 +77,13 @@ async function write(
   format: DocFormat,
   source?: string
 ): Promise<string> {
-  if (format === 'md') {
-    const text = toMarkdown(doc, { exported: new Date().toISOString(), source })
-    return plugin.porter.writeExport(exportFileName(title, 'md'), text)
+  if (format === 'md' || format === 'html') {
+    const meta = { exported: new Date().toISOString(), source }
+    const text =
+      format === 'md'
+        ? toMarkdown(doc, meta)
+        : toHtml(doc, { meta, anchor: (name) => (isReqId(name) ? name : undefined) })
+    return plugin.porter.writeExport(exportFileName(title, format), text)
   }
   const bytes = format === 'pdf' ? buildPdf(doc) : buildDocx(doc)
   return plugin.porter.writeBinaryExport(

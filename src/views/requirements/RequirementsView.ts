@@ -836,10 +836,10 @@ export class RequirementsView extends ItemView {
       'file-text',
       safeAsync(() => this.exportAs(shown, 'md'))
     )
-    for (const format of ['docx', 'pdf'] as const) {
+    for (const format of ['docx', 'pdf', 'html'] as const) {
       add(
-        format === 'pdf' ? t('req.exportPdf', { count: shown.length }) : t('req.exportWord', { count: shown.length }),
-        format === 'pdf' ? 'file-text' : 'file-type',
+        libraryExportLabel(format, shown.length),
+        libraryExportIcon(format),
         safeAsync(async () => {
           if (!shown.length) {
             new Notice(t('req.noneHere'))
@@ -1564,6 +1564,17 @@ function flagLabel(flag: ReqFlag): string {
     default:
       return t('common.all')
   }
+}
+
+/** Named in full rather than built from a condition: the catalogue cannot read a ternary. */
+function libraryExportLabel(format: 'docx' | 'pdf' | 'html', count: number): string {
+  if (format === 'pdf') return t('req.exportPdf', { count })
+  return format === 'html' ? t('req.exportHtml', { count }) : t('req.exportWord', { count })
+}
+
+function libraryExportIcon(format: 'docx' | 'pdf' | 'html'): string {
+  if (format === 'pdf') return 'file-text'
+  return format === 'html' ? 'globe' : 'file-type'
 }
 
 function gapLabel(gap: CoverageGap): string {
