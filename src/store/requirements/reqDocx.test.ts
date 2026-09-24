@@ -85,6 +85,27 @@ describe('a note as a document', () => {
     expect(paras('# Un\n# Deux')).toEqual(['Title:Un', 'Heading1:Deux'])
   })
 
+  /**
+   * The note's own first heading becomes the title, so everything under it moves up a
+   * level: a `##` section is the document's first level, not its second. Left as it was,
+   * the exported document skips a level, which a reader sees at once in Markdown.
+   */
+  it('lifts the headings under a title it took from the note', () => {
+    expect(paras('# Titre\n## Section\n### Sous-section')).toEqual([
+      'Title:Titre',
+      'Heading1:Section',
+      'Heading2:Sous-section'
+    ])
+  })
+
+  it('leaves the levels alone in a note that never named itself', () => {
+    expect(paras('## Section\n### Sous-section')).toEqual([
+      'Title:Spécification',
+      'Heading2:Section',
+      'Heading3:Sous-section'
+    ])
+  })
+
   it('carries headings, quotes and bullets across', () => {
     expect(paras('Avant.\n# Titre\n## Sous-titre\n> une citation\n- un point')).toEqual([
       'Title:Spécification',

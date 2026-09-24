@@ -968,6 +968,7 @@ export const fr: Catalog = {
   'req.exportPptx': { one: 'Exporter {count} en PowerPoint', other: 'Exporter les {count} en PowerPoint' },
   'req.exportXlsx': { one: 'Exporter {count} en Excel', other: 'Exporter les {count} en Excel' },
   'req.exportPdf': { one: 'Exporter {count} en PDF', other: 'Exporter les {count} en PDF' },
+  'req.exportNoteMarkdown': 'Exporter cette note en Markdown (exigences comprises)',
   'req.exportNotePdf': 'Exporter cette note en PDF (exigences comprises)',
   'req.exportNoteWord': 'Exporter cette note en Word (exigences comprises)',
   'req.exportNoteNone': 'Cette note ne cite aucune exigence.',

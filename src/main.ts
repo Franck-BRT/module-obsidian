@@ -73,7 +73,7 @@ import { ReqPorter } from './store/requirements/ReqPorter'
 import { ReqEmbeddingIndex } from './store/requirements/ReqEmbeddings'
 import { cleanBlockFields } from './store/requirements/reqBlockFields'
 import { registerReqBlock } from './views/requirements/reqBlockRenderer'
-import { registerReqEditorMenu } from './views/requirements/reqEditorMenu'
+import { noteExportLabel, registerReqEditorMenu } from './views/requirements/reqEditorMenu'
 import { exportNoteDocx } from './views/requirements/exportDocx'
 import { reqBlockRanges } from './store/requirements/reqFence'
 import { pickRequirement } from './views/requirements/RequirementPicker'
@@ -221,10 +221,10 @@ export default class PMPlugin extends Plugin {
       }
     })
 
-    for (const format of ['docx', 'pdf'] as const) {
+    for (const format of ['docx', 'pdf', 'md'] as const) {
       this.addCommand({
         id: `export-note-${format}`,
-        name: format === 'pdf' ? t('req.exportNotePdf') : t('req.exportNoteWord'),
+        name: noteExportLabel(format),
         callback: safeAsync(async () => {
           const file = this.app.workspace.getActiveFile()
           if (!file) return

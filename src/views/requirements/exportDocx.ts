@@ -4,6 +4,7 @@ import type { Requirement } from '../../store/requirements/Requirement'
 import type { ReqBlockField } from '../../store/requirements/reqBlockFields'
 import { buildDocx, type DocxDocument } from '../../store/docx'
 import { buildPdf } from '../../store/pdf'
+import { toMarkdown } from '../../store/markdownDoc'
 import { libraryDocx, noteDocx, type DocxWords } from '../../store/requirements/reqDocx'
 import { resolveBlockFields } from '../../store/requirements/reqBlockFields'
 import { assessRequirement } from '../../store/requirements/reqScore'
@@ -59,20 +60,30 @@ export function docxGlyph(plugin: PMPlugin): (requirement: Requirement, field: R
   }
 }
 
-export type DocFormat = 'docx' | 'pdf'
+export type DocFormat = 'docx' | 'pdf' | 'md'
 
-/** The same document, written as whichever of the two was asked for. */
-function render(doc: DocxDocument, format: DocFormat): Uint8Array {
-  return format === 'pdf' ? buildPdf(doc) : buildDocx(doc)
-}
-
-async function write(plugin: PMPlugin, title: string, doc: DocxDocument, format: DocFormat): Promise<void> {
-  const bytes = render(doc, format)
-  const path = await plugin.porter.writeBinaryExport(
+/**
+ * The same document, written as whichever of the three was asked for.
+ *
+ * Markdown is the one that comes out as text rather than bytes: it goes through the
+ * ordinary export, which is what lets it be opened in the vault it was written from.
+ */
+async function write(
+  plugin: PMPlugin,
+  title: string,
+  doc: DocxDocument,
+  format: DocFormat,
+  source?: string
+): Promise<string> {
+  if (format === 'md') {
+    const text = toMarkdown(doc, { exported: new Date().toISOString(), source })
+    return plugin.porter.writeExport(exportFileName(title, 'md'), text)
+  }
+  const bytes = format === 'pdf' ? buildPdf(doc) : buildDocx(doc)
+  return plugin.porter.writeBinaryExport(
     exportFileName(title, format),
     bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
   )
-  new Notice(t('req.exported', { path }))
 }
 
 /**
@@ -92,11 +103,17 @@ export async function exportNoteDocx(plugin: PMPlugin, file: TFile, format: DocF
       lang: reqLanguages(plugin.settings)[0],
       library: plugin.index.requirementRefs(),
       fields: resolveBlockFields([], plugin.settings.requirements.blockFields),
-      words: docxWords(plugin, format === 'docx')
+      // Stars where the format can draw them: Markdown is read in a terminal as often as
+      // in a renderer, and both hold the glyph.
+      words: docxWords(plugin, format !== 'pdf')
     },
     docxGlyph(plugin)
   )
-  await write(plugin, title, doc, format)
+  const path = await write(plugin, title, doc, format, file.path)
+  new Notice(t('req.exported', { path }))
+  // Opened straight away, and only this one: a Markdown export is a note the vault can
+  // show, and an export nobody looks at is an export nobody notices is wrong.
+  if (format === 'md') await plugin.app.workspace.openLinkText(path, '', 'tab')
 }
 
 /** The library itself, the same shape the markdown export gives it. */
@@ -122,5 +139,5 @@ export async function exportLibraryDocx(
     sourceLabel: t('req.field.source'),
     noCategory: t('req.noCategory')
   })
-  await write(plugin, title, doc, format)
+  new Notice(t('req.exported', { path: await write(plugin, title, doc, format) }))
 }

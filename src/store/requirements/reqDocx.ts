@@ -73,12 +73,20 @@ export function inlineRuns(text: string): DocxRun[] {
   return runs.length ? runs : [{ text: '' }]
 }
 
-function proseBlock(line: string): DocxParagraph | null {
+/**
+ * One line of the note.
+ *
+ * `lift` is one when the note's own first heading became the document's title: everything
+ * under it then moves up a level, so a `##` section is the first level of the document
+ * rather than the second. Without it the exported document skips a level, which a reader
+ * sees immediately in Markdown and an outline sees everywhere.
+ */
+function proseBlock(line: string, lift = 0): DocxParagraph | null {
   const trimmed = line.trim()
   if (!trimmed || /^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) return null
   const heading = /^(#{1,6})\s+(.*)$/.exec(trimmed)
   if (heading) {
-    const level = Math.min(3, heading[1].length)
+    const level = Math.min(3, Math.max(1, heading[1].length - lift))
     return { kind: 'p', style: `Heading${level}` as DocxParagraph['style'], runs: inlineRuns(heading[2]) }
   }
   if (trimmed.startsWith('>')) return { kind: 'p', style: 'Quote', runs: inlineRuns(trimmed.replace(/^>\s?/, '')) }
@@ -215,20 +223,21 @@ export function noteDocx(
   const start = bodyStart(lines)
   const own = titleLine(lines, start)
   const title = own ? own.title : options.title
+  const lift = own ? 1 : 0
   const out: DocxBlock[] = [para('Title', title)]
 
   let at = own ? own.at : start
   for (const block of blocks) {
     if (block.open < at) continue
     for (const line of lines.slice(at, block.open)) {
-      const made = proseBlock(line)
+      const made = proseBlock(line, lift)
       if (made) out.push(made)
     }
     out.push(...blockDocxBlocks(blockBody(lines, block), options, glyph))
     at = block.closed ? block.close + 1 : lines.length
   }
   for (const line of lines.slice(at)) {
-    const made = proseBlock(line)
+    const made = proseBlock(line, lift)
     if (made) out.push(made)
   }
   return { title, blocks: out }

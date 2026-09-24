@@ -990,6 +990,7 @@ export const en = {
   'req.exportPptx': { one: 'Export {count} to PowerPoint', other: 'Export all {count} to PowerPoint' },
   'req.exportXlsx': { one: 'Export {count} to Excel', other: 'Export all {count} to Excel' },
   'req.exportPdf': { one: 'Export {count} to PDF', other: 'Export all {count} to PDF' },
+  'req.exportNoteMarkdown': 'Export this note to Markdown (with its requirements)',
   'req.exportNotePdf': 'Export this note to PDF (with its requirements)',
   'req.exportNoteWord': 'Export this note to Word (with its requirements)',
   'req.exportNoteNone': 'This note quotes no requirement.',
