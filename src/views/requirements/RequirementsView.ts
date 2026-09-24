@@ -58,7 +58,14 @@ import { openReqifImport, openReqImport, openTableImport } from './ReqImportModa
 import { readXlsx } from '../../store/xlsxRead'
 import { xlsxTable } from '../../store/requirements/reqXlsxRead'
 import { readDocx } from '../../store/docxRead'
-import { docxRequirements, settleLanguages } from '../../store/requirements/reqDocxRead'
+import {
+  docxRequirements,
+  settleLanguages,
+  settleSpacing,
+  startsRequirementRow
+} from '../../store/requirements/reqDocxRead'
+import { PdfError, readPdf } from '../../store/pdfRead'
+import { pdfBlocks, readsByStructure } from '../../store/pdfText'
 import { isReqifName, readReqif, reqifFromArchive } from '../../store/requirements/reqifRead'
 import { EmptyState } from '../../ui/primitives/EmptyState'
 import { ChipButton } from '../../ui/primitives/ChipButton'
@@ -925,7 +932,7 @@ export class RequirementsView extends ItemView {
 
   private async importCsv(): Promise<void> {
     const file = await pickVaultFile(this.app, t('req.importPick'), (candidate) =>
-      ['csv', 'txt', 'tsv', 'xlsx', 'docx', 'json', 'xml', 'reqif', 'reqifz'].includes(
+      ['csv', 'txt', 'tsv', 'xlsx', 'docx', 'pdf', 'json', 'xml', 'reqif', 'reqifz'].includes(
         candidate.extension.toLowerCase()
       )
     )
@@ -937,6 +944,10 @@ export class RequirementsView extends ItemView {
     }
     if (file.extension.toLowerCase() === 'docx') {
       await this.importDocx(file, done)
+      return
+    }
+    if (file.extension.toLowerCase() === 'pdf') {
+      await this.importPdf(file, done)
       return
     }
     if (!isReqifName(file.name)) {
@@ -1021,6 +1032,48 @@ export class RequirementsView extends ItemView {
       { headers: [], rows, unknown: read.unknown },
       done,
       t('req.importDocxFound', { text: read.fromText, tables: read.fromTables, lang: this.lang.toUpperCase() }),
+      read.unmatched
+    )
+  }
+
+  /**
+   * The requirements a PDF holds, found by the same rules as in a Word document once the
+   * PDF has been read back into paragraphs and tables — by its structure where it was
+   * written with one, by where its text sits where not. The preview says which, because
+   * the second is a reading of the layout and deserves a closer look.
+   */
+  private async importPdf(file: TFile, done: () => void): Promise<void> {
+    const vocabulary = docxVocabulary(this.plugin)
+    let content: Awaited<ReturnType<typeof readPdf>>
+    try {
+      content = await readPdf(new Uint8Array(await this.app.vault.readBinary(file)))
+    } catch (error) {
+      if (error instanceof PdfError && /encrypted/.test(error.message)) new Notice(t('req.importPdfEncrypted'))
+      else new Notice(t('req.importUnreadable', { list: error instanceof Error ? error.message : String(error) }))
+      return
+    }
+    if (!content.items.some((item) => item.text.trim() !== '')) {
+      new Notice(t('req.importPdfNoText'))
+      return
+    }
+    const read = docxRequirements(
+      pdfBlocks(content, { startsRow: startsRequirementRow(vocabulary) }),
+      vocabulary,
+      this.lang
+    )
+    if (!read.rows.length) {
+      new Notice(t('req.importDocxNone'))
+      return
+    }
+    const library = this.plugin.index.requirementRefs()
+    const rows = settleSpacing(settleLanguages(read.rows, library), library)
+    const how = readsByStructure(content) ? t('req.importPdfTagged') : t('req.importPdfLayout')
+    openTableImport(
+      this.plugin,
+      file.name,
+      { headers: [], rows, unknown: read.unknown },
+      done,
+      `${t('req.importDocxFound', { text: read.fromText, tables: read.fromTables, lang: this.lang.toUpperCase() })} · ${how}`,
       read.unmatched
     )
   }

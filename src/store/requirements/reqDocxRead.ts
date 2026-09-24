@@ -257,3 +257,44 @@ export function settleLanguages(rows: Record<string, string>[], library: Require
     return out
   })
 }
+
+/**
+ * A wording that differs from the one held only in where its lines break, taken as the
+ * one held.
+ *
+ * For a PDF, which draws lines and does not record why each one ended: a break the author
+ * wrote at the very end of a full line looks exactly like the layout running out of room.
+ * A difference a PDF cannot express is not a change somebody made.
+ */
+export function settleSpacing(rows: Record<string, string>[], library: Requirement[]): Record<string, string>[] {
+  const flat = (text: string): string => text.replace(/\s+/g, ' ').trim()
+  return rows.map((row) => {
+    const held = row.id ? findByName(library, row.id) : null
+    if (!held) return row
+    const out: Record<string, string> = { ...row }
+    for (const [key, value] of Object.entries(row)) {
+      if (key.startsWith('text.')) {
+        const body = held.text[key.slice(5)]?.body
+        if (body !== undefined && flat(body) === flat(value)) out[key] = body
+      } else if (key === 'rationale' && flat(held.rationale) === flat(value)) out[key] = held.rationale
+    }
+    return out
+  })
+}
+
+/**
+ * Whether a table row starts a requirement of its own: it does when the column the
+ * header names as the identifier holds a whole one. For a PDF, where a row cut by a page
+ * break goes on under the header repeated on the next page.
+ */
+export function startsRequirementRow(vocabulary: DocxVocabulary): (header: string[], cells: string[]) => boolean {
+  return (header, cells) => {
+    const at = header.findIndex((name) => {
+      const key = name.trim().toLowerCase()
+      return key === 'id' || vocabulary.headers[key] === 'id'
+    })
+    if (at === -1) return cells[0] !== ''
+    const found = leadingId(cells[at] ?? '')
+    return found !== null && found.rest === ''
+  }
+}
