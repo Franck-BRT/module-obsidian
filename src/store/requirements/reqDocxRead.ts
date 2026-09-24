@@ -151,7 +151,7 @@ function tableRows(
   if (!table) return []
   for (const header of table.unknown) unknown.add(header)
   for (const value of table.unmatched) unmatched.add(value)
-  return table.rows.map((row) => {
+  return table.rows.flatMap((row) => {
     const out: Record<string, string> = {}
     for (const [key, value] of Object.entries(row)) {
       if (!key.startsWith('text.')) {
@@ -161,7 +161,12 @@ function tableRows(
       const cleaned = cleanWording(value, vocabulary)
       if (cleaned.body) out[`text.${cleaned.lang ?? key.slice(5)}`] = cleaned.body
     }
-    return out
+    // A row that names no requirement and says nothing — a total, a remark, a rule —
+    // is the document's, not the library's. One that names a requirement stays, to be
+    // shown refused if it has nothing to write.
+    const named = leadingId(out.id ?? '')
+    const says = Object.keys(out).some((key) => key.startsWith('text.')) || out.title
+    return says || (named && named.rest === '') ? [out] : []
   })
 }
 

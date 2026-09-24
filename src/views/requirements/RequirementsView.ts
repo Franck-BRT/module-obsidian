@@ -81,6 +81,7 @@ import { deriveRequirement } from './deriveReq'
 import { docxVocabulary, exportLibraryDocx, pptxVocabulary } from './exportDocx'
 import { readPptx } from '../../store/pptxRead'
 import { readMarkdown } from '../../store/markdownRead'
+import { readHtml } from '../../store/htmlRead'
 import { pptxRequirements } from '../../store/requirements/reqPptxRead'
 import { exportLibraryPptx, exportLibraryXlsx, xlsxVocabulary } from './exportXlsx'
 import { DeriveManyModal } from './DeriveManyModal'
@@ -935,9 +936,22 @@ export class RequirementsView extends ItemView {
 
   private async importCsv(): Promise<void> {
     const file = await pickVaultFile(this.app, t('req.importPick'), (candidate) =>
-      ['csv', 'txt', 'tsv', 'xlsx', 'docx', 'pdf', 'pptx', 'md', 'json', 'xml', 'reqif', 'reqifz'].includes(
-        candidate.extension.toLowerCase()
-      )
+      [
+        'csv',
+        'txt',
+        'tsv',
+        'xlsx',
+        'docx',
+        'pdf',
+        'pptx',
+        'md',
+        'html',
+        'htm',
+        'json',
+        'xml',
+        'reqif',
+        'reqifz'
+      ].includes(candidate.extension.toLowerCase())
     )
     if (!file) return
     const done = (): void => this.render()
@@ -959,6 +973,10 @@ export class RequirementsView extends ItemView {
     }
     if (file.extension.toLowerCase() === 'md') {
       await this.importMarkdown(file, done)
+      return
+    }
+    if (['html', 'htm'].includes(file.extension.toLowerCase())) {
+      await this.importHtml(file, done)
       return
     }
     if (!isReqifName(file.name)) {
@@ -1145,6 +1163,33 @@ export class RequirementsView extends ItemView {
       { headers: [], rows, unknown: read.unknown },
       done,
       t('req.importDocxFound', { text: read.fromText, tables: read.fromTables, lang: lang.toUpperCase() }),
+      read.unmatched
+    )
+  }
+
+  /**
+   * The requirements a web page holds, by the Word rules once the page is read into
+   * paragraphs and tables. In the language on screen: the page's own `lang` says what
+   * its interface was in, not necessarily its requirements.
+   */
+  private async importHtml(file: TFile, done: () => void): Promise<void> {
+    const read = docxRequirements(
+      readHtml(await this.app.vault.cachedRead(file)),
+      docxVocabulary(this.plugin),
+      this.lang
+    )
+    if (!read.rows.length) {
+      new Notice(t('req.importDocxNone'))
+      return
+    }
+    const library = this.plugin.index.requirementRefs()
+    const rows = settleSpacing(settleLanguages(read.rows, library), library)
+    openTableImport(
+      this.plugin,
+      file.name,
+      { headers: [], rows, unknown: read.unknown },
+      done,
+      t('req.importDocxFound', { text: read.fromText, tables: read.fromTables, lang: this.lang.toUpperCase() }),
       read.unmatched
     )
   }
