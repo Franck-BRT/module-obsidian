@@ -1,4 +1,5 @@
 import { cleanAliases } from './reqAlias'
+import type { JsonPlanRow } from './reqJsonImport'
 import { normalizePath, TFile, type App } from 'obsidian'
 import type { Requirement } from './Requirement'
 import { addLink, makeRequirement, setText } from './Requirement'
@@ -74,6 +75,49 @@ export class ReqPorter {
       }
     }
     return outcome
+  }
+
+  /**
+   * Writes a JSON plan.
+   *
+   * A record is written as it stands: that is what a lossless format is for, and a
+   * restore that helpfully bumped the revision, stamped today's date on a wording or
+   * dropped a history would not be a restore.
+   *
+   * Which is also why replacing is only ever done to a row the plan called a replacement
+   * and a person agreed to: the note that goes is somebody's work.
+   */
+  async applyJsonPlan(plan: JsonPlanRow[]): Promise<ImportOutcome> {
+    const outcome: ImportOutcome = { created: [], updated: [], failed: [] }
+    for (const row of plan) {
+      if (row.action === 'invalid' || row.action === 'unchanged') continue
+      try {
+        if (row.action === 'create') await this.createFromRecord(row, outcome)
+        else await this.replaceFromRecord(row, outcome)
+      } catch {
+        outcome.failed.push(row.id)
+      }
+    }
+    return outcome
+  }
+
+  private async createFromRecord(row: JsonPlanRow, outcome: ImportOutcome): Promise<void> {
+    // The identifier the file carries is kept, and the store's counter is carried past it
+    // so nothing minted later lands on it.
+    const created = await this.store.create({ ...row.requirement, filePath: undefined })
+    if (created) outcome.created.push(created.id)
+    else outcome.failed.push(row.id)
+  }
+
+  private async replaceFromRecord(row: JsonPlanRow, outcome: ImportOutcome): Promise<void> {
+    const path = this.index.requirementById(row.id)?.filePath
+    if (!path) {
+      outcome.failed.push(row.id)
+      return
+    }
+    const saved = await this.store.save(path, () => ({ ...row.requirement, filePath: path }))
+    if (saved) outcome.updated.push(saved.requirement.id)
+    else outcome.failed.push(row.id)
   }
 
   private async create(row: CsvPlanRow, by: string, outcome: ImportOutcome): Promise<void> {

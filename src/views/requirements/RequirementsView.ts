@@ -882,7 +882,7 @@ export class RequirementsView extends ItemView {
     )
     menu.addSeparator()
     add(
-      t('req.importCsv'),
+      t('req.importFile'),
       'upload',
       safeAsync(() => this.importCsv())
     )
@@ -912,7 +912,7 @@ export class RequirementsView extends ItemView {
 
   private async importCsv(): Promise<void> {
     const file = await pickVaultFile(this.app, t('req.importPick'), (candidate) =>
-      ['csv', 'txt', 'tsv'].includes(candidate.extension.toLowerCase())
+      ['csv', 'txt', 'tsv', 'json'].includes(candidate.extension.toLowerCase())
     )
     if (!file) return
     openReqImport(this.plugin, file.name, await this.app.vault.cachedRead(file), () => this.render())

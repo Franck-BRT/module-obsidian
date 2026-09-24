@@ -7,6 +7,13 @@ import {
   type CsvAction,
   type CsvPlanRow
 } from '../../store/requirements/reqCsv'
+import { readReqJson } from '../../store/requirements/reqJson'
+import {
+  countJsonPlan,
+  planJsonImport,
+  type JsonPlanRow,
+  type JsonReason
+} from '../../store/requirements/reqJsonImport'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 
@@ -17,139 +24,244 @@ import { t } from '../../i18n'
  * So the plan is shown first, row by row, and the button says how many of each it will
  * write — and writes exactly that, never more, because an import that quietly did a
  * little extra is one nobody trusts again.
+ *
+ * One screen for the two files it can be handed, because the question a reader is
+ * answering is the same one: what is about to happen to my library. What differs is the
+ * words — a spreadsheet updates fields, a JSON record replaces a whole requirement — and
+ * those are decided by whoever built the plan, not here.
  */
-class ReqImportModal extends Modal {
-  private plan: CsvPlanRow[]
 
+interface PlanLine {
+  /** Drawn from this: added, changed, ok, removed. */
+  kind: 'added' | 'changed' | 'ok' | 'removed'
+  icon: string
+  label: string
+  id: string
+  title: string
+  /** Why it was refused, or what a replacement would change. */
+  note?: string
+}
+
+interface PlanView {
+  fileName: string
+  /** Said before anything else, where a file carried something this could not use. */
+  warning?: string
+  counts: string
+  lines: PlanLine[]
+  /** How many rows the button would write. Zero disables it. */
+  writes: number
+  apply: () => Promise<{ created: number; updated: number; failed: number }>
+}
+
+class ReqImportModal extends Modal {
   constructor(
     app: App,
     private plugin: PMPlugin,
-    private fileName: string,
-    private table: ReturnType<typeof readCsvTable>,
+    private view: PlanView,
     private onDone: () => void
   ) {
     super(app)
-    this.plan = planCsvImport(table.rows, plugin.index.requirementRefs())
   }
 
   onOpen(): void {
     const { contentEl } = this
     contentEl.empty()
     this.modalEl.addClass('pm-modal', 'pm-req-import')
-    contentEl.createEl('h2', { text: t('req.importTitle', { file: this.fileName }) })
+    contentEl.createEl('h2', { text: t('req.importTitle', { file: this.view.fileName }) })
 
-    if (this.table.unknown.length) {
-      // Named rather than ignored: a column the reader meant as a status and this did not
-      // recognise is a field they will believe was imported.
+    if (this.view.warning) {
+      // Named rather than ignored: something the reader meant to import and this did not
+      // recognise is a field they will believe arrived.
       const warn = contentEl.createDiv('pm-reqblock-notice pm-reqblock-notice--warn')
       setIcon(warn.createSpan({ cls: 'pm-glyph-icon' }), 'triangle-alert')
-      warn.createSpan({ text: t('req.importUnknown', { list: this.table.unknown.join(', ') }) })
+      warn.createSpan({ text: this.view.warning })
     }
 
-    const counts = countPlan(this.plan)
-    contentEl.createDiv({
-      cls: 'pm-req-import-counts',
-      text: t('req.importCounts', {
-        create: counts.create,
-        update: counts.update,
-        unchanged: counts.unchanged,
-        invalid: counts.invalid
-      })
-    })
+    contentEl.createDiv({ cls: 'pm-req-import-counts', text: this.view.counts })
 
     const list = contentEl.createDiv('pm-req-import-rows')
-    for (const row of this.plan) this.renderRow(list, row)
+    for (const line of this.view.lines) this.renderLine(list, line)
 
     const actions = contentEl.createDiv('pm-te-actions')
     const cancel = actions.createEl('button', { text: t('common.cancel') })
     cancel.addEventListener('click', () => this.close())
     const apply = actions.createEl('button', {
       cls: 'mod-cta',
-      text: t('req.importApply', { count: counts.create + counts.update })
+      text: t('req.importApply', { count: this.view.writes })
     })
-    apply.disabled = counts.create + counts.update === 0
+    apply.disabled = this.view.writes === 0
     apply.addEventListener(
       'click',
       safeAsync(() => this.apply(apply))
     )
   }
 
-  private renderRow(list: HTMLElement, row: CsvPlanRow): void {
-    const el = list.createDiv(`pm-req-import-row pm-req-import-row--${row.action}`)
-    const badge = el.createSpan({ cls: `pm-req-state pm-req-state--${actionClass(row.action)}` })
-    setIcon(badge.createSpan({ cls: 'pm-glyph-icon' }), actionIcon(row.action))
-    badge.createSpan({ text: actionLabel(row.action) })
-    el.createSpan({ cls: 'pm-req-id', text: row.id || t('req.importNewId') })
-    const first = Object.values(row.values.text)[0] ?? ''
-    el.createSpan({ cls: 'pm-req-wording', text: row.title || first })
-    if (row.reason) el.createSpan({ cls: 'pm-req-rev', text: reasonLabel(row.reason) })
+  private renderLine(list: HTMLElement, line: PlanLine): void {
+    const el = list.createDiv(`pm-req-import-row pm-req-import-row--${line.kind}`)
+    const badge = el.createSpan({ cls: `pm-req-state pm-req-state--${line.kind}` })
+    setIcon(badge.createSpan({ cls: 'pm-glyph-icon' }), line.icon)
+    badge.createSpan({ text: line.label })
+    el.createSpan({ cls: 'pm-req-id', text: line.id || t('req.importNewId') })
+    el.createSpan({ cls: 'pm-req-wording', text: line.title })
+    if (line.note) el.createSpan({ cls: 'pm-req-rev', text: line.note })
   }
 
   private async apply(button: HTMLButtonElement): Promise<void> {
     button.disabled = true
     button.setText(t('req.importing'))
-    const outcome = await this.plugin.porter.applyCsvPlan(this.plan, this.plugin.settings.globalTeamMembers[0] ?? '')
+    const outcome = await this.view.apply()
     this.close()
-    new Notice(
-      t('req.importDone', {
-        created: outcome.created.length,
-        updated: outcome.updated.length,
-        failed: outcome.failed.length
-      })
-    )
+    new Notice(t('req.importDone', outcome))
     this.plugin.index.build()
     this.onDone()
   }
 }
 
-function actionLabel(action: CsvAction): string {
-  switch (action) {
-    case 'create':
-      return t('req.change.added')
-    case 'update':
-      return t('req.change.changed')
-    case 'unchanged':
-      return t('req.change.unchanged')
-    default:
-      return t('req.importRefused')
+/* ---- The two files it can be handed ------------------------------------------- */
+
+function csvLine(row: CsvPlanRow): PlanLine {
+  const first = Object.values(row.values.text)[0] ?? ''
+  return {
+    kind: csvKind(row.action),
+    icon: csvIcon(row.action),
+    label: csvLabel(row.action),
+    id: row.id,
+    title: row.title || first,
+    note: row.reason ? (row.reason === 'no-wording' ? t('req.importNoWording') : t('req.importDuplicate')) : undefined
   }
 }
 
-function actionIcon(action: CsvAction): string {
-  switch (action) {
-    case 'create':
-      return 'plus'
-    case 'update':
-      return 'pencil'
-    case 'unchanged':
-      return 'equal'
-    default:
-      return 'circle-slash'
-  }
+function csvLabel(action: CsvAction): string {
+  if (action === 'create') return t('req.change.added')
+  if (action === 'update') return t('req.change.changed')
+  return action === 'unchanged' ? t('req.change.unchanged') : t('req.importRefused')
 }
 
-function actionClass(action: CsvAction): string {
-  switch (action) {
-    case 'create':
-      return 'added'
-    case 'update':
-      return 'changed'
-    case 'unchanged':
-      return 'ok'
-    default:
-      return 'removed'
-  }
+function csvIcon(action: CsvAction): string {
+  if (action === 'create') return 'plus'
+  if (action === 'update') return 'pencil'
+  return action === 'unchanged' ? 'equal' : 'circle-slash'
 }
 
-function reasonLabel(reason: NonNullable<CsvPlanRow['reason']>): string {
+function csvKind(action: CsvAction): PlanLine['kind'] {
+  if (action === 'create') return 'added'
+  if (action === 'update') return 'changed'
+  return action === 'unchanged' ? 'ok' : 'removed'
+}
+
+function jsonReason(reason: JsonReason): string {
   return reason === 'no-wording' ? t('req.importNoWording') : t('req.importDuplicate')
 }
 
+/** What a replacement would change, as words rather than as field names. */
+function jsonNote(row: JsonPlanRow): string | undefined {
+  if (row.reason) return jsonReason(row.reason)
+  if (!row.changes.length) return undefined
+  return row.changes
+    .map((part) => {
+      if (part === 'links') return t('req.links')
+      if (part === 'history') return t('req.history')
+      return part === 'fields' ? t('req.importFields') : part.toUpperCase()
+    })
+    .join(' · ')
+}
+
+function jsonLine(row: JsonPlanRow): PlanLine {
+  const first = Object.values(row.requirement.text)[0]?.body ?? ''
+  return {
+    kind:
+      row.action === 'create'
+        ? 'added'
+        : row.action === 'replace'
+          ? 'changed'
+          : row.action === 'unchanged'
+            ? 'ok'
+            : 'removed',
+    icon:
+      row.action === 'create'
+        ? 'plus'
+        : row.action === 'replace'
+          ? 'replace'
+          : row.action === 'unchanged'
+            ? 'equal'
+            : 'circle-slash',
+    label:
+      row.action === 'create'
+        ? t('req.change.added')
+        : row.action === 'replace'
+          ? t('req.importReplaced')
+          : row.action === 'unchanged'
+            ? t('req.change.unchanged')
+            : t('req.importRefused'),
+    id: row.id,
+    title: row.requirement.title || first,
+    note: jsonNote(row)
+  }
+}
+
+/**
+ * Opens the right plan for the file it was handed.
+ *
+ * By extension, which is what the reader chose the file by. A file that is not JSON is
+ * read as a table, because that is what every other thing a requirements library is sent
+ * in turns out to be.
+ */
 export function openReqImport(plugin: PMPlugin, fileName: string, text: string, onDone: () => void): void {
+  if (fileName.toLowerCase().endsWith('.json')) {
+    openJsonImport(plugin, fileName, text, onDone)
+    return
+  }
   const table = readCsvTable(text)
   if (!table.rows.length) {
     new Notice(t('req.importEmpty'))
     return
   }
-  new ReqImportModal(plugin.app, plugin, fileName, table, onDone).open()
+  const plan = planCsvImport(table.rows, plugin.index.requirementRefs())
+  const counts = countPlan(plan)
+  new ReqImportModal(
+    plugin.app,
+    plugin,
+    {
+      fileName,
+      warning: table.unknown.length ? t('req.importUnknown', { list: table.unknown.join(', ') }) : undefined,
+      counts: t('req.importCounts', counts),
+      lines: plan.map(csvLine),
+      writes: counts.create + counts.update,
+      apply: async () => {
+        const outcome = await plugin.porter.applyCsvPlan(plan, plugin.settings.globalTeamMembers[0] ?? '')
+        return { created: outcome.created.length, updated: outcome.updated.length, failed: outcome.failed.length }
+      }
+    },
+    onDone
+  ).open()
+}
+
+function openJsonImport(plugin: PMPlugin, fileName: string, text: string, onDone: () => void): void {
+  const read = readReqJson(text)
+  if (!read.requirements.length) {
+    // The problems are worth more than "empty": a file refused for its format and a file
+    // holding nothing are two different mornings.
+    new Notice(
+      read.problems.length ? t('req.importUnreadable', { list: read.problems.join(', ') }) : t('req.importEmpty')
+    )
+    return
+  }
+  const plan = planJsonImport(read, plugin.index.requirementRefs())
+  const counts = countJsonPlan(plan)
+  new ReqImportModal(
+    plugin.app,
+    plugin,
+    {
+      fileName,
+      warning: read.problems.length ? t('req.importUnknown', { list: read.problems.join(', ') }) : undefined,
+      counts: t('req.importCountsJson', counts),
+      lines: plan.map(jsonLine),
+      writes: counts.create + counts.replace,
+      apply: async () => {
+        const outcome = await plugin.porter.applyJsonPlan(plan)
+        return { created: outcome.created.length, updated: outcome.updated.length, failed: outcome.failed.length }
+      }
+    },
+    onDone
+  ).open()
 }
