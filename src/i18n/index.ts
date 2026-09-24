@@ -87,3 +87,21 @@ export function searchAliases(key: TranslationKey): string[] {
     .map((word) => word.trim())
     .filter(Boolean)
 }
+
+/**
+ * One entry as every locale words it.
+ *
+ * For reading back a file the plugin wrote in whichever language was active that day: a
+ * spreadsheet exported with French headers is still this plugin's spreadsheet after the
+ * reader switches Obsidian to English.
+ */
+export function inEveryLocale(key: TranslationKey): string[] {
+  return [
+    ...new Set(
+      LOCALES.map((each) => {
+        const entry = CATALOGS[each][key] ?? en[key]
+        return typeof entry === 'string' ? entry : entry.other
+      })
+    )
+  ]
+}

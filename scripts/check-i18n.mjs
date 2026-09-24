@@ -27,7 +27,7 @@ const used = new Set()
 for (const file of sourceFiles(join(root, 'src'))) {
   const src = readFileSync(file, 'utf8')
   // `searchAliases` reads the catalogue too, it just splits what it finds.
-  for (const m of src.matchAll(/\b(?:t|searchAliases)\('([^']+)'/g)) used.add(m[1])
+  for (const m of src.matchAll(/\b(?:t|searchAliases|inEveryLocale)\('([^']+)'/g)) used.add(m[1])
   // Keys built at the call site, as in t(`weekday.${day}`).
   for (const m of src.matchAll(/\bt\(`([a-zA-Z.]+)\.\$\{/g)) {
     for (const key of keys) if (key.startsWith(m[1] + '.')) used.add(key)

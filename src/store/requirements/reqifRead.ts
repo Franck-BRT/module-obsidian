@@ -1,6 +1,6 @@
 import { REQ_LINK_KINDS, VERIFICATION_METHODS, type Requirement } from './Requirement'
 import { planCsvImport, type CsvPlanRow } from './reqCsv'
-import { parseXml, XmlError, type XmlNode } from '../xmlParse'
+import { childLocal, childrenLocal, localName, parseXml, XmlError, type XmlNode } from '../xmlParse'
 import { unzip, ZipError } from '../unzip'
 
 /**
@@ -91,18 +91,9 @@ const COLUMN_OF: Record<string, string> = {
  */
 const DELIBERATELY_UNREAD = new Set(['revision', 'révision', 'reqif.chaptername', 'reqif.prefix'])
 
-/** The element's own name, without the namespace prefix a tool may have put on it. */
-function local(node: XmlNode): string {
-  return node.name.slice(node.name.indexOf(':') + 1)
-}
-
-function kids(node: XmlNode | null | undefined, name: string): XmlNode[] {
-  return node ? node.children.filter((each) => local(each) === name) : []
-}
-
-function kid(node: XmlNode | null | undefined, name: string): XmlNode | null {
-  return kids(node, name)[0] ?? null
-}
+const local = localName
+const kids = childrenLocal
+const kid = childLocal
 
 /** Every descendant of that name, wherever it sits. */
 function all(node: XmlNode, name: string, out: XmlNode[] = []): XmlNode[] {

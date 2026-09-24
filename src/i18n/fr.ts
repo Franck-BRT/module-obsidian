@@ -1112,7 +1112,7 @@ export const fr: Catalog = {
     other: 'Exporter {count} exigences en document'
   },
   'req.exported': 'Exporté vers {path}',
-  'req.importFile': 'Importer un fichier (CSV, JSON, XML ou ReqIF)',
+  'req.importFile': 'Importer un fichier (CSV, Excel, JSON, XML ou ReqIF)',
   'req.importPick': 'Quel fichier ?',
   'req.importEmpty': 'Ce fichier ne contient aucune ligne.',
   'req.importTitle': 'Importer {file}',
@@ -1121,6 +1121,10 @@ export const fr: Catalog = {
   'req.importReqifHeadings': 'Objets sans identifiant ni texte (titres de chapitre), non importés : {count}',
   'req.importReqifLang': 'Textes lus en {lang}',
   'req.importReqifLangAssumed': 'Le fichier ne dit pas sa langue : textes lus en {lang}',
+  'req.importXlsxSheet': 'feuille « {sheet} »',
+  'req.importXlsxNoTable':
+    'Aucune feuille de ce classeur n’a de colonne d’identifiant ni de colonne de texte (FR, EN…).',
+  'req.importUnmatched': 'Valeurs absentes des listes des paramètres, importées telles quelles : {list}',
   'req.importUnknown': 'Colonnes non reconnues, ignorées : {list}',
   'req.importCountsJson': '{create} à créer · {replace} à remplacer · {unchanged} inchangées · {invalid} refusées',
   'req.importReplaced': 'Remplacée',

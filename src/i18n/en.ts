@@ -1134,7 +1134,7 @@ export const en = {
     other: 'Export {count} requirements as a document'
   },
   'req.exported': 'Exported to {path}',
-  'req.importFile': 'Import a file (CSV, JSON, XML or ReqIF)',
+  'req.importFile': 'Import a file (CSV, Excel, JSON, XML or ReqIF)',
   'req.importPick': 'Which file?',
   'req.importEmpty': 'That file holds no rows.',
   'req.importTitle': 'Import {file}',
@@ -1143,6 +1143,9 @@ export const en = {
   'req.importReqifHeadings': 'Objects with neither an identifier nor a text (chapter headings), not imported: {count}',
   'req.importReqifLang': 'Texts read as {lang}',
   'req.importReqifLangAssumed': 'The file does not say its language: texts read as {lang}',
+  'req.importXlsxSheet': 'sheet “{sheet}”',
+  'req.importXlsxNoTable': 'No sheet in this workbook has an identifier column or a wording column (FR, EN…).',
+  'req.importUnmatched': 'Values missing from the settings lists, imported as written: {list}',
   'req.importUnknown': 'Unrecognised columns, ignored: {list}',
   'req.importCountsJson': '{create} to create · {replace} to replace · {unchanged} unchanged · {invalid} refused',
   'req.importReplaced': 'Replaced',

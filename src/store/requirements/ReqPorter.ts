@@ -43,7 +43,13 @@ function applyValues(requirement: Requirement, values: CsvValues, by: string): R
   // Through setText, never by assignment: an imported wording has to bump the revision
   // and mark the translations behind exactly as a typed one does, or a library updated
   // from a spreadsheet would quietly stop knowing what is out of date.
-  for (const [lang, body] of Object.entries(values.text)) next = setText(next, lang, body, by)
+  //
+  // And only where the words differ: a spreadsheet carries every wording on the row, and
+  // one that came back as it went is not a new wording. Written again, a machine
+  // translation that merely passed through Excel would come back as a person's, read.
+  for (const [lang, body] of Object.entries(values.text)) {
+    if (next.text[lang]?.body !== body) next = setText(next, lang, body, by)
+  }
   for (const link of values.links ?? []) next = addLink(next, link.kind, link.to)
   return next
 }

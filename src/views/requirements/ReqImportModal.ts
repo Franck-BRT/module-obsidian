@@ -5,7 +5,8 @@ import {
   planCsvImport,
   readCsvTable,
   type CsvAction,
-  type CsvPlanRow
+  type CsvPlanRow,
+  type CsvTable
 } from '../../store/requirements/reqCsv'
 import { readReqJson, type ReqJsonRead } from '../../store/requirements/reqJson'
 import { readReqXml } from '../../store/requirements/reqXml'
@@ -221,19 +222,41 @@ export function openReqImport(plugin: PMPlugin, fileName: string, text: string, 
     return
   }
   const table = readCsvTable(text)
+  openTableImport(plugin, fileName, table, onDone)
+}
+
+/**
+ * A table — a CSV, or the sheet a workbook was read into — planned and shown.
+ *
+ * `note` is said beside the counts: for a workbook, which sheet the rows came from,
+ * since a reader who exported two sheets should not have to guess which one was read.
+ */
+export function openTableImport(
+  plugin: PMPlugin,
+  fileName: string,
+  table: CsvTable,
+  onDone: () => void,
+  note?: string,
+  unmatched: string[] = []
+): void {
   if (!table.rows.length) {
     new Notice(t('req.importEmpty'))
     return
   }
   const plan = planCsvImport(table.rows, plugin.index.requirementRefs())
   const counts = countPlan(plan)
+  const counted = t('req.importCounts', counts)
   new ReqImportModal(
     plugin.app,
     plugin,
     {
       fileName,
-      warning: table.unknown.length ? t('req.importUnknown', { list: table.unknown.join(', ') }) : undefined,
-      counts: t('req.importCounts', counts),
+      warning:
+        [
+          ...(table.unknown.length ? [t('req.importUnknown', { list: table.unknown.join(', ') })] : []),
+          ...(unmatched.length ? [t('req.importUnmatched', { list: unmatched.join(', ') })] : [])
+        ].join(' · ') || undefined,
+      counts: note ? `${counted} · ${note}` : counted,
       lines: plan.map(csvLine),
       writes: counts.create + counts.update,
       apply: async () => {

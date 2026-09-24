@@ -9,7 +9,8 @@ import { coverageOf, type CoverageGap } from '../../store/requirements/ReqCovera
 import { libraryWorkbook, type XlsxWords } from '../../store/requirements/reqXlsx'
 import { exportFileName } from '../../store/requirements/ReqPorter'
 import { reqCriticalityGlyph, reqLanguages, reqStatusGlyph, reqTypeGlyph, verificationLabel } from './reqPalette'
-import { t } from '../../i18n'
+import { inEveryLocale, t } from '../../i18n'
+import type { XlsxVocabulary } from '../../store/requirements/reqXlsxRead'
 
 /**
  * The library as a spreadsheet, in the reader's words.
@@ -124,4 +125,59 @@ export async function exportLibraryPptx(plugin: PMPlugin, requirements: Requirem
     bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
   )
   new Notice(t('req.exported', { path }))
+}
+
+/**
+ * The export's words, turned round to read a spreadsheet back.
+ *
+ * Every language's headers, not only today's: a sheet exported in French is still this
+ * plugin's sheet after Obsidian is switched to English. Badge words come from the
+ * palettes as they stand, since that is what the export wrote them from.
+ */
+export function xlsxVocabulary(plugin: PMPlugin): XlsxVocabulary {
+  const headers: Record<string, string> = {}
+  const name = (column: string, labels: string[]): void => {
+    for (const label of labels) headers[label.trim().toLowerCase()] ??= column
+  }
+  name('id', inEveryLocale('req.field.id'))
+  name('title', inEveryLocale('req.field.title'))
+  name('category', inEveryLocale('req.field.category'))
+  name('type', inEveryLocale('req.field.type'))
+  name('status', inEveryLocale('req.field.status'))
+  name('criticality', inEveryLocale('req.field.criticality'))
+  name('verification', inEveryLocale('req.field.verification'))
+  name('source', inEveryLocale('req.field.source'))
+  name('rationale', inEveryLocale('req.field.rationale'))
+  name('owner', inEveryLocale('req.field.owner'))
+  name('tags', inEveryLocale('req.field.tags'))
+  name('aliases', inEveryLocale('req.aliases'))
+  name('sourceLang', inEveryLocale('req.sourceLang'))
+  name('rev', inEveryLocale('req.field.rev'))
+  name('links', inEveryLocale('req.links'))
+
+  const words = (list: { id: string; label: string }[]): Record<string, string> =>
+    Object.fromEntries(list.map((entry) => [entry.label.trim().toLowerCase(), entry.id]))
+  const verification: Record<string, string> = {}
+  const methods: [string, string[]][] = [
+    ['test', inEveryLocale('req.verification.test')],
+    ['analysis', inEveryLocale('req.verification.analysis')],
+    ['inspection', inEveryLocale('req.verification.inspection')],
+    ['demonstration', inEveryLocale('req.verification.demonstration')],
+    ['none', inEveryLocale('req.verification.none')]
+  ]
+  for (const [method, labels] of methods) {
+    for (const label of labels) verification[label.trim().toLowerCase()] = method
+  }
+
+  return {
+    headers,
+    languages: reqLanguages(plugin.settings),
+    computed: inEveryLocale('req.field.rating'),
+    values: {
+      type: words(plugin.settings.requirements.types),
+      status: words(plugin.settings.requirements.statuses),
+      criticality: words(plugin.settings.priorities),
+      verification
+    }
+  }
 }

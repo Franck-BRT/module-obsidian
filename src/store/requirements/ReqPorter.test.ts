@@ -89,6 +89,27 @@ describe('ReqPorter', () => {
     expect(reloaded?.text.en.fromRev).toBe(1)
   })
 
+  // A spreadsheet carries every wording on the row, changed or not. The one nobody touched
+  // must come back exactly as it went: a machine translation that merely passed through
+  // Excel has not been read by anybody.
+  it('leaves a wording the file carried unchanged exactly as it was', async () => {
+    const created = await store.create({ category: 'SYS' })
+    const path = created?.filePath ?? ''
+    await store.save(path, (requirement) => setText(requirement, 'fr', 'Source.', 'a'))
+    await store.save(path, (requirement) => setText(requirement, 'en', 'Machine.', 'llm', 'machine'))
+    index.build()
+    const before = await store.load(path)
+
+    await porter.applyCsvPlan(
+      planFor(`id;status;text.fr;text.en\n${created?.id};approved;Source.;Machine.\n`),
+      'franck'
+    )
+    const after = await store.load(path)
+    expect(after?.status).toBe('approved')
+    expect(after?.text).toEqual(before?.text)
+    expect(after?.rev).toBe(before?.rev)
+  })
+
   it('does nothing at all about a row the plan called unchanged', async () => {
     const created = await store.create({ title: 'Trappe', category: 'SYS' })
     const path = created?.filePath ?? ''

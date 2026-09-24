@@ -1,4 +1,4 @@
-import { ItemView, Menu, Notice, setIcon, WorkspaceLeaf } from 'obsidian'
+import { ItemView, Menu, Notice, setIcon, WorkspaceLeaf, type TFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Requirement } from '../../store/requirements/Requirement'
 import type { TranslationOutcome } from '../../store/requirements/RequirementTranslator'
@@ -54,7 +54,9 @@ import { toReqif } from '../../store/requirements/reqif'
 import { toMarkdownDocument } from '../../store/requirements/reqMarkdown'
 import { exportFileName } from '../../store/requirements/ReqPorter'
 import { pickVaultFile } from '../../modals/PickerModals'
-import { openReqifImport, openReqImport } from './ReqImportModal'
+import { openReqifImport, openReqImport, openTableImport } from './ReqImportModal'
+import { readXlsx } from '../../store/xlsxRead'
+import { xlsxTable } from '../../store/requirements/reqXlsxRead'
 import { isReqifName, readReqif, reqifFromArchive } from '../../store/requirements/reqifRead'
 import { EmptyState } from '../../ui/primitives/EmptyState'
 import { ChipButton } from '../../ui/primitives/ChipButton'
@@ -68,7 +70,7 @@ import { openRequirementModal } from './RequirementModal'
 import { NewRequirementModal } from './NewRequirementModal'
 import { deriveRequirement } from './deriveReq'
 import { exportLibraryDocx } from './exportDocx'
-import { exportLibraryPptx, exportLibraryXlsx } from './exportXlsx'
+import { exportLibraryPptx, exportLibraryXlsx, xlsxVocabulary } from './exportXlsx'
 import { DeriveManyModal } from './DeriveManyModal'
 import { derivedFrom } from '../../store/requirements/reqDerive'
 import { renderStars } from './reqStars'
@@ -921,10 +923,14 @@ export class RequirementsView extends ItemView {
 
   private async importCsv(): Promise<void> {
     const file = await pickVaultFile(this.app, t('req.importPick'), (candidate) =>
-      ['csv', 'txt', 'tsv', 'json', 'xml', 'reqif', 'reqifz'].includes(candidate.extension.toLowerCase())
+      ['csv', 'txt', 'tsv', 'xlsx', 'json', 'xml', 'reqif', 'reqifz'].includes(candidate.extension.toLowerCase())
     )
     if (!file) return
     const done = (): void => this.render()
+    if (file.extension.toLowerCase() === 'xlsx') {
+      await this.importXlsx(file, done)
+      return
+    }
     if (!isReqifName(file.name)) {
       openReqImport(this.plugin, file.name, await this.app.vault.cachedRead(file), done)
       return
@@ -945,6 +951,37 @@ export class RequirementsView extends ItemView {
     // the file does not say — and the plan says so above it.
     const fallback = this.plugin.settings.requirements.languages[0] ?? this.lang
     openReqifImport(this.plugin, file.name, readReqif(source, fallback), done)
+  }
+
+  /**
+   * A workbook, read as the table its requirements sheet holds.
+   *
+   * Through the CSV plan, so a sheet exported, edited in Excel and brought back updates
+   * the fields it carries and leaves the rest — history, review state — where it was.
+   */
+  private async importXlsx(file: TFile, done: () => void): Promise<void> {
+    let table: ReturnType<typeof xlsxTable>
+    try {
+      table = xlsxTable(
+        await readXlsx(new Uint8Array(await this.app.vault.readBinary(file))),
+        xlsxVocabulary(this.plugin)
+      )
+    } catch (error) {
+      new Notice(t('req.importUnreadable', { list: error instanceof Error ? error.message : String(error) }))
+      return
+    }
+    if (!table) {
+      new Notice(t('req.importXlsxNoTable'))
+      return
+    }
+    openTableImport(
+      this.plugin,
+      file.name,
+      table,
+      done,
+      t('req.importXlsxSheet', { sheet: table.sheet }),
+      table.unmatched
+    )
   }
 
   /* ---- Baselines ------------------------------------------------------------ */

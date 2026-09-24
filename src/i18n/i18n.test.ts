@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { en } from './en'
 import { fr } from './fr'
-import { dateLocale, LOCALES, resolveLocale, searchAliases, setLocale, t, type TranslationKey } from './index'
+import {
+  dateLocale,
+  inEveryLocale,
+  LOCALES,
+  resolveLocale,
+  searchAliases,
+  setLocale,
+  t,
+  type TranslationKey
+} from './index'
 
 const KEYS = Object.keys(en) as TranslationKey[]
 
@@ -127,5 +136,13 @@ describe('settings search aliases', () => {
     setLocale('fr')
     const french = ALIAS_KEYS.map((key) => searchAliases(key).join('|'))
     expect(french.filter((words, i) => words === english[i])).toEqual([])
+  })
+})
+
+describe('inEveryLocale', () => {
+  // A spreadsheet exported with French headers is still this plugin's after the reader
+  // switches Obsidian to English.
+  it('gives an entry as every locale words it, once each', () => {
+    expect(inEveryLocale('req.field.status')).toEqual([en['req.field.status'], fr['req.field.status']])
   })
 })

@@ -157,3 +157,23 @@ export function child(node: XmlNode, name: string): XmlNode | null {
 export function children(node: XmlNode, name: string): XmlNode[] {
   return node.children.filter((each) => each.name === name)
 }
+
+/**
+ * The element's name without the namespace prefix a tool may have put on it.
+ *
+ * Files written by other tools prefix their elements as they please — `reqif:SPEC-OBJECT`,
+ * `x:row` — and what a reader means is the element, not the prefix.
+ */
+export function localName(node: XmlNode): string {
+  return node.name.slice(node.name.indexOf(':') + 1)
+}
+
+/** Every child of that local name, whatever its prefix. */
+export function childrenLocal(node: XmlNode | null | undefined, name: string): XmlNode[] {
+  return node ? node.children.filter((each) => localName(each) === name) : []
+}
+
+/** The first child of that local name, whatever its prefix, or null. */
+export function childLocal(node: XmlNode | null | undefined, name: string): XmlNode | null {
+  return childrenLocal(node, name)[0] ?? null
+}
