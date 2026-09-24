@@ -54,7 +54,8 @@ import { toReqif } from '../../store/requirements/reqif'
 import { toMarkdownDocument } from '../../store/requirements/reqMarkdown'
 import { exportFileName } from '../../store/requirements/ReqPorter'
 import { pickVaultFile } from '../../modals/PickerModals'
-import { openReqImport } from './ReqImportModal'
+import { openReqifImport, openReqImport } from './ReqImportModal'
+import { isReqifName, readReqif, reqifFromArchive } from '../../store/requirements/reqifRead'
 import { EmptyState } from '../../ui/primitives/EmptyState'
 import { ChipButton } from '../../ui/primitives/ChipButton'
 import { Chip } from '../../ui/primitives/Chip'
@@ -920,10 +921,30 @@ export class RequirementsView extends ItemView {
 
   private async importCsv(): Promise<void> {
     const file = await pickVaultFile(this.app, t('req.importPick'), (candidate) =>
-      ['csv', 'txt', 'tsv', 'json', 'xml'].includes(candidate.extension.toLowerCase())
+      ['csv', 'txt', 'tsv', 'json', 'xml', 'reqif', 'reqifz'].includes(candidate.extension.toLowerCase())
     )
     if (!file) return
-    openReqImport(this.plugin, file.name, await this.app.vault.cachedRead(file), () => this.render())
+    const done = (): void => this.render()
+    if (!isReqifName(file.name)) {
+      openReqImport(this.plugin, file.name, await this.app.vault.cachedRead(file), done)
+      return
+    }
+    let source: string
+    try {
+      // A .reqifz is a ZIP, so it is read as bytes: through the text API its compressed
+      // contents would come back mangled before anything could unpack them.
+      source =
+        file.extension.toLowerCase() === 'reqifz'
+          ? await reqifFromArchive(new Uint8Array(await this.app.vault.readBinary(file)))
+          : await this.app.vault.cachedRead(file)
+    } catch (error) {
+      new Notice(t('req.importUnreadable', { list: error instanceof Error ? error.message : String(error) }))
+      return
+    }
+    // The wordings are taken to be in the language new requirements are authored in when
+    // the file does not say — and the plan says so above it.
+    const fallback = this.plugin.settings.requirements.languages[0] ?? this.lang
+    openReqifImport(this.plugin, file.name, readReqif(source, fallback), done)
   }
 
   /* ---- Baselines ------------------------------------------------------------ */

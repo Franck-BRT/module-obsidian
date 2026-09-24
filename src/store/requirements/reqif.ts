@@ -12,11 +12,9 @@ export { escapeXml }
  * per requirement, one specification listing them, and the relations between them. A
  * library would bring the whole of ReqIF and its dependencies for that.
  *
- * Export only, and deliberately. Reading ReqIF back means dealing with every tool's own
- * profile, embedded XHTML, attachments and tool extensions, and a half-done importer
- * silently loses requirements — which is the one failure a requirements tool must never
- * have. A CSV round trip is honest about what it carries; a ReqIF importer that drops a
- * SPEC-OBJECT is not.
+ * Read back by `reqifRead`, which names everything it could not place rather than
+ * dropping it: a half-done importer that silently loses requirements is the one failure a
+ * requirements tool must never have.
  */
 
 export const REQIF_NAMESPACE = 'http://www.omg.org/spec/ReqIF/20110401/reqif.xsd'
@@ -30,6 +28,10 @@ export const REQIF_ATTRIBUTES = [
   { id: 'ATT-ALIASES', name: 'Aliases', type: 'string' },
   { id: 'ATT-TITLE', name: 'ReqIF.Name', type: 'string' },
   { id: 'ATT-TEXT', name: 'ReqIF.Text', type: 'xhtml' },
+  // The language ReqIF.Text is actually in. Usually the file's, but a requirement with no
+  // wording in that language goes out in its source one — and without saying so, reading
+  // the file back would take those words for a translation.
+  { id: 'ATT-LANG', name: 'Language', type: 'string' },
   { id: 'ATT-CATEGORY', name: 'Category', type: 'string' },
   { id: 'ATT-TYPE', name: 'Type', type: 'string' },
   { id: 'ATT-STATUS', name: 'Status', type: 'string' },
@@ -95,6 +97,12 @@ function textOfLang(requirement: Requirement, lang: string): string {
   return requirement.text[lang]?.body ?? requirement.text[requirement.sourceLang]?.body ?? ''
 }
 
+/** Which language `textOfLang` found its words in: the one asked for, or the source standing in. */
+function langOfText(requirement: Requirement, lang: string): string {
+  if (requirement.text[lang]) return lang
+  return requirement.text[requirement.sourceLang] ? requirement.sourceLang : ''
+}
+
 function specObject(requirement: Requirement, lang: string): string {
   const values = REQIF_ATTRIBUTES.map((attribute) => {
     switch (attribute.id) {
@@ -106,6 +114,8 @@ function specObject(requirement: Requirement, lang: string): string {
         return attributeValue(attribute, requirement.title)
       case 'ATT-TEXT':
         return attributeValue(attribute, textOfLang(requirement, lang))
+      case 'ATT-LANG':
+        return attributeValue(attribute, langOfText(requirement, lang))
       case 'ATT-CATEGORY':
         return attributeValue(attribute, requirement.category)
       case 'ATT-TYPE':

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { addLink, makeRequirement, setText, type Requirement } from './Requirement'
 import { addAlias } from './reqAlias'
 import { readReqJson, toReqJson } from './reqJson'
@@ -13,6 +13,17 @@ const req = (over: Parameters<typeof makeRequirement>[0] = {}): Requirement =>
     'Entre 5 et 30 °C.',
     'franck'
   )
+
+// The clock stands still: every requirement here is built twice and compared, and two
+// built a millisecond apart differ by the date stamped on their wording — which made
+// "nothing changed" fail whenever the millisecond happened to turn between them.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-09-24T10:00:00.000Z'))
+})
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 /** A file, as the export writes one and the reader reads it back. */
 const fileOf = (requirements: Requirement[]) => readReqJson(toReqJson(requirements, OPTIONS))

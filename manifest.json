@@ -1,7 +1,7 @@
 {
   "id": "black-projects",
   "name": "Black Projects",
-  "version": "2.87.0",
+  "version": "2.88.0",
   "minAppVersion": "1.13.0",
   "description": "Project management in your vault: Gantt charts, boards, tables, a KPI dashboard, programmes grouping projects, project templates charted by their links alone, recolourable ticket types and document states, a mailbox per project with a reading pane and attachments, Outlook messages dropped in as tickets, meetings with their own kinds and hours, zones telling one project when another is about to cross it, phases, collections gathering chosen tasks across projects, a versioned document library per project, and a requirements library with multilingual wordings, never-reused identifiers translations that say when they have fallen behind and can be drafted by an OpenAI-compatible model, with every figure checked against the source, quoted into documents by a pm-req block that stays current, with revisions shown word by word, links that say when the far end moved, a derivation tree, duplicate detection by letters and by meaning, a traceability view that finds what nothing covers, baselines you can compare the library against, writing checks that run without a network a star rating over six quality axes with a model-written review and costed proposals to reach a target you set, and exchange through CSV, Excel, JSON, XML, ReqIF, Word, PDF, PowerPoint, a web page and plain documents. French interface, working-day scheduling, typed dependencies and working recurring tasks.",
   "author": "Black Room Technologies (fork of dotpm, by Stepan Kropachev)",

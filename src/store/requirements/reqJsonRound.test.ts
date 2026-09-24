@@ -5,11 +5,13 @@ import { DEFAULT_REQUIREMENT_SETTINGS, DEFAULT_SETTINGS, type RequirementSetting
 import { VaultIndex } from '../VaultIndex'
 import { RequirementStore } from './RequirementStore'
 import { ReqPorter } from './ReqPorter'
-import { addLink, makeRequirement, setText, type Requirement } from './Requirement'
+import { addLink, isStale, makeRequirement, setText, type Requirement } from './Requirement'
 import { addAlias } from './reqAlias'
 import { readReqJson, toReqJson } from './reqJson'
 import { planJsonImport } from './reqJsonImport'
 import { readReqXml, toReqXml } from './reqXml'
+import { toReqif } from './reqif'
+import { planReqifImport, readReqif } from './reqifRead'
 
 /**
  * The whole way round: a library written to JSON, imported into an empty vault, read back
@@ -139,5 +141,48 @@ describe('a library exported to JSON and imported into an empty vault', () => {
     expect({ ...written, filePath: '' }).toEqual({ ...edited[0], filePath: '' })
     // And the note followed its title, or the next save would address a file that is gone.
     expect(vault.getAbstractFileByPath('Requirements/REQ-THERM-0001 Titre venu du fichier.md')).not.toBeNull()
+  })
+
+  // ReqIF carries one wording and a few fields, so it updates the way a spreadsheet does:
+  // what the file says is written, and everything it cannot say is left where it was.
+  it('updates from a ReqIF field by field, keeping what the file cannot carry', async () => {
+    await porter.applyJsonPlan(planJsonImport(readReqJson(toReqJson(library(), { exported: 'x' })), []))
+    index.build()
+    const held = index.requirementRefs()
+    const file = (requirements: Requirement[]) => readReqif(toReqif(requirements, { lang: 'fr', title: 'B' }), 'fr')
+    expect(planReqifImport(file(held), held).map((row) => row.action)).toEqual(['unchanged', 'unchanged'])
+
+    const before = held.find((requirement) => requirement.id === 'REQ-THERM-0001')!
+    const edited = held.map((requirement) =>
+      requirement === before
+        ? {
+            ...requirement,
+            status: 'verified',
+            text: { ...requirement.text, fr: { ...requirement.text.fr, body: 'Entre 5 °C et 25 °C.' } }
+          }
+        : requirement
+    )
+    const plan = planReqifImport(file(edited), held)
+    expect(plan.map((row) => [row.id, row.action])).toEqual([
+      ['REQ-THERM-0001', 'update'],
+      ['REQ-THERM-0002', 'unchanged']
+    ])
+    const outcome = await porter.applyCsvPlan(plan, 'dupont')
+    expect(outcome).toEqual({ created: [], updated: ['REQ-THERM-0001'], failed: [] })
+
+    index.build()
+    const after = index.requirementById('REQ-THERM-0001')!
+    expect(after.status).toBe('verified')
+    expect(after.text.fr.body).toBe('Entre 5 °C et 25 °C.')
+    // A new wording, counted as one: the revision moves, the old words go into the
+    // history, and the translation — which the file never carried — is kept and known
+    // to have fallen behind.
+    expect(after.rev).toBe(before.rev + 1)
+    expect(after.history).toHaveLength(before.history.length + 1)
+    expect(after.text.en).toEqual(before.text.en)
+    expect(isStale(after, 'en')).toBe(true)
+    expect(after.aliases).toEqual(['OMLX-THERM-0001'])
+    // And the one the file did not change is exactly as it was, suspect link included.
+    expect(index.requirementById('REQ-THERM-0002')).toEqual(held.find((each) => each.id === 'REQ-THERM-0002'))
   })
 })

@@ -9,6 +9,7 @@ import {
 } from '../../store/requirements/reqCsv'
 import { readReqJson, type ReqJsonRead } from '../../store/requirements/reqJson'
 import { readReqXml } from '../../store/requirements/reqXml'
+import { planReqifImport, type ReqifRead } from '../../store/requirements/reqifRead'
 import {
   countJsonPlan,
   planJsonImport,
@@ -266,6 +267,54 @@ function openRecordImport(plugin: PMPlugin, fileName: string, read: ReqJsonRead,
       writes: counts.create + counts.replace,
       apply: async () => {
         const outcome = await plugin.porter.applyJsonPlan(plan)
+        return { created: outcome.created.length, updated: outcome.updated.length, failed: outcome.failed.length }
+      }
+    },
+    onDone
+  ).open()
+}
+
+/**
+ * A ReqIF, planned as the table it is read into.
+ *
+ * Updated field by field like a spreadsheet, never replaced: the file carries one wording
+ * and a few fields, and replacing a requirement by that would throw away its other
+ * languages and its history. Everything the file held that has no place here is named
+ * above the plan, before anything is written.
+ */
+export function openReqifImport(plugin: PMPlugin, fileName: string, read: ReqifRead, onDone: () => void): void {
+  if (read.error) {
+    new Notice(t('req.importUnreadable', { list: read.error }))
+    return
+  }
+  if (!read.rows.length) {
+    new Notice(t('req.importEmpty'))
+    return
+  }
+  const warnings: string[] = []
+  if (!read.langFromFile) warnings.push(t('req.importReqifLangAssumed', { lang: read.lang.toUpperCase() }))
+  if (read.ignored.length) warnings.push(t('req.importReqifIgnored', { list: read.ignored.join(', ') }))
+  if (read.ignoredRelations.length) {
+    warnings.push(t('req.importReqifRelations', { list: read.ignoredRelations.join(', ') }))
+  }
+  if (read.headings) warnings.push(t('req.importReqifHeadings', { count: read.headings }))
+
+  const plan = planReqifImport(read, plugin.index.requirementRefs())
+  const counts = countPlan(plan)
+  const counted = t('req.importCounts', counts)
+  new ReqImportModal(
+    plugin.app,
+    plugin,
+    {
+      fileName,
+      warning: warnings.length ? warnings.join(' · ') : undefined,
+      counts: read.langFromFile
+        ? `${counted} · ${t('req.importReqifLang', { lang: read.lang.toUpperCase() })}`
+        : counted,
+      lines: plan.map(csvLine),
+      writes: counts.create + counts.update,
+      apply: async () => {
+        const outcome = await plugin.porter.applyCsvPlan(plan, plugin.settings.globalTeamMembers[0] ?? '')
         return { created: outcome.created.length, updated: outcome.updated.length, failed: outcome.failed.length }
       }
     },

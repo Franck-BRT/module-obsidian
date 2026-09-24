@@ -35,6 +35,17 @@ describe('parseXml', () => {
     expect(parseXml('<a>  un\n  deux  </a>').text).toBe('  un\n  deux  ')
   })
 
+  // A wording held as XHTML means something by its order: `a<br/>b` is two lines.
+  it('keeps text and elements in the order they were written', () => {
+    const root = parseXml('<p>un<br/>deux &amp; <![CDATA[<trois>]]><i>quatre</i></p>')
+    expect(root.content.map((part) => (typeof part === 'string' ? part : `<${part.name}>`))).toEqual([
+      'un',
+      '<br>',
+      'deux & <trois>',
+      '<i>'
+    ])
+  })
+
   it('decodes the text and the attributes', () => {
     const root = parseXml('<a t="3 &lt; 5">R&amp;D</a>')
     expect(root.attrs.t).toBe('3 < 5')

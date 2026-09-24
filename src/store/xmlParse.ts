@@ -17,6 +17,11 @@ export interface XmlNode {
   children: XmlNode[]
   /** The text directly inside, entities decoded, concatenated across the children. */
   text: string
+  /**
+   * Text and elements in the order they were written. `text` is enough for a record; a
+   * wording held as XHTML — `a<br/>b` — means something by its order, and loses it there.
+   */
+  content: (XmlNode | string)[]
 }
 
 export class XmlError extends Error {
@@ -39,7 +44,14 @@ export function decodeEntities(raw: string): string {
   })
 }
 
-const NAME = /^[A-Za-z_][\w.:-]*/
+// Sticky, and read from where the cursor stands: a file from a requirements tool runs to
+// megabytes, and slicing the rest of it at every tag is the slow way to read one.
+const NAME = /[A-Za-z_][\w.:-]*/y
+
+function nameAt(source: string, at: number): string | undefined {
+  NAME.lastIndex = at
+  return NAME.exec(source)?.[0]
+}
 
 function readAttrs(source: string, from: number): { attrs: Record<string, string>; end: number; selfClosing: boolean } {
   const attrs: Record<string, string> = {}
@@ -50,7 +62,7 @@ function readAttrs(source: string, from: number): { attrs: Record<string, string
     if (char === undefined) throw new XmlError('unterminated tag', from)
     if (char === '>') return { attrs, end: at + 1, selfClosing: false }
     if (char === '/' && source[at + 1] === '>') return { attrs, end: at + 2, selfClosing: true }
-    const name = NAME.exec(source.slice(at))?.[0]
+    const name = nameAt(source, at)
     if (!name) throw new XmlError(`unexpected "${char}" in a tag`, at)
     at += name.length
     while (/\s/.test(source[at] ?? '')) at++
@@ -66,6 +78,14 @@ function readAttrs(source: string, from: number): { attrs: Record<string, string
   }
 }
 
+function append(node: XmlNode, text: string): void {
+  if (!text) return
+  node.text += text
+  const last = node.content.length - 1
+  if (typeof node.content[last] === 'string') node.content[last] += text
+  else node.content.push(text)
+}
+
 /** The document's root element. Throws an XmlError, with a position, on anything malformed. */
 export function parseXml(source: string): XmlNode {
   const stack: XmlNode[] = []
@@ -75,7 +95,7 @@ export function parseXml(source: string): XmlNode {
   while (at < source.length) {
     const open = source.indexOf('<', at)
     const text = source.slice(at, open === -1 ? source.length : open)
-    if (stack.length) stack[stack.length - 1].text += decodeEntities(text)
+    if (stack.length) append(stack[stack.length - 1], decodeEntities(text))
     else if (text.trim()) throw new XmlError('text outside the root element', at)
     if (open === -1) break
 
@@ -95,7 +115,7 @@ export function parseXml(source: string): XmlNode {
       const end = source.indexOf(']]>', open)
       if (end === -1) throw new XmlError('unterminated CDATA', open)
       if (!stack.length) throw new XmlError('CDATA outside the root element', open)
-      stack[stack.length - 1].text += source.slice(open + 9, end)
+      append(stack[stack.length - 1], source.slice(open + 9, end))
       at = end + 3
       continue
     }
@@ -110,12 +130,14 @@ export function parseXml(source: string): XmlNode {
       continue
     }
 
-    const name = NAME.exec(source.slice(open + 1))?.[0]
+    const name = nameAt(source, open + 1)
     if (!name) throw new XmlError('a tag with no name', open)
     const read = readAttrs(source, open + 1 + name.length)
-    const node: XmlNode = { name, attrs: read.attrs, children: [], text: '' }
-    if (stack.length) stack[stack.length - 1].children.push(node)
-    else if (root) throw new XmlError('a second root element', open)
+    const node: XmlNode = { name, attrs: read.attrs, children: [], text: '', content: [] }
+    if (stack.length) {
+      stack[stack.length - 1].children.push(node)
+      stack[stack.length - 1].content.push(node)
+    } else if (root) throw new XmlError('a second root element', open)
     else root = node
     if (!read.selfClosing) stack.push(node)
     at = read.end
