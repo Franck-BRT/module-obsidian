@@ -989,6 +989,7 @@ export const en = {
   'req.exportWord': { one: 'Export {count} to Word', other: 'Export all {count} to Word' },
   'req.exportPptx': { one: 'Export {count} to PowerPoint', other: 'Export all {count} to PowerPoint' },
   'req.exportXlsx': { one: 'Export {count} to Excel', other: 'Export all {count} to Excel' },
+  'req.exportJson': { one: 'Export {count} to JSON', other: 'Export all {count} to JSON' },
   'req.exportHtml': { one: 'Export {count} to a web page', other: 'Export all {count} to a web page' },
   'req.exportPdf': { one: 'Export {count} to PDF', other: 'Export all {count} to PDF' },
   'req.exportNoteHtml': 'Export this note to a web page (with its requirements)',

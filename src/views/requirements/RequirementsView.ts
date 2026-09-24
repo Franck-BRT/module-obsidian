@@ -48,6 +48,7 @@ import {
 import { CollapseToggle } from '../../ui/primitives/CollapseToggle'
 import { renderTreeGuides } from '../../ui/composites/treeGuides'
 import { toCsv } from '../../store/requirements/reqCsv'
+import { toReqJson } from '../../store/requirements/reqJson'
 import { toReqif } from '../../store/requirements/reqif'
 import { toMarkdownDocument } from '../../store/requirements/reqMarkdown'
 import { exportFileName } from '../../store/requirements/ReqPorter'
@@ -850,6 +851,11 @@ export class RequirementsView extends ItemView {
       )
     }
     add(
+      t('req.exportJson', { count: shown.length }),
+      'braces',
+      safeAsync(() => this.exportAs(shown, 'json'))
+    )
+    add(
       t('req.exportXlsx', { count: shown.length }),
       'table-2',
       safeAsync(async () => {
@@ -883,7 +889,7 @@ export class RequirementsView extends ItemView {
     menu.showAtMouseEvent(event)
   }
 
-  private async exportAs(shown: Requirement[], format: 'csv' | 'reqif' | 'md'): Promise<void> {
+  private async exportAs(shown: Requirement[], format: 'csv' | 'reqif' | 'md' | 'json'): Promise<void> {
     if (!shown.length) {
       new Notice(t('req.noneHere'))
       return
@@ -894,7 +900,9 @@ export class RequirementsView extends ItemView {
         ? toCsv(shown)
         : format === 'reqif'
           ? toReqif(shown, { lang: this.lang, title })
-          : toMarkdownDocument(shown, { lang: this.lang, title, noCategory: t('req.noCategory') })
+          : format === 'json'
+            ? toReqJson(shown, { exported: new Date().toISOString() })
+            : toMarkdownDocument(shown, { lang: this.lang, title, noCategory: t('req.noCategory') })
     const path = await this.plugin.porter.writeExport(exportFileName(title, format), contents)
     new Notice(t('req.exported', { path }))
     // Opened straight away: an export nobody looks at is an export nobody notices is

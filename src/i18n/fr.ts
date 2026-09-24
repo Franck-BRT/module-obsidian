@@ -967,6 +967,7 @@ export const fr: Catalog = {
   'req.exportWord': { one: 'Exporter {count} en Word', other: 'Exporter les {count} en Word' },
   'req.exportPptx': { one: 'Exporter {count} en PowerPoint', other: 'Exporter les {count} en PowerPoint' },
   'req.exportXlsx': { one: 'Exporter {count} en Excel', other: 'Exporter les {count} en Excel' },
+  'req.exportJson': { one: 'Exporter {count} en JSON', other: 'Exporter les {count} en JSON' },
   'req.exportHtml': { one: 'Exporter {count} en page web', other: 'Exporter les {count} en page web' },
   'req.exportPdf': { one: 'Exporter {count} en PDF', other: 'Exporter les {count} en PDF' },
   'req.exportNoteHtml': 'Exporter cette note en page web (exigences comprises)',
