@@ -49,6 +49,7 @@ import { CollapseToggle } from '../../ui/primitives/CollapseToggle'
 import { renderTreeGuides } from '../../ui/composites/treeGuides'
 import { toCsv } from '../../store/requirements/reqCsv'
 import { toReqJson } from '../../store/requirements/reqJson'
+import { toReqXml } from '../../store/requirements/reqXml'
 import { toReqif } from '../../store/requirements/reqif'
 import { toMarkdownDocument } from '../../store/requirements/reqMarkdown'
 import { exportFileName } from '../../store/requirements/ReqPorter'
@@ -856,6 +857,11 @@ export class RequirementsView extends ItemView {
       safeAsync(() => this.exportAs(shown, 'json'))
     )
     add(
+      t('req.exportXml', { count: shown.length }),
+      'code-xml',
+      safeAsync(() => this.exportAs(shown, 'xml'))
+    )
+    add(
       t('req.exportXlsx', { count: shown.length }),
       'table-2',
       safeAsync(async () => {
@@ -889,7 +895,7 @@ export class RequirementsView extends ItemView {
     menu.showAtMouseEvent(event)
   }
 
-  private async exportAs(shown: Requirement[], format: 'csv' | 'reqif' | 'md' | 'json'): Promise<void> {
+  private async exportAs(shown: Requirement[], format: 'csv' | 'reqif' | 'md' | 'json' | 'xml'): Promise<void> {
     if (!shown.length) {
       new Notice(t('req.noneHere'))
       return
@@ -902,7 +908,9 @@ export class RequirementsView extends ItemView {
           ? toReqif(shown, { lang: this.lang, title })
           : format === 'json'
             ? toReqJson(shown, { exported: new Date().toISOString() })
-            : toMarkdownDocument(shown, { lang: this.lang, title, noCategory: t('req.noCategory') })
+            : format === 'xml'
+              ? toReqXml(shown, { exported: new Date().toISOString() })
+              : toMarkdownDocument(shown, { lang: this.lang, title, noCategory: t('req.noCategory') })
     const path = await this.plugin.porter.writeExport(exportFileName(title, format), contents)
     new Notice(t('req.exported', { path }))
     // Opened straight away: an export nobody looks at is an export nobody notices is
@@ -912,7 +920,7 @@ export class RequirementsView extends ItemView {
 
   private async importCsv(): Promise<void> {
     const file = await pickVaultFile(this.app, t('req.importPick'), (candidate) =>
-      ['csv', 'txt', 'tsv', 'json'].includes(candidate.extension.toLowerCase())
+      ['csv', 'txt', 'tsv', 'json', 'xml'].includes(candidate.extension.toLowerCase())
     )
     if (!file) return
     openReqImport(this.plugin, file.name, await this.app.vault.cachedRead(file), () => this.render())

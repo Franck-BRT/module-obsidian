@@ -968,6 +968,7 @@ export const fr: Catalog = {
   'req.exportPptx': { one: 'Exporter {count} en PowerPoint', other: 'Exporter les {count} en PowerPoint' },
   'req.exportXlsx': { one: 'Exporter {count} en Excel', other: 'Exporter les {count} en Excel' },
   'req.exportJson': { one: 'Exporter {count} en JSON', other: 'Exporter les {count} en JSON' },
+  'req.exportXml': { one: 'Exporter {count} en XML', other: 'Exporter les {count} en XML' },
   'req.exportHtml': { one: 'Exporter {count} en page web', other: 'Exporter les {count} en page web' },
   'req.exportPdf': { one: 'Exporter {count} en PDF', other: 'Exporter les {count} en PDF' },
   'req.exportNoteHtml': 'Exporter cette note en page web (exigences comprises)',
@@ -1111,7 +1112,7 @@ export const fr: Catalog = {
     other: 'Exporter {count} exigences en document'
   },
   'req.exported': 'Exporté vers {path}',
-  'req.importFile': 'Importer un fichier (CSV ou JSON)',
+  'req.importFile': 'Importer un fichier (CSV, JSON ou XML)',
   'req.importPick': 'Quel fichier ?',
   'req.importEmpty': 'Ce fichier ne contient aucune ligne.',
   'req.importTitle': 'Importer {file}',

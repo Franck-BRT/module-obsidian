@@ -9,6 +9,7 @@ import { addLink, makeRequirement, setText, type Requirement } from './Requireme
 import { addAlias } from './reqAlias'
 import { readReqJson, toReqJson } from './reqJson'
 import { planJsonImport } from './reqJsonImport'
+import { readReqXml, toReqXml } from './reqXml'
 
 /**
  * The whole way round: a library written to JSON, imported into an empty vault, read back
@@ -78,6 +79,17 @@ describe('a library exported to JSON and imported into an empty vault', () => {
     expect(outcome.failed).toEqual([])
     expect(outcome.created).toHaveLength(out.length)
 
+    index.build()
+    const back = index.requirementRefs().map((requirement) => ({ ...requirement, filePath: '' }))
+    expect(back).toEqual(out.map((requirement) => ({ ...requirement, filePath: '' })))
+  })
+
+  // The other lossless format goes through the same plan, so it has to arrive the same.
+  it('does the same through XML', async () => {
+    const out = library()
+    const plan = planJsonImport(readReqXml(toReqXml(out, { exported: '2026-09-25T10:00:00.000Z' })), [])
+    const outcome = await porter.applyJsonPlan(plan)
+    expect(outcome.failed).toEqual([])
     index.build()
     const back = index.requirementRefs().map((requirement) => ({ ...requirement, filePath: '' }))
     expect(back).toEqual(out.map((requirement) => ({ ...requirement, filePath: '' })))

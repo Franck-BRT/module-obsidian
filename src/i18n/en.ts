@@ -990,6 +990,7 @@ export const en = {
   'req.exportPptx': { one: 'Export {count} to PowerPoint', other: 'Export all {count} to PowerPoint' },
   'req.exportXlsx': { one: 'Export {count} to Excel', other: 'Export all {count} to Excel' },
   'req.exportJson': { one: 'Export {count} to JSON', other: 'Export all {count} to JSON' },
+  'req.exportXml': { one: 'Export {count} to XML', other: 'Export all {count} to XML' },
   'req.exportHtml': { one: 'Export {count} to a web page', other: 'Export all {count} to a web page' },
   'req.exportPdf': { one: 'Export {count} to PDF', other: 'Export all {count} to PDF' },
   'req.exportNoteHtml': 'Export this note to a web page (with its requirements)',
@@ -1133,7 +1134,7 @@ export const en = {
     other: 'Export {count} requirements as a document'
   },
   'req.exported': 'Exported to {path}',
-  'req.importFile': 'Import a file (CSV or JSON)',
+  'req.importFile': 'Import a file (CSV, JSON or XML)',
   'req.importPick': 'Which file?',
   'req.importEmpty': 'That file holds no rows.',
   'req.importTitle': 'Import {file}',

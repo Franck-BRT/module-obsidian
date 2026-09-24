@@ -7,7 +7,8 @@ import {
   type CsvAction,
   type CsvPlanRow
 } from '../../store/requirements/reqCsv'
-import { readReqJson } from '../../store/requirements/reqJson'
+import { readReqJson, type ReqJsonRead } from '../../store/requirements/reqJson'
+import { readReqXml } from '../../store/requirements/reqXml'
 import {
   countJsonPlan,
   planJsonImport,
@@ -207,8 +208,15 @@ function jsonLine(row: JsonPlanRow): PlanLine {
  * in turns out to be.
  */
 export function openReqImport(plugin: PMPlugin, fileName: string, text: string, onDone: () => void): void {
-  if (fileName.toLowerCase().endsWith('.json')) {
-    openJsonImport(plugin, fileName, text, onDone)
+  const lower = fileName.toLowerCase()
+  // The two lossless formats share one plan: both are the note's own record, and both are
+  // replaced rather than updated when they land on a requirement that exists.
+  if (lower.endsWith('.json')) {
+    openRecordImport(plugin, fileName, readReqJson(text), onDone)
+    return
+  }
+  if (lower.endsWith('.xml')) {
+    openRecordImport(plugin, fileName, readReqXml(text), onDone)
     return
   }
   const table = readCsvTable(text)
@@ -236,8 +244,7 @@ export function openReqImport(plugin: PMPlugin, fileName: string, text: string, 
   ).open()
 }
 
-function openJsonImport(plugin: PMPlugin, fileName: string, text: string, onDone: () => void): void {
-  const read = readReqJson(text)
+function openRecordImport(plugin: PMPlugin, fileName: string, read: ReqJsonRead, onDone: () => void): void {
   if (!read.requirements.length) {
     // The problems are worth more than "empty": a file refused for its format and a file
     // holding nothing are two different mornings.
