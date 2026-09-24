@@ -21,6 +21,7 @@ import {
 } from './reqPalette'
 import { inEveryLocale, t } from '../../i18n'
 import type { DocxVocabulary } from '../../store/requirements/reqDocxRead'
+import type { PptxVocabulary } from '../../store/requirements/reqPptxRead'
 import { xlsxVocabulary } from './exportXlsx'
 
 /**
@@ -188,5 +189,19 @@ export function docxVocabulary(plugin: PMPlugin): DocxVocabulary {
       }
       return undefined
     }
+  }
+}
+
+/**
+ * The review deck's words, turned round: the document's, plus what only a deck writes —
+ * the label before a rationale, the one above a category's name, and what a slide says
+ * where a requirement has no wording yet.
+ */
+export function pptxVocabulary(plugin: PMPlugin): PptxVocabulary {
+  return {
+    ...docxVocabulary(plugin),
+    rationaleLabels: inEveryLocale('req.field.rationale'),
+    sectionLabels: inEveryLocale('req.field.category'),
+    noWording: inEveryLocale('req.noWording')
   }
 }

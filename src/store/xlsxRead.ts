@@ -24,7 +24,7 @@ export interface XlsxReadSheet {
 }
 
 /** `_x000A_` and friends: how OOXML escapes a character XML itself cannot carry. */
-function unescapeOoxml(raw: string): string {
+export function unescapeOoxml(raw: string): string {
   return raw
     .replace(/_x([0-9a-fA-F]{4})_/g, (_whole, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)))
     .replace(/\r\n?/g, '\n')

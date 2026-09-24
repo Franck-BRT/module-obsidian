@@ -78,7 +78,9 @@ import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
 import { NewRequirementModal } from './NewRequirementModal'
 import { deriveRequirement } from './deriveReq'
-import { docxVocabulary, exportLibraryDocx } from './exportDocx'
+import { docxVocabulary, exportLibraryDocx, pptxVocabulary } from './exportDocx'
+import { readPptx } from '../../store/pptxRead'
+import { pptxRequirements } from '../../store/requirements/reqPptxRead'
 import { exportLibraryPptx, exportLibraryXlsx, xlsxVocabulary } from './exportXlsx'
 import { DeriveManyModal } from './DeriveManyModal'
 import { derivedFrom } from '../../store/requirements/reqDerive'
@@ -932,7 +934,7 @@ export class RequirementsView extends ItemView {
 
   private async importCsv(): Promise<void> {
     const file = await pickVaultFile(this.app, t('req.importPick'), (candidate) =>
-      ['csv', 'txt', 'tsv', 'xlsx', 'docx', 'pdf', 'json', 'xml', 'reqif', 'reqifz'].includes(
+      ['csv', 'txt', 'tsv', 'xlsx', 'docx', 'pdf', 'pptx', 'json', 'xml', 'reqif', 'reqifz'].includes(
         candidate.extension.toLowerCase()
       )
     )
@@ -948,6 +950,10 @@ export class RequirementsView extends ItemView {
     }
     if (file.extension.toLowerCase() === 'pdf') {
       await this.importPdf(file, done)
+      return
+    }
+    if (file.extension.toLowerCase() === 'pptx') {
+      await this.importPptx(file, done)
       return
     }
     if (!isReqifName(file.name)) {
@@ -1074,6 +1080,38 @@ export class RequirementsView extends ItemView {
       { headers: [], rows, unknown: read.unknown },
       done,
       `${t('req.importDocxFound', { text: read.fromText, tables: read.fromTables, lang: this.lang.toUpperCase() })} · ${how}`,
+      read.unmatched
+    )
+  }
+
+  /**
+   * The requirements a deck holds: the library's own review slides field by field, and
+   * any other slide read as a page of a document.
+   */
+  private async importPptx(file: TFile, done: () => void): Promise<void> {
+    let read: ReturnType<typeof pptxRequirements>
+    try {
+      read = pptxRequirements(
+        await readPptx(new Uint8Array(await this.app.vault.readBinary(file))),
+        pptxVocabulary(this.plugin),
+        this.lang
+      )
+    } catch (error) {
+      new Notice(t('req.importUnreadable', { list: error instanceof Error ? error.message : String(error) }))
+      return
+    }
+    if (!read.rows.length) {
+      new Notice(t('req.importDocxNone'))
+      return
+    }
+    const library = this.plugin.index.requirementRefs()
+    const rows = settleSpacing(settleLanguages(read.rows, library), library)
+    openTableImport(
+      this.plugin,
+      file.name,
+      { headers: [], rows, unknown: read.unknown },
+      done,
+      t('req.importDocxFound', { text: read.fromText, tables: read.fromTables, lang: this.lang.toUpperCase() }),
       read.unmatched
     )
   }

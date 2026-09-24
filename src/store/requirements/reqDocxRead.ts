@@ -80,7 +80,12 @@ interface Section {
  * Essai` — back into fields. Each word is given to the first field, in the order the
  * export writes them, that knows it; a word nobody knows is named rather than guessed.
  */
-function readMeta(line: string, vocabulary: DocxVocabulary, row: Record<string, string>, unmatched: Set<string>): void {
+export function readMeta(
+  line: string,
+  vocabulary: DocxVocabulary,
+  row: Record<string, string>,
+  unmatched: Set<string>
+): void {
   const order: XlsxEnumField[] = ['status', 'type', 'criticality', 'verification']
   let from = 0
   for (const bit of line

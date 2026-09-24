@@ -1134,7 +1134,7 @@ export const en = {
     other: 'Export {count} requirements as a document'
   },
   'req.exported': 'Exported to {path}',
-  'req.importFile': 'Import a file (CSV, Excel, Word, PDF, JSON, XML or ReqIF)',
+  'req.importFile': 'Import a file (CSV, Excel, Word, PDF, PowerPoint, JSON, XML or ReqIF)',
   'req.importPick': 'Which file?',
   'req.importEmpty': 'That file holds no rows.',
   'req.importTitle': 'Import {file}',
