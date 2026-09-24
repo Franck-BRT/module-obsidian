@@ -168,7 +168,9 @@ export function docxVocabulary(plugin: PMPlugin): DocxVocabulary {
   const marks = [...inEveryLocale('req.flag.stale'), ...inEveryLocale('req.machineWording')]
   return {
     ...xlsxVocabulary(plugin),
-    sourceLabels: inEveryLocale('req.field.source'),
+    // The Markdown export writes "Source :" in every language, beside the label the
+    // document exports use.
+    sourceLabels: [...inEveryLocale('req.field.source'), 'Source'],
     noCategory: inEveryLocale('req.noCategory'),
     // Beside the export's own header, what other people's specifications title the column
     // that holds the words — so a supplier's table reads without being retitled first.

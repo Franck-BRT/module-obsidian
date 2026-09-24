@@ -87,19 +87,22 @@ export function readMeta(
   unmatched: Set<string>
 ): void {
   const order: XlsxEnumField[] = ['status', 'type', 'criticality', 'verification']
+  // The word on the badge, or the stored value itself: the Markdown export writes the
+  // second, being a text for anybody rather than a document for a reader of this plugin.
+  const valueOf = (field: XlsxEnumField, bit: string): string | undefined =>
+    vocabulary.values[field][bit.toLowerCase()] ??
+    Object.values(vocabulary.values[field]).find((value) => value === bit)
   let from = 0
   for (const bit of line
     .split('·')
     .map((piece) => piece.trim())
     .filter(Boolean)) {
-    const at = order.findIndex(
-      (field, index) => index >= from && vocabulary.values[field][bit.toLowerCase()] !== undefined
-    )
+    const at = order.findIndex((field, index) => index >= from && valueOf(field, bit) !== undefined)
     if (at === -1) {
       unmatched.add(bit)
       continue
     }
-    row[order[at]] ??= vocabulary.values[order[at]][bit.toLowerCase()]
+    row[order[at]] ??= valueOf(order[at], bit) ?? bit
     from = at + 1
   }
 }
@@ -187,11 +190,15 @@ export function docxRequirements(blocks: DocxReadBlock[], vocabulary: DocxVocabu
 
   const paragraph = (block: DocxReadParagraph): void => {
     const text = block.text.trim()
-    const found = leadingId(text)
+    // Not from a note: the line an export writes for an identifier the library does not
+    // hold — "REQ-X-0404 : introuvable" — names a requirement that is missing, not one
+    // to create.
+    const found = block.style === 'meta' ? null : leadingId(text)
     if (found && found.id) {
       close()
       const row: Record<string, string> = { id: found.id }
-      if (category !== undefined && block.style === 'heading') row.category = category
+      // Under a category's heading, whichever way the requirement is written.
+      if (category !== undefined) row.category = category
       if (block.style === 'heading' || block.style === 'title') {
         if (found.rest) row.title = found.rest
         section = { row, body: [], open: true }
@@ -209,6 +216,8 @@ export function docxRequirements(blocks: DocxReadBlock[], vocabulary: DocxVocabu
     }
     if (!section || !section.open || !text) return
     const current: Section = section
+    // The export writes "—" for a requirement with no wording in the language asked for.
+    if (text === '—') return
     if (block.style === 'meta') {
       const source = sourceOf(text, vocabulary)
       if (source !== undefined) current.row.source ??= source
@@ -219,8 +228,6 @@ export function docxRequirements(blocks: DocxReadBlock[], vocabulary: DocxVocabu
       current.row.rationale = current.row.rationale ? `${current.row.rationale}\n\n${text}` : text
       return
     }
-    // The export writes "—" for a requirement with no wording in the language asked for.
-    if (text === '—') return
     current.body.push(block.style === 'list' ? `- ${text.replace(/^[•·▪]\s*/, '')}` : text)
   }
 

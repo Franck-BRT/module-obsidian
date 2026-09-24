@@ -1112,7 +1112,7 @@ export const fr: Catalog = {
     other: 'Exporter {count} exigences en document'
   },
   'req.exported': 'Exporté vers {path}',
-  'req.importFile': 'Importer un fichier (CSV, Excel, Word, PDF, PowerPoint, JSON, XML ou ReqIF)',
+  'req.importFile': 'Importer un fichier (CSV, Excel, Word, PDF, PowerPoint, Markdown, JSON, XML ou ReqIF)',
   'req.importPick': 'Quel fichier ?',
   'req.importEmpty': 'Ce fichier ne contient aucune ligne.',
   'req.importTitle': 'Importer {file}',

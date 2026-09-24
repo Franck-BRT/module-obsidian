@@ -80,6 +80,7 @@ import { NewRequirementModal } from './NewRequirementModal'
 import { deriveRequirement } from './deriveReq'
 import { docxVocabulary, exportLibraryDocx, pptxVocabulary } from './exportDocx'
 import { readPptx } from '../../store/pptxRead'
+import { readMarkdown } from '../../store/markdownRead'
 import { pptxRequirements } from '../../store/requirements/reqPptxRead'
 import { exportLibraryPptx, exportLibraryXlsx, xlsxVocabulary } from './exportXlsx'
 import { DeriveManyModal } from './DeriveManyModal'
@@ -934,7 +935,7 @@ export class RequirementsView extends ItemView {
 
   private async importCsv(): Promise<void> {
     const file = await pickVaultFile(this.app, t('req.importPick'), (candidate) =>
-      ['csv', 'txt', 'tsv', 'xlsx', 'docx', 'pdf', 'pptx', 'json', 'xml', 'reqif', 'reqifz'].includes(
+      ['csv', 'txt', 'tsv', 'xlsx', 'docx', 'pdf', 'pptx', 'md', 'json', 'xml', 'reqif', 'reqifz'].includes(
         candidate.extension.toLowerCase()
       )
     )
@@ -954,6 +955,10 @@ export class RequirementsView extends ItemView {
     }
     if (file.extension.toLowerCase() === 'pptx') {
       await this.importPptx(file, done)
+      return
+    }
+    if (file.extension.toLowerCase() === 'md') {
+      await this.importMarkdown(file, done)
       return
     }
     if (!isReqifName(file.name)) {
@@ -1112,6 +1117,34 @@ export class RequirementsView extends ItemView {
       { headers: [], rows, unknown: read.unknown },
       done,
       t('req.importDocxFound', { text: read.fromText, tables: read.fromTables, lang: this.lang.toUpperCase() }),
+      read.unmatched
+    )
+  }
+
+  /**
+   * The requirements a Markdown document holds, by the Word rules. In the language its
+   * front matter names where it names one — the library's export does — and in the one on
+   * screen where not.
+   */
+  private async importMarkdown(file: TFile, done: () => void): Promise<void> {
+    const vocabulary = docxVocabulary(this.plugin)
+    const { blocks, front } = readMarkdown(await this.app.vault.cachedRead(file), {
+      notePrefixes: vocabulary.sourceLabels
+    })
+    const lang = (front.language || this.lang).toLowerCase()
+    const read = docxRequirements(blocks, vocabulary, lang)
+    if (!read.rows.length) {
+      new Notice(t('req.importDocxNone'))
+      return
+    }
+    const library = this.plugin.index.requirementRefs()
+    const rows = settleSpacing(settleLanguages(read.rows, library), library)
+    openTableImport(
+      this.plugin,
+      file.name,
+      { headers: [], rows, unknown: read.unknown },
+      done,
+      t('req.importDocxFound', { text: read.fromText, tables: read.fromTables, lang: lang.toUpperCase() }),
       read.unmatched
     )
   }
