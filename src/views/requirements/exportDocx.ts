@@ -19,7 +19,9 @@ import {
   reqTypeGlyph,
   verificationLabel
 } from './reqPalette'
-import { t } from '../../i18n'
+import { inEveryLocale, t } from '../../i18n'
+import type { DocxVocabulary } from '../../store/requirements/reqDocxRead'
+import { xlsxVocabulary } from './exportXlsx'
 
 /**
  * The words a Word document needs, which the store has no business knowing.
@@ -146,4 +148,45 @@ export async function exportLibraryDocx(
     noCategory: t('req.noCategory')
   })
   new Notice(t('req.exported', { path: await write(plugin, title, doc, format) }))
+}
+
+/** A catalogue entry as a pattern, with `{lang}` standing for the language it names. */
+function templatePattern(template: string): RegExp {
+  const escaped = template.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\{lang\\}', '([A-Za-z-]+)')
+  return new RegExp(`^${escaped}$`)
+}
+
+/**
+ * The Word export's words, turned round to read a document back: the spreadsheet's,
+ * plus what only a document writes — the source line, the heading for requirements with
+ * no category, the notes under a wording — in every language, since the document may
+ * have been written in whichever was active that day.
+ */
+export function docxVocabulary(plugin: PMPlugin): DocxVocabulary {
+  const fallback = inEveryLocale('req.fallbackFrom').map(templatePattern)
+  const marks = [...inEveryLocale('req.flag.stale'), ...inEveryLocale('req.machineWording')]
+  return {
+    ...xlsxVocabulary(plugin),
+    sourceLabels: inEveryLocale('req.field.source'),
+    noCategory: inEveryLocale('req.noCategory'),
+    // Beside the export's own header, what other people's specifications title the column
+    // that holds the words — so a supplier's table reads without being retitled first.
+    wording: [
+      ...inEveryLocale('req.field.wording'),
+      'Exigence',
+      'Requirement',
+      'Texte',
+      'Text',
+      'Description',
+      'Libellé'
+    ],
+    isMark: (line) => marks.includes(line) || fallback.some((pattern) => pattern.test(line)),
+    fallbackLang: (line) => {
+      for (const pattern of fallback) {
+        const found = pattern.exec(line)
+        if (found) return found[1].toLowerCase()
+      }
+      return undefined
+    }
+  }
 }

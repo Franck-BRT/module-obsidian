@@ -145,6 +145,32 @@ describe('planCsvImport', () => {
 
   const plan = (csv: string) => planCsvImport(readCsvTable(csv).rows, library)
 
+  // A file written in a project's own numbering names the requirement, not a new one.
+  it('reads a row named by an alias as the requirement that answers to it', () => {
+    const aliased = [{ ...library[0], aliases: ['OMLX-A-0001'] }]
+    const rows = planCsvImport(readCsvTable('id;title;status\nomlx-a-0001;Trappe;draft\n').rows, aliased)
+    expect(rows[0]).toMatchObject({ action: 'update', id: 'REQ-A-0001' })
+  })
+
+  it('counts a requirement named twice, once by each of its names, as named twice', () => {
+    const aliased = [{ ...library[0], aliases: ['OMLX-A-0001'] }]
+    const rows = planCsvImport(
+      readCsvTable('id;title;status\nREQ-A-0001;Trappe;draft\nOMLX-A-0001;Trappe;approved\n').rows,
+      aliased
+    )
+    expect(rows.map((row) => row.action)).toEqual(['update', 'invalid'])
+  })
+
+  it('creates a requirement written in one language with that language as its source', () => {
+    const rows = plan('id;text.en\nREQ-B-0001;The hatch shall open.\n')
+    expect(rows[0].values.sourceLang).toBe('en')
+  })
+
+  it('leaves the source language to the file when the file says it', () => {
+    const rows = plan('id;sourceLang;text.en\nREQ-B-0001;fr;The hatch shall open.\n')
+    expect(rows[0].values.sourceLang).toBe('fr')
+  })
+
   it('sees a row that would change nothing', () => {
     const rows = plan('id;title;status;text.fr\nREQ-A-0001;Trappe;approved;La trappe doit ouvrir en 3 s.\n')
     expect(rows[0].action).toBe('unchanged')

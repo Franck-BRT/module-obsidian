@@ -57,6 +57,8 @@ import { pickVaultFile } from '../../modals/PickerModals'
 import { openReqifImport, openReqImport, openTableImport } from './ReqImportModal'
 import { readXlsx } from '../../store/xlsxRead'
 import { xlsxTable } from '../../store/requirements/reqXlsxRead'
+import { readDocx } from '../../store/docxRead'
+import { docxRequirements, settleLanguages } from '../../store/requirements/reqDocxRead'
 import { isReqifName, readReqif, reqifFromArchive } from '../../store/requirements/reqifRead'
 import { EmptyState } from '../../ui/primitives/EmptyState'
 import { ChipButton } from '../../ui/primitives/ChipButton'
@@ -69,7 +71,7 @@ import { t } from '../../i18n'
 import { openRequirementModal } from './RequirementModal'
 import { NewRequirementModal } from './NewRequirementModal'
 import { deriveRequirement } from './deriveReq'
-import { exportLibraryDocx } from './exportDocx'
+import { docxVocabulary, exportLibraryDocx } from './exportDocx'
 import { exportLibraryPptx, exportLibraryXlsx, xlsxVocabulary } from './exportXlsx'
 import { DeriveManyModal } from './DeriveManyModal'
 import { derivedFrom } from '../../store/requirements/reqDerive'
@@ -923,12 +925,18 @@ export class RequirementsView extends ItemView {
 
   private async importCsv(): Promise<void> {
     const file = await pickVaultFile(this.app, t('req.importPick'), (candidate) =>
-      ['csv', 'txt', 'tsv', 'xlsx', 'json', 'xml', 'reqif', 'reqifz'].includes(candidate.extension.toLowerCase())
+      ['csv', 'txt', 'tsv', 'xlsx', 'docx', 'json', 'xml', 'reqif', 'reqifz'].includes(
+        candidate.extension.toLowerCase()
+      )
     )
     if (!file) return
     const done = (): void => this.render()
     if (file.extension.toLowerCase() === 'xlsx') {
       await this.importXlsx(file, done)
+      return
+    }
+    if (file.extension.toLowerCase() === 'docx') {
+      await this.importDocx(file, done)
       return
     }
     if (!isReqifName(file.name)) {
@@ -981,6 +989,39 @@ export class RequirementsView extends ItemView {
       done,
       t('req.importXlsxSheet', { sheet: table.sheet }),
       table.unmatched
+    )
+  }
+
+  /**
+   * The requirements a Word document holds: its tables, and its paragraphs that open with
+   * an identifier. Read in the language on screen, which is the one the library was
+   * exported in — and a wording the library already holds word for word, in whichever
+   * language, is recognised as that one.
+   */
+  private async importDocx(file: TFile, done: () => void): Promise<void> {
+    let read: ReturnType<typeof docxRequirements>
+    try {
+      read = docxRequirements(
+        await readDocx(new Uint8Array(await this.app.vault.readBinary(file))),
+        docxVocabulary(this.plugin),
+        this.lang
+      )
+    } catch (error) {
+      new Notice(t('req.importUnreadable', { list: error instanceof Error ? error.message : String(error) }))
+      return
+    }
+    if (!read.rows.length) {
+      new Notice(t('req.importDocxNone'))
+      return
+    }
+    const rows = settleLanguages(read.rows, this.plugin.index.requirementRefs())
+    openTableImport(
+      this.plugin,
+      file.name,
+      { headers: [], rows, unknown: read.unknown },
+      done,
+      t('req.importDocxFound', { text: read.fromText, tables: read.fromTables, lang: this.lang.toUpperCase() }),
+      read.unmatched
     )
   }
 

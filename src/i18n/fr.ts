@@ -1112,7 +1112,7 @@ export const fr: Catalog = {
     other: 'Exporter {count} exigences en document'
   },
   'req.exported': 'Exporté vers {path}',
-  'req.importFile': 'Importer un fichier (CSV, Excel, JSON, XML ou ReqIF)',
+  'req.importFile': 'Importer un fichier (CSV, Excel, Word, JSON, XML ou ReqIF)',
   'req.importPick': 'Quel fichier ?',
   'req.importEmpty': 'Ce fichier ne contient aucune ligne.',
   'req.importTitle': 'Importer {file}',
@@ -1125,6 +1125,9 @@ export const fr: Catalog = {
   'req.importXlsxNoTable':
     'Aucune feuille de ce classeur n’a de colonne d’identifiant ni de colonne de texte (FR, EN…).',
   'req.importUnmatched': 'Valeurs absentes des listes des paramètres, importées telles quelles : {list}',
+  'req.importDocxNone':
+    'Aucune exigence trouvée dans ce document : ni tableau avec une colonne d’identifiant ou de texte, ni paragraphe commençant par un identifiant (REQ-SYS-0001, [SYS-12]…).',
+  'req.importDocxFound': '{text} lues dans le texte · {tables} dans des tableaux · textes lus en {lang}',
   'req.importUnknown': 'Colonnes non reconnues, ignorées : {list}',
   'req.importCountsJson': '{create} à créer · {replace} à remplacer · {unchanged} inchangées · {invalid} refusées',
   'req.importReplaced': 'Remplacée',

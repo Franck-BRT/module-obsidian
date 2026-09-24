@@ -341,12 +341,23 @@ function wouldChange(values: CsvValues, requirement: Requirement): boolean {
  * which is the one thing an identifier exists to prevent.
  */
 export function planCsvImport(rows: Record<string, string>[], library: Requirement[]): CsvPlanRow[] {
-  const byId = new Map(library.map((requirement) => [requirement.id.toUpperCase(), requirement]))
+  // Every name a requirement answers to, identifiers first: a file written in a project's
+  // own numbering updates the requirement it names rather than creating a twin under the
+  // alias — which would then collide with the alias it was named by.
+  const byName = new Map<string, Requirement>()
+  for (const requirement of library) byName.set(requirement.id.toUpperCase(), requirement)
+  for (const requirement of library) {
+    for (const alias of requirement.aliases) {
+      if (!byName.has(alias.toUpperCase())) byName.set(alias.toUpperCase(), requirement)
+    }
+  }
   const seen = new Set<string>()
   return rows.map((row) => {
-    const id = (row.id ?? '').trim()
+    const named = (row.id ?? '').trim()
     const values = valuesOf(row)
     const title = values.title ?? ''
+    const existing = named ? byName.get(named.toUpperCase()) : undefined
+    const id = existing?.id ?? named
 
     // A row with no words in it is a row that would create a requirement saying nothing.
     if (Object.keys(values.text).length === 0 && !title) {
@@ -357,8 +368,14 @@ export function planCsvImport(rows: Record<string, string>[], library: Requireme
     }
     if (id) seen.add(id.toUpperCase())
 
-    const existing = id ? byId.get(id.toUpperCase()) : undefined
-    if (!existing) return { action: 'create', id, title, values }
+    if (!existing) {
+      // Written in one language and not saying which is its source: that one is. Left to
+      // the default, an English row would become a French requirement with no French.
+      const langs = Object.keys(values.text)
+      const created =
+        values.sourceLang === undefined && langs.length === 1 ? { ...values, sourceLang: langs[0] } : values
+      return { action: 'create', id, title, values: created }
+    }
     return { action: wouldChange(values, existing) ? 'update' : 'unchanged', id, title, values }
   })
 }
