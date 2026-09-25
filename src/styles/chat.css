@@ -132,3 +132,7 @@
 .pm-chat-send {
   flex: none;
 }
+
+.pm-chat-pick-when {
+  color: var(--text-muted);
+}

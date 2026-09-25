@@ -1043,6 +1043,16 @@ export class PMSettingTab extends PluginSettingTab {
           }
         },
         {
+          name: t('settings.chat.folder'),
+          desc: t('settings.chat.folderDesc'),
+          control: {
+            type: 'folder',
+            key: 'chat.folder',
+            defaultValue: 'Chats',
+            placeholder: 'Chats'
+          }
+        },
+        {
           name: t('settings.llm.timeout'),
           render: (setting: Setting) => {
             setting.addText((text) =>

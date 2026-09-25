@@ -11,6 +11,7 @@ import {
   seedMeetingKinds,
   seedReqStatuses,
   seedReqTypes,
+  DEFAULT_CHAT_SETTINGS,
   DEFAULT_REQUIREMENT_SETTINGS,
   seedTypes,
   withMissingTypes,
@@ -494,6 +495,7 @@ export default class PMPlugin extends Plugin {
     // settings file written before a field of this group existed would otherwise arrive
     // without it and with no default behind it.
     this.settings.requirements = { ...DEFAULT_REQUIREMENT_SETTINGS, ...saved?.requirements }
+    this.settings.chat = { ...DEFAULT_CHAT_SETTINGS, ...saved?.chat }
     if (!saved?.requirements?.types?.length) this.settings.requirements.types = seedReqTypes()
     if (!saved?.requirements?.statuses?.length) this.settings.requirements.statuses = seedReqStatuses()
     if (!this.settings.requirements.counters) this.settings.requirements.counters = {}

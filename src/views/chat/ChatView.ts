@@ -1,6 +1,18 @@
-import { ItemView, MarkdownRenderer, Notice, setIcon, type WorkspaceLeaf } from 'obsidian'
+import {
+  ItemView,
+  MarkdownRenderer,
+  Notice,
+  setIcon,
+  SuggestModal,
+  TFile,
+  type App,
+  type ViewStateResult,
+  type WorkspaceLeaf
+} from 'obsidian'
 import type PMPlugin from '../../main'
 import { chatMessages, withoutFailure, type ChatTurn } from '../../store/chat/chatSession'
+import { chatTitle, localStamp, type ChatNoteWords } from '../../store/chat/chatNote'
+import { ChatNotes } from '../../store/chat/ChatNotes'
 import { LlmClient, LlmError } from '../../store/llm'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
@@ -11,12 +23,19 @@ export const PM_CHAT_VIEW_TYPE = 'pm-chat'
  * A conversation with the language model the plugin is already set up to use.
  *
  * The same gateway, the same text model and the same limits as the requirement reviews,
- * so there is one place where the model is chosen and one where it is switched off. The
- * conversation lives in the panel for now; closing the panel ends it.
+ * so there is one place where the model is chosen and one where it is switched off.
+ *
+ * Every exchange is kept in a note as soon as the reply arrives, so closing the panel —
+ * or Obsidian — loses nothing, and any conversation can be taken up again from its note.
  */
 export class ChatView extends ItemView {
   private turns: ChatTurn[] = []
   private pending = false
+  /** The note this conversation is kept in, once its first reply has arrived. */
+  private notePath: string | null = null
+  /** The turns already in the note, by identity: a failed reply taken off shifts no index. */
+  private saved = new WeakSet<ChatTurn>()
+  private notes: ChatNotes
   private listEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
   private sendEl!: HTMLButtonElement
@@ -26,6 +45,7 @@ export class ChatView extends ItemView {
     private plugin: PMPlugin
   ) {
     super(leaf)
+    this.notes = new ChatNotes(this.app, () => this.plugin.settings.chat.folder)
   }
 
   getViewType(): string {
@@ -40,8 +60,33 @@ export class ChatView extends ItemView {
 
   onOpen(): Promise<void> {
     this.containerEl.addClass('pm-view')
+    // The note may be renamed or moved while the conversation goes on; the next exchange
+    // follows it rather than starting a second note.
+    this.registerEvent(
+      this.app.vault.on('rename', (file, oldPath) => {
+        if (oldPath === this.notePath) this.notePath = file.path
+      })
+    )
     this.render()
     return Promise.resolve()
+  }
+
+  /** The note, remembered with the workspace, so the conversation is there after a restart. */
+  getState(): Record<string, unknown> {
+    return this.notePath ? { notePath: this.notePath } : {}
+  }
+
+  async setState(state: unknown, result: ViewStateResult): Promise<void> {
+    const path = (state as { notePath?: unknown } | null)?.notePath
+    if (typeof path === 'string' && path !== this.notePath) {
+      const file = this.app.vault.getAbstractFileByPath(path)
+      if (file instanceof TFile) await this.resume(file)
+    }
+    await super.setState(state, result)
+  }
+
+  private get words(): ChatNoteWords {
+    return { user: t('chat.you'), assistant: t('chat.assistant') }
   }
 
   private get llm(): LlmClient {
@@ -66,11 +111,27 @@ export class ChatView extends ItemView {
     titles.createDiv({ cls: 'pm-chat-title', text: t('chat.title') })
     const model = this.plugin.settings.llm.modelText.trim()
     if (model) titles.createDiv({ cls: 'pm-chat-model', text: model })
-    const fresh = head.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.new') } })
-    setIcon(fresh, 'square-pen')
-    fresh.addEventListener('click', () => {
-      if (this.pending) return
+    const button = (icon: string, label: string, run: () => void): void => {
+      const el = head.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': label } })
+      setIcon(el, icon)
+      el.addEventListener('click', () => {
+        if (!this.pending) run()
+      })
+    }
+    if (this.notePath) {
+      const path = this.notePath
+      button(
+        'file-text',
+        t('chat.openNote'),
+        safeAsync(() => this.app.workspace.openLinkText(path, '', 'tab'))
+      )
+    }
+    button('history', t('chat.history'), () => this.pickConversation())
+    button('square-pen', t('chat.new'), () => {
       this.turns = []
+      this.notePath = null
+      this.saved = new WeakSet()
+      this.app.workspace.requestSaveLayout()
       this.render()
     })
 
@@ -182,6 +243,7 @@ export class ChatView extends ItemView {
         messages: chatMessages(this.turns, t('chat.system', { date: new Date().toISOString().slice(0, 10) }))
       })
       this.turns = [...this.turns, { role: 'assistant', content: reply.trim(), at: new Date().toISOString() }]
+      await this.persist()
     } catch (error) {
       const reason = error instanceof LlmError || error instanceof Error ? error.message : String(error)
       this.turns = [
@@ -192,5 +254,99 @@ export class ChatView extends ItemView {
       this.pending = false
       this.render()
     }
+  }
+
+  /**
+   * What has been said since the last save, into the note.
+   *
+   * The first save makes the note; each one after adds to its end. A note deleted under
+   * the panel is made again, with the whole conversation, rather than the exchange being
+   * lost. A save that fails says so and leaves the conversation on screen as it was.
+   */
+  private async persist(): Promise<void> {
+    const said = this.turns.filter((turn) => !turn.failed)
+    const unsaved = said.filter((turn) => !this.saved.has(turn))
+    if (!unsaved.length) return
+    try {
+      let file = this.notePath ? await this.notes.append(this.notePath, unsaved, this.words) : null
+      if (file) for (const turn of unsaved) this.saved.add(turn)
+      else {
+        const question = said.find((turn) => turn.role === 'user')?.content ?? ''
+        file = await this.notes.create(
+          {
+            title: chatTitle(question, t('chat.untitled')),
+            model: this.plugin.settings.llm.modelText,
+            created: said[0]?.at ?? new Date().toISOString()
+          },
+          said,
+          this.words
+        )
+        for (const turn of said) this.saved.add(turn)
+      }
+      if (file.path !== this.notePath) {
+        this.notePath = file.path
+        this.app.workspace.requestSaveLayout()
+      }
+    } catch (error) {
+      new Notice(t('chat.saveFailed', { reason: error instanceof Error ? error.message : String(error) }))
+    }
+  }
+
+  /** A saved conversation, back on screen, where the next exchange will go on with it. */
+  private async resume(file: TFile): Promise<void> {
+    try {
+      const note = await this.notes.load(file)
+      this.turns = note.turns
+      this.saved = new WeakSet(note.turns)
+      this.notePath = file.path
+      this.app.workspace.requestSaveLayout()
+      this.render()
+    } catch (error) {
+      new Notice(t('chat.loadFailed', { reason: error instanceof Error ? error.message : String(error) }))
+    }
+  }
+
+  private pickConversation(): void {
+    const files = this.notes.list()
+    if (!files.length) {
+      new Notice(t('chat.historyEmpty'))
+      return
+    }
+    new ConversationPicker(
+      this.app,
+      files,
+      safeAsync((file: TFile) => this.resume(file))
+    ).open()
+  }
+}
+
+/** The saved conversations, latest first, by their title and the day they were last touched. */
+class ConversationPicker extends SuggestModal<TFile> {
+  constructor(
+    app: App,
+    private files: TFile[],
+    private onChoose: (file: TFile) => void
+  ) {
+    super(app)
+    this.setPlaceholder(t('chat.historyPick'))
+  }
+
+  private titleOf(file: TFile): string {
+    const title: unknown = this.app.metadataCache.getFileCache(file)?.frontmatter?.title
+    return typeof title === 'string' && title ? title : file.basename
+  }
+
+  getSuggestions(query: string): TFile[] {
+    const q = query.toLowerCase()
+    return this.files.filter((file) => this.titleOf(file).toLowerCase().includes(q))
+  }
+
+  renderSuggestion(file: TFile, el: HTMLElement): void {
+    el.createDiv({ text: this.titleOf(file) })
+    el.createEl('small', { cls: 'pm-chat-pick-when', text: localStamp(new Date(file.stat.mtime).toISOString()) })
+  }
+
+  onChooseSuggestion(file: TFile): void {
+    this.onChoose(file)
   }
 }

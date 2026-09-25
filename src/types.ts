@@ -484,6 +484,15 @@ export const DEFAULT_LLM_SETTINGS: LlmSettings = {
   timeoutSeconds: 60
 }
 
+export interface ChatSettings {
+  /** Where a new conversation is written. Found again anywhere, by what it says it is. */
+  folder: string
+}
+
+export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
+  folder: 'Chats'
+}
+
 /** Anything the reader can restyle: an id that never changes, and the look they chose. */
 export interface ReqPaletteConfig {
   id: string
@@ -640,6 +649,7 @@ export interface PMSettings {
   zones: ZoneConfig[]
   /** Where the plugin can ask a language model something, and with which models. */
   llm: LlmSettings
+  chat: ChatSettings
   /** The requirements library: where it lives, in which languages, under which ids. */
   requirements: RequirementSettings
   /** Which tickets say their kind on their own row: none, the ones that are not plain tasks, or all. */
@@ -934,6 +944,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   meetingKinds: DEFAULT_MEETING_KINDS,
   zones: [],
   llm: DEFAULT_LLM_SETTINGS,
+  chat: DEFAULT_CHAT_SETTINGS,
   requirements: DEFAULT_REQUIREMENT_SETTINGS,
   typeBadges: 'distinct',
   priorities: DEFAULT_PRIORITIES,
