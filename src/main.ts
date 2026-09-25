@@ -65,6 +65,7 @@ import { setImpactLookup, setTicketAppearance } from './store/TicketPalette'
 import { pickMessageForTicket, registerMessageFileMenu } from './views/messageToTicket'
 import { MessageView, PM_MESSAGE_VIEW_TYPE } from './views/MessageView'
 import { RequirementsView, PM_REQUIREMENTS_VIEW_TYPE } from './views/requirements/RequirementsView'
+import { ChatView, PM_CHAT_VIEW_TYPE } from './views/chat/ChatView'
 import { RequirementStore } from './store/requirements/RequirementStore'
 import { RequirementTranslator } from './store/requirements/RequirementTranslator'
 import { ReqUsageIndex } from './store/requirements/ReqUsage'
@@ -173,6 +174,7 @@ export default class PMPlugin extends Plugin {
     this.registerView(PM_TASK_VIEW_TYPE, (leaf) => new TaskView(leaf, this))
     this.registerView(PM_MESSAGE_VIEW_TYPE, (leaf) => new MessageView(leaf, this))
     this.registerView(PM_REQUIREMENTS_VIEW_TYPE, (leaf) => new RequirementsView(leaf, this))
+    this.registerView(PM_CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, this))
     // Claiming the extension is what stops a click handing the message back to Outlook.
     this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
@@ -189,6 +191,14 @@ export default class PMPlugin extends Plugin {
 
     this.addRibbonIcon('chart-gantt', t('ribbon.title'), async () => {
       await this.router.openDashboard()
+    })
+
+    this.addCommand({
+      id: 'open-chat',
+      name: t('command.openChat'),
+      callback: () => {
+        void this.openChat()
+      }
     })
 
     this.addCommand({
@@ -616,6 +626,17 @@ export default class PMPlugin extends Plugin {
     const existing = this.app.workspace.getLeavesOfType(PM_REQUIREMENTS_VIEW_TYPE)[0]
     const leaf = existing ?? this.app.workspace.getLeaf('tab')
     if (!existing) await leaf.setViewState({ type: PM_REQUIREMENTS_VIEW_TYPE, state: {} })
+    await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /**
+   * The chat, in the right-hand sidebar: a conversation is had beside the note or the
+   * project it is about, not instead of it. One panel, found again if it is already open.
+   */
+  async openChat(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]
+    const leaf = existing ?? this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf('tab')
+    if (!existing) await leaf.setViewState({ type: PM_CHAT_VIEW_TYPE, active: true })
     await this.app.workspace.revealLeaf(leaf)
   }
 

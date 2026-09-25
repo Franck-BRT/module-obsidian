@@ -37,6 +37,15 @@ export function renderProjectListToolbar(ctx: ProjectListContext): void {
   const line = countLine(ctx)
   if (line) left.createSpan({ cls: 'pm-project-list-count', text: line })
 
+  // The chat opens beside whatever is being read, and sits before the library: both are
+  // places rather than things this page makes.
+  new ExtraButtonComponent(ctx.toolbarEl)
+    .setIcon('messages-square')
+    .setTooltip(t('chat.title'))
+    .onClick(() => {
+      void ctx.plugin.openChat()
+    })
+
   // The library is a place rather than something this page makes, so it gets a button
   // of its own instead of a line in the menu below.
   new ExtraButtonComponent(ctx.toolbarEl)
