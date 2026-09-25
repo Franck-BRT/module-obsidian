@@ -1053,6 +1053,11 @@ export class PMSettingTab extends PluginSettingTab {
           }
         },
         {
+          name: t('settings.chat.stream'),
+          desc: t('settings.chat.streamDesc'),
+          control: { type: 'toggle', key: 'chat.stream' }
+        },
+        {
           name: t('settings.llm.timeout'),
           render: (setting: Setting) => {
             setting.addText((text) =>

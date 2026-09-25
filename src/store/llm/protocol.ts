@@ -73,6 +73,45 @@ export function buildChatBody(request: ChatRequest): Record<string, unknown> {
   return body
 }
 
+/**
+ * The events of a streamed reply, out of what has arrived so far.
+ *
+ * A stream arrives in pieces cut wherever the network cut them: an event can end in the
+ * middle of one piece and the next begin in it. So what is complete is read, and the
+ * rest is handed back to wait for the next piece. An event is its `data:` lines, joined;
+ * a comment or another field is not the reply.
+ */
+export function readSseEvents(buffer: string): { events: string[]; rest: string } {
+  const normalized = buffer.replace(/\r\n?/g, '\n')
+  const blocks = normalized.split('\n\n')
+  const rest = blocks.pop() ?? ''
+  const events: string[] = []
+  for (const block of blocks) {
+    const data = block
+      .split('\n')
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).replace(/^ /, ''))
+    if (data.length) events.push(data.join('\n'))
+  }
+  return { events, rest }
+}
+
+/**
+ * The words one streamed event adds to the reply: `choices[0].delta.content`, or nothing.
+ *
+ * An event carrying an error is the gateway failing in the middle of a reply, and says so
+ * rather than ending it quietly short.
+ */
+export function readDelta(payload: unknown): string {
+  const error = (payload as { error?: unknown } | null)?.error
+  if (error) {
+    const message = typeof error === 'string' ? error : (error as { message?: unknown }).message
+    throw new LlmError('http', typeof message === 'string' ? message : 'The gateway failed during the reply.')
+  }
+  const content = (payload as { choices?: { delta?: { content?: unknown } }[] } | null)?.choices?.[0]?.delta?.content
+  return typeof content === 'string' ? content : ''
+}
+
 export function buildEmbeddingBody(model: string, input: string[]): Record<string, unknown> {
   // One call for many texts: the endpoint takes an array, and a library of requirements
   // embedded one request at a time would be a thousand round trips.

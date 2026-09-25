@@ -1184,6 +1184,13 @@ export const en = {
   'chat.reqSource': 'source language',
   'chat.reqStale': 'translation behind its source',
   'chat.reqMachine': 'machine translation not reviewed',
+  'settings.chat.stream': 'Live replies',
+  'settings.chat.streamDesc':
+    'Shows the chat’s reply as it is written. Where the gateway does not allow it, the reply arrives whole.',
+  'chat.stop': 'Stop the reply',
+  'chat.stopped': 'Reply stopped before its first word.',
+  'chat.streamFallback':
+    'Your gateway does not allow live replies from Obsidian: replies will arrive whole. (“Live replies” in the settings.)',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

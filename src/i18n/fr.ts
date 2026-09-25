@@ -1163,6 +1163,13 @@ export const fr: Catalog = {
   'chat.reqSource': 'langue source',
   'chat.reqStale': 'traduction en retard sur la source',
   'chat.reqMachine': 'traduction automatique non relue',
+  'settings.chat.stream': 'Réponse en direct',
+  'settings.chat.streamDesc':
+    'Affiche la réponse du chat au fur et à mesure qu’elle s’écrit. Si la passerelle ne le permet pas, la réponse arrive d’un bloc.',
+  'chat.stop': 'Arrêter la réponse',
+  'chat.stopped': 'Réponse arrêtée avant son premier mot.',
+  'chat.streamFallback':
+    'Votre passerelle n’accepte pas l’affichage en direct depuis Obsidian : les réponses arriveront d’un bloc. (Réglage « Réponse en direct » dans les paramètres.)',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

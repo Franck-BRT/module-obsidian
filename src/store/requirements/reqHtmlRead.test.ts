@@ -98,7 +98,7 @@ const exported = (requirements: Requirement[]) =>
     }),
     {
       meta: { exported: '2026-09-24', kicker: 'Black Projects' },
-      anchor: (name) => (/^REQ-/.test(name) ? name : undefined)
+      anchor: (name) => (name.startsWith('REQ-') ? name : undefined)
     }
   )
 

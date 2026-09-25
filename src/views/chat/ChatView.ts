@@ -1,4 +1,5 @@
 import {
+  Component,
   ItemView,
   MarkdownRenderer,
   MarkdownView,
@@ -60,6 +61,14 @@ export class ChatView extends ItemView {
   /** Requirements chosen in the library, sent with every question until taken off. */
   private attached: string[] = []
   private contextEl: HTMLElement | null = null
+  /** The reply being written, drawn as it grows; null when none is. */
+  private liveEl: HTMLElement | null = null
+  private liveText = ''
+  private liveTimer: number | null = null
+  /** What the live reply's Markdown hangs off, replaced at every redraw. */
+  private liveComponent: Component | null = null
+  /** Stops the reply being written. */
+  private stopper: AbortController | null = null
   private listEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
   private sendEl!: HTMLButtonElement
@@ -309,9 +318,10 @@ export class ChatView extends ItemView {
     else if (!this.turns.length) this.listEl.createDiv({ cls: 'pm-chat-empty', text: t('chat.empty') })
     for (const [at, turn] of this.turns.entries()) this.renderTurn(turn, at === this.turns.length - 1)
     if (this.pending) {
-      const typing = this.listEl.createDiv('pm-chat-turn pm-chat-turn--assistant pm-chat-typing')
-      typing.createSpan({ text: t('chat.thinking') })
-    }
+      this.liveEl = this.listEl.createDiv('pm-chat-turn pm-chat-turn--assistant pm-chat-typing')
+      this.liveEl.createSpan({ text: t('chat.thinking') })
+      if (this.liveText) this.drawLive()
+    } else this.liveEl = null
 
     this.contextEl = missing ? null : root.createDiv('pm-chat-context')
     this.renderContext()
@@ -330,12 +340,20 @@ export class ChatView extends ItemView {
         void this.send()
       }
     })
-    this.sendEl = composer.createEl('button', { cls: 'mod-cta pm-chat-send', attr: { 'aria-label': t('chat.send') } })
-    setIcon(this.sendEl, 'send')
-    this.sendEl.disabled = missing !== null || this.pending
+    // While a reply is being written, the same button stops it.
+    const stoppable = this.pending && this.stopper !== null
+    this.sendEl = composer.createEl('button', {
+      cls: 'mod-cta pm-chat-send',
+      attr: { 'aria-label': stoppable ? t('chat.stop') : t('chat.send') }
+    })
+    setIcon(this.sendEl, stoppable ? 'square' : 'send')
+    this.sendEl.disabled = missing !== null || (this.pending && !stoppable)
     this.sendEl.addEventListener(
       'click',
-      safeAsync(() => this.send())
+      safeAsync(async () => {
+        if (this.pending) this.stopper?.abort()
+        else await this.send()
+      })
     )
 
     this.listEl.scrollTop = this.listEl.scrollHeight
@@ -427,8 +445,35 @@ export class ChatView extends ItemView {
   }
 
   /** Sends the conversation as it stands, and adds the reply — or why there is none. */
+  /** The reply so far, drawn at most every tenth of a second: Markdown is not free to draw. */
+  private showLive(text: string): void {
+    this.liveText = text
+    if (this.liveTimer !== null) return
+    this.liveTimer = window.setTimeout(() => {
+      this.liveTimer = null
+      this.drawLive()
+    }, 100)
+  }
+
+  private drawLive(): void {
+    const el = this.liveEl
+    if (!el || !this.liveText) return
+    // Followed down only by a reader who was at the bottom: one who scrolled up to read
+    // something is not pulled away from it.
+    const list = this.listEl
+    const following = list.scrollHeight - list.scrollTop - list.clientHeight < 48
+    el.empty()
+    el.removeClass('pm-chat-typing')
+    if (this.liveComponent) this.removeChild(this.liveComponent)
+    this.liveComponent = this.addChild(new Component())
+    void MarkdownRenderer.render(this.app, this.liveText, el.createDiv('pm-chat-body'), '', this.liveComponent)
+    if (following) list.scrollTop = list.scrollHeight
+  }
+
   private async ask(): Promise<void> {
     this.pending = true
+    this.liveText = ''
+    this.stopper = this.plugin.settings.chat.stream ? new AbortController() : null
     this.render()
     const settings = this.plugin.settings.llm
     try {
@@ -443,12 +488,30 @@ export class ChatView extends ItemView {
         .map((id) => this.plugin.index.requirementById(id))
         .filter((found): found is Requirement => found !== undefined && found !== null)
       const block = requirementsContext(requirements, this.requirementWords)
-      const reply = await this.llm.chat({
+      const request = {
         model: settings.modelText,
         messages: chatMessages(this.turns, block ? `${system}\n\n${block}` : system)
-      })
-      this.turns = [...this.turns, { role: 'assistant', content: reply.trim(), at: new Date().toISOString() }]
-      await this.persist()
+      }
+      let reply: string
+      let stopped = false
+      if (this.stopper) {
+        const outcome = await this.llm.chatStream(request, (text) => this.showLive(text), {
+          signal: this.stopper.signal,
+          onFallback: () => new Notice(t('chat.streamFallback'), 10000)
+        })
+        reply = outcome.text
+        stopped = outcome.stopped
+      } else reply = await this.llm.chat(request)
+      if (reply.trim()) {
+        // Stopped part way, what had been written is kept: it is what the reader read.
+        this.turns = [...this.turns, { role: 'assistant', content: reply.trim(), at: new Date().toISOString() }]
+        await this.persist()
+      } else if (stopped) {
+        this.turns = [
+          ...this.turns,
+          { role: 'assistant', content: t('chat.stopped'), at: new Date().toISOString(), failed: true }
+        ]
+      }
     } catch (error) {
       const reason = error instanceof LlmError || error instanceof Error ? error.message : String(error)
       this.turns = [
@@ -456,6 +519,12 @@ export class ChatView extends ItemView {
         { role: 'assistant', content: t('chat.failed', { reason }), at: new Date().toISOString(), failed: true }
       ]
     } finally {
+      if (this.liveTimer !== null) window.clearTimeout(this.liveTimer)
+      this.liveTimer = null
+      this.liveText = ''
+      if (this.liveComponent) this.removeChild(this.liveComponent)
+      this.liveComponent = null
+      this.stopper = null
       this.pending = false
       this.render()
     }

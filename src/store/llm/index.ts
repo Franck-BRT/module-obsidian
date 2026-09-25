@@ -1,4 +1,12 @@
-export { LlmClient, obsidianTransport, describeHttp, type HttpTransport } from './client'
+export {
+  LlmClient,
+  obsidianTransport,
+  describeHttp,
+  forgetUnstreamable,
+  type HttpTransport,
+  type StreamOutcome,
+  type StreamTransport
+} from './client'
 export {
   buildChatBody,
   buildEmbeddingBody,
@@ -8,7 +16,9 @@ export {
   parseJsonContent,
   readChatContent,
   readEmbeddings,
+  readDelta,
   readModels,
+  readSseEvents,
   type ChatMessage,
   type ChatRequest,
   type LlmFailure

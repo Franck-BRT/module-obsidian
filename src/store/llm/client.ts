@@ -7,8 +7,10 @@ import {
   LlmError,
   parseJsonContent,
   readChatContent,
+  readDelta,
   readEmbeddings,
   readModels,
+  readSseEvents,
   type ChatMessage,
   type ChatRequest
 } from './protocol'
@@ -44,9 +46,81 @@ export const obsidianTransport: HttpTransport = async (request) => {
   return { status: response.status, text: response.text }
 }
 
+/**
+ * A request whose reply is read as it arrives: a status, what the body is, and the body
+ * piece by piece. Rejects, without a status, when the request could not be made at all.
+ */
+export interface StreamTransport {
+  (request: {
+    url: string
+    method: string
+    headers: Record<string, string>
+    body: string
+    signal: AbortSignal
+  }): Promise<{ status: number; contentType: string; chunks: AsyncIterable<Uint8Array> }>
+}
+
+/**
+ * `fetch`, because it is the one way to read a reply while it is being written:
+ * `requestUrl` hands it over whole. Subject to the page's origin rules, which a gateway
+ * that does not allow other origins stops — which is why a stream that cannot be opened
+ * is followed by the ordinary request rather than by an error.
+ */
+export const fetchStreamTransport: StreamTransport = async (request) => {
+  // The one request in the plugin that does not go through `requestUrl`: it hands the
+  // reply over whole, and a reply shown as it is written has to be read as a stream.
+  const response = await window.fetch(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    signal: request.signal
+  })
+  const body = response.body
+  async function* chunks(): AsyncIterable<Uint8Array> {
+    if (!body) return
+    const reader = body.getReader()
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) return
+        yield value
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  }
+  return { status: response.status, contentType: response.headers.get('content-type') ?? '', chunks: chunks() }
+}
+
+/**
+ * Gateways a stream could not be opened to, while the ordinary request got through: this
+ * session asks them the ordinary way from then on, rather than failing first every time.
+ */
+const unstreamable = new Set<string>()
+
+/** Forgets which gateways could not stream: a new session's worth of chances. */
+export function forgetUnstreamable(): void {
+  unstreamable.clear()
+}
+
+export interface StreamOutcome {
+  /** The reply as far as it went. */
+  text: string
+  /** Stopped by the reader before the model had finished. */
+  stopped: boolean
+}
+
+export interface StreamOptions {
+  signal?: AbortSignal
+  /** Told once, when the gateway turns out not to allow a stream and the reply comes whole. */
+  onFallback?: () => void
+}
+
 export interface LlmClientOpts {
   settings: LlmSettings
   transport?: HttpTransport
+  /** How a streamed reply is read; `fetch` unless a test says otherwise. */
+  streamTransport?: StreamTransport
   /** Injected in tests; the real one is the clock. */
   now?: () => number
 }
@@ -61,10 +135,12 @@ export interface LlmClientOpts {
 export class LlmClient {
   private readonly settings: LlmSettings
   private readonly transport: HttpTransport
+  private readonly streamTransport: StreamTransport
 
   constructor(opts: LlmClientOpts) {
     this.settings = opts.settings
     this.transport = opts.transport ?? obsidianTransport
+    this.streamTransport = opts.streamTransport ?? fetchStreamTransport
   }
 
   get configured(): boolean {
@@ -78,6 +154,131 @@ export class LlmClient {
 
   async chat(request: ChatRequest): Promise<string> {
     return readChatContent(await this.send('chat/completions', 'POST', buildChatBody(this.withDefaults(request))))
+  }
+
+  /**
+   * A reply read as it is written, handed to `onText` whole-so-far each time it grows.
+   *
+   * Where the stream cannot be opened — the gateway does not allow the page's origin —
+   * the question is asked the ordinary way and the reply given in one piece; if that gets
+   * through, the gateway is remembered as one to ask that way. Where the gateway ignores
+   * the request for a stream and answers in one piece, that piece is read.
+   *
+   * Stopped by the reader, it returns what had arrived. Silent for longer than the
+   * timeout, it fails: a reply that stops coming is a gateway that stopped sending.
+   */
+  async chatStream(
+    request: ChatRequest,
+    onText: (text: string) => void,
+    options: StreamOptions = {}
+  ): Promise<StreamOutcome> {
+    if (!this.configured) throw new LlmError('disabled', 'No gateway is configured.')
+    const whole = async (): Promise<StreamOutcome> => {
+      const text = await this.chat(request)
+      onText(text)
+      return { text, stopped: false }
+    }
+    const base = this.settings.baseUrl.trim()
+    if (unstreamable.has(base)) return whole()
+
+    const controller = new AbortController()
+    const stop = (): void => controller.abort()
+    options.signal?.addEventListener('abort', stop)
+    const seconds = Math.max(1, this.settings.timeoutSeconds)
+    let silent = false
+    let timer: number | undefined
+    const wait = (): void => {
+      if (timer !== undefined) window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        silent = true
+        controller.abort()
+      }, seconds * 1000)
+    }
+
+    let text = ''
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'text/event-stream' }
+      const key = this.settings.apiKey.trim()
+      if (key) headers.Authorization = `Bearer ${key}`
+      wait()
+      let response: Awaited<ReturnType<StreamTransport>>
+      try {
+        response = await this.streamTransport({
+          url: joinUrl(base, 'chat/completions'),
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ ...buildChatBody(this.withDefaults(request)), stream: true }),
+          signal: controller.signal
+        })
+      } catch {
+        if (options.signal?.aborted) return { text: '', stopped: true }
+        if (silent) throw new LlmError('timeout', `No answer after ${seconds}s.`)
+        // Not reached at all: the page's rules, most likely. Asked the ordinary way, which
+        // either works — and the gateway is one not to stream from — or fails with the
+        // reason a reader can act on.
+        const outcome = await whole()
+        unstreamable.add(base)
+        options.onFallback?.()
+        return outcome
+      }
+
+      const decoder = new TextDecoder()
+      if (response.status < 200 || response.status >= 300) {
+        let body = ''
+        for await (const chunk of response.chunks) body += decoder.decode(chunk, { stream: true })
+        throw new LlmError('http', describeHttp(response.status, body), response.status)
+      }
+      if (!/event-stream/i.test(response.contentType)) {
+        // A gateway that answered in one piece after all.
+        let body = ''
+        for await (const chunk of response.chunks) body += decoder.decode(chunk, { stream: true })
+        let payload: unknown
+        try {
+          payload = JSON.parse(body)
+        } catch {
+          throw new LlmError('shape', 'The gateway answered with something that is not JSON.')
+        }
+        text = readChatContent(payload)
+        onText(text)
+        return { text, stopped: false }
+      }
+
+      let buffer = ''
+      for await (const chunk of response.chunks) {
+        wait()
+        // Decoded as a stream: a letter written in two bytes can arrive in two pieces.
+        const read = readSseEvents(buffer + decoder.decode(chunk, { stream: true }))
+        buffer = read.rest
+        for (const event of read.events) {
+          if (event.trim() === '[DONE]') return this.finished(text)
+          let payload: unknown
+          try {
+            payload = JSON.parse(event)
+          } catch {
+            continue
+          }
+          const delta = readDelta(payload)
+          if (delta) {
+            text += delta
+            onText(text)
+          }
+        }
+      }
+      return this.finished(text)
+    } catch (error) {
+      if (options.signal?.aborted) return { text, stopped: true }
+      if (silent) throw new LlmError('timeout', `No answer after ${seconds}s.`)
+      throw error
+    } finally {
+      if (timer !== undefined) window.clearTimeout(timer)
+      options.signal?.removeEventListener('abort', stop)
+    }
+  }
+
+  /** A stream that ended having said nothing is a failure, as an empty reply is. */
+  private finished(text: string): StreamOutcome {
+    if (!text.trim()) throw new LlmError('shape', 'The reply carried no text.')
+    return { text, stopped: false }
   }
 
   /**

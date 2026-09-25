@@ -487,10 +487,13 @@ export const DEFAULT_LLM_SETTINGS: LlmSettings = {
 export interface ChatSettings {
   /** Where a new conversation is written. Found again anywhere, by what it says it is. */
   folder: string
+  /** Replies shown as they are written, where the gateway allows it. */
+  stream: boolean
 }
 
 export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
-  folder: 'Chats'
+  folder: 'Chats',
+  stream: true
 }
 
 /** Anything the reader can restyle: an id that never changes, and the look they chose. */
