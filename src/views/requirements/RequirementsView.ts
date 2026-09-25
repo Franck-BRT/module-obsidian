@@ -434,6 +434,21 @@ export class RequirementsView extends ItemView {
         })
     }
 
+    // A conversation about what is ticked: only a selection, never the whole list by
+    // default, since everything it names is sent to the model.
+    if (this.picked.size && this.mode === 'library') {
+      const chat = right.createEl('button', { cls: 'pm-req-bulk' })
+      setIcon(chat.createSpan({ cls: 'pm-glyph-icon' }), 'messages-square')
+      chat.createSpan({ text: t('req.chatAbout', { count: this.picked.size }) })
+      chat.addEventListener(
+        'click',
+        safeAsync(async () => {
+          const chosen = this.targets(filterRequirements(all, this.filter, langs)).map((requirement) => requirement.id)
+          if (chosen.length) await this.plugin.chatAbout(chosen)
+        })
+      )
+    }
+
     const selection = this.mode === 'library' ? this.targets(filterRequirements(all, this.filter, langs)) : []
     if (selection.length > 1) {
       const branch = right.createEl('button', { cls: 'pm-req-bulk' })

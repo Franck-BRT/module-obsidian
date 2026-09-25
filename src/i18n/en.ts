@@ -1050,6 +1050,7 @@ export const en = {
   'req.block.none': 'No requirement matches.',
   'req.block.unknownKeys': 'Unknown key, ignored: {list}',
   'req.derive': 'Derive',
+  'req.chatAbout': { one: 'Discuss {count}', other: 'Discuss the {count}' },
   'req.deriveMany': { one: 'Derive {count}', other: 'Derive all {count}' },
   'req.deriveManyTitle': { one: 'Derive {count} requirement', other: 'Derive {count} requirements' },
   'req.deriveManyDone': { one: '{count} requirement derived.', other: '{count} requirements derived.' },
@@ -1172,6 +1173,17 @@ export const en = {
   'chat.noteHeading':
     'The person has the note “{title}” ({path}) open beside the conversation; their questions may refer to it. Here is its content:',
   'chat.noteTruncated': '[… the note is cut here: {sent} characters sent out of {total}.]',
+  'chat.requirements': { one: '{count} requirement: {list}', other: '{count} requirements: {list}' },
+  'chat.detach': 'Stop sending these requirements',
+  'chat.reqHeading': {
+    one: 'The person has attached {count} requirement from the library to their questions; here it is as recorded:',
+    other:
+      'The person has attached {count} requirements from the library to their questions; here they are as recorded:'
+  },
+  'chat.reqLeft': '({count} more not sent for lack of room: {list}. Say so if the question is about them.)',
+  'chat.reqSource': 'source language',
+  'chat.reqStale': 'translation behind its source',
+  'chat.reqMachine': 'machine translation not reviewed',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

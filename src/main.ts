@@ -642,6 +642,13 @@ export default class PMPlugin extends Plugin {
     await this.app.workspace.revealLeaf(leaf)
   }
 
+  /** The chat, opened on requirements chosen in the library. */
+  async chatAbout(ids: string[]): Promise<void> {
+    await this.openChat()
+    const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
+    if (view instanceof ChatView) view.attachRequirements(ids)
+  }
+
   async createCollection(): Promise<void> {
     const title = await promptText(this.app, t('collection.new'), t('collection.name'), '')
     if (!title) return

@@ -116,13 +116,16 @@
 
 /* Which note goes with the question: said above the box, where it is seen before sending. */
 .pm-chat-context {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-1);
   padding: var(--size-4-1) var(--size-4-3) 0;
   font-size: var(--font-ui-smaller);
   color: var(--text-normal);
   border-top: 1px solid var(--background-modifier-border);
+}
+
+.pm-chat-context-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
 }
 
 .pm-chat-context-icon {
@@ -149,15 +152,24 @@
   text-decoration: line-through;
 }
 
-/* Under a question, the note the model was shown with it. */
+/* Under a question, what the model was shown with it: one line, the rest on hover —
+   an identifier broken across two lines is one nobody can read. */
 .pm-chat-about {
   align-self: flex-end;
+  max-width: 92%;
   display: flex;
   align-items: center;
   gap: var(--size-4-1);
   margin-top: calc(-1 * var(--size-4-2));
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
+}
+
+.pm-chat-about > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pm-chat-about svg {

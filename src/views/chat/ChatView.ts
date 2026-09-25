@@ -21,6 +21,15 @@ import {
 } from '../../store/chat/chatSession'
 import { chatTitle, isChatNote, localStamp, type ChatNoteWords } from '../../store/chat/chatNote'
 import { ChatNotes } from '../../store/chat/ChatNotes'
+import { currentRequirements, requirementsContext, type RequirementWords } from '../../store/chat/chatRequirements'
+import type { Requirement } from '../../store/requirements/Requirement'
+import {
+  reqCriticalityGlyph,
+  reqLinkKindLabel,
+  reqStatusGlyph,
+  reqTypeGlyph,
+  verificationLabel
+} from '../requirements/reqPalette'
 import { LlmClient, LlmError } from '../../store/llm'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
@@ -48,6 +57,8 @@ export class ChatView extends ItemView {
   private contextFile: TFile | null = null
   /** Whether that note goes with the next question: the reader's to turn off. */
   private useNote = true
+  /** Requirements chosen in the library, sent with every question until taken off. */
+  private attached: string[] = []
   private contextEl: HTMLElement | null = null
   private listEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
@@ -133,32 +144,96 @@ export class ChatView extends ItemView {
     return file && this.eligible(file) ? file : null
   }
 
-  /** The strip above the box: which note goes with the question, and the switch for it. */
+  /**
+   * The strip above the box: what goes with the next question — the note, and the
+   * requirements chosen in the library — each with the switch to leave it out.
+   */
   private renderContext(): void {
     const el = this.contextEl
     if (!el) return
     el.empty()
     const file = this.contextFile
-    el.toggleClass('pm-chat-context--off', !file || !this.useNote)
-    setIcon(el.createSpan({ cls: 'pm-chat-context-icon' }), 'file-text')
-    if (!file) {
-      el.createSpan({ cls: 'pm-chat-context-name', text: t('chat.noNote') })
-      return
+    const noteRow = el.createDiv('pm-chat-context-row')
+    noteRow.toggleClass('pm-chat-context--off', !file || !this.useNote)
+    setIcon(noteRow.createSpan({ cls: 'pm-chat-context-icon' }), 'file-text')
+    if (!file) noteRow.createSpan({ cls: 'pm-chat-context-name', text: t('chat.noNote') })
+    else {
+      const name = noteRow.createEl('a', {
+        cls: 'pm-chat-context-name',
+        text: file.basename,
+        attr: { title: file.path }
+      })
+      name.addEventListener(
+        'click',
+        safeAsync(() => this.app.workspace.getLeaf(false).openFile(file))
+      )
+      const toggle = noteRow.createEl('button', {
+        cls: 'clickable-icon',
+        attr: { 'aria-label': this.useNote ? t('chat.noteOff') : t('chat.noteOn') }
+      })
+      setIcon(toggle, this.useNote ? 'eye' : 'eye-off')
+      toggle.addEventListener('click', () => {
+        this.useNote = !this.useNote
+        this.renderContext()
+      })
     }
-    const name = el.createEl('a', { cls: 'pm-chat-context-name', text: file.basename, attr: { title: file.path } })
-    name.addEventListener(
-      'click',
-      safeAsync(() => this.app.workspace.getLeaf(false).openFile(file))
-    )
-    const toggle = el.createEl('button', {
-      cls: 'clickable-icon',
-      attr: { 'aria-label': this.useNote ? t('chat.noteOff') : t('chat.noteOn') }
+
+    if (!this.attached.length) return
+    const reqRow = el.createDiv('pm-chat-context-row')
+    setIcon(reqRow.createSpan({ cls: 'pm-chat-context-icon' }), 'list-checks')
+    const list = this.attached.join(', ')
+    reqRow.createSpan({
+      cls: 'pm-chat-context-name',
+      text: t('chat.requirements', { count: this.attached.length, list }),
+      attr: { title: list }
     })
-    setIcon(toggle, this.useNote ? 'eye' : 'eye-off')
-    toggle.addEventListener('click', () => {
-      this.useNote = !this.useNote
+    const detach = reqRow.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.detach') } })
+    setIcon(detach, 'x')
+    detach.addEventListener('click', () => {
+      this.attached = []
       this.renderContext()
     })
+  }
+
+  /**
+   * Requirements to talk about, chosen in the library: they go with every question from
+   * here on, until taken off, the way the open note does.
+   */
+  attachRequirements(ids: string[]): void {
+    this.attached = [...new Set(ids)]
+    this.renderContext()
+    window.setTimeout(() => this.inputEl?.focus(), 0)
+  }
+
+  /** The reader's words for a requirement, so the model is told about it in their language. */
+  private get requirementWords(): RequirementWords {
+    const settings = this.plugin.settings
+    return {
+      heading: (count) => t('chat.reqHeading', { count }),
+      field: {
+        aliases: t('req.aliases'),
+        category: t('req.field.category'),
+        type: t('req.field.type'),
+        status: t('req.field.status'),
+        criticality: t('req.field.criticality'),
+        verification: t('req.field.verification'),
+        rationale: t('req.field.rationale'),
+        source: t('req.field.source'),
+        links: t('req.links'),
+        text: t('req.field.wording')
+      },
+      value: (field, value) => {
+        if (field === 'type') return reqTypeGlyph(settings, value).label
+        if (field === 'status') return reqStatusGlyph(settings, value).label
+        if (field === 'criticality') return reqCriticalityGlyph(settings, value).label
+        return verificationLabel(value)
+      },
+      source: t('chat.reqSource'),
+      stale: t('chat.reqStale'),
+      machine: t('chat.reqMachine'),
+      linkKind: (kind) => reqLinkKindLabel(kind),
+      left: (count, list) => t('chat.reqLeft', { count, list })
+    }
   }
 
   /** The note a question was asked about, read as it is now. Null when it is gone. */
@@ -170,7 +245,16 @@ export class ChatView extends ItemView {
   }
 
   private get words(): ChatNoteWords {
-    return { user: t('chat.you'), assistant: t('chat.assistant') }
+    return {
+      user: t('chat.you'),
+      assistant: t('chat.assistant'),
+      // A link to the requirement's note, shown by its identifier: the record says what
+      // was asked about, and the reader can go to it.
+      requirement: (id) => {
+        const path = this.plugin.index.requirementById(id)?.filePath
+        return path ? `[[${path.replace(/\.md$/i, '')}|${id}]]` : id
+      }
+    }
   }
 
   private get llm(): LlmClient {
@@ -282,12 +366,18 @@ export class ChatView extends ItemView {
       `pm-chat-turn pm-chat-turn--${turn.role}${turn.failed ? ' pm-chat-turn--failed' : ''}`
     )
     const body = el.createDiv('pm-chat-body')
+    // Said on the question itself: what the model was shown when it answered.
     if (turn.context) {
-      // Said on the question itself: what the model was shown when it answered.
       const about = this.listEl.createDiv('pm-chat-about')
       setIcon(about.createSpan(), 'file-text')
       about.createSpan({ text: turn.context.replace(/^.*\//, '').replace(/\.md$/i, '') })
       about.setAttr('title', turn.context)
+    }
+    if (turn.requirements?.length) {
+      const about = this.listEl.createDiv('pm-chat-about')
+      setIcon(about.createSpan(), 'list-checks')
+      about.createSpan({ text: turn.requirements.join(', ') })
+      about.setAttr('title', turn.requirements.join(', '))
     }
     if (turn.role === 'assistant' && !turn.failed) {
       // A reply is written in Markdown more often than not: lists, code, tables.
@@ -325,7 +415,13 @@ export class ChatView extends ItemView {
     const context = this.useNote && this.contextFile ? this.contextFile.path : undefined
     this.turns = [
       ...withoutFailure(this.turns),
-      { role: 'user', content: text, at: new Date().toISOString(), ...(context ? { context } : {}) }
+      {
+        role: 'user',
+        content: text,
+        at: new Date().toISOString(),
+        ...(context ? { context } : {}),
+        ...(this.attached.length ? { requirements: [...this.attached] } : {})
+      }
     ]
     await this.ask()
   }
@@ -342,7 +438,15 @@ export class ChatView extends ItemView {
         heading: (title, path) => t('chat.noteHeading', { title, path }),
         truncated: (sent, total) => t('chat.noteTruncated', { sent, total })
       })
-      const reply = await this.llm.chat({ model: settings.modelText, messages: chatMessages(this.turns, system) })
+      // The requirements as the library holds them now, not as they were when chosen.
+      const requirements = currentRequirements(this.turns)
+        .map((id) => this.plugin.index.requirementById(id))
+        .filter((found): found is Requirement => found !== undefined && found !== null)
+      const block = requirementsContext(requirements, this.requirementWords)
+      const reply = await this.llm.chat({
+        model: settings.modelText,
+        messages: chatMessages(this.turns, block ? `${system}\n\n${block}` : system)
+      })
       this.turns = [...this.turns, { role: 'assistant', content: reply.trim(), at: new Date().toISOString() }]
       await this.persist()
     } catch (error) {

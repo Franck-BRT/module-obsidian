@@ -111,6 +111,39 @@ describe('noteLink', () => {
   })
 })
 
+describe('the requirements a question was asked about', () => {
+  const linked = {
+    ...WORDS,
+    requirement: (id: string) => `[[Exigences/${id} Un titre|${id}]]`
+  }
+  const question = {
+    ...turn('user', 'Compare-les.', 3),
+    context: 'Specs/Thermique.md',
+    requirements: ['REQ-THERM-0001', 'REQ-THERM-0002']
+  }
+
+  it('are named in the question’s title, as links to their notes', () => {
+    expect(turnMarkdown(question, linked).split('\n')[0]).toBe(
+      `> [!question] Vous · ${localStamp(at(3))} · [[Specs/Thermique|Thermique]] · 📋 [[Exigences/REQ-THERM-0001 Un titre|REQ-THERM-0001]], [[Exigences/REQ-THERM-0002 Un titre|REQ-THERM-0002]]`
+    )
+  })
+
+  // Read back as identifiers, and never mistaken for the note the question was about.
+  it('are read back by identifier, beside the note', () => {
+    const turns = readChatNote(chatNoteContent(META, [question], linked)).turns
+    expect(turns).toEqual([question])
+  })
+
+  it('are read back however they were written: bare, or linked without an alias', () => {
+    const content = chatNoteContent(META, [turn('user', 'Q', 3)], WORDS).replace(
+      `Vous · ${localStamp(at(3))}`,
+      `Vous · ${localStamp(at(3))} · 📋 REQ-A-0001, [[Exigences/REQ-A-0002 Titre]]`
+    )
+    expect(readChatNote(content).turns[0]).toMatchObject({ requirements: ['REQ-A-0001', 'REQ-A-0002'] })
+    expect(readChatNote(content).turns[0].context).toBeUndefined()
+  })
+})
+
 describe('chatTitle', () => {
   it('is the first question, on one line', () => {
     expect(chatTitle('  Peux-tu\nreformuler ?  ', 'Conversation')).toBe('Peux-tu reformuler ?')

@@ -28,7 +28,12 @@ export interface ChatNoteMeta {
 export interface ChatNoteWords {
   user: string
   assistant: string
+  /** A requirement as the note shows it: a link to its note where there is one. */
+  requirement?: (id: string) => string
 }
+
+/** What marks the requirements a question was asked about, in its callout's title. */
+const REQUIREMENTS_MARK = '📋'
 
 export interface ChatNote extends ChatNoteMeta {
   turns: ChatTurn[]
@@ -58,9 +63,31 @@ export function noteLink(path: string): string {
   return target === name ? `[[${target}]]` : `[[${target}|${name}]]`
 }
 
+/** The requirements a callout's title names after its mark, by identifier. */
+function namedRequirements(title: string): string[] {
+  const segment = title.split(' · ').find((part) => part.trim().startsWith(REQUIREMENTS_MARK))
+  if (!segment) return []
+  return segment
+    .trim()
+    .slice(REQUIREMENTS_MARK.length)
+    .split(',')
+    .map((piece) => {
+      // A link shows the identifier as its alias; a bare one is the identifier itself.
+      const link = /\[\[([^\]|]*)(?:\|([^\]]*))?\]\]/.exec(piece)
+      const text = link ? (link[2] ?? link[1].slice(link[1].lastIndexOf('/') + 1)) : piece
+      return text.trim().split(/\s+/)[0] ?? ''
+    })
+    .filter(Boolean)
+}
+
 /** The note a callout's title links to, as a path; the first link, where there are several. */
 function linkedPath(title: string): string | undefined {
-  const found = /\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/.exec(title)
+  // The requirements' links are theirs, not the note's.
+  const own = title
+    .split(' · ')
+    .filter((part) => !part.trim().startsWith(REQUIREMENTS_MARK))
+    .join(' · ')
+  const found = /\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/.exec(own)
   if (!found) return undefined
   const target = found[1].trim()
   return /\.md$/i.test(target) ? target : `${target}.md`
@@ -70,7 +97,10 @@ function linkedPath(title: string): string | undefined {
 export function turnMarkdown(turn: ChatTurn, words: ChatNoteWords): string {
   // The note a question was asked about, as a link: the record says what the model was
   // shown, and the reader can go to it.
-  const about = turn.context ? ` · ${noteLink(turn.context)}` : ''
+  const link = words.requirement ?? ((id: string) => id)
+  const about =
+    (turn.context ? ` · ${noteLink(turn.context)}` : '') +
+    (turn.requirements?.length ? ` · ${REQUIREMENTS_MARK} ${turn.requirements.map(link).join(', ')}` : '')
   const head = `> [!${CALLOUT[turn.role]}] ${turn.role === 'user' ? words.user : words.assistant} · ${localStamp(turn.at)}${about}`
   const body = turn.content.split('\n').map((line) => (line === '' ? '>' : `> ${line}`))
   return [head, ...body].join('\n')
@@ -147,8 +177,15 @@ export function readChatNote(content: string): ChatNote {
     if (start && role && !previous.startsWith('>')) {
       close()
       const context = role === 'user' ? linkedPath(start[2]) : undefined
+      const requirements = role === 'user' ? namedRequirements(start[2]) : []
       current = {
-        turn: { role, content: '', at: fromStamp(start[2]) ?? created, ...(context ? { context } : {}) },
+        turn: {
+          role,
+          content: '',
+          at: fromStamp(start[2]) ?? created,
+          ...(context ? { context } : {}),
+          ...(requirements.length ? { requirements } : {})
+        },
         lines: []
       }
     } else if (current && line.startsWith('>')) current.lines.push(line.replace(/^> ?/, ''))

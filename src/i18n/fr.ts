@@ -1028,6 +1028,7 @@ export const fr: Catalog = {
   'req.block.none': 'Aucune exigence ne correspond.',
   'req.block.unknownKeys': 'Clé inconnue, ignorée : {list}',
   'req.derive': 'Dériver',
+  'req.chatAbout': { one: 'Discuter de {count}', other: 'Discuter des {count}' },
   'req.deriveMany': { one: 'Dériver {count}', other: 'Dériver les {count}' },
   'req.deriveManyTitle': { one: 'Dériver {count} exigence', other: 'Dériver {count} exigences' },
   'req.deriveManyDone': { one: '{count} exigence dérivée.', other: '{count} exigences dérivées.' },
@@ -1151,6 +1152,17 @@ export const fr: Catalog = {
   'chat.noteHeading':
     'La personne a la note « {title} » ({path}) ouverte à côté de la conversation ; ses questions peuvent y faire référence. Voici son contenu :',
   'chat.noteTruncated': '[… la note est coupée ici : {sent} caractères envoyés sur {total}.]',
+  'chat.requirements': { one: '{count} exigence : {list}', other: '{count} exigences : {list}' },
+  'chat.detach': 'Ne plus joindre ces exigences',
+  'chat.reqHeading': {
+    one: 'La personne a joint {count} exigence de la bibliothèque à ses questions ; la voici telle qu’elle est enregistrée :',
+    other:
+      'La personne a joint {count} exigences de la bibliothèque à ses questions ; les voici telles qu’elles sont enregistrées :'
+  },
+  'chat.reqLeft': '({count} autre(s) non envoyée(s) faute de place : {list}. Dis-le si la question les concerne.)',
+  'chat.reqSource': 'langue source',
+  'chat.reqStale': 'traduction en retard sur la source',
+  'chat.reqMachine': 'traduction automatique non relue',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

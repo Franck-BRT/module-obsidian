@@ -18,6 +18,8 @@ export interface ChatTurn {
   failed?: boolean
   /** The note a question was asked about, by its path: what the model was shown with it. */
   context?: string
+  /** The requirements a question was asked about, by identifier. */
+  requirements?: string[]
 }
 
 /**
