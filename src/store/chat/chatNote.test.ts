@@ -5,6 +5,7 @@ import {
   chatNoteName,
   chatTitle,
   localStamp,
+  noteLink,
   readChatNote,
   turnMarkdown
 } from './chatNote'
@@ -24,7 +25,7 @@ const META = { title: 'Reformuler REQ-LOG-0002', model: 'qwen3', created: at(3) 
 
 describe('a conversation kept as a note', () => {
   const turns = [
-    turn('user', 'Peux-tu reformuler REQ-LOG-0002 ?\nElle dit « rapidement ».', 3),
+    { ...turn('user', 'Peux-tu reformuler REQ-LOG-0002 ?\nElle dit « rapidement ».', 3), context: 'Specs/Journaux.md' },
     // A reply as a model writes one: a paragraph, a list, a blank line, code, a quote,
     // and a line that looks like the start of a callout.
     turn(
@@ -53,7 +54,7 @@ describe('a conversation kept as a note', () => {
 
   it('reads as the conversation did, one callout a turn', () => {
     expect(turnMarkdown(turns[0], WORDS)).toBe(
-      `> [!question] Vous · ${localStamp(at(3))}\n> Peux-tu reformuler REQ-LOG-0002 ?\n> Elle dit « rapidement ».`
+      `> [!question] Vous · ${localStamp(at(3))} · [[Specs/Journaux|Journaux]]\n> Peux-tu reformuler REQ-LOG-0002 ?\n> Elle dit « rapidement ».`
     )
   })
 
@@ -89,6 +90,24 @@ describe('a conversation kept as a note', () => {
   it('writes a title a YAML reader takes back as written, quotes and colons included', () => {
     const tricky = { ...META, title: 'Exigence « A » : "citée" #1' }
     expect(readChatNote(chatNoteContent(tricky, turns, WORDS)).title).toBe(tricky.title)
+  })
+})
+
+describe('noteLink', () => {
+  it('links to a note by its path and shows its name', () => {
+    expect(noteLink('Specs/Thermique.md')).toBe('[[Specs/Thermique|Thermique]]')
+    expect(noteLink('Racine.md')).toBe('[[Racine]]')
+  })
+
+  // A link the reader rewrote by hand — to a heading, with another alias — still names
+  // the note.
+  it('is read back however the reader rewrote it', () => {
+    const content = chatNoteContent(META, [turn('user', 'Q', 3)], WORDS)
+    const edited = content.replace(
+      `Vous · ${localStamp(at(3))}`,
+      `Vous · ${localStamp(at(3))} · [[Specs/Thermique#Seuils|la note]]`
+    )
+    expect(readChatNote(edited).turns[0].context).toBe('Specs/Thermique.md')
   })
 })
 

@@ -1145,6 +1145,12 @@ export const fr: Catalog = {
   'chat.openNote': 'Ouvrir la note de la conversation',
   'chat.saveFailed': 'La conversation n’a pas pu être enregistrée : {reason}',
   'chat.loadFailed': 'La conversation n’a pas pu être relue : {reason}',
+  'chat.noNote': 'Aucune note ouverte',
+  'chat.noteOn': 'Joindre cette note aux questions',
+  'chat.noteOff': 'Ne plus joindre cette note',
+  'chat.noteHeading':
+    'La personne a la note « {title} » ({path}) ouverte à côté de la conversation ; ses questions peuvent y faire référence. Voici son contenu :',
+  'chat.noteTruncated': '[… la note est coupée ici : {sent} caractères envoyés sur {total}.]',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

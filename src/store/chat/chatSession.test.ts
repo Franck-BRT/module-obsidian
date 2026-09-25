@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chatMessages, withoutFailure, type ChatTurn } from './chatSession'
+import { chatMessages, currentContext, withNote, withoutFailure, type ChatTurn } from './chatSession'
 
 const turn = (role: ChatTurn['role'], content: string, failed = false): ChatTurn => ({
   role,
@@ -57,5 +57,50 @@ describe('withoutFailure', () => {
     const turns = [turn('user', 'Q'), turn('assistant', 'Erreur', true)]
     expect(withoutFailure(turns)).toEqual([turns[0]])
     expect(withoutFailure([turns[0]])).toEqual([turns[0]])
+  })
+})
+
+describe('withNote', () => {
+  const words = {
+    heading: (title: string, path: string) => `Note ouverte : ${title} (${path})`,
+    truncated: (sent: number, total: number) => `[tronquée : ${sent} sur ${total}]`
+  }
+  const note = (content: string) => ({ path: 'Specs/Thermique.md', title: 'Thermique', content })
+
+  it('leaves the instructions alone when there is no note', () => {
+    expect(withNote('Sois bref.', null, words)).toBe('Sois bref.')
+  })
+
+  it('puts the note after the instructions, said to be the one the reader has open', () => {
+    expect(withNote('Sois bref.', note('# Thermique\n\nREQ-THERM-0001'), words)).toBe(
+      'Sois bref.\n\nNote ouverte : Thermique (Specs/Thermique.md)\n<note path="Specs/Thermique.md">\n# Thermique\n\nREQ-THERM-0001\n</note>'
+    )
+  })
+
+  // Whole paragraphs, and the model told there is more: it must not answer as if it had
+  // read the rest.
+  it('cuts a long note at a paragraph, and says how much was sent', () => {
+    const content = `${'a'.repeat(80)}\n\n${'b'.repeat(80)}\n\n${'c'.repeat(80)}`
+    const sent = withNote('S', note(content), words, 200)
+    expect(sent).toContain(`${'b'.repeat(80)}\n\n[tronquée : 162 sur 244]\n</note>`)
+    expect(sent).not.toContain('ccc')
+  })
+
+  it('cuts in the middle when no paragraph ends near the budget', () => {
+    const sent = withNote('S', note('x'.repeat(500)), words, 100)
+    expect(sent).toContain(`${'x'.repeat(100)}\n\n[tronquée : 100 sur 500]`)
+  })
+})
+
+describe('currentContext', () => {
+  it('is the note the latest question was asked about', () => {
+    const turns = [
+      { ...turn('user', 'Q1'), context: 'A.md' },
+      turn('assistant', 'R1'),
+      turn('user', 'Q2'),
+      turn('assistant', 'Erreur', true)
+    ]
+    expect(currentContext(turns)).toBeUndefined()
+    expect(currentContext(turns.slice(0, 2))).toBe('A.md')
   })
 })

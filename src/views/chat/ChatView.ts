@@ -1,6 +1,7 @@
 import {
   ItemView,
   MarkdownRenderer,
+  MarkdownView,
   Notice,
   setIcon,
   SuggestModal,
@@ -10,8 +11,15 @@ import {
   type WorkspaceLeaf
 } from 'obsidian'
 import type PMPlugin from '../../main'
-import { chatMessages, withoutFailure, type ChatTurn } from '../../store/chat/chatSession'
-import { chatTitle, localStamp, type ChatNoteWords } from '../../store/chat/chatNote'
+import {
+  chatMessages,
+  currentContext,
+  withNote,
+  withoutFailure,
+  type ChatTurn,
+  type ContextNote
+} from '../../store/chat/chatSession'
+import { chatTitle, isChatNote, localStamp, type ChatNoteWords } from '../../store/chat/chatNote'
 import { ChatNotes } from '../../store/chat/ChatNotes'
 import { LlmClient, LlmError } from '../../store/llm'
 import { safeAsync } from '../../utils'
@@ -36,6 +44,11 @@ export class ChatView extends ItemView {
   /** The turns already in the note, by identity: a failed reply taken off shifts no index. */
   private saved = new WeakSet<ChatTurn>()
   private notes: ChatNotes
+  /** The note open beside the conversation, which a question can be asked about. */
+  private contextFile: TFile | null = null
+  /** Whether that note goes with the next question: the reader's to turn off. */
+  private useNote = true
+  private contextEl: HTMLElement | null = null
   private listEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
   private sendEl!: HTMLButtonElement
@@ -65,6 +78,25 @@ export class ChatView extends ItemView {
     this.registerEvent(
       this.app.vault.on('rename', (file, oldPath) => {
         if (oldPath === this.notePath) this.notePath = file.path
+        if (file === this.contextFile) this.renderContext()
+      })
+    )
+    // The note beside the conversation follows the reader: the last one they opened, and
+    // none once it is closed. Only the strip that shows it is redrawn, so a question
+    // being typed is not lost to a click elsewhere.
+    this.contextFile = this.openNote()
+    this.registerEvent(
+      this.app.workspace.on('file-open', (file) => {
+        if (!file || !this.eligible(file)) return
+        this.contextFile = file
+        this.renderContext()
+      })
+    )
+    this.registerEvent(
+      this.app.workspace.on('layout-change', () => {
+        if (this.contextFile && this.showing(this.contextFile)) return
+        this.contextFile = this.openNote()
+        this.renderContext()
       })
     )
     this.render()
@@ -83,6 +115,58 @@ export class ChatView extends ItemView {
       if (file instanceof TFile) await this.resume(file)
     }
     await super.setState(state, result)
+  }
+
+  /** A note a question can be about: Markdown, and not one of the conversations themselves. */
+  private eligible(file: TFile): boolean {
+    return file.extension === 'md' && !isChatNote(this.app.metadataCache.getFileCache(file)?.frontmatter)
+  }
+
+  private showing(file: TFile): boolean {
+    return this.app.workspace.getLeavesOfType('markdown').some((leaf) => (leaf.view as MarkdownView).file === file)
+  }
+
+  /** The note the reader was last in, in the main area, if it is one a question can be about. */
+  private openNote(): TFile | null {
+    const view = this.app.workspace.getMostRecentLeaf()?.view
+    const file = view instanceof MarkdownView ? view.file : this.app.workspace.getActiveFile()
+    return file && this.eligible(file) ? file : null
+  }
+
+  /** The strip above the box: which note goes with the question, and the switch for it. */
+  private renderContext(): void {
+    const el = this.contextEl
+    if (!el) return
+    el.empty()
+    const file = this.contextFile
+    el.toggleClass('pm-chat-context--off', !file || !this.useNote)
+    setIcon(el.createSpan({ cls: 'pm-chat-context-icon' }), 'file-text')
+    if (!file) {
+      el.createSpan({ cls: 'pm-chat-context-name', text: t('chat.noNote') })
+      return
+    }
+    const name = el.createEl('a', { cls: 'pm-chat-context-name', text: file.basename, attr: { title: file.path } })
+    name.addEventListener(
+      'click',
+      safeAsync(() => this.app.workspace.getLeaf(false).openFile(file))
+    )
+    const toggle = el.createEl('button', {
+      cls: 'clickable-icon',
+      attr: { 'aria-label': this.useNote ? t('chat.noteOff') : t('chat.noteOn') }
+    })
+    setIcon(toggle, this.useNote ? 'eye' : 'eye-off')
+    toggle.addEventListener('click', () => {
+      this.useNote = !this.useNote
+      this.renderContext()
+    })
+  }
+
+  /** The note a question was asked about, read as it is now. Null when it is gone. */
+  private async contextNote(path: string | undefined): Promise<ContextNote | null> {
+    if (!path) return null
+    const file = this.app.vault.getAbstractFileByPath(path)
+    if (!(file instanceof TFile)) return null
+    return { path: file.path, title: file.basename, content: await this.app.vault.cachedRead(file) }
   }
 
   private get words(): ChatNoteWords {
@@ -145,6 +229,9 @@ export class ChatView extends ItemView {
       typing.createSpan({ text: t('chat.thinking') })
     }
 
+    this.contextEl = missing ? null : root.createDiv('pm-chat-context')
+    this.renderContext()
+
     const composer = root.createDiv('pm-chat-composer')
     this.inputEl = composer.createEl('textarea', {
       cls: 'pm-chat-input',
@@ -195,6 +282,13 @@ export class ChatView extends ItemView {
       `pm-chat-turn pm-chat-turn--${turn.role}${turn.failed ? ' pm-chat-turn--failed' : ''}`
     )
     const body = el.createDiv('pm-chat-body')
+    if (turn.context) {
+      // Said on the question itself: what the model was shown when it answered.
+      const about = this.listEl.createDiv('pm-chat-about')
+      setIcon(about.createSpan(), 'file-text')
+      about.createSpan({ text: turn.context.replace(/^.*\//, '').replace(/\.md$/i, '') })
+      about.setAttr('title', turn.context)
+    }
     if (turn.role === 'assistant' && !turn.failed) {
       // A reply is written in Markdown more often than not: lists, code, tables.
       void MarkdownRenderer.render(this.app, turn.content, body, '', this)
@@ -228,7 +322,11 @@ export class ChatView extends ItemView {
     const text = this.inputEl.value.trim()
     if (!text || this.pending || this.missing()) return
     this.inputEl.value = ''
-    this.turns = [...withoutFailure(this.turns), { role: 'user', content: text, at: new Date().toISOString() }]
+    const context = this.useNote && this.contextFile ? this.contextFile.path : undefined
+    this.turns = [
+      ...withoutFailure(this.turns),
+      { role: 'user', content: text, at: new Date().toISOString(), ...(context ? { context } : {}) }
+    ]
     await this.ask()
   }
 
@@ -238,10 +336,13 @@ export class ChatView extends ItemView {
     this.render()
     const settings = this.plugin.settings.llm
     try {
-      const reply = await this.llm.chat({
-        model: settings.modelText,
-        messages: chatMessages(this.turns, t('chat.system', { date: new Date().toISOString().slice(0, 10) }))
+      // The note as it is at the moment of asking: the reader may have just edited it.
+      const note = await this.contextNote(currentContext(this.turns))
+      const system = withNote(t('chat.system', { date: new Date().toISOString().slice(0, 10) }), note, {
+        heading: (title, path) => t('chat.noteHeading', { title, path }),
+        truncated: (sent, total) => t('chat.noteTruncated', { sent, total })
       })
+      const reply = await this.llm.chat({ model: settings.modelText, messages: chatMessages(this.turns, system) })
       this.turns = [...this.turns, { role: 'assistant', content: reply.trim(), at: new Date().toISOString() }]
       await this.persist()
     } catch (error) {

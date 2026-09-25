@@ -1166,6 +1166,12 @@ export const en = {
   'chat.openNote': 'Open the conversation’s note',
   'chat.saveFailed': 'The conversation could not be saved: {reason}',
   'chat.loadFailed': 'The conversation could not be read back: {reason}',
+  'chat.noNote': 'No note open',
+  'chat.noteOn': 'Send this note with the questions',
+  'chat.noteOff': 'Stop sending this note',
+  'chat.noteHeading':
+    'The person has the note “{title}” ({path}) open beside the conversation; their questions may refer to it. Here is its content:',
+  'chat.noteTruncated': '[… the note is cut here: {sent} characters sent out of {total}.]',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

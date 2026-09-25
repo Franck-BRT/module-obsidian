@@ -51,9 +51,27 @@ function fromStamp(text: string): string | undefined {
   return new Date(y, mo - 1, d, h, mi).toISOString()
 }
 
+/** A link to a note by its path, shown by its name: `[[Specs/Thermique|Thermique]]`. */
+export function noteLink(path: string): string {
+  const target = path.replace(/\.md$/i, '')
+  const name = target.slice(target.lastIndexOf('/') + 1)
+  return target === name ? `[[${target}]]` : `[[${target}|${name}]]`
+}
+
+/** The note a callout's title links to, as a path; the first link, where there are several. */
+function linkedPath(title: string): string | undefined {
+  const found = /\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/.exec(title)
+  if (!found) return undefined
+  const target = found[1].trim()
+  return /\.md$/i.test(target) ? target : `${target}.md`
+}
+
 /** One turn, as its callout. */
 export function turnMarkdown(turn: ChatTurn, words: ChatNoteWords): string {
-  const head = `> [!${CALLOUT[turn.role]}] ${turn.role === 'user' ? words.user : words.assistant} · ${localStamp(turn.at)}`
+  // The note a question was asked about, as a link: the record says what the model was
+  // shown, and the reader can go to it.
+  const about = turn.context ? ` · ${noteLink(turn.context)}` : ''
+  const head = `> [!${CALLOUT[turn.role]}] ${turn.role === 'user' ? words.user : words.assistant} · ${localStamp(turn.at)}${about}`
   const body = turn.content.split('\n').map((line) => (line === '' ? '>' : `> ${line}`))
   return [head, ...body].join('\n')
 }
@@ -128,7 +146,11 @@ export function readChatNote(content: string): ChatNote {
     const role = start ? ROLE_OF[start[1].toLowerCase()] : undefined
     if (start && role && !previous.startsWith('>')) {
       close()
-      current = { turn: { role, content: '', at: fromStamp(start[2]) ?? created }, lines: [] }
+      const context = role === 'user' ? linkedPath(start[2]) : undefined
+      current = {
+        turn: { role, content: '', at: fromStamp(start[2]) ?? created, ...(context ? { context } : {}) },
+        lines: []
+      }
     } else if (current && line.startsWith('>')) current.lines.push(line.replace(/^> ?/, ''))
     else close()
     previous = line
