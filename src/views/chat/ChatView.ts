@@ -15,6 +15,7 @@ import type PMPlugin from '../../main'
 import {
   chatMessages,
   currentContext,
+  readableNote,
   withNote,
   withoutFailure,
   type ChatTurn,
@@ -293,7 +294,9 @@ export class ChatView extends ItemView {
         parts: projectParts(primary, projects),
         statuses: config.statuses,
         priorities: config.priorities,
-        today: today().toString()
+        today: today().toString(),
+        // A dependency on a ticket in another project is named by that ticket's title too.
+        titleOf: (id) => this.plugin.index.task(id)?.title
       },
       this.projectWords
     )
@@ -316,6 +319,9 @@ export class ChatView extends ItemView {
       docState: (state) => docStateConfigOf(state as DocState).label,
       late: t('chat.projectLate'),
       after: t('chat.projectAfter'),
+      reference: t('chat.projectReference'),
+      issue: t('chat.projectIssue'),
+      file: t('chat.projectFile'),
       noTickets: t('chat.projectEmpty'),
       doneLeft: (count) => t('chat.projectDoneLeft', { count }),
       left: (count) => t('chat.projectLeft', { count })
@@ -368,7 +374,7 @@ export class ChatView extends ItemView {
     if (!path) return null
     const file = this.app.vault.getAbstractFileByPath(path)
     if (!(file instanceof TFile)) return null
-    return { path: file.path, title: file.basename, content: await this.app.vault.cachedRead(file) }
+    return { path: file.path, title: file.basename, content: readableNote(await this.app.vault.cachedRead(file)) }
   }
 
   private get words(): ChatNoteWords {

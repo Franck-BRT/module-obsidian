@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chatMessages, currentContext, withNote, withoutFailure, type ChatTurn } from './chatSession'
+import { chatMessages, currentContext, readableNote, withNote, withoutFailure, type ChatTurn } from './chatSession'
 
 const turn = (role: ChatTurn['role'], content: string, failed = false): ChatTurn => ({
   role,
@@ -102,5 +102,56 @@ describe('currentContext', () => {
     ]
     expect(currentContext(turns)).toBeUndefined()
     expect(currentContext(turns.slice(0, 2))).toBe('A.md')
+  })
+})
+
+describe('readableNote', () => {
+  const ticket = [
+    '---',
+    'pm-task: true',
+    'projectId: "[[Génie civil|Génie civil]]"',
+    'id: "capemoejmul8bzi9"',
+    'title: "Plan de ventilation"',
+    'dependencies: ["[[déblais|Déblais]]"]',
+    'createdAt: "2026-09-28T12:34:26.077Z"',
+    'updatedAt: "2026-09-28T12:34:26.077Z"',
+    'document:',
+    '  state: "expected"',
+    '  id: "kept, it is not the ticket’s"',
+    '---',
+    '',
+    'Project: [[Génie civil|Génie civil]]'
+  ].join('\n')
+
+  it('takes the plugin’s bookkeeping out of a ticket’s front matter, and nothing else', () => {
+    expect(readableNote(ticket)).toBe(
+      [
+        '---',
+        'pm-task: true',
+        'projectId: "[[Génie civil|Génie civil]]"',
+        'title: "Plan de ventilation"',
+        'dependencies: ["[[déblais|Déblais]]"]',
+        'document:',
+        '  state: "expected"',
+        '  id: "kept, it is not the ticket’s"',
+        '---',
+        '',
+        'Project: [[Génie civil|Génie civil]]'
+      ].join('\n')
+    )
+  })
+
+  it('does the same for a project’s note', () => {
+    const project = '---\npm-project: true\nid: "2cdxmzl9mul8bzi7"\ntitle: "Génie civil"\n---\n\n# Génie civil'
+    expect(readableNote(project)).toBe('---\npm-project: true\ntitle: "Génie civil"\n---\n\n# Génie civil')
+  })
+
+  // A requirement's identifier is a name people use; a note of the reader's own is theirs.
+  it('leaves every other note as it is', () => {
+    const requirement = '---\npm-req: true\nid: REQ-THERM-0001\n---\nLe boîtier…'
+    expect(readableNote(requirement)).toBe(requirement)
+    const own = '---\nid: 42\ncreatedAt: hier\n---\nMa note'
+    expect(readableNote(own)).toBe(own)
+    expect(readableNote('Pas d’en-tête\nid: 3')).toBe('Pas d’en-tête\nid: 3')
   })
 })

@@ -1177,17 +1177,19 @@ export const fr: Catalog = {
   'chat.projectOpen': 'Ouvrir le projet',
   'chat.projectAbout': 'Discuter de ce projet',
   'chat.projectHeading':
-    'La personne a joint le projet « {title} » ({path}) à ses questions ; le voici tel qu’il est enregistré, ticket par ticket. Cite les identifiants des tickets dont tu parles.',
+    'La personne a joint le projet « {title} » ({path}) à ses questions ; le voici tel qu’il est enregistré, ticket par ticket. Désigne les tickets et les documents par leur titre, tel qu’il est écrit ici.',
   'chat.projectProgram': 'programme',
   'chat.projectDescription': 'Description',
   'chat.projectTeam': 'Équipe',
   'chat.projectZones': 'Zones',
   'chat.projectSpan': 'Période',
   'chat.projectSummary': 'Bilan',
-  'chat.projectTickets':
-    'Tickets (identifiant, titre, type, statut, priorité, dates, avancement, personnes, dépendances)',
+  'chat.projectTickets': 'Tickets (titre, type, statut, priorité, dates, avancement, personnes, dépendances)',
   'chat.projectFigures':
     'tickets : {total} ; terminés : {done} ; avancement : {progress} % ; en retard : {late} ; échéance dans les 7 jours : {soon}',
+  'chat.projectReference': 'réf.',
+  'chat.projectIssue': 'indice',
+  'chat.projectFile': 'fichier',
   'chat.projectLate': 'EN RETARD',
   'chat.projectAfter': 'après',
   'chat.projectEmpty': '(aucun ticket)',

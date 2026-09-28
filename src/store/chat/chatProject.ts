@@ -35,6 +35,8 @@ export interface ProjectContextInput {
   statuses: StatusConfig[]
   priorities: PriorityConfig[]
   today: string
+  /** A ticket outside these projects, by its title: what a dependency on it is called. */
+  titleOf?: (id: string) => string | undefined
 }
 
 /** The reader's words, so the model is told about the project in their language. */
@@ -56,6 +58,10 @@ export interface ProjectWords {
   docState: (state: string) => string
   late: string
   after: string
+  /** What introduces a document's reference, its revision mark and its file. */
+  reference: string
+  issue: string
+  file: string
   noTickets: string
   /** What is said when finished tickets were left out to make room. */
   doneLeft: (count: number) => string
@@ -77,8 +83,20 @@ function span(start: string, due: string): string {
   return due || start
 }
 
-/** One ticket, on one line, indented under the ticket it sits under. */
-function ticketLine(task: Task, depth: number, input: ProjectContextInput, words: ProjectWords): string {
+/**
+ * One ticket, on one line, indented under the ticket it sits under.
+ *
+ * Named by its title, never by its identifier: a ticket's identifier is a random string
+ * the plugin keys it by, which means nothing to the reader, and a model shown it quotes
+ * it back. A dependency is named the same way, by the title of the ticket it waits for.
+ */
+function ticketLine(
+  task: Task,
+  depth: number,
+  input: ProjectContextInput,
+  words: ProjectWords,
+  nameOf: (id: string) => string | undefined
+): string {
   const facts: string[] = []
   if (isPhase(task)) {
     const phase = phaseSpan(task, input.statuses)
@@ -86,10 +104,17 @@ function ticketLine(task: Task, depth: number, input: ProjectContextInput, words
     const when = span(phase.start, phase.due)
     if (when) facts.push(when)
     if (phase.count) facts.push(`${phase.progress} %`)
-    return `${'  '.repeat(depth)}- ${task.id} ${task.title} · ${facts.join(' · ')}`
+    return `${'  '.repeat(depth)}- ${task.title} · ${facts.join(' · ')}`
   }
   if (task.type !== 'task' && task.type !== 'subtask') facts.push(words.type(task.type))
-  if (isDocument(task)) facts.push(words.docState(documentOf(task).state))
+  if (isDocument(task)) {
+    // What a document is known by in the trade — its reference, its revision, its file.
+    const meta = documentOf(task)
+    facts.push(words.docState(meta.state))
+    if (meta.reference.trim()) facts.push(`${words.reference} ${meta.reference.trim()}`)
+    if (meta.issue.trim()) facts.push(`${words.issue} ${meta.issue.trim()}`)
+    if (meta.file) facts.push(`${words.file} ${meta.file.slice(meta.file.lastIndexOf('/') + 1)}`)
+  }
   const status = input.statuses.find((config) => config.id === task.status)
   facts.push(status?.label ?? task.status)
   const priority = input.priorities.find((config) => config.id === task.priority)
@@ -99,9 +124,12 @@ function ticketLine(task: Task, depth: number, input: ProjectContextInput, words
   const finished = isTerminalStatus(task.status, input.statuses)
   if (!finished && task.progress > 0) facts.push(`${task.progress} %`)
   if (task.assignees.length) facts.push(`@ ${task.assignees.join(', ')}`)
-  if (task.dependencies.length) facts.push(`${words.after} ${task.dependencies.join(', ')}`)
+  // A dependency on a ticket nobody can find any more is left unsaid rather than named by
+  // an identifier.
+  const after = task.dependencies.map(nameOf).filter((name): name is string => !!name)
+  if (after.length) facts.push(`${words.after} ${after.join(', ')}`)
   if (!finished && task.due && task.due < input.today) facts.push(words.late)
-  return `${'  '.repeat(depth)}- ${task.id} ${task.title} · ${facts.join(' · ')}`
+  return `${'  '.repeat(depth)}- ${task.title} · ${facts.join(' · ')}`
 }
 
 /**
@@ -113,7 +141,8 @@ function ticketLines(
   tasks: Task[],
   input: ProjectContextInput,
   words: ProjectWords,
-  openOnly: boolean
+  openOnly: boolean,
+  nameOf: (id: string) => string | undefined
 ): { lines: string[]; skipped: number } {
   const lines: string[] = []
   let skipped = 0
@@ -125,7 +154,7 @@ function ticketLines(
         skipped += count(task)
         continue
       }
-      lines.push(ticketLine(task, depth, input, words))
+      lines.push(ticketLine(task, depth, input, words, nameOf))
       walk(task.subtasks, depth + 1)
     }
   }
@@ -152,6 +181,8 @@ function flat(tasks: Task[]): Task[] {
  */
 export function projectContext(input: ProjectContextInput, words: ProjectWords, budget = PROJECT_BUDGET): string {
   const all = input.parts.flatMap((part) => flat(part.tasks))
+  const titles = new Map(all.map((task) => [task.id, task.title]))
+  const nameOf = (id: string): string | undefined => titles.get(id) ?? input.titleOf?.(id)
   const figures = projectMetrics({
     tasks: all,
     statuses: input.statuses,
@@ -186,7 +217,7 @@ export function projectContext(input: ProjectContextInput, words: ProjectWords, 
     const lines: string[] = []
     let skipped = 0
     for (const part of input.parts) {
-      const written = ticketLines(part.tasks, input, words, openOnly)
+      const written = ticketLines(part.tasks, input, words, openOnly, nameOf)
       skipped += written.skipped
       if (titled) lines.push(`## ${part.title}`)
       lines.push(...written.lines)

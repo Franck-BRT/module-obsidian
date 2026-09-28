@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_PRIORITIES, DEFAULT_STATUSES, makeProject, makeTask, type Task } from '../../types'
+import { DEFAULT_PRIORITIES, DEFAULT_STATUSES, makeDocument, makeProject, makeTask, type Task } from '../../types'
 import {
   currentProject,
   projectContext,
@@ -25,6 +25,9 @@ const WORDS: ProjectWords = {
   docState: (state) => ({ expected: 'Attendu' })[state] ?? state,
   late: 'EN RETARD',
   after: 'après',
+  reference: 'réf.',
+  issue: 'indice',
+  file: 'fichier',
   noTickets: '(aucun ticket)',
   doneLeft: (count) => `(${count} tickets terminés non montrés)`,
   left: (count) => `(${count} autres non montrés faute de place)`
@@ -87,10 +90,10 @@ describe('projectContext', () => {
         'Bilan : 3 tickets, 1 terminés, 47 %, 1 en retard, 1 bientôt',
         '',
         'Tickets :',
-        '- LOT-1 Études · Lot · 2026-09-01 → 2026-09-25 · 70 %',
-        '  - T-1 Relevé · Done · Medium · 2026-09-01 → 2026-09-10',
-        '  - T-2 Note de calcul · In Progress · High · 2026-09-11 → 2026-09-25 · 40 % · @ Anne, Bob · après T-1 · EN RETARD',
-        '- M-1 Revue · Jalon · To Do · Medium · 2026-10-02',
+        '- Études · Lot · 2026-09-01 → 2026-09-25 · 70 %',
+        '  - Relevé · Done · Medium · 2026-09-01 → 2026-09-10',
+        '  - Note de calcul · In Progress · High · 2026-09-11 → 2026-09-25 · 40 % · @ Anne, Bob · après Relevé · EN RETARD',
+        '- Revue · Jalon · To Do · Medium · 2026-10-02',
         '</project>'
       ].join('\n')
     )
@@ -109,12 +112,53 @@ describe('projectContext', () => {
       WORDS
     )
     const late = text.split('\n').filter((line) => line.includes('EN RETARD'))
-    expect(late).toEqual(['- A Tâche A · To Do · Medium · 2026-09-27 · EN RETARD'])
+    expect(late).toEqual(['- Tâche A · To Do · Medium · 2026-09-27 · EN RETARD'])
   })
 
   it('names a document’s state and a ticket of a kind of its own', () => {
     const text = projectContext(input([task('D', { type: 'document' })]), WORDS)
-    expect(text).toContain('- D Tâche D · Document · Attendu · To Do · Medium')
+    expect(text).toContain('- Tâche D · Document · Attendu · To Do · Medium')
+  })
+
+  // What a document is known by: its reference, its revision mark, its file — not the
+  // identifier the plugin keys it by.
+  it('names a document by what the trade calls it', () => {
+    const plan = [
+      task('k3j9x2ab', {
+        title: 'Plan de ventilation',
+        type: 'document',
+        document: makeDocument({
+          state: 'received',
+          reference: 'PL-VEN-001',
+          issue: 'B',
+          file: 'Projets/Ligne 6/_docs/PL-VEN-001 indice B.pdf'
+        })
+      })
+    ]
+    expect(projectContext(input(plan), WORDS)).toContain(
+      '- Plan de ventilation · Document · received · réf. PL-VEN-001 · indice B · fichier PL-VEN-001 indice B.pdf · To Do'
+    )
+  })
+
+  // A ticket's identifier is a random string: shown to a model, it is what the model
+  // quotes back, and the reader cannot tell one ticket from another by it.
+  it('never shows a ticket’s identifier, and names what a ticket waits for by its title', () => {
+    const plan = [
+      task('q8z1m0rt', {
+        title: 'Terrassements',
+        type: 'phase',
+        subtasks: [
+          task('a7c2kq9d', { title: 'Déblais' }),
+          task('p4x8w2ne', { title: 'Soutènement', dependencies: ['a7c2kq9d', 'x0elsewh', 'gone1234'] })
+        ]
+      })
+    ]
+    const text = projectContext(
+      input(plan, { titleOf: (id) => (id === 'x0elsewh' ? 'Livraison des pompes' : undefined) }),
+      WORDS
+    )
+    for (const id of ['q8z1m0rt', 'a7c2kq9d', 'p4x8w2ne', 'x0elsewh', 'gone1234']) expect(text).not.toContain(id)
+    expect(text).toContain('après Déblais, Livraison des pompes')
   })
 
   it('writes a programme’s projects each under its own name', () => {
@@ -129,8 +173,8 @@ describe('projectContext', () => {
       WORDS
     )
     expect(text).toContain('# Refonte chaufferie (programme)')
-    expect(text).toContain('## Lot chaufferie\n- A-1 Tâche A-1')
-    expect(text).toContain('## Lot ventilation\n- B-1 Tâche B-1')
+    expect(text).toContain('## Lot chaufferie\n- Tâche A-1')
+    expect(text).toContain('## Lot ventilation\n- Tâche B-1')
     expect(text).toContain('Bilan : 2 tickets')
   })
 
@@ -152,12 +196,12 @@ describe('projectContext', () => {
       ...done
     ]
     const all = projectContext(input(plan), WORDS, 100_000)
-    expect(all).toContain('- F-29 ')
+    expect(all).toContain('- Tâche F-29 ')
     const text = projectContext(input(plan), WORDS, 200)
-    expect(text).not.toContain('- F-')
-    expect(text).toContain('- LOT Tâche LOT · Lot')
-    expect(text).toContain('  - P Tâche P · Done')
-    expect(text).toContain('    - OPEN Tâche OPEN · To Do')
+    expect(text).not.toContain('- Tâche F-')
+    expect(text).toContain('- Tâche LOT · Lot')
+    expect(text).toContain('  - Tâche P · Done')
+    expect(text).toContain('    - Tâche OPEN · To Do')
     expect(text).toContain('(30 tickets terminés non montrés)')
     expect(text).not.toContain('faute de place')
   })
@@ -165,7 +209,7 @@ describe('projectContext', () => {
   it('cuts what is still too long, and says how many were not shown', () => {
     const plan = Array.from({ length: 40 }, (_, at) => task(`O-${at}`))
     const text = projectContext(input(plan), WORDS, 300)
-    const shown = text.split('\n').filter((line) => line.startsWith('- O-')).length
+    const shown = text.split('\n').filter((line) => line.startsWith('- Tâche O-')).length
     expect(shown).toBeGreaterThan(0)
     expect(shown).toBeLessThan(40)
     expect(text).toContain(`(${40 - shown} autres non montrés faute de place)`)

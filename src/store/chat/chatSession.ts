@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../llm'
+import { COLLECTION_FRONTMATTER_KEY, FRONTMATTER_KEY, TASK_FRONTMATTER_KEY } from '../YamlParser'
 
 /**
  * A conversation with the model, and what of it is sent each time.
@@ -115,6 +116,29 @@ export function withNote(
     tail = `\n\n${words.truncated(sent.length, content.length)}`
   }
   return `${system}\n\n${words.heading(note.title, note.path)}\n<note path="${note.path}">\n${sent}${tail}\n</note>`
+}
+
+/** What the plugin writes into its own notes for itself, and a reader never reads. */
+const BOOKKEEPING = new Set(['id', 'createdAt', 'updatedAt'])
+
+/**
+ * A note as a model should read it: a ticket's, a project's or a collection's without
+ * the plugin's bookkeeping in its front matter.
+ *
+ * Their identifier is a random string the plugin keys them by. Shown to a model, it is
+ * what the model quotes back — "k3j9x2ab is late" — where the reader wanted the title.
+ * Every other note is sent as it is: a requirement's identifier is a name people use.
+ */
+export function readableNote(content: string): string {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/.exec(content)
+  if (!match) return content
+  const lines = match[1].split(/\r?\n/)
+  const ours = [FRONTMATTER_KEY, TASK_FRONTMATTER_KEY, COLLECTION_FRONTMATTER_KEY].some((key) =>
+    lines.some((line) => new RegExp(`^${key}:\\s*true\\s*$`).test(line))
+  )
+  if (!ours) return content
+  const kept = lines.filter((line) => !BOOKKEEPING.has(/^([\w-]+):/.exec(line)?.[1] ?? ''))
+  return `---\n${kept.join('\n')}\n---${match[2]}${content.slice(match[0].length)}`
 }
 
 /** The note the conversation's latest question was asked about, if any. */
