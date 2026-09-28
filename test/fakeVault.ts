@@ -9,6 +9,8 @@ const expectDefined = <T>(value: T | null | undefined, message = 'expected value
 interface FileContent {
   file: TFile
   content: string
+  /** The bytes a binary file was created with. */
+  binary?: Uint8Array
 }
 
 type VaultHandler = (file: TAbstractFile, oldPath?: string) => void
@@ -54,6 +56,14 @@ export class FakeVault {
     return this.cachedRead(file)
   }
 
+  /** A binary file's bytes, or a text file's as UTF-8. */
+  async readBinary(file: TFile): Promise<ArrayBuffer> {
+    const entry = this.files.get(file.path)
+    if (!entry) throw new Error(`readBinary: ${file.path} does not exist`)
+    const bytes = entry.binary ?? new TextEncoder().encode(entry.content)
+    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+  }
+
   async modify(file: TFile, content: string): Promise<void> {
     const entry = this.files.get(file.path)
     if (!entry) throw new Error(`modify: ${file.path} does not exist`)
@@ -84,12 +94,12 @@ export class FakeVault {
     return file
   }
 
-  async createBinary(path: string, _data: ArrayBuffer): Promise<TFile> {
+  async createBinary(path: string, data: ArrayBuffer): Promise<TFile> {
     const n = normalizePath(path)
     if (this.files.has(n)) throw new Error(`createBinary: ${n} already exists`)
     const parent = this.ensureFolderForPath(n)
     const file = makeFile(n, parent)
-    this.files.set(n, { file, content: '' })
+    this.files.set(n, { file, content: '', binary: new Uint8Array(data.slice(0)) })
     parent.children.push(file)
     bump(this.createCount, n)
     this.emit('create', file)
@@ -241,6 +251,8 @@ export class FakeMetadataCache {
   }
 
   getFirstLinkpathDest(linkpath: string, _sourcePath: string): TFile | null {
+    const exact = this.vault.getAbstractFileByPath(linkpath)
+    if (exact instanceof TFile) return exact
     const direct = this.vault.getAbstractFileByPath(linkpath.endsWith('.md') ? linkpath : `${linkpath}.md`)
     if (direct instanceof TFile) return direct
     return this.vault.getMarkdownFiles().find((f) => f.basename === linkpath) ?? null

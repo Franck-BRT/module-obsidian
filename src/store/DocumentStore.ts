@@ -164,16 +164,7 @@ export class DocumentStore {
    */
   async open(meta: DocumentMeta): Promise<boolean> {
     const file = this.fileOf(meta)
-    if (!file) return false
-    const readable = ['md', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'mp4', 'webm', 'mp3', 'wav', 'canvas']
-    if (readable.includes(file.extension)) {
-      await this.app.workspace.getLeaf('tab').openFile(file)
-      return true
-    }
-    const opener = (this.app as App & { openWithDefaultApp?: (path: string) => Promise<void> }).openWithDefaultApp
-    if (!opener) return false
-    await opener.call(this.app, file.path)
-    return true
+    return file ? openDocumentFile(this.app, file) : false
   }
 
   /** Every file in the project's docs folder that no document claims. */
@@ -187,4 +178,37 @@ export class DocumentStore {
       .filter((file) => folderOf(file.path) === folder && !claimed.has(file.path))
       .map((file) => file.path)
   }
+}
+
+/**
+ * Opens a file where it can be read: in a tab for what Obsidian renders, with the
+ * system's own application otherwise. False when neither is possible, as on mobile.
+ */
+export async function openDocumentFile(app: App, file: TFile): Promise<boolean> {
+  // Messages too: the plugin reads them itself.
+  const readable = [
+    'md',
+    'pdf',
+    'png',
+    'jpg',
+    'jpeg',
+    'gif',
+    'webp',
+    'svg',
+    'mp4',
+    'webm',
+    'mp3',
+    'wav',
+    'canvas',
+    'msg',
+    'eml'
+  ]
+  if (readable.includes(file.extension.toLowerCase())) {
+    await app.workspace.getLeaf('tab').openFile(file)
+    return true
+  }
+  const opener = (app as App & { openWithDefaultApp?: (path: string) => Promise<void> }).openWithDefaultApp
+  if (!opener) return false
+  await opener.call(app, file.path)
+  return true
 }

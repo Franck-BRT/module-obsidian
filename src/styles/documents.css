@@ -1,0 +1,359 @@
+/* The document library: a search line, then one row a document. */
+
+.pm-docs {
+  display: flex;
+  flex-direction: column;
+}
+
+.pm-docs.pm-docs--drop {
+  outline: 2px dashed var(--interactive-accent);
+  outline-offset: -8px;
+  background: rgb(from var(--interactive-accent) r g b / 5%);
+}
+
+.pm-docs-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+}
+
+/* In a narrow pane the button goes under the title rather than the title being cut. */
+.pm-docs .pm-toolbar-left {
+  min-width: min(100%, 300px);
+}
+
+.pm-docs-filters.is-hidden {
+  display: none;
+}
+
+.pm-docs-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-4);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pm-docs-search {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.pm-docs-select {
+  flex: 0 1 auto;
+  max-width: 220px;
+}
+
+.pm-docs-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--size-4-2) var(--size-4-4) var(--size-4-6);
+}
+
+.pm-docs-summary {
+  margin: var(--size-2-2) 0 var(--size-4-2);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-docs-none {
+  padding: var(--size-4-6) 0;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.pm-docs-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+
+.pm-docs-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3);
+  background: var(--background-primary);
+}
+
+.pm-docs-row + .pm-docs-row {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.pm-docs-row:hover {
+  background: var(--background-primary-alt);
+}
+
+/* The kind of file, at a glance: one colour a kind. */
+.pm-docs-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-top: 2px;
+  border-radius: var(--radius-s);
+  color: var(--pm-docs-kind, var(--text-muted));
+  background: rgb(from var(--pm-docs-kind, var(--text-muted)) r g b / 12%);
+}
+
+.pm-docs-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.pm-docs-icon--pdf {
+  --pm-docs-kind: var(--color-red);
+}
+
+.pm-docs-icon--word {
+  --pm-docs-kind: var(--color-blue);
+}
+
+.pm-docs-icon--sheet {
+  --pm-docs-kind: var(--color-green);
+}
+
+.pm-docs-icon--slides {
+  --pm-docs-kind: var(--color-orange);
+}
+
+.pm-docs-icon--image {
+  --pm-docs-kind: var(--color-purple);
+}
+
+.pm-docs-icon--mail {
+  --pm-docs-kind: var(--color-cyan);
+}
+
+.pm-docs-icon--note {
+  --pm-docs-kind: var(--color-yellow);
+}
+
+.pm-docs-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.pm-docs-title {
+  display: block;
+  overflow: hidden;
+  color: var(--text-normal);
+  font-weight: var(--font-medium);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-docs-title:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.pm-docs-row.is-missing .pm-docs-title {
+  color: var(--text-muted);
+}
+
+.pm-docs-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--size-4-3);
+  margin-top: var(--size-2-1);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-docs-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-docs-lost {
+  color: var(--text-error);
+}
+
+.pm-docs-projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2);
+  margin-top: var(--size-2-3);
+}
+
+button.pm-docs-chip:not(.clickable-icon),
+.pm-docs-chip {
+  display: inline-flex;
+  align-items: center;
+  height: auto;
+  padding: 1px var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l);
+  background: var(--background-secondary);
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal);
+  line-height: var(--line-height-normal);
+}
+
+button.pm-docs-chip:not(.clickable-icon):hover {
+  border-color: var(--interactive-accent);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+.pm-docs-chip.is-none {
+  border-style: dashed;
+  background: none;
+  color: var(--text-faint);
+}
+
+.pm-docs-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--size-2-1);
+}
+
+.pm-docs-more {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--size-4-3);
+}
+
+/* Nothing poured yet: what to do, where it is done. */
+.pm-docs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--size-4-2);
+  max-width: 460px;
+  margin: var(--size-4-8) auto;
+  padding: var(--size-4-8) var(--size-4-6);
+  border: 2px dashed var(--background-modifier-border);
+  border-radius: var(--radius-l);
+  text-align: center;
+}
+
+.pm-docs-empty-icon {
+  color: var(--text-faint);
+}
+
+.pm-docs-empty-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.pm-docs-empty-title {
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+}
+
+.pm-docs-empty-text {
+  margin-bottom: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* Which projects: the files concerned, then a list to tick. */
+.pm-docs-chooser-files {
+  margin: 0 0 var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3) var(--size-4-2) var(--size-4-6);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-docs-chooser-files li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-docs-chooser-more {
+  list-style: none;
+  color: var(--text-faint);
+}
+
+.pm-docs-chooser-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-1);
+}
+
+.pm-docs-chooser-label {
+  font-weight: var(--font-semibold);
+}
+
+.pm-docs-chooser-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  text-align: right;
+}
+
+.pm-docs-chooser-search {
+  width: 100%;
+  margin-bottom: var(--size-4-2);
+}
+
+.pm-docs-chooser-list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+
+.pm-docs-chooser-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-1) var(--size-4-3);
+  cursor: pointer;
+}
+
+.pm-docs-chooser-row + .pm-docs-chooser-row {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.pm-docs-chooser-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.pm-docs-chooser-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.pm-docs-chooser-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pm-docs-chooser-title {
+  flex: none;
+}
+
+.pm-docs-chooser-detail {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-docs-chooser-empty {
+  padding: var(--size-4-3);
+  color: var(--text-muted);
+  text-align: center;
+}

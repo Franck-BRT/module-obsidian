@@ -643,6 +643,8 @@ export function seedReqStatuses(): ReqPaletteConfig[] {
 export interface PMSettings {
   /** Where new projects are created. Projects are discovered vault-wide, wherever they live. */
   projectsFolder: string
+  /** Where the document library keeps its records, and the files brought into it. */
+  libraryFolder: string
   peopleFolder: string
   /** Folders discovery skips, for templates and archives holding pm-project notes. */
   excludedFolders: string[]
@@ -948,6 +950,7 @@ export function seedPriorities(): PriorityConfig[] {
 
 export const DEFAULT_SETTINGS: PMSettings = {
   projectsFolder: 'Projects',
+  libraryFolder: 'Library',
   peopleFolder: 'People',
   excludedFolders: [],
   defaultView: 'table',

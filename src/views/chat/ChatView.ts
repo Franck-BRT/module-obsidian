@@ -1067,13 +1067,17 @@ export class ChatView extends ItemView {
     const head = root.createDiv('pm-chat-head')
     const titles = head.createDiv('pm-chat-titles')
     titles.createDiv({ cls: 'pm-chat-title', text: t('chat.title') })
-    // The model, as a button: the list of what the gateway offers is one click away.
+    // The model, as a button: the list of what the gateway offers is one click away. On a
+    // line of its own under the title and the buttons, so a long name has the panel's
+    // whole width rather than what the buttons leave of it.
     const model = this.model
     const configured = this.plugin.settings.llm.enabled && this.plugin.settings.llm.baseUrl.trim() !== ''
-    if (configured) {
-      const pick = titles.createEl('button', {
+    const modelRow = configured ? root.createDiv('pm-chat-model-row') : null
+    if (modelRow) {
+      const label = model ? `${model} — ${t('chat.modelPick')}` : t('chat.modelPick')
+      const pick = modelRow.createEl('button', {
         cls: 'pm-chat-model pm-chat-model-pick',
-        attr: { 'aria-label': t('chat.modelPick'), title: t('chat.modelPick') }
+        attr: { 'aria-label': label, title: label }
       })
       pick.createSpan({ cls: 'pm-chat-model-name', text: model || t('chat.modelNone') })
       setIcon(pick.createSpan({ cls: 'pm-chat-model-caret' }), 'chevron-down')

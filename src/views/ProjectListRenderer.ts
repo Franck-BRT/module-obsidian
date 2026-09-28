@@ -46,6 +46,14 @@ export function renderProjectListToolbar(ctx: ProjectListContext): void {
       void ctx.plugin.openChat()
     })
 
+  // Every document, whatever project it belongs to — or none.
+  new ExtraButtonComponent(ctx.toolbarEl)
+    .setIcon('library-big')
+    .setTooltip(t('library.title'))
+    .onClick(() => {
+      void ctx.plugin.openDocuments()
+    })
+
   // The library is a place rather than something this page makes, so it gets a button
   // of its own instead of a line in the menu below.
   new ExtraButtonComponent(ctx.toolbarEl)

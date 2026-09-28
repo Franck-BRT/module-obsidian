@@ -97,6 +97,16 @@ export class PMSettingTab extends PluginSettingTab {
               placeholder: t('settings.projectsFolder.placeholder')
             }
           },
+          {
+            name: t('settings.libraryFolder.name'),
+            desc: t('settings.libraryFolder.desc'),
+            control: {
+              type: 'folder',
+              key: 'libraryFolder',
+              defaultValue: 'Library',
+              placeholder: 'Library'
+            }
+          },
           this.excludedFoldersPage(),
           {
             name: t('settings.projectSurface.name'),

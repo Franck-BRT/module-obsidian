@@ -1,6 +1,6 @@
 import { ZoneRadar } from './store/ZoneRadar'
-import { MarkdownView, Menu, Plugin, Notice, TFile } from 'obsidian'
-import type { Editor } from 'obsidian'
+import { MarkdownView, Menu, Plugin, Notice, TFile, TFolder } from 'obsidian'
+import type { Editor, TAbstractFile } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
   makeDefaultFilter,
@@ -79,6 +79,14 @@ import { cleanBlockFields } from './store/requirements/reqBlockFields'
 import { registerReqBlock } from './views/requirements/reqBlockRenderer'
 import { registerChangeBlock } from './views/chat/changeCard'
 import { registerBranchBlock } from './views/chat/branchGraph'
+import { DocumentsView, PM_DOCUMENTS_VIEW_TYPE } from './views/documents/DocumentsView'
+import {
+  chooseProjects,
+  type ChooserAnswer,
+  type ChooserRequest,
+  type ProjectOption
+} from './views/documents/ProjectChooser'
+import { DocLibrary, type PourItem } from './store/library/DocLibrary'
 import { noteExportLabel, registerReqEditorMenu } from './views/requirements/reqEditorMenu'
 import { exportNoteDocx } from './views/requirements/exportDocx'
 import { reqBlockRanges } from './store/requirements/reqFence'
@@ -102,6 +110,8 @@ export default class PMPlugin extends Plugin {
   /** Vectors for the library, asked for once and kept. */
   reqVectors!: ReqEmbeddingIndex
   documents!: DocumentStore
+  /** Every document poured into the library, whatever project it belongs to. */
+  library!: DocLibrary
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver
@@ -155,6 +165,12 @@ export default class PMPlugin extends Plugin {
     this.store = new ProjectStore(this.app, () => this.settings, this.index)
     this.collections = new CollectionStore(this.app, this.index)
     this.documents = new DocumentStore(this.app)
+    this.library = new DocLibrary(
+      this.app,
+      () => this.settings.libraryFolder.trim() || 'Library',
+      () => ({ filesFolder: '_files', notesHeading: t('library.notesHeading') }),
+      (path) => this.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, '')
+    )
     this.requirements = new RequirementStore(
       this.app,
       () => this.settings.requirements,
@@ -180,6 +196,7 @@ export default class PMPlugin extends Plugin {
     this.registerView(PM_MESSAGE_VIEW_TYPE, (leaf) => new MessageView(leaf, this))
     this.registerView(PM_REQUIREMENTS_VIEW_TYPE, (leaf) => new RequirementsView(leaf, this))
     this.registerView(PM_CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, this))
+    this.registerView(PM_DOCUMENTS_VIEW_TYPE, (leaf) => new DocumentsView(leaf, this))
     // Claiming the extension is what stops a click handing the message back to Outlook.
     this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
@@ -399,6 +416,38 @@ export default class PMPlugin extends Plugin {
         return true
       }
     })
+
+    this.addCommand({
+      id: 'open-documents',
+      name: t('command.openDocuments'),
+      callback: () => {
+        void this.openDocuments()
+      }
+    })
+
+    // A file or a folder in the vault, poured in from its menu: a folder with every file
+    // it holds, however deep.
+    this.registerEvent(
+      this.app.workspace.on('file-menu', (menu, file) => {
+        if (file instanceof TFile && !this.library.pourable(file)) return
+        menu.addItem((item) =>
+          item
+            .setTitle(t('library.pourMenu'))
+            .setIcon('library-big')
+            .onClick(safeAsync(() => this.pourVaultFiles([file])))
+        )
+      })
+    )
+    this.registerEvent(
+      this.app.workspace.on('files-menu', (menu, files) => {
+        menu.addItem((item) =>
+          item
+            .setTitle(t('library.pourMenu'))
+            .setIcon('library-big')
+            .onClick(safeAsync(() => this.pourVaultFiles(files)))
+        )
+      })
+    )
 
     this.registerEvent(
       this.app.workspace.on('editor-menu', (menu, editor, context) => {
@@ -691,6 +740,84 @@ export default class PMPlugin extends Plugin {
     const leaf = existing ?? this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf('tab')
     if (!existing) await leaf.setViewState({ type: PM_CHAT_VIEW_TYPE, active: true })
     await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /**
+   * The document library, in a tab of its own: found again if it is open, and narrowed to
+   * one project when opened from it.
+   */
+  async openDocuments(project = ''): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(PM_DOCUMENTS_VIEW_TYPE)[0]
+    const leaf = existing ?? this.app.workspace.getLeaf('tab')
+    await leaf.setViewState({ type: PM_DOCUMENTS_VIEW_TYPE, state: { project }, active: true })
+    await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /** The projects a document can belong to: programmes too, templates not. By title. */
+  libraryProjects(): ProjectOption[] {
+    return this.index
+      .projectRefs()
+      .filter((ref) => !ref.template)
+      .map((ref) => ({ path: ref.path, title: ref.title, detail: ref.path.slice(0, ref.path.lastIndexOf('/')) }))
+      .sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }))
+  }
+
+  askLibraryProjects(request: Omit<ChooserRequest, 'projects'>): Promise<ChooserAnswer | null> {
+    return chooseProjects(this.app, { ...request, projects: this.libraryProjects() })
+  }
+
+  /**
+   * Pours documents into the library once the reader has said which projects they belong
+   * to, telling how far it has got on a long pour and what came of it at the end.
+   */
+  async pourIntoLibrary(items: PourItem[], preset: string[] = []): Promise<void> {
+    if (!items.length) return
+    const inVault = items.some((item) => item.kind === 'vault' && this.library.movable(item.file))
+    const answer = await this.askLibraryProjects({
+      heading: t('library.pourTitle', { count: items.length }),
+      names: items.map((item) => (item.kind === 'vault' ? item.file.path : item.name)),
+      chosen: preset,
+      offerMove: inVault,
+      confirm: t('library.pourConfirm')
+    })
+    if (!answer) return
+    const progress = items.length > 3 ? new Notice(t('library.pouring', { done: 0, total: items.length }), 0) : null
+    const report = await this.library.pour(
+      items,
+      { projects: answer.projects, move: answer.move, today: today().toString() },
+      (done, total) => progress?.setMessage(t('library.pouring', { done, total }))
+    )
+    progress?.hide()
+    const parts = [t('library.poured', { count: report.added.length })]
+    if (report.known.length) parts.push(t('library.alreadyThere', { count: report.known.length }))
+    if (report.failed.length) {
+      parts.push(
+        t('library.pourFailed', {
+          list: report.failed.map((failure) => `${failure.name} (${failure.reason})`).join(', ')
+        })
+      )
+    }
+    new Notice(parts.join('\n'), report.failed.length ? 0 : 6000)
+    await this.openDocuments(answer.projects.length === 1 ? answer.projects[0] : '')
+  }
+
+  /** Files and folders of the vault, poured in: a folder brings every file it holds. */
+  async pourVaultFiles(entries: TAbstractFile[]): Promise<void> {
+    const files: TFile[] = []
+    const collect = (entry: TAbstractFile): void => {
+      if (entry instanceof TFolder) {
+        for (const child of entry.children) collect(child)
+      } else if (entry instanceof TFile && this.library.pourable(entry)) {
+        files.push(entry)
+      }
+    }
+    for (const entry of entries) collect(entry)
+    const unique = [...new Map(files.map((file) => [file.path, file])).values()]
+    if (!unique.length) {
+      new Notice(t('library.nothingToPour'))
+      return
+    }
+    await this.pourIntoLibrary(unique.map((file) => ({ kind: 'vault', file })))
   }
 
   /** The chat, opened on requirements chosen in the library. */

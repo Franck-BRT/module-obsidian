@@ -1,3 +1,5 @@
+import { currentLocale } from '../../i18n'
+
 /**
  * What the plugin keeps of a message dropped in from a mail client.
  *
@@ -109,7 +111,8 @@ export function formatBytes(bytes: number, units: readonly string[]): string {
     unit++
   }
   const rounded = unit === 0 || value >= 10 ? Math.round(value) : Math.round(value * 10) / 10
-  return `${rounded} ${units[unit]}`
+  // In the reader's language: `1,4 Mo` in French, `1.4 MB` in English.
+  return `${rounded.toLocaleString(currentLocale())} ${units[unit]}`
 }
 
 /** The same message with its attachments' bytes let go of, for holding in a list. */

@@ -12,6 +12,15 @@
   align-items: center;
   gap: var(--size-4-2);
   padding: var(--size-4-2) var(--size-4-3);
+}
+
+/* The model under the header, the header's rule drawn below whichever comes last. */
+.pm-chat-model-row {
+  padding: 0 var(--size-4-3) var(--size-4-2);
+}
+
+.pm-chat-head:not(:has(+ .pm-chat-model-row)),
+.pm-chat-model-row {
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
@@ -422,21 +431,37 @@ a.pm-change-target {
 /* ---- The model ------------------------------------------------------------ */
 
 /* The model under the title, as a quiet button: the list is there, not in the way. */
-.pm-chat-model-pick {
+/* The model, as a small tag under the title: sized by its name, not by the theme's button
+   height, which Obsidian gives every button through a rule that outranks a single class —
+   hence the button selector with the theme's own :not(). */
+button.pm-chat-model-pick:not(.clickable-icon) {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--size-2-2);
   max-width: 100%;
   height: auto;
-  padding: 0;
-  border: none;
-  background: none;
+  min-height: 0;
+  padding: var(--size-2-2) var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
   box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal);
+  line-height: var(--line-height-tight);
   cursor: pointer;
 }
 
-.pm-chat-model-pick:hover {
+button.pm-chat-model-pick:not(.clickable-icon):hover {
+  border-color: var(--background-modifier-border-hover);
+  background: var(--background-modifier-hover);
   color: var(--text-normal);
+}
+
+button.pm-chat-model-pick:not(.clickable-icon):disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .pm-chat-model-name {
