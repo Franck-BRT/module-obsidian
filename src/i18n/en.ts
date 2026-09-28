@@ -1439,6 +1439,8 @@ export const en = {
   'chat.branchRetake': 'Question asked again in place of another: a branch starts here.',
   'chat.branchFollows': 'Question asked after going back to an older branch.',
   'chat.branchResumed': 'Branch resumed: the next question carries it on.',
+  'chat.askMenu': 'Ask the chat',
+  'chat.copySelection': 'Copy',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

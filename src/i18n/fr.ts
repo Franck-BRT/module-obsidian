@@ -1419,6 +1419,8 @@ export const fr: Catalog = {
   'chat.branchRetake': 'Question reposée à la place d’une autre : une branche commence ici.',
   'chat.branchFollows': 'Question posée après être revenu sur une branche plus ancienne.',
   'chat.branchResumed': 'Branche reprise : la prochaine question la continue.',
+  'chat.askMenu': 'Demander au chat',
+  'chat.copySelection': 'Copier',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

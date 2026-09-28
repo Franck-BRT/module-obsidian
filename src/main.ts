@@ -1,5 +1,5 @@
 import { ZoneRadar } from './store/ZoneRadar'
-import { MarkdownView, Plugin, Notice, TFile } from 'obsidian'
+import { MarkdownView, Menu, Plugin, Notice, TFile } from 'obsidian'
 import type { Editor } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
@@ -367,14 +367,15 @@ export default class PMPlugin extends Plugin {
       }
     })
 
+    // In every mode: the editor's selection while editing, the page's while reading.
     this.addCommand({
       id: 'ask-chat-selection',
       name: t('command.askChat'),
-      editorCheckCallback: (checking, editor, context) => {
-        const selection = editor.getSelection()
-        if (!selection.trim()) return false
+      checkCallback: (checking: boolean) => {
+        const picked = this.selectionInView()
+        if (!picked) return false
         if (checking) return true
-        void this.chatAboutSelection(selection, context.file?.path ?? '')
+        void this.chatAboutSelection(picked.text, picked.path)
         return true
       }
     })
@@ -383,20 +384,28 @@ export default class PMPlugin extends Plugin {
       this.app.workspace.on('editor-menu', (menu, editor, context) => {
         const selection = editor.getSelection()
         if (!selection.trim()) return
-        menu.addItem((item) =>
-          item
-            .setTitle(t('command.askChat'))
-            .setIcon('messages-square')
-            .onClick(safeAsync(() => this.chatAboutSelection(selection, context.file?.path ?? '')))
-        )
-        menu.addItem((item) =>
-          item
-            .setTitle(t('command.taskFromSelection'))
-            .setIcon('list-plus')
-            .onClick(() => this.createTaskFromText(selection.trim()))
-        )
+        this.addSelectionItems(menu, selection, context.file?.path ?? '')
       })
     )
+
+    // Reading view has no menu of its own to add to: a right-click on a passage selected
+    // there gets one, with the same entries and a way to copy it.
+    this.registerDomEvent(activeDocument, 'contextmenu', (event) => {
+      const target = event.target
+      if (!(target instanceof HTMLElement) || !target.closest('.markdown-reading-view')) return
+      const picked = this.selectionInView()
+      if (!picked) return
+      event.preventDefault()
+      const menu = new Menu()
+      menu.addItem((item) =>
+        item
+          .setTitle(t('chat.copySelection'))
+          .setIcon('copy')
+          .onClick(safeAsync(() => navigator.clipboard.writeText(picked.text)))
+      )
+      this.addSelectionItems(menu, picked.text, picked.path)
+      menu.showAtMouseEvent(event)
+    })
 
     this.addCommand({
       id: 'open-current-as-project',
@@ -685,6 +694,42 @@ export default class PMPlugin extends Plugin {
     await this.openChat()
     const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
     if (view instanceof ChatView) await view.goToBranch(file, index)
+  }
+
+  /** What a passage selected in a note can be taken to: the chat, or a new task. */
+  private addSelectionItems(menu: Menu, selection: string, path: string): void {
+    menu.addItem((item) =>
+      item
+        .setTitle(t('chat.askMenu'))
+        .setIcon('messages-square')
+        .onClick(safeAsync(() => this.chatAboutSelection(selection, path)))
+    )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('command.taskFromSelection'))
+        .setIcon('list-plus')
+        .onClick(() => this.createTaskFromText(selection.trim()))
+    )
+  }
+
+  /**
+   * The passage selected in the note in front of the reader: the editor's while it is
+   * being edited, the page's while it is read — and only when the selection is inside
+   * that note, not in a panel beside it.
+   */
+  private selectionInView(): { text: string; path: string } | null {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView)
+    const file = view?.file
+    if (!view || !file) return null
+    if (view.getMode() === 'source') {
+      const text = view.editor.getSelection()
+      return text.trim() ? { text, path: file.path } : null
+    }
+    const selection = activeWindow.getSelection()
+    const text = selection?.toString() ?? ''
+    const anchor = selection?.anchorNode
+    if (!text.trim() || !anchor || !view.containerEl.contains(anchor)) return null
+    return { text, path: file.path }
   }
 
   /** The chat, opened on a passage chosen in a note, for the next question. */
