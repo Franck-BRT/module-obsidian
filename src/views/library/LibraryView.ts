@@ -23,6 +23,9 @@ import { depositDocument, setDocState, signOff } from './documentActions'
 import { LIBRARY_SORT_KEYS, librarySortKeyLabel, orderDocuments } from './librarySort'
 import { renderSortControl } from '../SortControl'
 import { writeBordereau } from './bordereau'
+import { LibraryDocPicker } from '../documents/LibraryDocPicker'
+import { fileInRegister } from '../documents/registerActions'
+import { sortDocs } from '../../store/library/libraryDoc'
 
 /**
  * A project's documents as a library rather than as a plan: what exists, at which
@@ -233,6 +236,14 @@ export class LibraryView implements SubView {
         .setTooltip(`${t('view.awaitedDocs')}\n${late.map((task) => task.title).join('\n')}`)
     }
     this.renderOrphanChip(right)
+    // A document already in the library, followed here without being copied.
+    const primary = this.scope.primary
+    if (primary && !this.scope.isMulti) {
+      new ChipButton(right)
+        .setLabel(t('library.fromLibrary'))
+        .setShape('pill')
+        .onClick(() => this.pickFromLibrary(primary.filePath))
+    }
     new ChipButton(right)
       .setLabel(t('view.bordereau'))
       .setShape('pill')
@@ -248,6 +259,41 @@ export class LibraryView implements SubView {
           new Notice(t('view.bordereauCreated', { path: await writeBordereau(this.plugin, project, chosen) }))
         })
       )
+  }
+
+  /**
+   * A document of the library to follow in this register: this project's own first, then
+   * the rest, found by title or by what they say.
+   */
+  private pickFromLibrary(projectPath: string): void {
+    const docs = this.plugin.library.docs().filter((doc) => doc.file)
+    if (!docs.length) {
+      new Notice(t('library.fromLibraryNone'))
+      return
+    }
+    const ordered = [
+      ...sortDocs(
+        docs.filter((doc) => doc.projects.includes(projectPath)),
+        'added'
+      ),
+      ...sortDocs(
+        docs.filter((doc) => !doc.projects.includes(projectPath)),
+        'added'
+      )
+    ]
+    const texts = this.plugin.libraryText
+    void texts.refresh(this.plugin.library.docs())
+    new LibraryDocPicker(
+      this.plugin.app,
+      ordered,
+      (path) => this.plugin.index.projectRef(path)?.title ?? path,
+      (doc) => texts.folded(doc),
+      safeAsync(async (doc) => {
+        await fileInRegister(this.plugin, doc, projectPath)
+        await this.onRefresh()
+      }),
+      (doc) => texts.entry(doc)?.text ?? ''
+    ).open()
   }
 
   /**

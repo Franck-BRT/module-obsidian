@@ -1740,5 +1740,19 @@ export const fr: Catalog = {
   'library.picked': { one: '{count} document coché', other: '{count} documents cochés' },
   'library.unpick': 'Tout décocher',
   'library.pickAll': 'Cocher tous les documents affichés',
-  'library.pickOne': 'Cocher « {title} »'
+  'library.pickOne': 'Cocher « {title} »',
+  'library.registerMenu': 'Suivre dans le registre documentaire…',
+  'library.registerPick': 'Où suivre « {title} » ? Un document attendu, un document existant, ou un nouveau…',
+  'library.registerNew': 'Nouveau document dans le registre de {project}',
+  'library.registerDue': 'attendu pour le {date}',
+  'library.registerIssue': 'indice {issue}',
+  'library.registerNext': 'deviendra la version {version}',
+  'library.registerNote': 'Versé depuis la bibliothèque',
+  'library.registerFiled': '« {title} » ({project}) : le fichier est enregistré comme version {version}.',
+  'library.registerCreated': '« {title} » est ajouté au registre de {project} ; renseigne sa référence et son indice.',
+  'library.registerNoProject': 'Aucun projet ne peut tenir de registre : crée d’abord un projet.',
+  'library.registerOld': 'ancienne version {version}',
+  'library.registerOpen': 'Ouvrir « {title} » dans le registre',
+  'library.fromLibrary': 'Depuis la bibliothèque',
+  'library.fromLibraryNone': 'La bibliothèque de documents est vide.'
 }

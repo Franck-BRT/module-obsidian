@@ -490,3 +490,67 @@ button.pm-docs-chip:not(.clickable-icon):hover {
   background: rgb(from var(--text-highlight-bg, var(--color-yellow)) r g b / 35%);
   color: var(--text-normal);
 }
+
+/* Where a document is followed in the projects' registers. */
+.pm-docs-register {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2);
+  margin-top: var(--size-2-3);
+}
+
+button.pm-docs-reg:not(.clickable-icon) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  height: auto;
+  padding: 1px var(--size-4-2);
+  border: 1px solid var(--pm-docs-reg, var(--background-modifier-border));
+  border-radius: var(--radius-s);
+  background: rgb(from var(--pm-docs-reg, var(--text-muted)) r g b / 10%);
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal);
+  line-height: var(--line-height-normal);
+  cursor: pointer;
+}
+
+button.pm-docs-reg:not(.clickable-icon):hover {
+  background: rgb(from var(--pm-docs-reg, var(--text-muted)) r g b / 20%);
+}
+
+button.pm-docs-reg.is-old:not(.clickable-icon) {
+  border-style: dashed;
+  background: none;
+  color: var(--text-faint);
+}
+
+.pm-docs-reg-icon {
+  display: inline-flex;
+}
+
+.pm-docs-reg-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.pm-docs-reg--expected {
+  --pm-docs-reg: var(--color-orange);
+}
+
+.pm-docs-reg--received {
+  --pm-docs-reg: var(--color-blue);
+}
+
+.pm-docs-reg--in-review {
+  --pm-docs-reg: var(--color-purple);
+}
+
+.pm-docs-reg--approved {
+  --pm-docs-reg: var(--color-green);
+}
+
+.pm-docs-reg--obsolete {
+  --pm-docs-reg: var(--text-faint);
+}

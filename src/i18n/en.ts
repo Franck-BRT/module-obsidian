@@ -1760,5 +1760,19 @@ export const en = {
   'library.picked': { one: '{count} document ticked', other: '{count} documents ticked' },
   'library.unpick': 'Untick all',
   'library.pickAll': 'Tick every document shown',
-  'library.pickOne': 'Tick “{title}”'
+  'library.pickOne': 'Tick “{title}”',
+  'library.registerMenu': 'Follow in the document register…',
+  'library.registerPick': 'Where to follow “{title}”? An awaited document, an existing one, or a new one…',
+  'library.registerNew': 'New document in the register of {project}',
+  'library.registerDue': 'awaited for {date}',
+  'library.registerIssue': 'issue {issue}',
+  'library.registerNext': 'will be version {version}',
+  'library.registerNote': 'Poured in from the library',
+  'library.registerFiled': '“{title}” ({project}): the file is recorded as version {version}.',
+  'library.registerCreated': '“{title}” is added to the register of {project}; fill in its reference and issue.',
+  'library.registerNoProject': 'No project can hold a register: create a project first.',
+  'library.registerOld': 'earlier version {version}',
+  'library.registerOpen': 'Open “{title}” in the register',
+  'library.fromLibrary': 'From the library',
+  'library.fromLibraryNone': 'The document library is empty.'
 } as const

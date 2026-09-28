@@ -28,6 +28,11 @@ import {
 } from '../../store/library/libraryDoc'
 import type { PourItem } from '../../store/library/DocLibrary'
 import { snippet } from '../../store/library/docText'
+import { registerEntries, type RegisterEntry } from '../../store/library/libraryRegister'
+import { documentOf } from '../../store/Document'
+import { openTaskModal } from '../../ui/ModalFactory'
+import { docStateLabel } from '../library/docStateLabel'
+import { fileInRegister } from './registerActions'
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
@@ -57,6 +62,8 @@ export class DocumentsView extends ItemView {
   private textTimer: number | null = null
   /** The documents ticked, by their records, to be asked about together. */
   private picked = new Set<string>()
+  /** Where each file is followed in the projects' registers, once they have been read. */
+  private followed = new Map<string, RegisterEntry[]>()
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -114,6 +121,7 @@ export class DocumentsView extends ItemView {
     // What the documents say, read in the background: the list follows as it comes in.
     this.register(this.plugin.libraryText.onChange(() => this.textSoon()))
     void this.plugin.libraryText.refresh(this.plugin.library.docs())
+    void this.loadRegister()
 
     this.registerDomEvent(this.containerEl, 'dragover', (event) => {
       if (!event.dataTransfer?.types.includes('Files')) return
@@ -148,7 +156,18 @@ export class DocumentsView extends ItemView {
       this.renderBody()
       // A document come in, or changed, has its text read.
       void this.plugin.libraryText.refresh(this.plugin.library.docs())
+      void this.loadRegister()
     }, 300)
+  }
+
+  /** The projects' registers, read for the files they follow; the list drawn again after. */
+  private async loadRegister(): Promise<void> {
+    const paths = this.plugin.index
+      .projectRefs()
+      .filter((ref) => !ref.template && !ref.program)
+      .map((ref) => ref.path)
+    this.followed = registerEntries(await this.plugin.store.loadProjects(paths))
+    this.renderBody()
   }
 
   /**
@@ -434,6 +453,8 @@ export class DocumentsView extends ItemView {
       if (found.after) line.appendText(' …')
     }
 
+    this.renderRegister(main, doc)
+
     const chips = main.createDiv('pm-docs-projects')
     if (!doc.projects.length) chips.createSpan({ cls: 'pm-docs-chip is-none', text: t('library.noProject') })
     for (const path of doc.projects) {
@@ -459,6 +480,40 @@ export class DocumentsView extends ItemView {
       .setIcon('more-vertical')
       .setTooltip(t('library.more'))
       .extraSettingsEl.addEventListener('click', (event) => this.showMenu(doc, event))
+  }
+
+  /**
+   * Where the document is followed in the registers: the project, its reference, issue and
+   * state — or that it is an earlier version there. A click opens the register's ticket.
+   */
+  private renderRegister(main: HTMLElement, doc: LibraryDoc): void {
+    const entries = doc.file ? this.followed.get(doc.file) : undefined
+    if (!entries?.length) return
+    const line = main.createDiv('pm-docs-register')
+    for (const entry of entries) {
+      const meta = documentOf(entry.task)
+      const text = entry.current
+        ? [
+            entry.project.title,
+            meta.reference || entry.task.title,
+            meta.issue && t('library.registerIssue', { issue: meta.issue }),
+            docStateLabel(meta.state)
+          ]
+        : [
+            entry.project.title,
+            meta.reference || entry.task.title,
+            t('library.registerOld', { version: entry.version })
+          ]
+      const chip = line.createEl('button', {
+        cls: `pm-docs-reg${entry.current ? '' : ' is-old'} pm-docs-reg--${meta.state}`,
+        attr: { title: t('library.registerOpen', { title: entry.task.title }) }
+      })
+      setIcon(chip.createSpan('pm-docs-reg-icon'), 'clipboard-list')
+      chip.createSpan({ text: text.filter(Boolean).join(' · ') })
+      chip.addEventListener('click', () =>
+        openTaskModal(this.plugin, entry.project, { task: entry.task, onSave: () => this.loadRegister() })
+      )
+    }
   }
 
   /** Said when its text could not be read, and offered to a model when it is a scan. */
@@ -489,6 +544,18 @@ export class DocumentsView extends ItemView {
         .setIcon('file-search')
         .setDisabled(!doc.file)
         .onClick(safeAsync(() => this.openDoc(doc)))
+    )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('library.registerMenu'))
+        .setIcon('clipboard-list')
+        .setDisabled(!doc.file)
+        .onClick(
+          safeAsync(async () => {
+            await fileInRegister(this.plugin, doc)
+            await this.loadRegister()
+          })
+        )
     )
     menu.addItem((item) =>
       item
