@@ -119,6 +119,8 @@ export class ChatView extends ItemView {
   private projects: string[] = []
   /** The collections talked about, by the paths of their notes: sent like the projects. */
   private collections: string[] = []
+  /** The question being rewritten, whose place the next one sent takes. */
+  private editing: ChatTurn | null = null
   /** A passage chosen in a note, for the next question only. */
   private selection: { text: string; path: string } | null = null
   private contextEl: HTMLElement | null = null
@@ -1090,6 +1092,7 @@ export class ChatView extends ItemView {
     button('history', t('chat.history'), () => this.pickConversation())
     button('square-pen', t('chat.new'), () => {
       this.turns = []
+      this.editing = null
       this.notePath = null
       this.saved = new WeakSet()
       this.app.workspace.requestSaveLayout()
@@ -1113,6 +1116,19 @@ export class ChatView extends ItemView {
     this.contextEl = missing ? null : root.createDiv('pm-chat-context')
     this.renderContext()
 
+    // A question being rewritten says so, with the way back.
+    const editing = this.editing
+    if (editing && !missing) {
+      const banner = root.createDiv('pm-chat-editing')
+      setIcon(banner.createSpan({ cls: 'pm-chat-editing-icon' }), 'pencil')
+      banner.createSpan({ text: t('chat.editing', { at: localStamp(editing.at) }) })
+      const cancel = banner.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.editCancel') } })
+      setIcon(cancel, 'x')
+      cancel.addEventListener('click', () => {
+        this.editing = null
+        this.render()
+      })
+    }
     const composer = root.createDiv('pm-chat-composer')
     this.inputEl = composer.createEl('textarea', {
       cls: 'pm-chat-input',
@@ -1241,8 +1257,20 @@ export class ChatView extends ItemView {
       }
       return
     }
-    // A reply is copied into a note; a question is still in the reader's head.
-    if (turn.role !== 'assistant') return
+    // A question can be copied, rewritten or asked again: the last two take its place and
+    // that of everything said after it.
+    if (turn.role === 'user') {
+      this.turnButton(actions, 'copy', t('chat.copyQuestion'), async () => {
+        await navigator.clipboard.writeText(turn.content)
+        new Notice(t('chat.copiedQuestion'))
+      })
+      this.turnButton(actions, 'pencil', t('chat.editQuestion'), () => this.edit(turn))
+      this.turnButton(actions, 'refresh-cw', t('chat.askAgain'), () => this.retake(turn))
+      return
+    }
+    // Written again: its question asked again, as it was.
+    const question = this.questionOf(turn)
+    if (question) this.turnButton(actions, 'refresh-cw', t('chat.regenerate'), () => this.retake(question))
     // A reply the length limit cut short says so, with the way to have the rest.
     if (turn.cut) {
       const note = el.createDiv('pm-chat-cut')
@@ -1307,6 +1335,48 @@ export class ChatView extends ItemView {
         new Notice(t('chat.copied'))
       })
     )
+  }
+
+  /** A small button under a turn, doing nothing while a reply is being written. */
+  private turnButton(parent: HTMLElement, icon: string, label: string, run: () => void | Promise<void>): void {
+    const button = parent.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': label } })
+    setIcon(button, icon)
+    button.disabled = this.pending
+    button.addEventListener(
+      'click',
+      safeAsync(async () => {
+        if (!this.pending) await run()
+      })
+    )
+  }
+
+  /**
+   * A question asked again with what it was asked with — the note, the projects, the
+   * files it named — in place of itself and of everything after it.
+   */
+  private async retake(question: ChatTurn): Promise<void> {
+    const at = this.turns.indexOf(question)
+    if (at < 0 || this.missing()) return
+    this.editing = null
+    this.turns = [...this.turns.slice(0, at), this.again(question, question.content)]
+    await this.ask()
+  }
+
+  /** The question put back in the box, to be sent rewritten in place of itself. */
+  private edit(question: ChatTurn): void {
+    this.editing = question
+    this.render()
+    this.inputEl.value = question.content
+    window.setTimeout(() => {
+      this.inputEl.focus()
+      this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length)
+    }, 0)
+  }
+
+  /** A question like this one, asked now, saying which one it takes the place of. */
+  private again(question: ChatTurn, content: string): ChatTurn {
+    const { model: _model, cut: _cut, failed: _failed, retakes: _retakes, ...kept } = question
+    return { ...kept, content, at: new Date().toISOString(), retakes: question.at }
   }
 
   /** The question a reply answers: the last one asked before it. */
@@ -1518,6 +1588,16 @@ export class ChatView extends ItemView {
       ? withSelection(text, chosen.text, (sent, total) => t('chat.selectionCut', { sent, total }))
       : text
     this.selection = null
+    // A rewritten question takes the place of the one it rewrites, with what that one was
+    // asked with, and of everything said after it.
+    const editing = this.editing
+    const at = editing ? this.turns.indexOf(editing) : -1
+    this.editing = null
+    if (editing && at >= 0) {
+      this.turns = [...this.turns.slice(0, at), this.again(editing, content)]
+      await this.ask()
+      return
+    }
     this.turns = [
       ...withoutFailure(this.turns),
       {
@@ -1687,6 +1767,7 @@ export class ChatView extends ItemView {
   private async resume(file: TFile): Promise<void> {
     try {
       const note = await this.notes.load(file)
+      this.editing = null
       this.turns = note.turns
       this.saved = new WeakSet(note.turns)
       this.notePath = file.path

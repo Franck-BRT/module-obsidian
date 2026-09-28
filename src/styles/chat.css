@@ -499,3 +499,40 @@ a.pm-change-target {
   width: 14px;
   height: 14px;
 }
+
+/* ---- Rewriting a question ------------------------------------------------- */
+
+/* Under a question, its buttons sit on its side, as quiet as a reply's. */
+.pm-chat-turn--user .pm-chat-actions {
+  justify-content: flex-end;
+  opacity: 0.75;
+}
+
+.pm-chat-turn--user .pm-chat-actions .clickable-icon {
+  color: var(--text-on-accent);
+}
+
+.pm-chat-editing {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-1) var(--size-4-3);
+  border-top: 1px solid var(--background-modifier-border);
+  background: rgb(from var(--interactive-accent) r g b / 8%);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-chat-editing-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.pm-chat-editing-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pm-chat-editing > span:nth-child(2) {
+  flex: 1;
+}

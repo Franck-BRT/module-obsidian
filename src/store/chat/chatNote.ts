@@ -40,6 +40,8 @@ const PROJECT_MARK = '📁'
 const FILES_MARK = '📎'
 /** What marks the collections a question was asked about. */
 const COLLECTION_MARK = '🗂'
+/** What marks a question asked again in place of an earlier one, before that one's time. */
+const RETAKE_MARK = '↻'
 /** The marks after which a link is not the note the question was about. */
 const MARKS = [REQUIREMENTS_MARK, PROJECT_MARK, FILES_MARK, COLLECTION_MARK]
 
@@ -110,6 +112,39 @@ function linkedPath(title: string): string | undefined {
   )
 }
 
+/** The time of the question a question retakes, from the mark in its title. */
+function retaken(title: string): string | undefined {
+  const segment = title.split(' · ').find((part) => part.trim().startsWith(RETAKE_MARK))
+  return segment ? fromStamp(segment) : undefined
+}
+
+/**
+ * The conversation as it now goes: a question asked again takes the place of the one it
+ * retakes and of everything said after it. The note keeps them — it is the record, and
+ * the reader may want to compare — but the thread picked up from it is the latest one.
+ *
+ * The question retaken is the last one asked at that minute before the retake, which is
+ * as precise as the note's times are.
+ */
+export function currentThread(turns: ChatTurn[]): ChatTurn[] {
+  const thread: ChatTurn[] = []
+  for (const turn of turns) {
+    if (turn.role === 'user' && turn.retakes) {
+      const stamp = localStamp(turn.retakes)
+      let from = -1
+      for (let at = thread.length - 1; at >= 0; at--) {
+        if (thread[at].role === 'user' && localStamp(thread[at].at) === stamp) {
+          from = at
+          break
+        }
+      }
+      if (from >= 0) thread.splice(from)
+    }
+    thread.push(turn)
+  }
+  return thread
+}
+
 /** The model a reply's title names after its time: `Assistant · 2026-09-28 14:10 · qwen3`. */
 function writtenBy(title: string): string | undefined {
   const parts = title.split(' · ').map((part) => part.trim())
@@ -149,7 +184,8 @@ export function turnMarkdown(turn: ChatTurn, words: ChatNoteWords): string {
   // A reply says which model wrote it: a conversation may change model on the way, and
   // two answers to one question are compared knowing whose they are.
   const by = turn.role === 'assistant' && turn.model ? ` · ${turn.model}` : ''
-  const head = `> [!${CALLOUT[turn.role]}] ${turn.role === 'user' ? words.user : words.assistant} · ${localStamp(turn.at)}${about}${by}`
+  const retake = turn.role === 'user' && turn.retakes ? ` · ${RETAKE_MARK} ${localStamp(turn.retakes)}` : ''
+  const head = `> [!${CALLOUT[turn.role]}] ${turn.role === 'user' ? words.user : words.assistant} · ${localStamp(turn.at)}${about}${retake}${by}`
   const body = turn.content.split('\n').map((line) => (line === '' ? '>' : `> ${line}`))
   return [head, ...body].join('\n')
 }
@@ -230,6 +266,7 @@ export function readChatNote(content: string): ChatNote {
       const collections = role === 'user' ? namedNotes(start[2], COLLECTION_MARK) : []
       const files = role === 'user' ? namedFiles(start[2]) : []
       const model = role === 'assistant' ? writtenBy(start[2]) : undefined
+      const retakes = role === 'user' ? retaken(start[2]) : undefined
       current = {
         turn: {
           role,
@@ -240,6 +277,7 @@ export function readChatNote(content: string): ChatNote {
           ...(collections.length ? { collections } : {}),
           ...(files.length ? { files } : {}),
           ...(model ? { model } : {}),
+          ...(retakes ? { retakes } : {}),
           ...(requirements.length ? { requirements } : {})
         },
         lines: []
@@ -249,7 +287,7 @@ export function readChatNote(content: string): ChatNote {
     previous = line
   }
   close()
-  return { title: text('title'), model: text('model'), created, turns }
+  return { title: text('title'), model: text('model'), created, turns: currentThread(turns) }
 }
 
 /** Whether a note's front matter says it is a conversation. */

@@ -31,6 +31,11 @@ export interface ChatTurn {
   model?: string
   /** A reply the length limit cut before the model had finished. Said in the panel only. */
   cut?: boolean
+  /**
+   * A question asked again — as it was, or rewritten — in place of the one asked at this
+   * moment: that one and everything after it are the conversation's past, not its thread.
+   */
+  retakes?: string
 }
 
 /**

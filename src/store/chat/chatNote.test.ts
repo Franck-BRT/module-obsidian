@@ -7,7 +7,8 @@ import {
   localStamp,
   noteLink,
   readChatNote,
-  turnMarkdown
+  turnMarkdown,
+  currentThread
 } from './chatNote'
 import type { ChatTurn } from './chatSession'
 
@@ -267,5 +268,46 @@ describe('the collections a question was asked about', () => {
       `> [!question] Vous · ${localStamp(at(3))} · 📁 [[Work/Génie civil|Génie civil]] · 🗂 [[Collections/En retard|En retard]], [[Collections/Équipe Anne|Équipe Anne]]`
     )
     expect(readChatNote(chatNoteContent(META, [question], WORDS)).turns).toEqual([question])
+  })
+})
+
+describe('a question asked again', () => {
+  const first = turn('user', 'Résume.', 3)
+  const reply = turn('assistant', 'Trop long.', 4)
+  const next = turn('user', 'Plus court ?', 5)
+  const nextReply = turn('assistant', 'Oui.', 6)
+  const again = { ...turn('user', 'Résume en trois lignes.', 7), retakes: first.at }
+  const againReply = turn('assistant', 'Trois lignes.', 8)
+
+  it('names the time of the question it takes the place of', () => {
+    expect(turnMarkdown(again, WORDS).split('\n')[0]).toBe(
+      `> [!question] Vous · ${localStamp(at(7))} · ↻ ${localStamp(at(3))}`
+    )
+  })
+
+  // The note keeps every exchange; the thread picked up from it is the latest one.
+  it('takes the place of that question and of everything after it, once read back', () => {
+    const note = chatNoteContent(META, [first, reply, next, nextReply, again, againReply], WORDS)
+    expect(note).toContain('Trop long.')
+    expect(readChatNote(note).turns).toEqual([again, againReply])
+  })
+
+  it('keeps what came before the question it retakes', () => {
+    const later = { ...turn('user', 'Plus court, vraiment ?', 7), retakes: next.at }
+    const note = chatNoteContent(META, [first, reply, next, nextReply, later], WORDS)
+    expect(readChatNote(note).turns).toEqual([first, reply, later])
+  })
+
+  // The note's times are to the minute: of two questions asked in one, the later is meant.
+  it('takes the place of the later of two questions asked in the same minute', () => {
+    const quick = turn('user', 'Et en anglais ?', 3)
+    const quickReply = turn('assistant', 'In English.', 3)
+    const retake = { ...turn('user', 'Et en allemand ?', 7), retakes: quick.at }
+    expect(currentThread([first, reply, quick, quickReply, retake])).toEqual([first, reply, retake])
+  })
+
+  it('leaves the thread alone when the question it names is not there', () => {
+    const orphan = { ...turn('user', 'Q', 7), retakes: at(1) }
+    expect(currentThread([first, reply, orphan])).toEqual([first, reply, orphan])
   })
 })
