@@ -16,6 +16,7 @@ export function builtinPrompts(): ChatPrompt[] {
     own: false
   })
   return [
+    prompt('planning', t('chat.preset.planning'), t('chat.preset.planningQ')),
     prompt('project', t('chat.preset.status'), t('chat.preset.statusQ')),
     prompt('project', t('chat.preset.late'), t('chat.preset.lateQ')),
     prompt('project', t('chat.preset.report'), t('chat.preset.reportQ')),
@@ -25,6 +26,7 @@ export function builtinPrompts(): ChatPrompt[] {
     prompt('requirements', t('chat.preset.coherence'), t('chat.preset.coherenceQ')),
     prompt('requirements', t('chat.preset.verification'), t('chat.preset.verificationQ')),
     prompt('requirements', t('chat.preset.translate'), t('chat.preset.translateQ')),
+    prompt('file', t('chat.preset.document'), t('chat.preset.documentQ')),
     prompt('note', t('chat.preset.summary'), t('chat.preset.summaryQ')),
     prompt('note', t('chat.preset.actions'), t('chat.preset.actionsQ')),
     prompt('note', t('chat.preset.extract'), t('chat.preset.extractQ'))
@@ -40,6 +42,10 @@ export function scopeWord(scope: PromptScope): string {
       return t('chat.presetScope.requirements')
     case 'note':
       return t('chat.presetScope.note')
+    case 'file':
+      return t('chat.presetScope.file')
+    case 'planning':
+      return t('chat.presetScope.planning')
     case 'any':
       return ''
   }
@@ -53,6 +59,10 @@ export function scopeIcon(scope: PromptScope): string {
       return 'list-checks'
     case 'note':
       return 'file-text'
+    case 'file':
+      return 'paperclip'
+    case 'planning':
+      return 'calendar-sync'
     case 'any':
       return 'message-circle'
   }

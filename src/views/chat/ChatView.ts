@@ -4,6 +4,7 @@ import {
   Menu,
   MarkdownRenderer,
   MarkdownView,
+  normalizePath,
   Notice,
   setIcon,
   SuggestModal,
@@ -26,7 +27,18 @@ import { chatTitle, isChatNote, localStamp, type ChatNoteWords } from '../../sto
 import { ChatNotes } from '../../store/chat/ChatNotes'
 import { currentRequirements, requirementsContext, type RequirementWords } from '../../store/chat/chatRequirements'
 import { currentProject, projectContext, projectParts, type ProjectWords } from '../../store/chat/chatProject'
-import { withoutOpenChange } from '../../store/chat/chatChange'
+import { changeBlocks, parseChange, withoutOpenChange } from '../../store/chat/chatChange'
+import { applyToRequirement, applyToTicket, type Applied } from '../../store/chat/applyChange'
+import {
+  currentFiles,
+  fileText,
+  filesContext,
+  FileReadError,
+  isReadable,
+  type ContextFile,
+  type FileProblem
+} from '../../store/chat/chatFile'
+import { keepDroppedFile } from '../../store/chat/keepFile'
 import { availablePrompts, parsePrompts, type ChatPrompt } from '../../store/chat/chatPrompts'
 import { builtinPrompts, scopeIcon } from './chatPresets'
 import { requirementOptions } from './changeCard'
@@ -77,6 +89,10 @@ export class ChatView extends ItemView {
   private contextEl: HTMLElement | null = null
   /** The ready questions offered while the conversation is empty. */
   private presetsEl: HTMLElement | null = null
+  /** Files attached — a planning, a report — by path, sent with every question until taken off. */
+  private files: string[] = []
+  /** Files already read, by path, with the modification time they were read at. */
+  private fileCache = new Map<string, { mtime: number; text: string }>()
   /** The reply being written, drawn as it grows; null when none is. */
   private liveEl: HTMLElement | null = null
   private liveText = ''
@@ -124,6 +140,10 @@ export class ChatView extends ItemView {
           this.project = file.path
           this.renderContext()
         }
+        if (this.files.includes(oldPath)) {
+          this.files = this.files.map((path) => (path === oldPath ? file.path : path))
+          this.renderContext()
+        }
         if (file === this.contextFile) this.renderContext()
       })
     )
@@ -145,6 +165,23 @@ export class ChatView extends ItemView {
         this.renderContext()
       })
     )
+    // A file dropped on the panel is kept in the vault, then attached.
+    this.registerDomEvent(this.containerEl, 'dragover', (event) => {
+      if (!event.dataTransfer?.types.includes('Files')) return
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'copy'
+      this.contentEl.addClass('pm-chat--drop')
+    })
+    this.registerDomEvent(this.containerEl, 'dragleave', (event) => {
+      if (!this.containerEl.contains(event.relatedTarget as Node | null)) this.contentEl.removeClass('pm-chat--drop')
+    })
+    this.registerDomEvent(this.containerEl, 'drop', (event) => {
+      this.contentEl.removeClass('pm-chat--drop')
+      const dropped = event.dataTransfer?.files
+      if (!dropped?.length) return
+      event.preventDefault()
+      void this.dropFiles(Array.from(dropped))
+    })
     this.render()
     return Promise.resolve()
   }
@@ -217,6 +254,7 @@ export class ChatView extends ItemView {
     }
 
     this.renderProjectRow(el)
+    this.renderFileRows(el)
 
     if (!this.attached.length) return
     const reqRow = el.createDiv('pm-chat-context-row')
@@ -263,6 +301,137 @@ export class ChatView extends ItemView {
       this.project = null
       this.renderContext()
     })
+  }
+
+  /** One row a file attached, with the way to open it and the way to take it off. */
+  private renderFileRows(el: HTMLElement): void {
+    for (const path of this.files) {
+      const row = el.createDiv('pm-chat-context-row')
+      setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'paperclip')
+      const name = row.createEl('a', {
+        cls: 'pm-chat-context-name',
+        text: path.slice(path.lastIndexOf('/') + 1),
+        attr: { title: path }
+      })
+      name.addEventListener(
+        'click',
+        safeAsync(() => this.app.workspace.openLinkText(path, '', 'tab'))
+      )
+      const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.fileOff') } })
+      setIcon(off, 'x')
+      off.addEventListener('click', () => {
+        this.files = this.files.filter((each) => each !== path)
+        this.renderContext()
+      })
+    }
+  }
+
+  /**
+   * A file to read with the questions: it goes with every one from here on, until taken
+   * off, like the note and the project.
+   */
+  attachFile(path: string): void {
+    if (!this.files.includes(path)) this.files = [...this.files, path]
+    this.renderContext()
+    window.setTimeout(() => this.inputEl?.focus(), 0)
+  }
+
+  /**
+   * The files that can be read, the attached project's own first — its documents are what
+   * a question about it is most likely about — then the most recently changed.
+   */
+  private pickFile(): void {
+    const ref = this.project ? this.plugin.index.projectRef(this.project) : null
+    const folder = ref ? ref.path.slice(0, ref.path.lastIndexOf('/') + 1) : null
+    const files = this.app.vault
+      .getFiles()
+      .filter((file) => isReadable(file.extension) && !this.files.includes(file.path))
+      .filter((file) => file.extension !== 'md' || !isChatNote(this.app.metadataCache.getFileCache(file)?.frontmatter))
+      .sort((a, b) => {
+        const own = (file: TFile): number => (folder && file.path.startsWith(folder) ? 0 : 1)
+        return own(a) - own(b) || b.stat.mtime - a.stat.mtime
+      })
+    if (!files.length) {
+      new Notice(t('chat.fileNone'))
+      return
+    }
+    new FilePicker(this.app, files, (file) => this.attachFile(file.path)).open()
+  }
+
+  /**
+   * Files dropped from outside the vault: kept first — into the attached project as
+   * received documents, or beside the conversations — then attached by where they now are.
+   */
+  private async dropFiles(files: File[]): Promise<void> {
+    const settings = this.plugin.settings
+    for (const file of files) {
+      const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.') + 1) : ''
+      if (!isReadable(extension)) {
+        new Notice(t('chat.fileUnsupported', { name: file.name }))
+        continue
+      }
+      try {
+        const looseFolder = normalizePath(`${settings.chat.folder}/${t('chat.filesFolder')}`)
+        const kept = await keepDroppedFile(
+          {
+            app: this.app,
+            store: this.plugin.store,
+            documents: this.plugin.documents,
+            looseFolder,
+            by: settings.globalTeamMembers[0] ?? '',
+            note: t('chat.dropNote')
+          },
+          file.name,
+          new Uint8Array(await file.arrayBuffer()),
+          this.project
+        )
+        this.attachFile(kept.path)
+        const project = this.project ? (this.plugin.index.projectRef(this.project)?.title ?? '') : ''
+        new Notice(
+          kept.filed
+            ? t('chat.fileFiled', { name: file.name, project })
+            : t('chat.fileKept', { name: file.name, folder: looseFolder })
+        )
+      } catch (error) {
+        new Notice(
+          t('chat.fileKeepFailed', { name: file.name, reason: error instanceof Error ? error.message : String(error) })
+        )
+      }
+    }
+  }
+
+  /**
+   * The attached files' text, for the instructions: each read when it changed, not at
+   * every question — a hundred-page PDF is not parsed again for a follow-up. One that
+   * cannot be read is named with why, so the model says so rather than answering as if
+   * it had read it; the reader is told too.
+   */
+  private async filesBlock(paths: string[]): Promise<string> {
+    const read: ContextFile[] = []
+    const unread: string[] = []
+    for (const path of paths) {
+      const file = this.app.vault.getAbstractFileByPath(path)
+      if (!(file instanceof TFile)) continue
+      const cached = this.fileCache.get(path)
+      let text = cached && cached.mtime === file.stat.mtime ? cached.text : null
+      if (text === null) {
+        try {
+          text = await fileText(file.extension, new Uint8Array(await this.app.vault.readBinary(file)))
+          this.fileCache.set(path, { mtime: file.stat.mtime, text })
+        } catch (error) {
+          const reason = fileProblemText(error instanceof FileReadError ? error.problem : 'unreadable')
+          unread.push(t('chat.fileUnread', { name: file.name, reason }))
+          new Notice(t('chat.fileProblemNotice', { name: file.name, reason }), 10000)
+          continue
+        }
+      }
+      read.push({ path: file.path, name: file.name, text })
+    }
+    const block = filesContext(read, {
+      heading: (name, path) => t('chat.fileHeading', { name, path }),
+      truncated: (sent, total) => t('chat.fileTruncated', { sent, total })
+    })
+    return [block, ...unread].filter(Boolean).join('\n\n')
   }
 
   private pickProject(): void {
@@ -331,7 +500,8 @@ export class ChatView extends ItemView {
    */
   private changeInstructions(
     requirements: boolean,
-    project: { statuses: string[]; priorities: string[] } | null
+    project: { statuses: string[]; priorities: string[] } | null,
+    files: boolean
   ): string {
     if (!requirements && !project) return ''
     const lines = [t('chat.changeHow')]
@@ -352,6 +522,8 @@ export class ChatView extends ItemView {
       lines.push(
         t('chat.changeTicket', { statuses: project.statuses.join(', '), priorities: project.priorities.join(', ') })
       )
+      // A planning received, read against the plan: what the whole feature is for.
+      if (files) lines.push(t('chat.changePlanning'))
     }
     return lines.join('\n')
   }
@@ -521,6 +693,13 @@ export class ChatView extends ItemView {
         void this.send()
       }
     })
+    const attach = composer.createEl('button', {
+      cls: 'clickable-icon pm-chat-ready',
+      attr: { 'aria-label': t('chat.attachFile') }
+    })
+    setIcon(attach, 'paperclip')
+    attach.disabled = missing !== null || this.pending
+    attach.addEventListener('click', () => this.pickFile())
     const ready = composer.createEl('button', {
       cls: 'clickable-icon pm-chat-ready',
       attr: { 'aria-label': t('chat.presets') }
@@ -588,6 +767,13 @@ export class ChatView extends ItemView {
       })
       about.setAttr('title', turn.project)
     }
+    if (turn.files?.length) {
+      const names = turn.files.map((path) => path.slice(path.lastIndexOf('/') + 1))
+      const about = this.listEl.createDiv('pm-chat-about')
+      setIcon(about.createSpan(), 'paperclip')
+      about.createSpan({ text: names.join(', ') })
+      about.setAttr('title', turn.files.join('\n'))
+    }
     if (turn.requirements?.length) {
       const about = this.listEl.createDiv('pm-chat-about')
       setIcon(about.createSpan(), 'list-checks')
@@ -612,6 +798,23 @@ export class ChatView extends ItemView {
     }
     // A reply is copied into a note; a question is still in the reader's head.
     if (turn.role !== 'assistant') return
+    // A revised planning is a dozen proposals: one click for all of them, each still
+    // checked as its own card would check it.
+    const blocks = changeBlocks(turn.content)
+    if (blocks.length > 1) {
+      const all = actions.createEl('button', { text: t('chat.change.applyAll', { count: blocks.length }) })
+      all.addEventListener(
+        'click',
+        safeAsync(async () => {
+          all.disabled = true
+          try {
+            await this.applyAll(blocks)
+          } finally {
+            all.disabled = false
+          }
+        })
+      )
+    }
     const copy = actions.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.copy') } })
     setIcon(copy, 'copy')
     copy.addEventListener(
@@ -623,6 +826,33 @@ export class ChatView extends ItemView {
     )
   }
 
+  /** Every proposal of a reply, applied one after the other, with one report at the end. */
+  private async applyAll(blocks: string[]): Promise<void> {
+    let applied = 0
+    let already = 0
+    let refused = 0
+    const by = this.plugin.settings.globalTeamMembers[0] || 'llm'
+    for (const source of blocks) {
+      const read = parseChange(source)
+      if ('problem' in read) {
+        refused++
+        continue
+      }
+      const spec = read.spec
+      let done: Applied
+      if (spec.kind === 'requirement') {
+        const path = this.plugin.index.requirementById(spec.target)?.filePath
+        done = path
+          ? await applyToRequirement(this.plugin.requirements, path, spec, requirementOptions(this.plugin), by)
+          : { ok: false, problem: 'none' }
+      } else done = await applyToTicket(this.plugin.index, this.plugin.store, spec)
+      if (!done.ok) refused++
+      else if (done.changed) applied++
+      else already++
+    }
+    new Notice(t('chat.change.allDone', { applied, already, refused }), 10000)
+  }
+
   /** The ready questions that fit what is attached now. */
   private presets(): ChatPrompt[] {
     const settings = this.plugin.settings.chat
@@ -630,7 +860,8 @@ export class ChatView extends ItemView {
     return availablePrompts(all, {
       note: this.useNote && this.contextFile !== null,
       project: this.project !== null && this.plugin.index.projectRef(this.project) !== null,
-      requirements: this.attached.length > 0
+      requirements: this.attached.length > 0,
+      file: this.files.length > 0
     })
   }
 
@@ -696,6 +927,7 @@ export class ChatView extends ItemView {
         at: new Date().toISOString(),
         ...(context ? { context } : {}),
         ...(this.project ? { project: this.project } : {}),
+        ...(this.files.length ? { files: [...this.files] } : {}),
         ...(this.attached.length ? { requirements: [...this.attached] } : {})
       }
     ]
@@ -754,10 +986,13 @@ export class ChatView extends ItemView {
       const block = requirementsContext(requirements, this.requirementWords)
       // The project as it stands at the moment of asking, like the note.
       const project = await this.projectBlock(currentProject(this.turns))
-      const how = this.changeInstructions(requirements.length > 0, project)
+      // The files as they are now: a planning replaced by its next issue is read again.
+      const paths = currentFiles(this.turns)
+      const files = await this.filesBlock(paths)
+      const how = this.changeInstructions(requirements.length > 0, project, paths.length > 0)
       const request = {
         model: settings.modelText,
-        messages: chatMessages(this.turns, [system, project?.text, block, how].filter(Boolean).join('\n\n'))
+        messages: chatMessages(this.turns, [system, project?.text, block, files, how].filter(Boolean).join('\n\n'))
       }
       let reply: string
       let stopped = false
@@ -858,6 +1093,45 @@ export class ChatView extends ItemView {
       files,
       safeAsync((file: TFile) => this.resume(file))
     ).open()
+  }
+}
+
+/** The files that can be read, by name, with where they are. */
+class FilePicker extends SuggestModal<TFile> {
+  constructor(
+    app: App,
+    private files: TFile[],
+    private onChoose: (file: TFile) => void
+  ) {
+    super(app)
+    this.setPlaceholder(t('chat.filePick'))
+    this.limit = 200
+  }
+
+  getSuggestions(query: string): TFile[] {
+    const q = query.toLowerCase()
+    return this.files.filter((file) => file.path.toLowerCase().includes(q))
+  }
+
+  renderSuggestion(file: TFile, el: HTMLElement): void {
+    el.createDiv({ text: file.name })
+    el.createEl('small', { cls: 'pm-chat-pick-when', text: file.parent?.path ?? '' })
+  }
+
+  onChooseSuggestion(file: TFile): void {
+    this.onChoose(file)
+  }
+}
+
+/** Why a file gives no text, as a sentence. */
+function fileProblemText(problem: FileProblem): string {
+  switch (problem) {
+    case 'unsupported':
+      return t('chat.fileProblem.unsupported')
+    case 'empty':
+      return t('chat.fileProblem.empty')
+    case 'unreadable':
+      return t('chat.fileProblem.unreadable')
   }
 }
 

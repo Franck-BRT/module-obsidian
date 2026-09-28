@@ -80,7 +80,58 @@ function relationships(parts: Map<string, string>, part: string): Map<string, { 
   return out
 }
 
-function cellValue(cell: XmlNode, shared: string[]): string {
+/** The built-in number formats that are dates or times, by id: 14–22 and 45–47. */
+const DATE_FORMAT_IDS = new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47])
+
+/**
+ * Whether a format code shows a date: a day, a month or a year outside quoted text and
+ * brackets. `[Red]0.00` and `"m²" 0` are numbers; `dd/mm/yyyy` and `d mmm` are dates.
+ */
+export function isDateFormat(code: string): boolean {
+  const bare = code
+    .replace(/"[^"]*"/g, '')
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\\./g, '')
+  return /[dy]/i.test(bare) || (/m/i.test(bare) && !/[hs]/i.test(bare))
+}
+
+/** How a workbook styles its cells: which style indices show a date, and where days are counted from. */
+interface DateStyles {
+  dates: Set<number>
+  /** Days count from 1904 rather than 1900, as old Mac workbooks do. */
+  from1904: boolean
+}
+
+function dateStyles(source: string | undefined, from1904: boolean): DateStyles {
+  const dates = new Set<number>()
+  if (!source) return { dates, from1904 }
+  const root = parseXml(source)
+  const custom = new Map<number, string>()
+  for (const format of childrenLocal(childLocal(root, 'numFmts'), 'numFmt')) {
+    custom.set(Number(format.attrs.numFmtId), format.attrs.formatCode ?? '')
+  }
+  childrenLocal(childLocal(root, 'cellXfs'), 'xf').forEach((xf, at) => {
+    const id = Number(xf.attrs.numFmtId ?? 0)
+    const code = custom.get(id)
+    if (code !== undefined ? isDateFormat(code) : DATE_FORMAT_IDS.has(id)) dates.add(at)
+  })
+  return { dates, from1904 }
+}
+
+/**
+ * A date cell's serial number as the date it shows, `YYYY-MM-DD`, with the time when it
+ * has one. The 1900 count starts on 30 December 1899 so that it agrees with Excel from
+ * March 1900 on, past the leap day Excel invented for Lotus's sake.
+ */
+export function serialDate(serial: number, from1904 = false): string {
+  const epoch = from1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30)
+  const at = new Date(epoch + Math.round(serial * 86_400) * 1000)
+  const day = at.toISOString().slice(0, 10)
+  const time = at.toISOString().slice(11, 16)
+  return time === '00:00' ? day : `${day} ${time}`
+}
+
+function cellValue(cell: XmlNode, shared: string[], styles: DateStyles): string {
   const type = cell.attrs.t ?? 'n'
   if (type === 'inlineStr') return richText(childLocal(cell, 'is'))
   const value = childLocal(cell, 'v')?.text ?? ''
@@ -88,10 +139,16 @@ function cellValue(cell: XmlNode, shared: string[]): string {
   if (type === 'b') return value === '1' ? 'TRUE' : value === '0' ? 'FALSE' : ''
   // An error (#N/A, #REF!) says nothing a requirement could hold.
   if (type === 'e') return ''
-  return type === 'str' ? unescapeOoxml(value) : value
+  if (type === 'str') return unescapeOoxml(value)
+  // A number shown as a date is the date: a planning's dates are read as dates, not as the
+  // day counts Excel keeps them as.
+  const style = Number(cell.attrs.s ?? -1)
+  const serial = Number(value)
+  if (value !== '' && styles.dates.has(style) && Number.isFinite(serial)) return serialDate(serial, styles.from1904)
+  return value
 }
 
-function sheetRows(source: string, shared: string[]): string[][] {
+function sheetRows(source: string, shared: string[], styles: DateStyles): string[][] {
   const data = childLocal(parseXml(source), 'sheetData')
   const rows: string[][] = []
   for (const row of childrenLocal(data, 'row')) {
@@ -101,7 +158,7 @@ function sheetRows(source: string, shared: string[]): string[][] {
       // A cell may leave out its reference, and then it is the one after the last.
       const at = cell.attrs.r ? columnIndex(cell.attrs.r) : next
       next = at + 1
-      const value = cellValue(cell, shared)
+      const value = cellValue(cell, shared, styles)
       if (value === '') continue
       while (cells.length < at) cells.push('')
       cells[at] = value
@@ -128,14 +185,19 @@ export async function readXlsx(bytes: Uint8Array): Promise<XlsxReadSheet[]> {
   const sharedSource = sharedPath ? parts.get(sharedPath) : undefined
   const shared = sharedSource ? childrenLocal(parseXml(sharedSource), 'si').map((si) => richText(si)) : []
 
+  const stylesPath = [...rels.values()].find((rel) => rel.type.endsWith('/styles'))?.target
+  const book = parseXml(workbook)
+  const from1904 = ['1', 'true'].includes(childLocal(book, 'workbookPr')?.attrs.date1904 ?? '')
+  const styles = dateStyles(stylesPath ? parts.get(stylesPath) : undefined, from1904)
+
   const sheets: XlsxReadSheet[] = []
-  for (const sheet of childrenLocal(childLocal(parseXml(workbook), 'sheets'), 'sheet')) {
+  for (const sheet of childrenLocal(childLocal(book, 'sheets'), 'sheet')) {
     // `r:id`, under whatever prefix the relationships namespace was given.
     const id = Object.entries(sheet.attrs).find(([name]) => name.endsWith(':id'))?.[1] ?? ''
     const target = rels.get(id)?.target
     const source = target ? parts.get(target) : undefined
     if (!source) continue
-    sheets.push({ name: sheet.attrs.name ?? '', rows: sheetRows(source, shared) })
+    sheets.push({ name: sheet.attrs.name ?? '', rows: sheetRows(source, shared, styles) })
   }
   return sheets
 }

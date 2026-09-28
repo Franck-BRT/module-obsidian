@@ -389,3 +389,11 @@ a.pm-change-target {
 .pm-chat-empty + .pm-chat-presets {
   margin-bottom: auto;
 }
+
+/* ---- A file dragged over the panel ---------------------------------------- */
+
+.pm-chat.pm-chat--drop {
+  outline: 2px dashed var(--interactive-accent);
+  outline-offset: -6px;
+  background: rgb(from var(--interactive-accent) r g b / 6%);
+}

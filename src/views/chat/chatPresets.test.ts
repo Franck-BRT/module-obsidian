@@ -11,8 +11,8 @@ describe('the shipped questions', () => {
     expect(copied).toEqual(shipped.map((prompt) => ({ ...prompt, own: true })))
   })
 
-  it('offer something for a project, requirements and a note', () => {
+  it('offer something for a project, requirements, a note, a file and a planning', () => {
     const scopes = new Set(builtinPrompts().map((prompt) => prompt.scope))
-    expect([...scopes].sort()).toEqual(['note', 'project', 'requirements'])
+    expect([...scopes].sort()).toEqual(['file', 'note', 'planning', 'project', 'requirements'])
   })
 })

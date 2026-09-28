@@ -9,6 +9,7 @@ import {
   ticketChange,
   verificationOptions,
   withoutOpenChange,
+  changeBlocks,
   type ChangeSpec,
   type ReqOptions
 } from './chatChange'
@@ -69,9 +70,14 @@ describe('parseChange', () => {
       kind: 'ticket',
       target: 'Soutènement',
       project: 'Génie civil',
-      field: 'due',
-      value: '2026-10-10',
+      changes: [{ field: 'due', value: '2026-10-10' }],
       why: ''
+    })
+    expect(spec({ ticket: 'T', changes: { start: '2026-09-28', Échéance: '2026-10-09' } })).toMatchObject({
+      changes: [
+        { field: 'start', value: '2026-09-28' },
+        { field: 'due', value: '2026-10-09' }
+      ]
     })
   })
 
@@ -83,12 +89,14 @@ describe('parseChange', () => {
       lang: 'en',
       value: 'X'
     })
-    expect(spec({ ticket: 'T', field: 'Échéance', value: '2026-10-10' })).toMatchObject({ field: 'due' })
+    expect(spec({ ticket: 'T', field: 'Échéance', value: '2026-10-10' })).toMatchObject({
+      changes: [{ field: 'due' }]
+    })
   })
 
   it('forgives a second fence around the JSON', () => {
     expect(parseChange('```json\n{"ticket": "T", "field": "progress", "value": 50}\n```')).toMatchObject({
-      spec: { kind: 'ticket', field: 'progress', value: 50 }
+      spec: { kind: 'ticket', changes: [{ field: 'progress', value: 50 }] }
     })
   })
 
@@ -99,6 +107,10 @@ describe('parseChange', () => {
     expect(parseChange('{"ticket": "T", "requirement": "R", "field": "title"}')).toEqual({ problem: 'target' })
     // Only what the short list allows: a ticket's description is the reader's prose.
     expect(parseChange('{"ticket": "T", "field": "description", "value": "…"}')).toEqual({ problem: 'field' })
+    expect(parseChange('{"ticket": "T", "changes": {"due": "2026-10-10", "description": "…"}}')).toEqual({
+      problem: 'field'
+    })
+    expect(parseChange('{"ticket": "T", "changes": {}}')).toEqual({ problem: 'field' })
     expect(parseChange('{"requirement": "R", "field": "id", "value": "REQ-X"}')).toEqual({ problem: 'field' })
   })
 })
@@ -233,29 +245,52 @@ describe('ticketChange', () => {
   it('moves a due date, and says what waits on it may have to move too', () => {
     expect(change({ field: 'due', value: '2026-10-10' })).toEqual({
       ok: true,
-      before: '2026-09-26',
-      after: '2026-10-10',
+      rows: [{ field: 'due', before: '2026-09-26', after: '2026-10-10', applied: false }],
       applied: false,
       change: { patch: { due: '2026-10-10' }, reschedule: true }
     })
   })
 
+  // A task moved two weeks later: read one at a time, its new start would fall after its
+  // old due and be refused. Taken together, the pair is checked as it will be.
+  it('moves a task in time, its start and due together', () => {
+    expect(change({ changes: { start: '2026-09-28', due: '2026-10-09' } })).toEqual({
+      ok: true,
+      rows: [
+        { field: 'start', before: '2026-09-14', after: '2026-09-28', applied: false },
+        { field: 'due', before: '2026-09-26', after: '2026-10-09', applied: false }
+      ],
+      applied: false,
+      change: { patch: { start: '2026-09-28', due: '2026-10-09' }, reschedule: true }
+    })
+    expect(change({ changes: { début: '2026-09-28', échéance: '2026-09-20' } })).toEqual({
+      ok: false,
+      field: 'due',
+      problem: 'order'
+    })
+  })
+
+  it('is applied only once every field says what was proposed', () => {
+    expect(change({ changes: { progress: 60, due: '2026-09-26' } })).toMatchObject({ ok: true, applied: true })
+    expect(change({ changes: { progress: 60, due: '2026-09-27' } })).toMatchObject({ ok: true, applied: false })
+  })
+
   it('refuses a date that is not one, or that ends a ticket before it starts', () => {
-    expect(change({ field: 'due', value: '10/10/2026' })).toEqual({ ok: false, problem: 'date' })
-    expect(change({ field: 'due', value: '2026-02-30' })).toEqual({ ok: false, problem: 'date' })
-    expect(change({ field: 'due', value: '2026-09-01' })).toEqual({ ok: false, problem: 'order' })
-    expect(change({ field: 'start', value: '2026-09-30' })).toEqual({ ok: false, problem: 'order' })
+    expect(change({ field: 'due', value: '10/10/2026' })).toEqual({ ok: false, field: 'due', problem: 'date' })
+    expect(change({ field: 'due', value: '2026-02-30' })).toEqual({ ok: false, field: 'due', problem: 'date' })
+    expect(change({ field: 'due', value: '2026-09-01' })).toEqual({ ok: false, field: 'due', problem: 'order' })
+    expect(change({ field: 'start', value: '2026-09-30' })).toEqual({ ok: false, field: 'start', problem: 'order' })
   })
 
   it('takes a status and a priority by their labels', () => {
     expect(change({ field: 'status', value: 'en cours' })).toMatchObject({
       ok: true,
-      before: 'À faire',
-      after: 'En cours',
+      rows: [{ before: 'À faire', after: 'En cours' }],
       change: { patch: { status: 'in-progress' }, reschedule: false }
     })
     expect(change({ field: 'priority', value: 'Critique' })).toEqual({
       ok: false,
+      field: 'priority',
       problem: 'unknown',
       allowed: ['Haute', 'Moyenne']
     })
@@ -267,15 +302,14 @@ describe('ticketChange', () => {
       change: { patch: { progress: 80 } }
     })
     expect(change({ field: 'progress', value: 60 })).toMatchObject({ ok: true, applied: true })
-    expect(change({ field: 'progress', value: 120 })).toEqual({ ok: false, problem: 'progress' })
-    expect(change({ field: 'progress', value: 'beaucoup' })).toEqual({ ok: false, problem: 'progress' })
+    expect(change({ field: 'progress', value: 120 })).toMatchObject({ ok: false, problem: 'progress' })
+    expect(change({ field: 'progress', value: 'beaucoup' })).toMatchObject({ ok: false, problem: 'progress' })
   })
 
   it('reads the people as a list or as one line', () => {
     expect(change({ field: 'assignees', value: ['Bruno', 'Anne', 'Bruno'] })).toMatchObject({
       ok: true,
-      before: 'Bruno',
-      after: 'Bruno, Anne',
+      rows: [{ before: 'Bruno', after: 'Bruno, Anne' }],
       change: { patch: { assignees: ['Bruno', 'Anne'] } }
     })
     expect(change({ field: 'assignees', value: 'Anne; Chloé' })).toMatchObject({
@@ -326,5 +360,33 @@ describe('withoutOpenChange', () => {
   it('does not take a fence inside another block for an opening', () => {
     const sample = '````md\n```pm-change\n{}\n```\n````\n\nFin.'
     expect(withoutOpenChange(sample, '…')).toBe(sample)
+  })
+})
+
+describe('changeBlocks', () => {
+  it('finds every finished change block of a reply, and nothing else', () => {
+    const reply = [
+      'Deux décalages :',
+      '```pm-change',
+      '{"ticket": "A", "field": "due", "value": "2026-10-10"}',
+      '```',
+      '```ts',
+      'const b = 1',
+      '```',
+      '~~~pm-change',
+      '{"ticket": "B", "field": "progress", "value": 50}',
+      '~~~',
+      '````md',
+      '```pm-change',
+      '{"ticket": "exemple"}',
+      '```',
+      '````',
+      '```pm-change',
+      '{"ticket": "pas fini"'
+    ].join('\n')
+    expect(changeBlocks(reply)).toEqual([
+      '{"ticket": "A", "field": "due", "value": "2026-10-10"}',
+      '{"ticket": "B", "field": "progress", "value": 50}'
+    ])
   })
 })

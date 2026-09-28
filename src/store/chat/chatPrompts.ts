@@ -12,12 +12,16 @@
  *     projet : Point hebdo :: Fais le point de la semaine pour le comité…
  *     Traduis ta dernière réponse en anglais.
  *
- * A line may start with what it is about (`projet :`, `exigences :`, `note :`, in French
- * or English) and may give itself a short name before `::`. A line with neither is a
+ * A line may start with what it is about (`projet :`, `exigences :`, `note :`, `fichier :`,
+ * `planning :`, in French or English) and may give itself a short name before `::`. A line with neither is a
  * question for any conversation, named by itself.
  */
 
-export type PromptScope = 'any' | 'note' | 'project' | 'requirements'
+/**
+ * What a question is about. `planning` is a file read against a project — a planning
+ * received, compared with the plan — so it needs both.
+ */
+export type PromptScope = 'any' | 'note' | 'project' | 'requirements' | 'file' | 'planning'
 
 export interface ChatPrompt {
   /** What the button says. */
@@ -37,6 +41,12 @@ const SCOPE_WORDS: Record<string, PromptScope> = {
   requirement: 'requirements',
   requirements: 'requirements',
   note: 'note',
+  fichier: 'file',
+  fichiers: 'file',
+  document: 'file',
+  file: 'file',
+  files: 'file',
+  planning: 'planning',
   tout: 'any',
   toujours: 'any',
   any: 'any',
@@ -70,17 +80,19 @@ export interface PromptContext {
   note: boolean
   project: boolean
   requirements: boolean
+  file: boolean
 }
 
 /** The order the groups are offered in: the most particular first. */
-export const SCOPE_ORDER: PromptScope[] = ['project', 'requirements', 'note', 'any']
+export const SCOPE_ORDER: PromptScope[] = ['planning', 'project', 'requirements', 'file', 'note', 'any']
 
 /**
  * The questions that make sense now, the reader's before the plugin's within each group,
  * and a question offered twice — the reader copied a shipped one to keep it — only once.
  */
 export function availablePrompts(prompts: ChatPrompt[], context: PromptContext): ChatPrompt[] {
-  const fits = (scope: PromptScope): boolean => scope === 'any' || context[scope]
+  const fits = (scope: PromptScope): boolean =>
+    scope === 'any' || (scope === 'planning' ? context.file && context.project : context[scope])
   const seen = new Set<string>()
   const out: ChatPrompt[] = []
   for (const scope of SCOPE_ORDER) {

@@ -1221,7 +1221,7 @@ export const en = {
   'chat.changeRequirement':
     'For a requirement: {"requirement": "identifier", "field": "…", "value": "…", "why": "…"}. Fields: text (the statement; add "lang" for a language other than the source language: {languages}), title, rationale, source, status ({statuses}), type ({types}), criticality ({criticalities}), verification ({verifications}).',
   'chat.changeTicket':
-    'For a ticket: {"ticket": "exact title of the ticket", "project": "title of its project", "field": "…", "value": …, "why": "…"}. Fields: title, status ({statuses}), priority ({priorities}), start and due (YYYY-MM-DD date), progress (number from 0 to 100), assignees (list of names).',
+    'For a ticket: {"ticket": "exact title of the ticket", "project": "title of its project", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, a single block per ticket with all its changed fields. Fields: title, status ({statuses}), priority ({priorities}), start and due (YYYY-MM-DD date), progress (number from 0 to 100), assignees (list of names).',
   'chat.change.title': 'Proposal',
   'chat.change.apply': 'Apply',
   'chat.change.applying': 'Applying…',
@@ -1251,7 +1251,7 @@ export const en = {
   'chat.change.field.progress': 'Progress',
   'chat.change.field.assignees': 'People',
   'chat.presets': 'Ready questions',
-  'chat.presetsNone': 'Attach a note, a project or requirements to see the ready questions about them.',
+  'chat.presetsNone': 'Attach a note, a project, requirements or a file to see the ready questions about them.',
   'chat.presetScope.project': 'project',
   'chat.presetScope.requirements': 'requirements',
   'chat.presetScope.note': 'note',
@@ -1298,11 +1298,43 @@ export const en = {
     'Offer the questions that come with the plugin (status update, progress report, requirement consistency…) besides your own.',
   'settings.chat.own': 'Your questions',
   'settings.chat.ownDesc':
-    'One question a line. Start the line with “project:”, “requirements:” or “note:” to offer it only when a project, requirements or a note are attached. Give it a short name before “::”. Example: project: Weekly :: Give the week’s status update for the committee.',
+    'One question a line. Start the line with “project:”, “requirements:”, “note:” or “file:” to offer it only when a project, requirements, a note or a file are attached, or with “planning:” for a file and a project attached together. Give it a short name before “::”. Example: project: Weekly :: Give the week’s status update for the committee.',
   'settings.chat.copyBuiltin': 'Start from the built-in questions',
   'settings.chat.copyBuiltinDesc':
     'Add the built-in questions to your list, to adapt them. Then turn the built-in questions off so they are not offered twice.',
   'settings.chat.copyBuiltinButton': 'Add to my list',
+  'chat.attachFile': 'Attach a file (PDF, Word, Excel, PowerPoint, HTML, text…)',
+  'chat.filePick': 'Choose the file to attach…',
+  'chat.fileOff': 'Stop attaching this file',
+  'chat.fileNone': 'No readable file in the vault.',
+  'chat.fileHeading':
+    'The person has attached the file “{name}” ({path}) to their questions; here is its text, tables included:',
+  'chat.fileTruncated': '[… the file is cut here: {sent} characters sent out of {total}.]',
+  'chat.fileUnread':
+    '[The file “{name}” is attached but could not be read: {reason} Say so if the question concerns it.]',
+  'chat.fileProblem.unsupported': 'this kind of file cannot be read.',
+  'chat.fileProblem.empty': 'it holds no text (a scanned PDF, for instance, is only an image).',
+  'chat.fileProblem.unreadable': 'it is unreadable or damaged.',
+  'chat.fileProblemNotice': '“{name}”: {reason}',
+  'chat.fileUnsupported': '“{name}”: this kind of file cannot be read (PDF, Word, Excel, PowerPoint, HTML or text).',
+  'chat.fileFiled':
+    '“{name}” is filed in the project {project} as a received document, and attached to the conversation.',
+  'chat.fileKept': '“{name}” is saved in {folder} and attached to the conversation.',
+  'chat.fileKeepFailed': '“{name}” could not be saved: {reason}',
+  'chat.filesFolder': 'Files',
+  'chat.dropNote': 'Dropped in the chat',
+  'chat.changePlanning':
+    'If an attached file is a planning, compare its tasks with the project’s tickets (same title or same meaning), and propose for each ticket that changes a single block with all its changed fields. Dates as YYYY-MM-DD, whatever their format in the file. List separately, without blocks, the planning’s tasks that have no ticket and the tickets missing from the planning.',
+  'chat.change.applyAll': 'Apply all ({count})',
+  'chat.change.allDone': 'Proposals: {applied} applied, {already} already in place, {refused} refused.',
+  'chat.presetScope.file': 'file',
+  'chat.presetScope.planning': 'planning',
+  'chat.preset.planning': 'Update the project',
+  'chat.preset.planningQ':
+    'Compare this planning with the project’s tickets and propose the updates to dates, progress and owners. List separately the planning’s tasks that have no ticket, and the tickets missing from the planning.',
+  'chat.preset.document': 'Summarise the document',
+  'chat.preset.documentQ':
+    'Summarise this document: what it is about, who issued it and when, what it changes or asks for, and the dates and figures to remember.',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

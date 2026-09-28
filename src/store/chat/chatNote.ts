@@ -36,6 +36,10 @@ export interface ChatNoteWords {
 const REQUIREMENTS_MARK = '📋'
 /** What marks the project a question was asked about. */
 const PROJECT_MARK = '📁'
+/** What marks the files a question was asked with. */
+const FILES_MARK = '📎'
+/** The marks after which a link is not the note the question was about. */
+const MARKS = [REQUIREMENTS_MARK, PROJECT_MARK, FILES_MARK]
 
 export interface ChatNote extends ChatNoteMeta {
   turns: ChatTurn[]
@@ -58,7 +62,10 @@ function fromStamp(text: string): string | undefined {
   return new Date(y, mo - 1, d, h, mi).toISOString()
 }
 
-/** A link to a note by its path, shown by its name: `[[Specs/Thermique|Thermique]]`. */
+/**
+ * A link to a note by its path, shown by its name: `[[Specs/Thermique|Thermique]]`. Any
+ * other file keeps its extension, since that is how Obsidian links to it.
+ */
 export function noteLink(path: string): string {
   const target = path.replace(/\.md$/i, '')
   const name = target.slice(target.lastIndexOf('/') + 1)
@@ -92,13 +99,20 @@ function pathIn(text: string): string | undefined {
 
 /** The note a callout's title links to, as a path; the first link, where there are several. */
 function linkedPath(title: string): string | undefined {
-  // The requirements' and the project's links are theirs, not the note's.
+  // The requirements', the project's and the files' links are theirs, not the note's.
   return pathIn(
     title
       .split(' · ')
-      .filter((part) => !part.trim().startsWith(REQUIREMENTS_MARK) && !part.trim().startsWith(PROJECT_MARK))
+      .filter((part) => !MARKS.some((mark) => part.trim().startsWith(mark)))
       .join(' · ')
   )
+}
+
+/** The files a callout's title names after its mark, by path. */
+function namedFiles(title: string): string[] {
+  const segment = title.split(' · ').find((part) => part.trim().startsWith(FILES_MARK))
+  if (!segment) return []
+  return [...segment.matchAll(/\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/g)].map((found) => found[1].trim())
 }
 
 /** The project a callout's title names after its mark, as the path of its note. */
@@ -115,6 +129,7 @@ export function turnMarkdown(turn: ChatTurn, words: ChatNoteWords): string {
   const about =
     (turn.context ? ` · ${noteLink(turn.context)}` : '') +
     (turn.project ? ` · ${PROJECT_MARK} ${noteLink(turn.project)}` : '') +
+    (turn.files?.length ? ` · ${FILES_MARK} ${turn.files.map(noteLink).join(', ')}` : '') +
     (turn.requirements?.length ? ` · ${REQUIREMENTS_MARK} ${turn.requirements.map(link).join(', ')}` : '')
   const head = `> [!${CALLOUT[turn.role]}] ${turn.role === 'user' ? words.user : words.assistant} · ${localStamp(turn.at)}${about}`
   const body = turn.content.split('\n').map((line) => (line === '' ? '>' : `> ${line}`))
@@ -194,6 +209,7 @@ export function readChatNote(content: string): ChatNote {
       const context = role === 'user' ? linkedPath(start[2]) : undefined
       const requirements = role === 'user' ? namedRequirements(start[2]) : []
       const project = role === 'user' ? namedProject(start[2]) : undefined
+      const files = role === 'user' ? namedFiles(start[2]) : []
       current = {
         turn: {
           role,
@@ -201,6 +217,7 @@ export function readChatNote(content: string): ChatNote {
           at: fromStamp(start[2]) ?? created,
           ...(context ? { context } : {}),
           ...(project ? { project } : {}),
+          ...(files.length ? { files } : {}),
           ...(requirements.length ? { requirements } : {})
         },
         lines: []

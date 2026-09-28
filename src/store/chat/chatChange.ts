@@ -34,7 +34,13 @@ export type TicketChangeField = (typeof TICKET_CHANGE_FIELDS)[number]
 
 export type ChangeSpec =
   | { kind: 'requirement'; target: string; field: ReqChangeField; lang: string; value: unknown; why: string }
-  | { kind: 'ticket'; target: string; project: string; field: TicketChangeField; value: unknown; why: string }
+  | { kind: 'ticket'; target: string; project: string; changes: TicketFieldChange[]; why: string }
+
+/** One field of a ticket and what it is to become. */
+export interface TicketFieldChange {
+  field: TicketChangeField
+  value: unknown
+}
 
 /** Why a block cannot be drawn as a change: it does not read, or does not say what to change. */
 export type ChangeProblem = 'unreadable' | 'target' | 'field'
@@ -109,16 +115,22 @@ export function parseChange(source: string): { spec: ChangeSpec } | { problem: C
     }
   }
   if (ticket && !requirement) {
-    if (!(TICKET_CHANGE_FIELDS as readonly string[]).includes(field)) return { problem: 'field' }
+    // Several fields at once — a task moved is its start and its due together — or one.
+    const many = record.changes ?? record.modifications
+    const pairs: [string, unknown][] =
+      many && typeof many === 'object' && !Array.isArray(many)
+        ? Object.entries(many as Record<string, unknown>)
+        : [[text(record.field), record.value ?? record.valeur]]
+    const changes: TicketFieldChange[] = []
+    for (const [name, value] of pairs) {
+      const folded = fold(name)
+      const known = FIELD_ALIASES[folded] ?? folded
+      if (!(TICKET_CHANGE_FIELDS as readonly string[]).includes(known)) return { problem: 'field' }
+      changes.push({ field: known as TicketChangeField, value })
+    }
+    if (!changes.length) return { problem: 'field' }
     return {
-      spec: {
-        kind: 'ticket',
-        target: ticket,
-        project: text(record.project ?? record.projet),
-        field: field as TicketChangeField,
-        value: record.value ?? record.valeur,
-        why
-      }
+      spec: { kind: 'ticket', target: ticket, project: text(record.project ?? record.projet), changes, why }
     }
   }
   return { problem: 'target' }
@@ -260,83 +272,97 @@ export interface TicketEdit {
   reschedule: boolean
 }
 
+/** One field of a ticket, as the card shows it: what it says now and what it would say. */
+export interface TicketRow {
+  field: TicketChangeField
+  before: string
+  after: string
+  applied: boolean
+}
+
+export type TicketResolution =
+  | { ok: true; rows: TicketRow[]; applied: boolean; change: TicketEdit }
+  | { ok: false; field: TicketChangeField; problem: ValueProblem; allowed?: string[] }
+
 /**
  * A change to a ticket, checked against the ticket as it is now.
  *
- * A status and a priority are the project's own, named by their label as the model was
- * shown them. A date that would put the end before the start is refused rather than
- * written: the plan would draw it, and nobody would have asked for it.
+ * Every field is checked before any is taken: a proposal that moves a task two weeks
+ * later sets its start and its due together, and read one at a time the new start would
+ * fall after the old due and be refused. A status and a priority are the project's own,
+ * named by their label as the model was shown them. A pair of dates that would put the
+ * end before the start is refused rather than written: the plan would draw it, and nobody
+ * would have asked for it.
  */
 export function ticketChange(
   spec: Extract<ChangeSpec, { kind: 'ticket' }>,
   task: Task,
   lists: { statuses: Option[]; priorities: Option[] }
-): Resolution<TicketEdit> {
-  const value = text(spec.value)
-  switch (spec.field) {
-    case 'title':
-      if (!value) return { ok: false, problem: 'empty' }
-      return {
-        ok: true,
-        before: task.title,
-        after: value,
-        applied: task.title === value,
-        change: { patch: { title: value }, reschedule: false }
+): TicketResolution {
+  const rows: TicketRow[] = []
+  const patch: Partial<Task> = {}
+  let reschedule = false
+  for (const { field, value: raw } of spec.changes) {
+    const value = text(raw)
+    const refuse = (problem: ValueProblem, allowed?: string[]): TicketResolution => ({
+      ok: false,
+      field,
+      problem,
+      ...(allowed ? { allowed } : {})
+    })
+    switch (field) {
+      case 'title':
+        if (!value) return refuse('empty')
+        rows.push({ field, before: task.title, after: value, applied: task.title === value })
+        patch.title = value
+        break
+      case 'status':
+      case 'priority': {
+        const list = field === 'status' ? lists.statuses : lists.priorities
+        const picked = pickOption(list, value)
+        if (!picked) {
+          return refuse(
+            'unknown',
+            list.map((option) => option.label)
+          )
+        }
+        const before = task[field]
+        rows.push({ field, before: labelOf(list, before), after: picked.label, applied: before === picked.id })
+        patch[field] = picked.id
+        break
       }
-    case 'status':
-    case 'priority': {
-      const list = spec.field === 'status' ? lists.statuses : lists.priorities
-      const picked = pickOption(list, value)
-      if (!picked) return { ok: false, problem: 'unknown', allowed: list.map((option) => option.label) }
-      const before = task[spec.field]
-      return {
-        ok: true,
-        before: labelOf(list, before),
-        after: picked.label,
-        applied: before === picked.id,
-        change: { patch: { [spec.field]: picked.id }, reschedule: false }
+      case 'start':
+      case 'due': {
+        if (!isDate(value)) return refuse('date')
+        rows.push({ field, before: task[field], after: value, applied: task[field] === value })
+        patch[field] = value
+        reschedule = true
+        break
       }
-    }
-    case 'start':
-    case 'due': {
-      if (!isDate(value)) return { ok: false, problem: 'date' }
-      const start = spec.field === 'start' ? value : task.start
-      const due = spec.field === 'due' ? value : task.due
-      if (start && due && start > due) return { ok: false, problem: 'order' }
-      const before = task[spec.field]
-      return {
-        ok: true,
-        before,
-        after: value,
-        applied: before === value,
-        change: { patch: { [spec.field]: value }, reschedule: true }
+      case 'progress': {
+        const number = Number(value.replace(/\s*%$/, '').replace(',', '.'))
+        if (!value || !Number.isFinite(number) || number < 0 || number > 100) return refuse('progress')
+        const progress = Math.round(number)
+        rows.push({ field, before: `${task.progress} %`, after: `${progress} %`, applied: task.progress === progress })
+        patch.progress = progress
+        break
       }
-    }
-    case 'progress': {
-      const number = Number(value.replace(/\s*%$/, '').replace(',', '.'))
-      if (!value || !Number.isFinite(number) || number < 0 || number > 100) return { ok: false, problem: 'progress' }
-      const progress = Math.round(number)
-      return {
-        ok: true,
-        before: `${task.progress} %`,
-        after: `${progress} %`,
-        applied: task.progress === progress,
-        change: { patch: { progress }, reschedule: false }
-      }
-    }
-    case 'assignees': {
-      const names = people(spec.value)
-      const before = task.assignees.join(', ')
-      const after = names.join(', ')
-      return {
-        ok: true,
-        before,
-        after,
-        applied: before === after,
-        change: { patch: { assignees: names }, reschedule: false }
+      case 'assignees': {
+        const names = people(raw)
+        const before = task.assignees.join(', ')
+        const after = names.join(', ')
+        rows.push({ field, before, after, applied: before === after })
+        patch.assignees = names
+        break
       }
     }
   }
+  // The dates as they would be once every field is taken, checked as a pair.
+  const start = patch.start ?? task.start
+  const due = patch.due ?? task.due
+  if (start && due && start > due) return { ok: false, field: patch.due ? 'due' : 'start', problem: 'order' }
+  const applied = rows.every((row) => row.applied)
+  return { ok: true, rows, applied, change: { patch, reschedule } }
 }
 
 /** A ticket as the index knows it: enough to find it by the title the model was shown. */
@@ -392,4 +418,24 @@ export function withoutOpenChange(text: string, pending: string): string {
   }
   if (!open?.change) return text
   return `${text.slice(0, open.at).trimEnd()}\n\n*${pending}*`
+}
+
+/** The change blocks of a reply, finished ones only, in the order they were written. */
+export function changeBlocks(text: string): string[] {
+  const blocks: string[] = []
+  let open: { fence: string; change: boolean; lines: string[] } | null = null
+  for (const line of text.split('\n')) {
+    const fence = /^[ \t]*(`{3,}|~{3,})(.*)$/.exec(line)
+    if (!open) {
+      if (fence) open = { fence: fence[1], change: fence[2].trim() === CHANGE_LANGUAGE, lines: [] }
+      continue
+    }
+    if (fence && fence[1][0] === open.fence[0] && fence[1].length >= open.fence.length && !fence[2].trim()) {
+      if (open.change) blocks.push(open.lines.join('\n'))
+      open = null
+      continue
+    }
+    open.lines.push(line)
+  }
+  return blocks
 }

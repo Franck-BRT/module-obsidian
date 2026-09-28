@@ -71,17 +71,36 @@ describe('availablePrompts', () => {
 
   it('offers only what fits what is attached, the most particular first', () => {
     expect(
-      availablePrompts(prompts, { note: true, project: false, requirements: false }).map((prompt) => prompt.question)
+      availablePrompts(prompts, { note: true, project: false, requirements: false, file: false }).map(
+        (prompt) => prompt.question
+      )
     ).toEqual(['Résume la note.', 'Tout'])
     expect(
-      availablePrompts(prompts, { note: false, project: false, requirements: true }).map((prompt) => prompt.question)
+      availablePrompts(prompts, { note: false, project: false, requirements: true, file: false }).map(
+        (prompt) => prompt.question
+      )
     ).toEqual(['Rends-les vérifiables.', 'Tout'])
   })
 
   // The reader's own first within a group, and a shipped question they copied only once.
   it('puts the reader’s own first, and offers one question once', () => {
     expect(
-      availablePrompts(prompts, { note: false, project: true, requirements: false }).map((prompt) => prompt.question)
+      availablePrompts(prompts, { note: false, project: true, requirements: false, file: false }).map(
+        (prompt) => prompt.question
+      )
     ).toEqual(['Point hebdo.', 'fais le  point.', 'Tout'])
+  })
+})
+
+describe('a planning question', () => {
+  const prompts = parsePrompts('planning : Mets à jour\nfichier : Résume le document\nprojet : Point')
+
+  // A file read against a project: offered only with both, before anything else.
+  it('is offered only with a file and a project, first', () => {
+    const offered = (file: boolean, project: boolean): string[] =>
+      availablePrompts(prompts, { note: false, requirements: false, file, project }).map((prompt) => prompt.question)
+    expect(offered(true, true)).toEqual(['Mets à jour', 'Point', 'Résume le document'])
+    expect(offered(true, false)).toEqual(['Résume le document'])
+    expect(offered(false, true)).toEqual(['Point'])
   })
 })

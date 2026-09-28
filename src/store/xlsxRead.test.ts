@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildXlsx } from './xlsx'
-import { columnIndex, readXlsx } from './xlsxRead'
+import { columnIndex, isDateFormat, readXlsx, serialDate } from './xlsxRead'
 import { utf8, zip } from './zip'
 
 /**
@@ -104,5 +104,66 @@ describe('readXlsx', () => {
 describe('columnIndex', () => {
   it('counts columns the way a spreadsheet names them', () => {
     expect(['A1', 'Z9', 'AA1', 'AB12', 'XFD1'].map(columnIndex)).toEqual([0, 25, 26, 27, 16383])
+  })
+})
+
+describe('dates', () => {
+  it('knows a date format from a number one', () => {
+    for (const code of ['dd/mm/yyyy', 'd mmm yy', 'mm/dd/yy', 'yyyy-mm-dd hh:mm', '[$-40C]d mmmm yyyy', 'mmm-yy']) {
+      expect(isDateFormat(code)).toBe(true)
+    }
+    for (const code of ['General', '0.00', '#,##0 "m²"', '[Red]0', 'h:mm', '[h]:mm:ss', '0 "jours"']) {
+      expect(isDateFormat(code)).toBe(false)
+    }
+  })
+
+  // Day counts as Excel keeps them, and the dates they are.
+  it('turns a serial number into the date it shows', () => {
+    expect(serialDate(46279)).toBe('2026-09-14')
+    expect(serialDate(1)).toBe('1899-12-31')
+    expect(serialDate(61)).toBe('1900-03-01')
+    expect(serialDate(46279.5)).toBe('2026-09-14 12:00')
+    expect(serialDate(44817, true)).toBe('2026-09-14')
+  })
+})
+
+/** A planning as a French Excel saves one: a custom date format, a built-in one, a number beside them. */
+function planning(from1904 = false): Uint8Array {
+  const part = (name: string, text: string) => ({ name, data: utf8(text) })
+  const ns = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+  const rel = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+  return zip([
+    part(
+      '_rels/.rels',
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="r1" Type="${rel}/officeDocument" Target="xl/workbook.xml"/></Relationships>`
+    ),
+    part(
+      'xl/workbook.xml',
+      `<workbook ${ns} xmlns:r="${rel}">${from1904 ? '<workbookPr date1904="1"/>' : ''}<sheets><sheet name="Planning" sheetId="1" r:id="r2"/></sheets></workbook>`
+    ),
+    part(
+      'xl/_rels/workbook.xml.rels',
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="r2" Type="${rel}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="r3" Type="${rel}/styles" Target="styles.xml"/></Relationships>`
+    ),
+    part(
+      'xl/styles.xml',
+      `<styleSheet ${ns}><numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/></numFmts><cellXfs count="3"><xf numFmtId="0"/><xf numFmtId="164"/><xf numFmtId="14"/></cellXfs></styleSheet>`
+    ),
+    part(
+      'xl/worksheets/sheet1.xml',
+      `<worksheet ${ns}><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Soutènement</t></is></c><c r="B1" s="1"><v>${from1904 ? 44817 : 46279}</v></c><c r="C1" s="2"><v>${from1904 ? 44842 : 46304}</v></c><c r="D1" s="0"><v>20</v></c></row></sheetData></worksheet>`
+    )
+  ])
+}
+
+describe('a planning’s dates', () => {
+  it('reads a date cell as the date it shows, and a number as a number', async () => {
+    const [sheet] = await readXlsx(planning())
+    expect(sheet.rows).toEqual([['Soutènement', '2026-09-14', '2026-10-09', '20']])
+  })
+
+  it('counts from 1904 when the workbook says so', async () => {
+    const [sheet] = await readXlsx(planning(true))
+    expect(sheet.rows[0].slice(1, 3)).toEqual(['2026-09-14', '2026-10-09'])
   })
 })

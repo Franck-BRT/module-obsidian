@@ -10,7 +10,6 @@ import {
   type Option,
   type ReqChangeField,
   type ReqOptions,
-  type Resolution,
   type TicketChangeField,
   type ValueProblem
 } from '../../store/chat/chatChange'
@@ -120,6 +119,9 @@ function problemText(problem: ValueProblem, allowed: string[] | undefined): stri
   }
 }
 
+/** Where a card stands: its change to be made or already made, or why it cannot be. */
+type CardState = { ok: true; applied: boolean } | { ok: false; problem: ValueProblem; allowed?: string[] }
+
 class ChangeCard extends MarkdownRenderChild {
   private timer: number | null = null
   /** Bumped at every draw: a draw that finds a newer one started drops its own result. */
@@ -223,7 +225,7 @@ class ChangeCard extends MarkdownRenderChild {
     this.body(
       card,
       reqFieldLabel(spec.field, lang),
-      resolved,
+      resolved.ok ? resolved : null,
       ['text', 'title', 'rationale', 'source'].includes(spec.field)
     )
     this.why(card, spec.why)
@@ -254,7 +256,9 @@ class ChangeCard extends MarkdownRenderChild {
       path ? safeAsync(() => this.app().workspace.openLinkText(path, '', false)) : null
     )
     const resolved = ticketChange(spec, task, target.lists)
-    this.body(card, ticketFieldLabel(spec.field), resolved, spec.field === 'title')
+    if (resolved.ok) {
+      for (const row of resolved.rows) this.body(card, ticketFieldLabel(row.field), row, row.field === 'title')
+    } else this.body(card, ticketFieldLabel(resolved.field), null, false)
     this.why(card, spec.why)
     this.footer(card, resolved, () => this.applyTicket(spec))
   }
@@ -271,9 +275,14 @@ class ChangeCard extends MarkdownRenderChild {
   }
 
   /** What changes: the words that come and go for prose, what it was and will be otherwise. */
-  private body(card: HTMLElement, label: string, resolved: Resolution<unknown>, prose: boolean): void {
+  private body(
+    card: HTMLElement,
+    label: string,
+    resolved: { before: string; after: string } | null,
+    prose: boolean
+  ): void {
     card.createDiv({ cls: 'pm-change-field', text: label })
-    if (!resolved.ok) return
+    if (!resolved) return
     const diff = card.createDiv('pm-change-diff pm-req-diff')
     if (prose && resolved.before) {
       for (const part of diffWords(resolved.before, resolved.after)) {
@@ -293,7 +302,7 @@ class ChangeCard extends MarkdownRenderChild {
     if (why) card.createDiv({ cls: 'pm-change-why', text: why })
   }
 
-  private footer(card: HTMLElement, resolved: Resolution<unknown>, apply: () => Promise<void>): void {
+  private footer(card: HTMLElement, resolved: CardState, apply: () => Promise<void>): void {
     const foot = card.createDiv('pm-change-foot')
     if (!resolved.ok) {
       card.addClass('pm-change--problem')

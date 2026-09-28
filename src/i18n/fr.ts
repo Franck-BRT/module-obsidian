@@ -1200,7 +1200,7 @@ export const fr: Catalog = {
   'chat.changeRequirement':
     'Pour une exigence : {"requirement": "identifiant", "field": "…", "value": "…", "why": "…"}. Champs : text (l’énoncé ; ajoute "lang" pour une autre langue que la langue source : {languages}), title, rationale, source, status ({statuses}), type ({types}), criticality ({criticalities}), verification ({verifications}).',
   'chat.changeTicket':
-    'Pour un ticket : {"ticket": "titre exact du ticket", "project": "titre de son projet", "field": "…", "value": …, "why": "…"}. Champs : title, status ({statuses}), priority ({priorities}), start et due (date AAAA-MM-JJ), progress (nombre de 0 à 100), assignees (liste de noms).',
+    'Pour un ticket : {"ticket": "titre exact du ticket", "project": "titre de son projet", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, un seul bloc par ticket avec tous ses champs modifiés. Champs : title, status ({statuses}), priority ({priorities}), start et due (date AAAA-MM-JJ), progress (nombre de 0 à 100), assignees (liste de noms).',
   'chat.change.title': 'Proposition',
   'chat.change.apply': 'Appliquer',
   'chat.change.applying': 'Application…',
@@ -1231,7 +1231,7 @@ export const fr: Catalog = {
   'chat.change.field.assignees': 'Personnes',
   'chat.presets': 'Questions toutes prêtes',
   'chat.presetsNone':
-    'Joins une note, un projet ou des exigences pour voir les questions toutes prêtes qui s’y rapportent.',
+    'Joins une note, un projet, des exigences ou un fichier pour voir les questions toutes prêtes qui s’y rapportent.',
   'chat.presetScope.project': 'projet',
   'chat.presetScope.requirements': 'exigences',
   'chat.presetScope.note': 'note',
@@ -1278,11 +1278,43 @@ export const fr: Catalog = {
     'Propose les questions fournies avec le plugin (point d’avancement, compte rendu, cohérence des exigences…) en plus des tiennes.',
   'settings.chat.own': 'Tes questions',
   'settings.chat.ownDesc':
-    'Une question par ligne. Commence la ligne par « projet : », « exigences : » ou « note : » pour ne la proposer que quand un projet, des exigences ou une note sont joints. Donne-lui un nom court avant « :: ». Exemple : projet : Point hebdo :: Fais le point de la semaine pour le comité.',
+    'Une question par ligne. Commence la ligne par « projet : », « exigences : », « note : » ou « fichier : » pour ne la proposer que quand un projet, des exigences, une note ou un fichier sont joints, ou par « planning : » pour un fichier et un projet joints ensemble. Donne-lui un nom court avant « :: ». Exemple : projet : Point hebdo :: Fais le point de la semaine pour le comité.',
   'settings.chat.copyBuiltin': 'Partir des questions intégrées',
   'settings.chat.copyBuiltinDesc':
     'Ajoute les questions intégrées à ta liste, pour les adapter. Désactive ensuite les questions intégrées pour ne pas les voir en double.',
   'settings.chat.copyBuiltinButton': 'Ajouter à ma liste',
+  'chat.attachFile': 'Joindre un fichier (PDF, Word, Excel, PowerPoint, HTML, texte…)',
+  'chat.filePick': 'Choisis le fichier à joindre…',
+  'chat.fileOff': 'Ne plus joindre ce fichier',
+  'chat.fileNone': 'Aucun fichier lisible dans le coffre.',
+  'chat.fileHeading':
+    'La personne a joint le fichier « {name} » ({path}) à ses questions ; voici son texte, tableaux compris :',
+  'chat.fileTruncated': '[… le fichier est coupé ici : {sent} caractères envoyés sur {total}.]',
+  'chat.fileUnread':
+    '[Le fichier « {name} » est joint mais n’a pas pu être lu : {reason} Dis-le si la question le concerne.]',
+  'chat.fileProblem.unsupported': 'ce type de fichier ne se lit pas.',
+  'chat.fileProblem.empty': 'il ne contient pas de texte (un PDF scanné, par exemple, n’est qu’une image).',
+  'chat.fileProblem.unreadable': 'il est illisible ou abîmé.',
+  'chat.fileProblemNotice': '« {name} » : {reason}',
+  'chat.fileUnsupported':
+    '« {name} » : ce type de fichier ne se lit pas (PDF, Word, Excel, PowerPoint, HTML ou texte).',
+  'chat.fileFiled': '« {name} » est rangé dans le projet {project}, comme document reçu, et joint à la conversation.',
+  'chat.fileKept': '« {name} » est enregistré dans {folder} et joint à la conversation.',
+  'chat.fileKeepFailed': '« {name} » n’a pas pu être enregistré : {reason}',
+  'chat.filesFolder': 'Fichiers',
+  'chat.dropNote': 'Déposé dans le chat',
+  'chat.changePlanning':
+    'Si un fichier joint est un planning, compare ses tâches aux tickets du projet (même titre ou même sens), et propose pour chaque ticket qui change un seul bloc avec tous ses champs modifiés. Dates au format AAAA-MM-JJ, quel que soit leur format dans le fichier. Liste à part, sans bloc, les tâches du planning qui n’ont pas de ticket et les tickets absents du planning.',
+  'chat.change.applyAll': 'Tout appliquer ({count})',
+  'chat.change.allDone': 'Propositions : {applied} appliquée(s), {already} déjà en place, {refused} refusée(s).',
+  'chat.presetScope.file': 'fichier',
+  'chat.presetScope.planning': 'planning',
+  'chat.preset.planning': 'Mettre le projet à jour',
+  'chat.preset.planningQ':
+    'Compare ce planning avec les tickets du projet et propose les mises à jour de dates, d’avancement et de responsables. Liste à part les tâches du planning qui n’ont pas de ticket, et les tickets absents du planning.',
+  'chat.preset.document': 'Résumer le document',
+  'chat.preset.documentQ':
+    'Résume ce document : de quoi il s’agit, qui l’a émis et quand, ce qu’il change ou demande, et les dates et chiffres à retenir.',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

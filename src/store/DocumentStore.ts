@@ -32,7 +32,7 @@ function baseNameOf(path: string): string {
 }
 
 /** `name.pdf`, `name-2.pdf`, … so a deposit never lands on top of an unrelated file. */
-async function freePath(app: App, folder: string, base: string, ext: string): Promise<string> {
+export async function freePath(app: App, folder: string, base: string, ext: string): Promise<string> {
   const suffix = ext ? `.${ext}` : ''
   for (let n = 0; n < 100; n++) {
     const candidate = normalizePath(`${folder}/${base}${n === 0 ? '' : `-${n}`}${suffix}`)

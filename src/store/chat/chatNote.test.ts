@@ -197,3 +197,30 @@ describe('the project a question was asked about', () => {
     expect(read.context).toBeUndefined()
   })
 })
+
+describe('the files a question was asked with', () => {
+  const question = {
+    ...turn('user', 'Mets le planning à jour.', 3),
+    context: 'Specs/Thermique.md',
+    project: 'Projets/Ligne 6.md',
+    files: ['Projets/Ligne 6/_docs/Planning indice C.pdf', 'Planning.xlsx']
+  }
+
+  it('are named in the question’s title, as links keeping their extension', () => {
+    expect(turnMarkdown(question, WORDS).split('\n')[0]).toBe(
+      `> [!question] Vous · ${localStamp(at(3))} · [[Specs/Thermique|Thermique]] · 📁 [[Projets/Ligne 6|Ligne 6]] · 📎 [[Projets/Ligne 6/_docs/Planning indice C.pdf|Planning indice C.pdf]], [[Planning.xlsx]]`
+    )
+  })
+
+  // Read back by path, and never taken for the note or the project.
+  it('are read back beside the note and the project', () => {
+    expect(readChatNote(chatNoteContent(META, [question], WORDS)).turns).toEqual([question])
+  })
+
+  it('leave the question about no note when it has none', () => {
+    const alone = { ...turn('user', 'Q', 3), files: ['p.pdf'] }
+    const read = readChatNote(chatNoteContent(META, [alone], WORDS)).turns[0]
+    expect(read.files).toEqual(['p.pdf'])
+    expect(read.context).toBeUndefined()
+  })
+})

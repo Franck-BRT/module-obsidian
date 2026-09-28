@@ -170,6 +170,21 @@ describe('applying a change to a ticket', () => {
     expect(moved?.start && moved.start > '2026-07-08').toBe(true)
   })
 
+  // What a revised planning asks for most: a task two weeks later, its start past its old
+  // due. One proposal, both dates, and what waits on it moved after it.
+  it('moves a task two weeks later, and what waits on it follows', async () => {
+    const { path, first, second } = await plan()
+    const done = await applyToTicket(
+      index,
+      store,
+      spec('ticket', { ticket: 'Déblais', changes: { start: '2026-07-15', due: '2026-07-17' } })
+    )
+    expect(done).toMatchObject({ ok: true, changed: true })
+    expect(await task(path, first)).toMatchObject({ start: '2026-07-15', due: '2026-07-17' })
+    const moved = await task(path, second)
+    expect(moved?.start && moved.start > '2026-07-17').toBe(true)
+  })
+
   it('finishes a ticket by its status label, stamping when it was finished', async () => {
     const { path, first } = await plan()
     const label = DEFAULT_SETTINGS.statuses.find((status) => status.id === 'done')?.label ?? 'done'
