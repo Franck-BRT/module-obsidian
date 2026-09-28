@@ -76,11 +76,14 @@ import {
   reqCriticalityGlyph,
   reqLinkKindLabel,
   reqStatusGlyph,
+  reqLanguages,
   reqTypeGlyph,
   verificationLabel
 } from '../requirements/reqPalette'
 import { LlmClient, LlmError } from '../../store/llm'
-import { safeAsync, sanitizeFileName } from '../../utils'
+import { displayName, safeAsync, sanitizeFileName } from '../../utils'
+import { fillPrompt, promptParams } from '../../store/chat/promptParams'
+import { askParams } from './ParamModal'
 import { replyNoteContent, replyTitle, withoutChangeBlocks } from '../../store/chat/replyNote'
 import { freePath } from '../../store/DocumentStore'
 import { ensureFolder } from '../../store/vaultFs'
@@ -1405,10 +1408,12 @@ export class ChatView extends ItemView {
     for (const preset of presets) {
       const chip = el.createEl('button', { cls: 'pm-chat-preset', attr: { title: preset.question } })
       setIcon(chip.createSpan({ cls: 'pm-chat-preset-icon' }), scopeIcon(preset.scope))
-      chip.createSpan({ cls: 'pm-chat-preset-label', text: preset.label })
+      // A question with blanks says so: it asks something before it goes.
+      const blanks = promptParams(preset.question).length > 0
+      chip.createSpan({ cls: 'pm-chat-preset-label', text: blanks ? `${preset.label}…` : preset.label })
       chip.addEventListener(
         'click',
-        safeAsync(() => this.send(preset.question))
+        safeAsync(() => this.askPreset(preset))
       )
     }
   }
@@ -1428,12 +1433,40 @@ export class ChatView extends ItemView {
       }
       menu.addItem((item) =>
         item
-          .setTitle(preset.label)
+          .setTitle(promptParams(preset.question).length ? `${preset.label}…` : preset.label)
           .setIcon(scopeIcon(preset.scope))
-          .onClick(safeAsync(() => this.send(preset.question)))
+          .onClick(safeAsync(() => this.askPreset(preset)))
       )
     }
     menu.showAtMouseEvent(event)
+  }
+
+  /**
+   * A ready question, its blanks asked for first when it has some, and the ones the chat
+   * knows — today, the projects attached — filled in without asking.
+   */
+  private async askPreset(preset: ChatPrompt): Promise<void> {
+    const params = promptParams(preset.question)
+    let values: Record<string, string> = {}
+    if (params.length) {
+      const settings = this.plugin.settings
+      const people = [...new Set([...settings.globalTeamMembers, ...this.plugin.index.allAssignees()].map(displayName))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+      const got = await askParams(this.app, preset.label, params, { people, languages: reqLanguages(settings) })
+      if (!got) return
+      values = got
+    }
+    const index = this.plugin.index
+    const projects = [
+      ...this.projects.map((path) => index.projectRef(path)?.title ?? ''),
+      ...this.collections.map((path) => index.collectionRef(path)?.title ?? '')
+    ]
+      .filter(Boolean)
+      .join(', ')
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    await this.send(fillPrompt(preset.question, values, { today, projects }))
   }
 
   /** Sends what is in the box, or a ready question — which leaves the box as it was. */

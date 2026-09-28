@@ -1299,7 +1299,7 @@ export const en = {
     'Offer the questions that come with the plugin (status update, progress report, requirement consistency…) besides your own.',
   'settings.chat.own': 'Your questions',
   'settings.chat.ownDesc':
-    'One question a line. Start the line with “project:”, “requirements:”, “note:” or “file:” to offer it only when a project, requirements, a note or a file are attached, or with “planning:” for a file and a project attached together. Give it a short name before “::”. Example: project: Weekly :: Give the week’s status update for the committee.',
+    'One question a line. Start the line with “project:”, “requirements:”, “note:” or “file:” to offer it only when a project, requirements, a note or a file are attached, or with “planning:” for a file and a project attached together. Give it a short name before “::”. Leave blanks to fill in when sending between braces: {Since:date}, {Who:person}, {Language:language}, {Criterion:cost|time|quality} or {Topic:text}; the blanks today and project, between braces, fill themselves. Example: project: Weekly :: Give the status update since {Since:date} for the committee.',
   'settings.chat.copyBuiltin': 'Start from the built-in questions',
   'settings.chat.copyBuiltinDesc':
     'Add the built-in questions to your list, to adapt them. Then turn the built-in questions off so they are not offered twice.',
@@ -1392,6 +1392,16 @@ export const en = {
   'chat.collectionAbout': 'Talk about this collection',
   'chat.collectionHeading':
     'The person has attached the collection “{title}” ({path}) to their questions: the tickets it gathers, project by project, as recorded. Refer to tickets by their title, and their project when two share one.',
+  'chat.paramChoose': 'Choice',
+  'chat.paramMissing': 'To fill in before sending: {list}',
+  'chat.preset.since': 'Report since a date',
+  'chat.preset.sinceQ':
+    'Write a progress report for this project covering the period since {Since:date}: what was finished, what started, what slipped and why, then the next deadlines.',
+  'chat.preset.person': 'Tasks of one person',
+  'chat.preset.personQ':
+    'What are the tasks of {Person:person} in this project: in progress, late, coming up? Point out what holds them up and what they hold up.',
+  'chat.preset.translateTo': 'Translate into a language',
+  'chat.preset.translateToQ': 'Translate these requirements into {Language:language}.',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

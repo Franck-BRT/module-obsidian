@@ -1279,7 +1279,7 @@ export const fr: Catalog = {
     'Propose les questions fournies avec le plugin (point d’avancement, compte rendu, cohérence des exigences…) en plus des tiennes.',
   'settings.chat.own': 'Tes questions',
   'settings.chat.ownDesc':
-    'Une question par ligne. Commence la ligne par « projet : », « exigences : », « note : » ou « fichier : » pour ne la proposer que quand un projet, des exigences, une note ou un fichier sont joints, ou par « planning : » pour un fichier et un projet joints ensemble. Donne-lui un nom court avant « :: ». Exemple : projet : Point hebdo :: Fais le point de la semaine pour le comité.',
+    'Une question par ligne. Commence la ligne par « projet : », « exigences : », « note : » ou « fichier : » pour ne la proposer que quand un projet, des exigences, une note ou un fichier sont joints, ou par « planning : » pour un fichier et un projet joints ensemble. Donne-lui un nom court avant « :: ». Laisse des blancs à remplir à l’envoi entre accolades : {Depuis le:date}, {Personne:personne}, {Langue:langue}, {Critère:coût|délai|qualité} ou {Sujet:texte} ; les blancs aujourd’hui et projet, entre accolades, se remplissent seuls. Exemple : projet : Point hebdo :: Fais le point depuis le {Depuis le:date} pour le comité.',
   'settings.chat.copyBuiltin': 'Partir des questions intégrées',
   'settings.chat.copyBuiltinDesc':
     'Ajoute les questions intégrées à ta liste, pour les adapter. Désactive ensuite les questions intégrées pour ne pas les voir en double.',
@@ -1371,6 +1371,16 @@ export const fr: Catalog = {
   'chat.collectionAbout': 'Discuter de cette collection',
   'chat.collectionHeading':
     'La personne a joint la collection « {title} » ({path}) à ses questions : les tickets qu’elle rassemble, projet par projet, tels qu’ils sont enregistrés. Désigne les tickets par leur titre, et leur projet quand deux portent le même.',
+  'chat.paramChoose': 'Choix',
+  'chat.paramMissing': 'À renseigner avant l’envoi : {list}',
+  'chat.preset.since': 'Compte rendu depuis une date',
+  'chat.preset.sinceQ':
+    'Rédige un compte rendu d’avancement de ce projet pour la période depuis le {Depuis le:date} : ce qui a été terminé, ce qui a démarré, ce qui a glissé et pourquoi, puis les prochaines échéances.',
+  'chat.preset.person': 'Tâches d’une personne',
+  'chat.preset.personQ':
+    'Quelles sont les tâches de {Personne:personne} dans ce projet : en cours, en retard, à venir ? Signale ce qui la bloque et ce qu’elle bloque.',
+  'chat.preset.translateTo': 'Traduire dans une langue',
+  'chat.preset.translateToQ': 'Traduis ces exigences en {Langue:langue}.',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

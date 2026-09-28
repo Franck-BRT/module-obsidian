@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parsePrompts } from '../../store/chat/chatPrompts'
+import { promptParams } from '../../store/chat/promptParams'
 import { builtinPrompts, promptLine } from './chatPresets'
 
 describe('the shipped questions', () => {
@@ -14,5 +15,15 @@ describe('the shipped questions', () => {
   it('offer something for a project, requirements, a note, a file and a planning', () => {
     const scopes = new Set(builtinPrompts().map((prompt) => prompt.scope))
     expect([...scopes].sort()).toEqual(['file', 'note', 'planning', 'project', 'requirements'])
+  })
+})
+
+describe('the shipped questions with blanks', () => {
+  // A date, a person, a language: each asked for with the field that fits it.
+  it('ask for what they leave blank, with the field that fits', () => {
+    const kinds = builtinPrompts()
+      .map((prompt) => promptParams(prompt.question).map((param) => param.kind))
+      .filter((found) => found.length)
+    expect(kinds).toEqual([['date'], ['person'], ['language']])
   })
 })
