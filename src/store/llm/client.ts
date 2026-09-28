@@ -152,6 +152,31 @@ export class LlmClient {
     return readModels(await this.send('models', 'GET'))
   }
 
+  /**
+   * What a model reads in an image: one picture and the instruction that goes with it,
+   * in the OpenAI form for images — the text and a data URL side by side in one message.
+   *
+   * The reply room is wider than a chat's: a page of planning written out as a table runs
+   * to thousands of words, and one cut at the setting's default would lose its last rows.
+   */
+  async readImage(request: { model: string; prompt: string; image: string; maxTokens?: number }): Promise<string> {
+    const body = {
+      model: request.model,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: request.prompt },
+            { type: 'image_url', image_url: { url: request.image } }
+          ]
+        }
+      ],
+      temperature: 0,
+      max_tokens: request.maxTokens ?? Math.max(this.settings.maxTokens, 4096)
+    }
+    return readChatContent(await this.send('chat/completions', 'POST', body))
+  }
+
   async chat(request: ChatRequest): Promise<string> {
     return readChatContent(await this.send('chat/completions', 'POST', buildChatBody(this.withDefaults(request))))
   }

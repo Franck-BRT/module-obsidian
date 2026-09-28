@@ -247,7 +247,8 @@ export const fr: Catalog = {
   'settings.llm.modelEmbed': 'Modèle — vecteurs',
   'settings.llm.modelEmbedDesc': 'Sert à repérer les doublons, y compris entre deux langues.',
   'settings.llm.modelOcr': 'Modèle — OCR',
-  'settings.llm.modelOcrDesc': 'Pour extraire des exigences d’une image de spécification.',
+  'settings.llm.modelOcrDesc':
+    'Un modèle qui lit les images, pour les PDF scannés et les plannings exportés en image joints au chat. Vide : le modèle du chat.',
   'settings.llm.temperature': 'Température',
   'settings.llm.temperatureDesc':
     'Zéro par défaut : un contrôle qui répond deux choses différentes au même texte n’est pas un contrôle.',
@@ -1283,7 +1284,7 @@ export const fr: Catalog = {
   'settings.chat.copyBuiltinDesc':
     'Ajoute les questions intégrées à ta liste, pour les adapter. Désactive ensuite les questions intégrées pour ne pas les voir en double.',
   'settings.chat.copyBuiltinButton': 'Ajouter à ma liste',
-  'chat.attachFile': 'Joindre un fichier (PDF, Word, Excel, PowerPoint, HTML, texte…)',
+  'chat.attachFile': 'Joindre un fichier (PDF, même scanné, Word, Excel, PowerPoint, image, HTML, texte…)',
   'chat.filePick': 'Choisis le fichier à joindre…',
   'chat.fileOff': 'Ne plus joindre ce fichier',
   'chat.fileNone': 'Aucun fichier lisible dans le coffre.',
@@ -1293,11 +1294,11 @@ export const fr: Catalog = {
   'chat.fileUnread':
     '[Le fichier « {name} » est joint mais n’a pas pu être lu : {reason} Dis-le si la question le concerne.]',
   'chat.fileProblem.unsupported': 'ce type de fichier ne se lit pas.',
-  'chat.fileProblem.empty': 'il ne contient pas de texte (un PDF scanné, par exemple, n’est qu’une image).',
+  'chat.fileProblem.empty': 'il ne contient pas de texte.',
   'chat.fileProblem.unreadable': 'il est illisible ou abîmé.',
   'chat.fileProblemNotice': '« {name} » : {reason}',
   'chat.fileUnsupported':
-    '« {name} » : ce type de fichier ne se lit pas (PDF, Word, Excel, PowerPoint, HTML ou texte).',
+    '« {name} » : ce type de fichier ne se lit pas (PDF, Word, Excel, PowerPoint, image PNG ou JPG, HTML ou texte).',
   'chat.fileFiled': '« {name} » est rangé dans le projet {project}, comme document reçu, et joint à la conversation.',
   'chat.fileKept': '« {name} » est enregistré dans {folder} et joint à la conversation.',
   'chat.fileKeepFailed': '« {name} » n’a pas pu être enregistré : {reason}',
@@ -1333,6 +1334,21 @@ export const fr: Catalog = {
   'chat.modelsUnavailable': 'Liste des modèles indisponible : {reason}',
   'chat.modelsNone': 'La passerelle ne propose aucun modèle de conversation.',
   'chat.modelBy': 'Réponse écrite par {model}',
+  'chat.ocrSuffix': 'transcription',
+  'chat.ocrOpen': 'Ouvrir la transcription',
+  'chat.ocrOn': 'Lire les pages comme des images (pour un planning inséré en image)',
+  'chat.ocrOff': 'Lire le texte du PDF plutôt que ses pages en image',
+  'chat.ocrReading': 'Lecture de « {name} » par le modèle : page {page} sur {total}…',
+  'chat.ocrPrompt':
+    'Voici la page {page} sur {total} d’un document scanné ou exporté en image. Transcris fidèlement tout son texte, dans l’ordre de lecture. Rends chaque tableau en tableau Markdown (| … |), une ligne par ligne du tableau, sans en omettre aucune. Recopie les dates, numéros, durées et noms exactement comme ils apparaissent. Si la page montre un diagramme de Gantt dont des dates ne sont données que par la position des barres, déduis-les de l’échelle du calendrier et marque-les « (estimé) ». N’ajoute aucun commentaire : seulement la transcription.',
+  'chat.ocrPage': 'Page {page} sur {total}',
+  'chat.ocrPageFailed': '[Page {page} non lue : {reason}]',
+  'chat.ocrSkipped': '[{count} page(s) suivante(s) non lue(s) : au-delà de la limite de pages.]',
+  'chat.ocrNothing':
+    'le modèle {model} n’a lu aucune page. Il ne lit peut-être pas les images : choisis un modèle qui les lit dans les paramètres (Modèle — OCR).',
+  'chat.ocrHeading':
+    '> [!info] Transcription faite par {model}. Relis-la et corrige-la au besoin : le chat lit cette note tant que le document ne change pas. Supprime-la pour relancer la lecture.',
+  'chat.ocrDone': '« {name} » a été lu ; sa transcription est enregistrée dans {path}.',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

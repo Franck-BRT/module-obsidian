@@ -20,11 +20,54 @@ import { readXlsx } from '../xlsxRead'
 /** The extensions read as plain text, as they are. */
 const PLAIN = new Set(['md', 'txt', 'csv', 'tsv', 'json', 'xml', 'yaml', 'yml', 'ics', 'log', 'eml'])
 
+/** Pictures, read by a model that sees, with the type a data URL gives them. */
+const IMAGES: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif'
+}
+
 /** Every extension a file can be attached with. */
-export const READABLE_EXTENSIONS = new Set([...PLAIN, 'pdf', 'docx', 'xlsx', 'pptx', 'html', 'htm'])
+export const READABLE_EXTENSIONS = new Set([
+  ...PLAIN,
+  'pdf',
+  'docx',
+  'xlsx',
+  'pptx',
+  'html',
+  'htm',
+  ...Object.keys(IMAGES)
+])
 
 export function isReadable(extension: string): boolean {
   return READABLE_EXTENSIONS.has(extension.toLowerCase())
+}
+
+export function isImage(extension: string): boolean {
+  return extension.toLowerCase() in IMAGES
+}
+
+/** A picture as a data URL, the form a model is handed an image in. */
+export function imageDataUrl(extension: string, bytes: Uint8Array): string {
+  let binary = ''
+  // In slices: a string built from a whole scan in one call overflows the argument list.
+  for (let at = 0; at < bytes.length; at += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(at, at + 0x8000))
+  }
+  return `data:${IMAGES[extension.toLowerCase()] ?? 'application/octet-stream'};base64,${btoa(binary)}`
+}
+
+/** A PDF's text and its number of pages, which together say whether the text is the document. */
+export async function readPdfText(bytes: Uint8Array): Promise<{ text: string; pages: number }> {
+  let content
+  try {
+    content = await readPdf(bytes)
+  } catch {
+    throw new FileReadError('unreadable')
+  }
+  return { text: blocksText(pdfBlocks(content)).replace(/\r\n?/g, '\n').trim(), pages: content.pages }
 }
 
 export type FileProblem = 'unsupported' | 'empty' | 'unreadable'

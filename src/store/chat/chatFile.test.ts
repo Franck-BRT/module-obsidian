@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { buildXlsx } from '../xlsx'
-import { blocksText, currentFiles, fileText, filesContext, FileReadError, isReadable } from './chatFile'
+import {
+  blocksText,
+  currentFiles,
+  fileText,
+  filesContext,
+  FileReadError,
+  imageDataUrl,
+  isImage,
+  isReadable
+} from './chatFile'
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
 
@@ -66,7 +75,7 @@ describe('fileText', () => {
 
   it('knows which files it can read', () => {
     expect(['pdf', 'PDF', 'docx', 'xlsx', 'pptx', 'md', 'csv', 'html'].every(isReadable)).toBe(true)
-    expect(['png', 'zip', 'msg', 'dwg'].some(isReadable)).toBe(false)
+    expect(['zip', 'msg', 'dwg', 'tiff'].some(isReadable)).toBe(false)
   })
 })
 
@@ -96,5 +105,22 @@ describe('currentFiles', () => {
   it('is the files of the latest question', () => {
     expect(currentFiles([{ role: 'user', files: ['a.pdf'] }, { role: 'assistant' }])).toEqual(['a.pdf'])
     expect(currentFiles([{ role: 'user', files: ['a.pdf'] }, { role: 'user' }])).toEqual([])
+  })
+})
+
+describe('pictures', () => {
+  it('are attached, and handed to a model as a data URL', () => {
+    expect(['png', 'JPG', 'jpeg', 'webp'].every(isReadable)).toBe(true)
+    expect(isImage('PNG')).toBe(true)
+    expect(isImage('pdf')).toBe(false)
+    expect(imageDataUrl('png', new Uint8Array([137, 80, 78, 71]))).toBe('data:image/png;base64,iVBORw==')
+  })
+
+  // A scan is megabytes: turned into text in slices, or the call overflows.
+  it('turns a large picture into a data URL', () => {
+    const big = new Uint8Array(200_000).fill(65)
+    const url = imageDataUrl('jpg', big)
+    expect(url.startsWith('data:image/jpeg;base64,QUFB')).toBe(true)
+    expect(url.length).toBe('data:image/jpeg;base64,'.length + Math.ceil(200_000 / 3) * 4)
   })
 })

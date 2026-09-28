@@ -250,7 +250,8 @@ export const en = {
   'settings.llm.modelEmbed': 'Model — vectors',
   'settings.llm.modelEmbedDesc': 'Used to spot duplicates, including across two languages.',
   'settings.llm.modelOcr': 'Model — OCR',
-  'settings.llm.modelOcrDesc': 'For lifting requirements out of an image of a specification.',
+  'settings.llm.modelOcrDesc':
+    'A model that reads images, for scanned PDFs and plannings exported as images attached to the chat. Empty: the chat’s model.',
   'settings.llm.temperature': 'Temperature',
   'settings.llm.temperatureDesc':
     'Zero by default: a check that answers two different things about one text is not a check.',
@@ -1303,7 +1304,7 @@ export const en = {
   'settings.chat.copyBuiltinDesc':
     'Add the built-in questions to your list, to adapt them. Then turn the built-in questions off so they are not offered twice.',
   'settings.chat.copyBuiltinButton': 'Add to my list',
-  'chat.attachFile': 'Attach a file (PDF, Word, Excel, PowerPoint, HTML, text…)',
+  'chat.attachFile': 'Attach a file (PDF, even scanned, Word, Excel, PowerPoint, image, HTML, text…)',
   'chat.filePick': 'Choose the file to attach…',
   'chat.fileOff': 'Stop attaching this file',
   'chat.fileNone': 'No readable file in the vault.',
@@ -1313,10 +1314,11 @@ export const en = {
   'chat.fileUnread':
     '[The file “{name}” is attached but could not be read: {reason} Say so if the question concerns it.]',
   'chat.fileProblem.unsupported': 'this kind of file cannot be read.',
-  'chat.fileProblem.empty': 'it holds no text (a scanned PDF, for instance, is only an image).',
+  'chat.fileProblem.empty': 'it holds no text.',
   'chat.fileProblem.unreadable': 'it is unreadable or damaged.',
   'chat.fileProblemNotice': '“{name}”: {reason}',
-  'chat.fileUnsupported': '“{name}”: this kind of file cannot be read (PDF, Word, Excel, PowerPoint, HTML or text).',
+  'chat.fileUnsupported':
+    '“{name}”: this kind of file cannot be read (PDF, Word, Excel, PowerPoint, PNG or JPG image, HTML or text).',
   'chat.fileFiled':
     '“{name}” is filed in the project {project} as a received document, and attached to the conversation.',
   'chat.fileKept': '“{name}” is saved in {folder} and attached to the conversation.',
@@ -1353,6 +1355,21 @@ export const en = {
   'chat.modelsUnavailable': 'Model list unavailable: {reason}',
   'chat.modelsNone': 'The gateway offers no conversation model.',
   'chat.modelBy': 'Reply written by {model}',
+  'chat.ocrSuffix': 'transcription',
+  'chat.ocrOpen': 'Open the transcription',
+  'chat.ocrOn': 'Read the pages as pictures (for a planning inserted as an image)',
+  'chat.ocrOff': 'Read the PDF’s text rather than its pages as pictures',
+  'chat.ocrReading': 'Reading “{name}” with the model: page {page} of {total}…',
+  'chat.ocrPrompt':
+    'Here is page {page} of {total} of a document scanned or exported as an image. Transcribe all its text faithfully, in reading order. Render each table as a Markdown table (| … |), one line per row, leaving none out. Copy dates, numbers, durations and names exactly as they appear. If the page shows a Gantt chart whose dates are only given by the position of the bars, work them out from the calendar scale and mark them “(estimated)”. Add no comment: only the transcription.',
+  'chat.ocrPage': 'Page {page} of {total}',
+  'chat.ocrPageFailed': '[Page {page} not read: {reason}]',
+  'chat.ocrSkipped': '[{count} further page(s) not read: past the page limit.]',
+  'chat.ocrNothing':
+    'the model {model} read no page. It may not read images: choose one that does in the settings (Model — OCR).',
+  'chat.ocrHeading':
+    '> [!info] Transcription made by {model}. Read it and correct it if needed: the chat reads this note as long as the document does not change. Delete it to have the document read again.',
+  'chat.ocrDone': '“{name}” has been read; its transcription is saved in {path}.',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

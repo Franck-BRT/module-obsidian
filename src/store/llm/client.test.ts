@@ -256,3 +256,32 @@ describe('what a failure tells the reader to do', () => {
     expect(describeHttp(404, '')).toContain('/v1')
   })
 })
+
+describe('reading an image', () => {
+  // The OpenAI form for images: the instruction and the picture side by side, read at
+  // temperature zero, with room for a page written out whole.
+  it('sends the instruction and the image in one message', async () => {
+    const { transport, seen } = fake({ body: { choices: [{ message: { content: '| Radier | 19/10/2026 |' } }] } })
+    const text = await new LlmClient({ settings: settings({ maxTokens: 1024 }), transport }).readImage({
+      model: 'qwen2.5-vl-72b',
+      prompt: 'Transcris cette page.',
+      image: 'data:image/jpeg;base64,AAAA'
+    })
+    expect(text).toBe('| Radier | 19/10/2026 |')
+    expect(seen[0].url).toBe('http://sidoniedev.cloud.cnes.fr:8081/v1/chat/completions')
+    expect(JSON.parse(seen[0].body ?? '')).toEqual({
+      model: 'qwen2.5-vl-72b',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Transcris cette page.' },
+            { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,AAAA' } }
+          ]
+        }
+      ],
+      temperature: 0,
+      max_tokens: 4096
+    })
+  })
+})

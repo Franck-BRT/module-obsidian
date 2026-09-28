@@ -34,10 +34,22 @@ import {
   fileText,
   filesContext,
   FileReadError,
+  imageDataUrl,
+  isImage,
   isReadable,
+  readPdfText,
   type ContextFile,
   type FileProblem
 } from '../../store/chat/chatFile'
+import {
+  needsOcr,
+  readTranscript,
+  transcribe,
+  transcriptNote,
+  transcriptPath,
+  type OcrSource
+} from '../../store/chat/ocr'
+import { pdfPages } from './pdfPages'
 import { keepDroppedFile } from '../../store/chat/keepFile'
 import { chatModel, chatModels } from '../../store/chat/chatModels'
 import { availablePrompts, parsePrompts, type ChatPrompt } from '../../store/chat/chatPrompts'
@@ -92,8 +104,10 @@ export class ChatView extends ItemView {
   private presetsEl: HTMLElement | null = null
   /** Files attached — a planning, a report — by path, sent with every question until taken off. */
   private files: string[] = []
-  /** Files already read, by path, with the modification time they were read at. */
+  /** Files already read, by path and way of reading, with the modification time they were read at. */
   private fileCache = new Map<string, { mtime: number; text: string }>()
+  /** PDFs the reader asked to have read as pictures, whatever text they hold. */
+  private ocrForced = new Set<string>()
   /** The reply being written, drawn as it grows; null when none is. */
   private liveEl: HTMLElement | null = null
   private liveText = ''
@@ -318,6 +332,31 @@ export class ChatView extends ItemView {
         'click',
         safeAsync(() => this.app.workspace.openLinkText(path, '', 'tab'))
       )
+      // A transcription already made is the reader's to check, one click away.
+      const transcript = this.app.vault.getAbstractFileByPath(transcriptPath(path, t('chat.ocrSuffix')))
+      if (transcript instanceof TFile) {
+        const open = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.ocrOpen') } })
+        setIcon(open, 'file-scan')
+        open.addEventListener(
+          'click',
+          safeAsync(() => this.app.workspace.getLeaf('tab').openFile(transcript))
+        )
+      }
+      // A PDF with a title block around a picture of the planning: its text is not the
+      // document, and the reader can say so.
+      if (path.toLowerCase().endsWith('.pdf')) {
+        const forced = this.ocrForced.has(path)
+        const scan = row.createEl('button', {
+          cls: `clickable-icon${forced ? ' is-active' : ''}`,
+          attr: { 'aria-label': forced ? t('chat.ocrOff') : t('chat.ocrOn'), 'aria-pressed': String(forced) }
+        })
+        setIcon(scan, 'scan-text')
+        scan.addEventListener('click', () => {
+          if (forced) this.ocrForced.delete(path)
+          else this.ocrForced.add(path)
+          this.renderContext()
+        })
+      }
       const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.fileOff') } })
       setIcon(off, 'x')
       off.addEventListener('click', () => {
@@ -413,14 +452,20 @@ export class ChatView extends ItemView {
     for (const path of paths) {
       const file = this.app.vault.getAbstractFileByPath(path)
       if (!(file instanceof TFile)) continue
-      const cached = this.fileCache.get(path)
+      const key = `${path}|${this.ocrForced.has(path) ? 'ocr' : 'text'}`
+      const cached = this.fileCache.get(key)
       let text = cached && cached.mtime === file.stat.mtime ? cached.text : null
       if (text === null) {
         try {
-          text = await fileText(file.extension, new Uint8Array(await this.app.vault.readBinary(file)))
-          this.fileCache.set(path, { mtime: file.stat.mtime, text })
+          text = await this.readAttached(file)
+          this.fileCache.set(key, { mtime: file.stat.mtime, text })
         } catch (error) {
-          const reason = fileProblemText(error instanceof FileReadError ? error.problem : 'unreadable')
+          const reason =
+            error instanceof FileReadError
+              ? fileProblemText(error.problem)
+              : error instanceof Error
+                ? error.message
+                : String(error)
           unread.push(t('chat.fileUnread', { name: file.name, reason }))
           new Notice(t('chat.fileProblemNotice', { name: file.name, reason }), 10000)
           continue
@@ -433,6 +478,76 @@ export class ChatView extends ItemView {
       truncated: (sent, total) => t('chat.fileTruncated', { sent, total })
     })
     return [block, ...unread].filter(Boolean).join('\n\n')
+  }
+
+  /**
+   * A file's text, however it has to be had: a picture read by a model that sees, a PDF
+   * with no text to speak of drawn page by page and read the same way, anything else by
+   * its reader.
+   */
+  private async readAttached(file: TFile): Promise<string> {
+    const bytes = new Uint8Array(await this.app.vault.readBinary(file))
+    if (isImage(file.extension)) {
+      return this.transcribed(file, { pages: 1, render: () => Promise.resolve(imageDataUrl(file.extension, bytes)) })
+    }
+    if (file.extension.toLowerCase() !== 'pdf') return fileText(file.extension, bytes)
+    let text = ''
+    let pages = 1
+    try {
+      ;({ text, pages } = await readPdfText(bytes))
+    } catch {
+      // A PDF this plugin cannot take apart may still be one the viewer can draw.
+    }
+    if (!this.ocrForced.has(file.path) && !needsOcr(text, pages)) return text
+    const source = await pdfPages(bytes)
+    try {
+      return await this.transcribed(file, source)
+    } finally {
+      source.close()
+    }
+  }
+
+  /**
+   * A document read by a model that sees, page by page, its transcription kept in a note
+   * beside it — and that note read instead, as long as the document has not changed: a
+   * scan is slow and not free to read, and the reader may have corrected what the model
+   * made of a blurred date.
+   */
+  private async transcribed(file: TFile, source: OcrSource): Promise<string> {
+    const path = normalizePath(transcriptPath(file.path, t('chat.ocrSuffix')))
+    const existing = this.app.vault.getAbstractFileByPath(path)
+    if (existing instanceof TFile) {
+      const kept = readTranscript(await this.app.vault.cachedRead(existing))
+      if (kept && kept.sourceMtime === file.stat.mtime && kept.text) return kept.text
+    }
+    const model = this.plugin.settings.llm.modelOcr.trim() || this.model
+    const notice = new Notice(t('chat.ocrReading', { name: file.name, page: 1, total: source.pages }), 0)
+    try {
+      const result = await transcribe(
+        source,
+        (image, page, total) => this.llm.readImage({ model, prompt: t('chat.ocrPrompt', { page, total }), image }),
+        {
+          page: (page, total) => t('chat.ocrPage', { page, total }),
+          failed: (page, reason) => t('chat.ocrPageFailed', { page, reason }),
+          skipped: (count) => t('chat.ocrSkipped', { count })
+        },
+        (page, total) => notice.setMessage(t('chat.ocrReading', { name: file.name, page, total }))
+      )
+      // Nothing read at all is a model that does not see, most likely: said as such.
+      if (!result.read) throw new Error(t('chat.ocrNothing', { model }))
+      const note = transcriptNote(
+        { source: file.path, sourceMtime: file.stat.mtime, model, at: new Date().toISOString(), pages: source.pages },
+        result.text,
+        t('chat.ocrHeading', { model })
+      )
+      if (existing instanceof TFile) await this.app.vault.modify(existing, note)
+      else await this.app.vault.create(path, note)
+      new Notice(t('chat.ocrDone', { name: file.name, path }), 8000)
+      this.renderContext()
+      return result.text
+    } finally {
+      notice.hide()
+    }
   }
 
   private pickProject(): void {
