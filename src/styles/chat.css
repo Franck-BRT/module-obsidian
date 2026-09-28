@@ -143,8 +143,11 @@
   text-decoration: none;
 }
 
+/* Turned off is struck through; nothing there to send is only greyed. */
 .pm-chat-context--off,
-.pm-chat-context--off .pm-chat-context-icon {
+.pm-chat-context--off .pm-chat-context-icon,
+.pm-chat-context--empty,
+.pm-chat-context--empty .pm-chat-context-icon {
   color: var(--text-faint);
 }
 

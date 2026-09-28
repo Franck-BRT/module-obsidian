@@ -34,6 +34,8 @@ export interface ChatNoteWords {
 
 /** What marks the requirements a question was asked about, in its callout's title. */
 const REQUIREMENTS_MARK = '📋'
+/** What marks the project a question was asked about. */
+const PROJECT_MARK = '📁'
 
 export interface ChatNote extends ChatNoteMeta {
   turns: ChatTurn[]
@@ -80,17 +82,29 @@ function namedRequirements(title: string): string[] {
     .filter(Boolean)
 }
 
-/** The note a callout's title links to, as a path; the first link, where there are several. */
-function linkedPath(title: string): string | undefined {
-  // The requirements' links are theirs, not the note's.
-  const own = title
-    .split(' · ')
-    .filter((part) => !part.trim().startsWith(REQUIREMENTS_MARK))
-    .join(' · ')
-  const found = /\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/.exec(own)
+/** A link's target as a note's path: `[[Specs/Thermique|…]]` is `Specs/Thermique.md`. */
+function pathIn(text: string): string | undefined {
+  const found = /\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/.exec(text)
   if (!found) return undefined
   const target = found[1].trim()
   return /\.md$/i.test(target) ? target : `${target}.md`
+}
+
+/** The note a callout's title links to, as a path; the first link, where there are several. */
+function linkedPath(title: string): string | undefined {
+  // The requirements' and the project's links are theirs, not the note's.
+  return pathIn(
+    title
+      .split(' · ')
+      .filter((part) => !part.trim().startsWith(REQUIREMENTS_MARK) && !part.trim().startsWith(PROJECT_MARK))
+      .join(' · ')
+  )
+}
+
+/** The project a callout's title names after its mark, as the path of its note. */
+function namedProject(title: string): string | undefined {
+  const segment = title.split(' · ').find((part) => part.trim().startsWith(PROJECT_MARK))
+  return segment ? pathIn(segment) : undefined
 }
 
 /** One turn, as its callout. */
@@ -100,6 +114,7 @@ export function turnMarkdown(turn: ChatTurn, words: ChatNoteWords): string {
   const link = words.requirement ?? ((id: string) => id)
   const about =
     (turn.context ? ` · ${noteLink(turn.context)}` : '') +
+    (turn.project ? ` · ${PROJECT_MARK} ${noteLink(turn.project)}` : '') +
     (turn.requirements?.length ? ` · ${REQUIREMENTS_MARK} ${turn.requirements.map(link).join(', ')}` : '')
   const head = `> [!${CALLOUT[turn.role]}] ${turn.role === 'user' ? words.user : words.assistant} · ${localStamp(turn.at)}${about}`
   const body = turn.content.split('\n').map((line) => (line === '' ? '>' : `> ${line}`))
@@ -178,12 +193,14 @@ export function readChatNote(content: string): ChatNote {
       close()
       const context = role === 'user' ? linkedPath(start[2]) : undefined
       const requirements = role === 'user' ? namedRequirements(start[2]) : []
+      const project = role === 'user' ? namedProject(start[2]) : undefined
       current = {
         turn: {
           role,
           content: '',
           at: fromStamp(start[2]) ?? created,
           ...(context ? { context } : {}),
+          ...(project ? { project } : {}),
           ...(requirements.length ? { requirements } : {})
         },
         lines: []

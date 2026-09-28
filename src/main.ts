@@ -649,6 +649,13 @@ export default class PMPlugin extends Plugin {
     if (view instanceof ChatView) view.attachRequirements(ids)
   }
 
+  /** The chat, opened on a project: its tickets go with every question until taken off. */
+  async chatAboutProject(path: string): Promise<void> {
+    await this.openChat()
+    const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
+    if (view instanceof ChatView) view.attachProject(path)
+  }
+
   async createCollection(): Promise<void> {
     const title = await promptText(this.app, t('collection.new'), t('collection.name'), '')
     if (!title) return

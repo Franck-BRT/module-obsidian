@@ -23,7 +23,13 @@ import {
 import { chatTitle, isChatNote, localStamp, type ChatNoteWords } from '../../store/chat/chatNote'
 import { ChatNotes } from '../../store/chat/ChatNotes'
 import { currentRequirements, requirementsContext, type RequirementWords } from '../../store/chat/chatRequirements'
+import { currentProject, projectContext, projectParts, type ProjectWords } from '../../store/chat/chatProject'
 import type { Requirement } from '../../store/requirements/Requirement'
+import { ProjectScope, resolveScopePaths, type ScopeSpec } from '../../store/ProjectScope'
+import type { ProjectRef } from '../../store/VaultIndex'
+import { docStateConfigOf, typeConfigOf } from '../../store/TicketPalette'
+import type { DocState, TaskType } from '../../types'
+import { today } from '../../dates'
 import {
   reqCriticalityGlyph,
   reqLinkKindLabel,
@@ -60,6 +66,8 @@ export class ChatView extends ItemView {
   private useNote = true
   /** Requirements chosen in the library, sent with every question until taken off. */
   private attached: string[] = []
+  /** The project talked about, by the path of its note: sent with every question until taken off. */
+  private project: string | null = null
   private contextEl: HTMLElement | null = null
   /** The reply being written, drawn as it grows; null when none is. */
   private liveEl: HTMLElement | null = null
@@ -98,6 +106,10 @@ export class ChatView extends ItemView {
     this.registerEvent(
       this.app.vault.on('rename', (file, oldPath) => {
         if (oldPath === this.notePath) this.notePath = file.path
+        if (oldPath === this.project) {
+          this.project = file.path
+          this.renderContext()
+        }
         if (file === this.contextFile) this.renderContext()
       })
     )
@@ -163,7 +175,8 @@ export class ChatView extends ItemView {
     el.empty()
     const file = this.contextFile
     const noteRow = el.createDiv('pm-chat-context-row')
-    noteRow.toggleClass('pm-chat-context--off', !file || !this.useNote)
+    noteRow.toggleClass('pm-chat-context--empty', !file)
+    noteRow.toggleClass('pm-chat-context--off', !!file && !this.useNote)
     setIcon(noteRow.createSpan({ cls: 'pm-chat-context-icon' }), 'file-text')
     if (!file) noteRow.createSpan({ cls: 'pm-chat-context-name', text: t('chat.noNote') })
     else {
@@ -187,6 +200,8 @@ export class ChatView extends ItemView {
       })
     }
 
+    this.renderProjectRow(el)
+
     if (!this.attached.length) return
     const reqRow = el.createDiv('pm-chat-context-row')
     setIcon(reqRow.createSpan({ cls: 'pm-chat-context-icon' }), 'list-checks')
@@ -202,6 +217,109 @@ export class ChatView extends ItemView {
       this.attached = []
       this.renderContext()
     })
+  }
+
+  /** The project row: the one attached, with the way to take it off, or the way to choose one. */
+  private renderProjectRow(el: HTMLElement): void {
+    const row = el.createDiv('pm-chat-context-row')
+    setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'folder-kanban')
+    const ref = this.project ? this.plugin.index.projectRef(this.project) : null
+    if (!ref) {
+      row.addClass('pm-chat-context--empty')
+      row.createSpan({ cls: 'pm-chat-context-name', text: t('chat.noProject') })
+      const pick = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.pickProject') } })
+      setIcon(pick, 'plus')
+      pick.addEventListener('click', () => this.pickProject())
+      return
+    }
+    const name = row.createEl('a', {
+      cls: 'pm-chat-context-name',
+      text: ref.program ? `${ref.title} (${t('chat.projectProgram')})` : ref.title,
+      attr: { title: t('chat.projectOpen') }
+    })
+    name.addEventListener(
+      'click',
+      safeAsync(() => this.plugin.router.openProjectLink(ref.path))
+    )
+    const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.projectOff') } })
+    setIcon(off, 'x')
+    off.addEventListener('click', () => {
+      this.project = null
+      this.renderContext()
+    })
+  }
+
+  private pickProject(): void {
+    new ProjectPicker(this.app, this.plugin.index.projectRefs(), (ref) => this.attachProject(ref.path)).open()
+  }
+
+  /**
+   * A project to talk about: it goes with every question from here on, until taken off,
+   * the way the open note does. One at a time — a programme stands for the projects it
+   * groups.
+   */
+  attachProject(path: string): void {
+    this.project = path
+    this.renderContext()
+    window.setTimeout(() => this.inputEl?.focus(), 0)
+  }
+
+  /**
+   * The project a question was asked about, written out as it stands now; '' when it is
+   * gone. The projects under it come with it, each with its own tickets.
+   */
+  private async projectBlock(path: string | undefined): Promise<string> {
+    const ref = path ? this.plugin.index.projectRef(path) : null
+    if (!ref) return ''
+    // With what is under it: a programme is the projects it groups, and a project's own
+    // sub-projects are part of what someone asking about it means.
+    const spec: ScopeSpec = { kind: 'subtree', path: ref.path }
+    const projects = await this.plugin.store.loadProjects(
+      resolveScopePaths(spec, this.plugin.index, this.plugin.settings.statuses)
+    )
+    const scope = new ProjectScope(spec, projects, this.plugin.store)
+    const primary = scope.primary
+    if (!primary) return ''
+    await this.plugin.store.loadProjectBody(primary)
+    const config = scope.config
+    return projectContext(
+      {
+        title: primary.title,
+        path: primary.filePath,
+        program: !!primary.program,
+        description: primary.description,
+        team: primary.teamMembers,
+        zones: primary.zones ?? [],
+        parts: projectParts(primary, projects),
+        statuses: config.statuses,
+        priorities: config.priorities,
+        today: today().toString()
+      },
+      this.projectWords
+    )
+  }
+
+  private get projectWords(): ProjectWords {
+    return {
+      heading: (title, path) => t('chat.projectHeading', { title, path }),
+      program: t('chat.projectProgram'),
+      field: {
+        description: t('chat.projectDescription'),
+        team: t('chat.projectTeam'),
+        zones: t('chat.projectZones'),
+        span: t('chat.projectSpan'),
+        summary: t('chat.projectSummary'),
+        tickets: t('chat.projectTickets')
+      },
+      summary: (figures) => t('chat.projectFigures', figures),
+      type: (type) => typeConfigOf(type as TaskType).label,
+      docState: (state) => docStateConfigOf(state as DocState).label,
+      late: t('chat.projectLate'),
+      after: t('chat.projectAfter'),
+      noTickets: t('chat.projectEmpty'),
+      doneLeft: (count) => t('chat.projectDoneLeft', { count }),
+      left: (count) => t('chat.projectLeft', { count })
+    }
   }
 
   /**
@@ -391,6 +509,15 @@ export class ChatView extends ItemView {
       about.createSpan({ text: turn.context.replace(/^.*\//, '').replace(/\.md$/i, '') })
       about.setAttr('title', turn.context)
     }
+    if (turn.project) {
+      const about = this.listEl.createDiv('pm-chat-about')
+      setIcon(about.createSpan(), 'folder-kanban')
+      about.createSpan({
+        text:
+          this.plugin.index.projectRef(turn.project)?.title ?? turn.project.replace(/^.*\//, '').replace(/\.md$/i, '')
+      })
+      about.setAttr('title', turn.project)
+    }
     if (turn.requirements?.length) {
       const about = this.listEl.createDiv('pm-chat-about')
       setIcon(about.createSpan(), 'list-checks')
@@ -438,6 +565,7 @@ export class ChatView extends ItemView {
         content: text,
         at: new Date().toISOString(),
         ...(context ? { context } : {}),
+        ...(this.project ? { project: this.project } : {}),
         ...(this.attached.length ? { requirements: [...this.attached] } : {})
       }
     ]
@@ -488,9 +616,11 @@ export class ChatView extends ItemView {
         .map((id) => this.plugin.index.requirementById(id))
         .filter((found): found is Requirement => found !== undefined && found !== null)
       const block = requirementsContext(requirements, this.requirementWords)
+      // The project as it stands at the moment of asking, like the note.
+      const project = await this.projectBlock(currentProject(this.turns))
       const request = {
         model: settings.modelText,
-        messages: chatMessages(this.turns, block ? `${system}\n\n${block}` : system)
+        messages: chatMessages(this.turns, [system, project, block].filter(Boolean).join('\n\n'))
       }
       let reply: string
       let stopped = false
@@ -591,6 +721,35 @@ export class ChatView extends ItemView {
       files,
       safeAsync((file: TFile) => this.resume(file))
     ).open()
+  }
+}
+
+/** The projects of the vault, by name, a programme said to be one. */
+class ProjectPicker extends SuggestModal<ProjectRef> {
+  constructor(
+    app: App,
+    private refs: ProjectRef[],
+    private onChoose: (ref: ProjectRef) => void
+  ) {
+    super(app)
+    this.setPlaceholder(t('chat.projectPick'))
+  }
+
+  getSuggestions(query: string): ProjectRef[] {
+    const q = query.toLowerCase()
+    return this.refs.filter((ref) => ref.title.toLowerCase().includes(q) || ref.path.toLowerCase().includes(q))
+  }
+
+  renderSuggestion(ref: ProjectRef, el: HTMLElement): void {
+    el.createDiv({ text: ref.title })
+    el.createEl('small', {
+      cls: 'pm-chat-pick-when',
+      text: ref.program ? `${t('chat.projectProgram')} · ${ref.path}` : ref.path
+    })
+  }
+
+  onChooseSuggestion(ref: ProjectRef): void {
+    this.onChoose(ref)
   }
 }
 

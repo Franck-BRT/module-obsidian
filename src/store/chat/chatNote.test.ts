@@ -170,3 +170,30 @@ describe('chatNoteName', () => {
     )
   })
 })
+
+describe('the project a question was asked about', () => {
+  const question = {
+    ...turn('user', 'Où en est-on ?', 3),
+    context: 'Specs/Thermique.md',
+    project: 'Projets/Refonte chaufferie.md',
+    requirements: ['REQ-THERM-0001']
+  }
+
+  it('is named in the question’s title, as a link to its note', () => {
+    expect(turnMarkdown(question, WORDS).split('\n')[0]).toBe(
+      `> [!question] Vous · ${localStamp(at(3))} · [[Specs/Thermique|Thermique]] · 📁 [[Projets/Refonte chaufferie|Refonte chaufferie]] · 📋 REQ-THERM-0001`
+    )
+  })
+
+  // Never mistaken for the note the question was about, nor the note for it.
+  it('is read back beside the note and the requirements', () => {
+    expect(readChatNote(chatNoteContent(META, [question], WORDS)).turns).toEqual([question])
+  })
+
+  it('is read back alone, the question then about no note', () => {
+    const alone = { ...turn('user', 'Q', 3), project: 'Refonte.md' }
+    const read = readChatNote(chatNoteContent(META, [alone], WORDS)).turns[0]
+    expect(read.project).toBe('Refonte.md')
+    expect(read.context).toBeUndefined()
+  })
+})

@@ -542,6 +542,15 @@ export class ProjectView extends ItemView {
       this.renderInboxButton()
     }
 
+    // A project or a programme, not a folder or a collection: what is attached to the chat
+    // is a project, so the button is only where one is being looked at.
+    if (this.spec?.kind === 'project' || this.spec?.kind === 'subtree') {
+      new ExtraButtonComponent(right)
+        .setIcon('messages-square')
+        .setTooltip(t('chat.projectAbout'))
+        .onClick(safeAsync(() => this.plugin.chatAboutProject(primary.filePath)))
+    }
+
     if (!scope.isMulti) {
       new ExtraButtonComponent(right)
         .setIcon('settings')

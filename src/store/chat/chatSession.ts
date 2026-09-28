@@ -20,6 +20,8 @@ export interface ChatTurn {
   context?: string
   /** The requirements a question was asked about, by identifier. */
   requirements?: string[]
+  /** The project a question was asked about, by the path of its note. */
+  project?: string
 }
 
 /**
