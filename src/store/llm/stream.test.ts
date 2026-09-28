@@ -82,7 +82,7 @@ describe('chatStream', () => {
       (text) => grown.push(text)
     )
     expect(grown).toEqual(['Le ', 'Le CNES ', 'Le CNES a 60 ans.'])
-    expect(outcome).toEqual({ text: 'Le CNES a 60 ans.', stopped: false })
+    expect(outcome).toEqual({ text: 'Le CNES a 60 ans.', stopped: false, truncated: false })
     expect(seen[0].url).toBe('http://passerelle.interne:8081/v1/chat/completions')
     expect(JSON.parse(seen[0].body)).toMatchObject({ model: 'qwen3', stream: true })
   })
@@ -117,7 +117,8 @@ describe('chatStream', () => {
     const shown: string[] = []
     expect(await client.chatStream(REQUEST, (text) => shown.push(text), { onFallback })).toEqual({
       text: 'Réponse entière.',
-      stopped: false
+      stopped: false,
+      truncated: false
     })
     expect(shown).toEqual(['Réponse entière.'])
     expect(onFallback).toHaveBeenCalledOnce()
@@ -164,7 +165,7 @@ describe('chatStream', () => {
       },
       { signal: controller.signal }
     )
-    expect(outcome).toEqual({ text: 'Début de réponse', stopped: true })
+    expect(outcome).toEqual({ text: 'Début de réponse', stopped: true, truncated: false })
   })
 
   it('fails on a stream that ends having said nothing', async () => {
@@ -245,7 +246,7 @@ describe('chatStream', () => {
         () => {}
       )
       await vi.advanceTimersByTimeAsync(7000)
-      expect(await pending).toEqual({ text: 'Un deux trois quatre.', stopped: false })
+      expect(await pending).toEqual({ text: 'Un deux trois quatre.', stopped: false, truncated: false })
     } finally {
       vi.useRealTimers()
     }
@@ -271,9 +272,47 @@ describe('chatStream', () => {
         streamTransport: lingering
       }).chatStream(REQUEST, () => {})
       await vi.advanceTimersByTimeAsync(3000)
-      expect(await pending).toEqual({ text: 'Fini.', stopped: false })
+      expect(await pending).toEqual({ text: 'Fini.', stopped: false, truncated: false })
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+// A reply the length limit cut short ends like any other: only its last word says so.
+describe('a reply cut by the length limit', () => {
+  const cut = (content: string) =>
+    `data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason: 'length' }] })}\n\n`
+
+  it('is told apart from a finished one, streamed', async () => {
+    const { transport } = streaming([event('Sept '), cut('blocs'), 'data: [DONE]\n\n'])
+    const outcome = await new LlmClient({ settings: settings(), streamTransport: transport }).chatStream(
+      REQUEST,
+      () => {}
+    )
+    expect(outcome).toEqual({ text: 'Sept blocs', stopped: false, truncated: true })
+  })
+
+  it('is told apart from a finished one, in one piece', async () => {
+    const transport: HttpTransport = () =>
+      Promise.resolve({
+        status: 200,
+        text: JSON.stringify({ choices: [{ message: { content: 'Sept blocs' }, finish_reason: 'length' }] })
+      })
+    expect(await new LlmClient({ settings: settings(), transport }).reply(REQUEST)).toEqual({
+      text: 'Sept blocs',
+      truncated: true
+    })
+  })
+
+  // No limit of the plugin's own unless one is asked for: the gateway's is what is left
+  // of the model's context.
+  it('asks for no length limit when given none', async () => {
+    const { transport, seen } = streaming([event('ok'), 'data: [DONE]\n\n'])
+    const client = new LlmClient({ settings: settings({ maxTokens: 1024 }), streamTransport: transport })
+    await client.chatStream({ ...REQUEST, maxTokens: 0 }, () => {})
+    expect(JSON.parse(seen[0].body)).not.toHaveProperty('max_tokens')
+    await client.chatStream(REQUEST, () => {})
+    expect(JSON.parse(seen[1].body)).toMatchObject({ max_tokens: 1024 })
   })
 })

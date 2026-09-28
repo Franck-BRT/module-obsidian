@@ -31,6 +31,7 @@ import { changeBlocks, parseChange, withoutOpenChange } from '../../store/chat/c
 import { applyCreate, applyToRequirement, applyToTicket, type Applied } from '../../store/chat/applyChange'
 import {
   currentFiles,
+  FILE_BUDGET,
   fileText,
   filesContext,
   FileReadError,
@@ -472,6 +473,10 @@ export class ChatView extends ItemView {
         }
       }
       read.push({ path: file.path, name: file.name, text })
+    }
+    // A file cut is a planning whose last tasks the model never saw: the reader is told.
+    for (const file of read.filter((each) => each.text.length > FILE_BUDGET)) {
+      new Notice(t('chat.fileCut', { name: file.name, sent: FILE_BUDGET, total: file.text.length }), 12000)
     }
     const block = filesContext(read, {
       heading: (name, path) => t('chat.fileHeading', { name, path }),
@@ -990,6 +995,19 @@ export class ChatView extends ItemView {
     }
     // A reply is copied into a note; a question is still in the reader's head.
     if (turn.role !== 'assistant') return
+    // A reply the length limit cut short says so, with the way to have the rest.
+    if (turn.cut) {
+      const note = el.createDiv('pm-chat-cut')
+      setIcon(note.createSpan({ cls: 'pm-chat-cut-icon' }), 'scissors')
+      note.createSpan({ text: t('chat.cut') })
+      if (last) {
+        const more = note.createEl('button', { text: t('chat.continue') })
+        more.addEventListener(
+          'click',
+          safeAsync(() => this.send(t('chat.continueQ')))
+        )
+      }
+    }
     // Which model wrote it, once the chat has talked to more than one.
     if (turn.model && this.turns.some((other) => other.model && other.model !== turn.model)) {
       actions.createSpan({
@@ -1200,10 +1218,14 @@ export class ChatView extends ItemView {
       const how = this.changeInstructions(requirements.length > 0, project, paths.length > 0)
       const request = {
         model,
-        messages: chatMessages(this.turns, [system, project?.text, block, files, how].filter(Boolean).join('\n\n'))
+        messages: chatMessages(this.turns, [system, project?.text, block, files, how].filter(Boolean).join('\n\n')),
+        // The chat's own limit, none by default: a reply proposing thirty changes is long,
+        // and one cut at the reviews' thousand tokens stops after seven.
+        maxTokens: Math.max(0, this.plugin.settings.chat.maxTokens)
       }
       let reply: string
       let stopped = false
+      let truncated = false
       if (this.stopper) {
         const outcome = await this.llm.chatStream(request, (text) => this.showLive(text), {
           signal: this.stopper.signal,
@@ -1211,10 +1233,20 @@ export class ChatView extends ItemView {
         })
         reply = outcome.text
         stopped = outcome.stopped
-      } else reply = await this.llm.chat(request)
+        truncated = outcome.truncated
+      } else ({ text: reply, truncated } = await this.llm.reply(request))
       if (reply.trim()) {
         // Stopped part way, what had been written is kept: it is what the reader read.
-        this.turns = [...this.turns, { role: 'assistant', content: reply.trim(), at: new Date().toISOString(), model }]
+        this.turns = [
+          ...this.turns,
+          {
+            role: 'assistant',
+            content: reply.trim(),
+            at: new Date().toISOString(),
+            model,
+            ...(truncated ? { cut: true } : {})
+          }
+        ]
         await this.persist()
       } else if (stopped) {
         this.turns = [

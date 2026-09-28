@@ -9,6 +9,7 @@ import {
   readChatContent,
   readDelta,
   readEmbeddings,
+  readFinish,
   readModels,
   readSseEvents,
   type ChatMessage,
@@ -108,6 +109,8 @@ export interface StreamOutcome {
   text: string
   /** Stopped by the reader before the model had finished. */
   stopped: boolean
+  /** Cut by the length limit — the gateway's, or one asked for — before the model had finished. */
+  truncated: boolean
 }
 
 export interface StreamOptions {
@@ -177,6 +180,12 @@ export class LlmClient {
     return readChatContent(await this.send('chat/completions', 'POST', body))
   }
 
+  /** A reply, and whether it was cut by the length limit rather than finished. */
+  async reply(request: ChatRequest): Promise<{ text: string; truncated: boolean }> {
+    const payload = await this.send('chat/completions', 'POST', buildChatBody(this.withDefaults(request)))
+    return { text: readChatContent(payload), truncated: readFinish(payload) === 'length' }
+  }
+
   async chat(request: ChatRequest): Promise<string> {
     return readChatContent(await this.send('chat/completions', 'POST', buildChatBody(this.withDefaults(request))))
   }
@@ -199,9 +208,9 @@ export class LlmClient {
   ): Promise<StreamOutcome> {
     if (!this.configured) throw new LlmError('disabled', 'No gateway is configured.')
     const whole = async (): Promise<StreamOutcome> => {
-      const text = await this.chat(request)
+      const { text, truncated } = await this.reply(request)
       onText(text)
-      return { text, stopped: false }
+      return { text, stopped: false, truncated }
     }
     const base = this.settings.baseUrl.trim()
     if (unstreamable.has(base)) return whole()
@@ -236,7 +245,7 @@ export class LlmClient {
           signal: controller.signal
         })
       } catch {
-        if (options.signal?.aborted) return { text: '', stopped: true }
+        if (options.signal?.aborted) return { text: '', stopped: true, truncated: false }
         if (silent) throw new LlmError('timeout', `No answer after ${seconds}s.`)
         // Not reached at all: the page's rules, most likely. Asked the ordinary way, which
         // either works — and the gateway is one not to stream from — or fails with the
@@ -265,23 +274,25 @@ export class LlmClient {
         }
         text = readChatContent(payload)
         onText(text)
-        return { text, stopped: false }
+        return { text, stopped: false, truncated: readFinish(payload) === 'length' }
       }
 
       let buffer = ''
+      let truncated = false
       for await (const chunk of response.chunks) {
         wait()
         // Decoded as a stream: a letter written in two bytes can arrive in two pieces.
         const read = readSseEvents(buffer + decoder.decode(chunk, { stream: true }))
         buffer = read.rest
         for (const event of read.events) {
-          if (event.trim() === '[DONE]') return this.finished(text)
+          if (event.trim() === '[DONE]') return this.finished(text, truncated)
           let payload: unknown
           try {
             payload = JSON.parse(event)
           } catch {
             continue
           }
+          if (readFinish(payload) === 'length') truncated = true
           const delta = readDelta(payload)
           if (delta) {
             text += delta
@@ -289,9 +300,9 @@ export class LlmClient {
           }
         }
       }
-      return this.finished(text)
+      return this.finished(text, truncated)
     } catch (error) {
-      if (options.signal?.aborted) return { text, stopped: true }
+      if (options.signal?.aborted) return { text, stopped: true, truncated: false }
       if (silent) throw new LlmError('timeout', `No answer after ${seconds}s.`)
       throw error
     } finally {
@@ -301,9 +312,9 @@ export class LlmClient {
   }
 
   /** A stream that ended having said nothing is a failure, as an empty reply is. */
-  private finished(text: string): StreamOutcome {
+  private finished(text: string, truncated: boolean): StreamOutcome {
     if (!text.trim()) throw new LlmError('shape', 'The reply carried no text.')
-    return { text, stopped: false }
+    return { text, stopped: false, truncated }
   }
 
   /**

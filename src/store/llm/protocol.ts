@@ -59,7 +59,10 @@ export function buildChatBody(request: ChatRequest): Record<string, unknown> {
     model: request.model,
     messages: request.messages
   }
-  if (request.maxTokens !== undefined) body.max_tokens = request.maxTokens
+  // Zero asks for no limit of the plugin's own: the gateway's, which is what is left of
+  // the model's context. A number there cuts a long reply short, silently but for the
+  // reason the reply ends with.
+  if (request.maxTokens) body.max_tokens = request.maxTokens
   // Sent even at zero: a quality verdict that changes between two runs on the same text
   // is a verdict nobody can audit, so determinism is the default and it must be explicit.
   if (request.temperature !== undefined) body.temperature = request.temperature
@@ -110,6 +113,15 @@ export function readDelta(payload: unknown): string {
   }
   const content = (payload as { choices?: { delta?: { content?: unknown } }[] } | null)?.choices?.[0]?.delta?.content
   return typeof content === 'string' ? content : ''
+}
+
+/**
+ * Why the model stopped, from a reply or a streamed event: `stop` when it had finished,
+ * `length` when the reply ran into the length limit and was cut. '' when it does not say.
+ */
+export function readFinish(payload: unknown): string {
+  const reason = (payload as { choices?: { finish_reason?: unknown }[] } | null)?.choices?.[0]?.finish_reason
+  return typeof reason === 'string' ? reason : ''
 }
 
 export function buildEmbeddingBody(model: string, input: string[]): Record<string, unknown> {

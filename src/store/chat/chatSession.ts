@@ -27,6 +27,8 @@ export interface ChatTurn {
   files?: string[]
   /** The model a reply was written by, where it is known. */
   model?: string
+  /** A reply the length limit cut before the model had finished. Said in the panel only. */
+  cut?: boolean
 }
 
 /**

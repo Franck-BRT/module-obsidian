@@ -1305,14 +1305,14 @@ export const fr: Catalog = {
   'chat.filesFolder': 'Fichiers',
   'chat.dropNote': 'Déposé dans le chat',
   'chat.changePlanning':
-    'Si un fichier joint est un planning, compare ses tâches aux tickets du projet (même titre ou même sens), et propose pour chaque ticket qui change un seul bloc avec tous ses champs modifiés. Dates au format AAAA-MM-JJ, quel que soit leur format dans le fichier. Pour les tâches du planning qui n’ont pas de ticket, propose leur création, sous leur lot quand il existe, avec leurs dates, leurs responsables et ce qu’elles suivent. Liste à part, sans bloc, les tickets absents du planning.',
+    'Si un fichier joint est un planning, compare chacune de ses tâches aux tickets du projet (même titre ou même sens), et propose pour chaque ticket qui change un seul bloc avec tous ses champs modifiés. Traite toutes les tâches du planning, une par une, jusqu’à la dernière : n’en omets aucune et ne résume jamais par « etc. » ou « de même pour les autres ». Dates au format AAAA-MM-JJ, quel que soit leur format dans le fichier. Pour les tâches du planning qui n’ont pas de ticket, propose leur création, sous leur lot quand il existe, avec leurs dates, leurs responsables et ce qu’elles suivent. Liste à part, sans bloc, les tickets absents du planning.',
   'chat.change.applyAll': 'Tout appliquer ({count})',
   'chat.change.allDone': 'Propositions : {applied} appliquée(s), {already} déjà en place, {refused} refusée(s).',
   'chat.presetScope.file': 'fichier',
   'chat.presetScope.planning': 'planning',
   'chat.preset.planning': 'Mettre le projet à jour',
   'chat.preset.planningQ':
-    'Compare ce planning avec les tickets du projet et propose les mises à jour de dates, d’avancement et de responsables. Propose la création des tâches du planning qui n’ont pas de ticket, et liste à part les tickets absents du planning.',
+    'Compare ce planning avec les tickets du projet, tâche par tâche et jusqu’à la dernière, et propose les mises à jour de dates, d’avancement et de responsables. Propose la création des tâches du planning qui n’ont pas de ticket, et liste à part les tickets absents du planning.',
   'chat.preset.document': 'Résumer le document',
   'chat.preset.documentQ':
     'Résume ce document : de quoi il s’agit, qui l’a émis et quand, ce qu’il change ou demande, et les dates et chiffres à retenir.',
@@ -1349,6 +1349,15 @@ export const fr: Catalog = {
   'chat.ocrHeading':
     '> [!info] Transcription faite par {model}. Relis-la et corrige-la au besoin : le chat lit cette note tant que le document ne change pas. Supprime-la pour relancer la lecture.',
   'chat.ocrDone': '« {name} » a été lu ; sa transcription est enregistrée dans {path}.',
+  'chat.cut': 'Réponse coupée : elle a atteint la limite de longueur avant la fin.',
+  'chat.continue': 'Continuer',
+  'chat.continueQ':
+    'Ta réponse a été coupée. Continue exactement là où tu t’es arrêté, sans répéter ce que tu as déjà écrit, jusqu’à la fin.',
+  'chat.fileCut':
+    '« {name} » est long : seuls ses {sent} premiers caractères sur {total} sont envoyés au modèle. Les tâches au-delà ne seront pas vues.',
+  'settings.chat.maxTokens': 'Longueur maximale des réponses',
+  'settings.chat.maxTokensDesc':
+    'En jetons. 0 : aucune limite du plugin, celle de la passerelle s’applique (recommandé : une mise à jour de planning propose beaucoup de modifications).',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

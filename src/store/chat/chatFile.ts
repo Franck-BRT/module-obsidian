@@ -156,10 +156,11 @@ export async function fileText(extension: string, bytes: Uint8Array): Promise<st
 }
 
 /**
- * How much of one file goes with a question, in characters: a planning of a few hundred
- * lines whole, a long specification cut.
+ * How much of one file goes with a question, in characters: a planning of several
+ * hundred lines whole — a scanned one's transcription runs long — and a long
+ * specification cut, with the reader told.
  */
-export const FILE_BUDGET = 30000
+export const FILE_BUDGET = 50000
 
 export interface ContextFile {
   path: string

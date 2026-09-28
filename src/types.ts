@@ -495,6 +495,8 @@ export interface ChatSettings {
   prompts: string
   /** The model the chat talks to, chosen in the panel; empty uses the settings' text model. */
   model: string
+  /** The longest reply the chat asks for, in tokens; 0 leaves it to the gateway. */
+  maxTokens: number
 }
 
 export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
@@ -502,7 +504,8 @@ export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   stream: true,
   builtinPrompts: true,
   prompts: '',
-  model: ''
+  model: '',
+  maxTokens: 0
 }
 
 /** Anything the reader can restyle: an id that never changes, and the look they chose. */

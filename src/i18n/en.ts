@@ -1326,14 +1326,14 @@ export const en = {
   'chat.filesFolder': 'Files',
   'chat.dropNote': 'Dropped in the chat',
   'chat.changePlanning':
-    'If an attached file is a planning, compare its tasks with the project’s tickets (same title or same meaning), and propose for each ticket that changes a single block with all its changed fields. Dates as YYYY-MM-DD, whatever their format in the file. For the planning’s tasks that have no ticket, propose to create them, under their lot where it exists, with their dates, owners and what they follow. List separately, without blocks, the tickets missing from the planning.',
+    'If an attached file is a planning, compare each of its tasks with the project’s tickets (same title or same meaning), and propose for each ticket that changes a single block with all its changed fields. Go through every task of the planning, one by one, to the last: leave none out and never sum up with “etc.” or “likewise for the others”. Dates as YYYY-MM-DD, whatever their format in the file. For the planning’s tasks that have no ticket, propose to create them, under their lot where it exists, with their dates, owners and what they follow. List separately, without blocks, the tickets missing from the planning.',
   'chat.change.applyAll': 'Apply all ({count})',
   'chat.change.allDone': 'Proposals: {applied} applied, {already} already in place, {refused} refused.',
   'chat.presetScope.file': 'file',
   'chat.presetScope.planning': 'planning',
   'chat.preset.planning': 'Update the project',
   'chat.preset.planningQ':
-    'Compare this planning with the project’s tickets and propose the updates to dates, progress and owners. Propose to create the planning’s tasks that have no ticket, and list separately the tickets missing from the planning.',
+    'Compare this planning with the project’s tickets, task by task to the last one, and propose the updates to dates, progress and owners. Propose to create the planning’s tasks that have no ticket, and list separately the tickets missing from the planning.',
   'chat.preset.document': 'Summarise the document',
   'chat.preset.documentQ':
     'Summarise this document: what it is about, who issued it and when, what it changes or asks for, and the dates and figures to remember.',
@@ -1370,6 +1370,15 @@ export const en = {
   'chat.ocrHeading':
     '> [!info] Transcription made by {model}. Read it and correct it if needed: the chat reads this note as long as the document does not change. Delete it to have the document read again.',
   'chat.ocrDone': '“{name}” has been read; its transcription is saved in {path}.',
+  'chat.cut': 'Reply cut: it reached the length limit before the end.',
+  'chat.continue': 'Continue',
+  'chat.continueQ':
+    'Your reply was cut. Continue exactly where you stopped, without repeating what you already wrote, until the end.',
+  'chat.fileCut':
+    '“{name}” is long: only its first {sent} characters out of {total} are sent to the model. The tasks past them will not be seen.',
+  'settings.chat.maxTokens': 'Longest reply',
+  'settings.chat.maxTokensDesc':
+    'In tokens. 0: no limit of the plugin’s own, the gateway’s applies (recommended: a planning update proposes many changes).',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

@@ -1112,6 +1112,21 @@ export class PMSettingTab extends PluginSettingTab {
         },
         this.chatPromptsPage(),
         {
+          name: t('settings.chat.maxTokens'),
+          desc: t('settings.chat.maxTokensDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text.setValue(String(this.plugin.settings.chat.maxTokens)).onChange((value) => {
+                const parsed = Number.parseInt(value, 10)
+                if (Number.isFinite(parsed) && parsed >= 0) {
+                  this.plugin.settings.chat.maxTokens = parsed
+                  this.persist()
+                }
+              })
+            )
+          }
+        },
+        {
           name: t('settings.llm.timeout'),
           render: (setting: Setting) => {
             setting.addText((text) =>
