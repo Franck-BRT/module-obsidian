@@ -1421,6 +1421,9 @@ export const fr: Catalog = {
   'chat.branchResumed': 'Branche reprise : la prochaine question la continue.',
   'chat.askMenu': 'Demander au chat',
   'chat.copySelection': 'Copier',
+  'command.chatBranches': 'Afficher les branches de la conversation',
+  'chat.branchesNone':
+    'Aucune conversation enregistrée dans le chat : ses branches apparaîtront après la première réponse.',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

@@ -51,6 +51,20 @@ export class ChatNotes {
     return file
   }
 
+  /**
+   * The block that draws a conversation's branches, put under its title if the note has
+   * branched and does not have it yet — a conversation branched before the block existed
+   * gets it the first time it is opened. Reports whether the note was changed.
+   */
+  async ensureBranchBlock(file: TFile): Promise<boolean> {
+    const content = await this.app.vault.read(file)
+    if (!readChatNote(content).all.some(branches)) return false
+    const next = withBranchBlock(content)
+    if (next === content) return false
+    await this.app.vault.process(file, (current) => withBranchBlock(current))
+    return true
+  }
+
   /** Every conversation in the vault, the latest touched first. */
   list(): TFile[] {
     return this.app.vault

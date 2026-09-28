@@ -55,4 +55,21 @@ describe('ChatNotes', () => {
     newer.stat.mtime = 2
     expect(notes.list().map((file) => file.path)).toEqual([newer.path, older.path])
   })
+
+  // A note branched before the block existed — the ↻ mark, no drawing — gets it once.
+  it('puts the branches block into a branched note that lacks it, once, and into no other', async () => {
+    const question = turn('user', 'Résume.', 3)
+    const again = { ...turn('user', 'Résume en trois lignes.', 6), retakes: question.at }
+    const branched = await notes.create(META, [question, turn('assistant', 'Long.', 4)], WORDS)
+    await notes.append(branched.path, [again, turn('assistant', 'Court.', 7)], WORDS)
+    // As a note written before the block existed: the block taken out again.
+    const old = (await vault.read(branched)).replace('```pm-chat-branches\n```\n', '')
+    await vault.modify(branched, old)
+    expect(await notes.ensureBranchBlock(branched)).toBe(true)
+    expect(await vault.read(branched)).toContain('```pm-chat-branches\n```')
+    expect(await notes.ensureBranchBlock(branched)).toBe(false)
+    const plain = await notes.create(META, [question, turn('assistant', 'Long.', 4)], WORDS)
+    expect(await notes.ensureBranchBlock(plain)).toBe(false)
+    expect(await vault.read(plain)).not.toContain('pm-chat-branches')
+  })
 })

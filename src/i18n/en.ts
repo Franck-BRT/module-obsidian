@@ -1441,6 +1441,8 @@ export const en = {
   'chat.branchResumed': 'Branch resumed: the next question carries it on.',
   'chat.askMenu': 'Ask the chat',
   'chat.copySelection': 'Copy',
+  'command.chatBranches': 'Show the conversation’s branches',
+  'chat.branchesNone': 'No conversation kept in the chat yet: its branches will show after the first reply.',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

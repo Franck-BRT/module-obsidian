@@ -1098,7 +1098,9 @@ export class ChatView extends ItemView {
         safeAsync(() => this.app.workspace.openLinkText(path, '', 'tab'))
       )
     }
-    if (this.notePath && this.branched) {
+    // Once the conversation is kept, its branches are one click away — drawn as one line
+    // until a question is asked again.
+    if (this.notePath) {
       const path = this.notePath
       button(
         'git-fork',
@@ -1800,12 +1802,20 @@ export class ChatView extends ItemView {
       this.branched = note.all.some(branches)
       this.turns = note.turns
       this.saved = new WeakSet(note.all)
+      if (this.branched) await this.notes.ensureBranchBlock(file)
       this.notePath = file.path
       this.app.workspace.requestSaveLayout()
       this.render()
     } catch (error) {
       new Notice(t('chat.loadFailed', { reason: error instanceof Error ? error.message : String(error) }))
     }
+  }
+
+  /** The branches of the conversation on screen, for the command: none when none is kept. */
+  async showBranches(): Promise<boolean> {
+    if (!this.notePath) return false
+    await this.openBranches(this.notePath)
+    return true
   }
 
   /** The conversation's branches, drawn; a question picked is gone back to. */

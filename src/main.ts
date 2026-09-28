@@ -67,6 +67,8 @@ import { pickMessageForTicket, registerMessageFileMenu } from './views/messageTo
 import { MessageView, PM_MESSAGE_VIEW_TYPE } from './views/MessageView'
 import { RequirementsView, PM_REQUIREMENTS_VIEW_TYPE } from './views/requirements/RequirementsView'
 import { ChatView, PM_CHAT_VIEW_TYPE } from './views/chat/ChatView'
+import { ChatNotes } from './store/chat/ChatNotes'
+import { isChatNote } from './store/chat/chatNote'
 import { RequirementStore } from './store/requirements/RequirementStore'
 import { RequirementTranslator } from './store/requirements/RequirementTranslator'
 import { ReqUsageIndex } from './store/requirements/ReqUsage'
@@ -197,6 +199,24 @@ export default class PMPlugin extends Plugin {
     this.addRibbonIcon('chart-gantt', t('ribbon.title'), async () => {
       await this.router.openDashboard()
     })
+
+    this.addCommand({
+      id: 'chat-branches',
+      name: t('command.chatBranches'),
+      callback: safeAsync(async () => {
+        await this.openChat()
+        const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
+        if (!(view instanceof ChatView) || !(await view.showBranches())) new Notice(t('chat.branchesNone'))
+      })
+    })
+
+    // A conversation branched before its note could draw them gets the block when opened.
+    this.registerEvent(
+      this.app.workspace.on('file-open', (file) => {
+        if (!file || !isChatNote(this.app.metadataCache.getFileCache(file)?.frontmatter)) return
+        new ChatNotes(this.app, () => this.settings.chat.folder).ensureBranchBlock(file).catch(() => undefined)
+      })
+    )
 
     this.addCommand({
       id: 'open-chat',
