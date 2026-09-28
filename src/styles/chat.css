@@ -536,3 +536,100 @@ a.pm-change-target {
 .pm-chat-editing > span:nth-child(2) {
   flex: 1;
 }
+
+/* ---- A conversation's branches -------------------------------------------- */
+
+.pm-branches-box {
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.pm-branches-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-branches-legend > span:first-child {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+
+/* The lines drawn behind, the questions written beside: one row each, the same height. */
+.pm-branches {
+  position: relative;
+}
+
+.pm-branches-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+}
+
+.pm-branches-edge {
+  stroke-width: 2;
+  opacity: 0.35;
+}
+
+.pm-branches-edge.is-current {
+  opacity: 1;
+}
+
+.pm-branches-dot {
+  stroke-width: 2;
+}
+
+.pm-branches-rows {
+  padding-left: var(--pm-branches-gutter);
+}
+
+.pm-branches-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  height: var(--pm-branches-row);
+  min-width: 0;
+  padding: 0 var(--size-4-2);
+  border-radius: var(--radius-s);
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+.pm-branches-row.is-current {
+  color: var(--text-normal);
+}
+
+.pm-branches-row.is-pickable {
+  cursor: pointer;
+}
+
+.pm-branches-row.is-pickable:hover,
+.pm-branches-row.is-pickable:focus-visible {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.pm-branches-when {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+.pm-branches-mark {
+  flex: none;
+  color: var(--text-accent);
+}
+
+.pm-branches-question {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

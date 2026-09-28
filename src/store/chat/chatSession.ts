@@ -36,6 +36,11 @@ export interface ChatTurn {
    * moment: that one and everything after it are the conversation's past, not its thread.
    */
   retakes?: string
+  /**
+   * A question asked after going back to an earlier branch: it follows the exchange whose
+   * question was asked at this moment, not the one written just before it in the note.
+   */
+  follows?: string
 }
 
 /**

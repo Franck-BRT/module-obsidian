@@ -40,7 +40,8 @@ describe('a conversation kept as a note', () => {
   // The test that matters most: what is written is read back as it was said.
   it('reads back exactly the conversation it was written from', () => {
     const note = readChatNote(chatNoteContent(META, turns, WORDS))
-    expect(note).toEqual({ ...META, turns })
+    // With no branch, the thread is the whole note.
+    expect(note).toEqual({ ...META, turns, all: turns })
   })
 
   // A blank line inside a reply stays inside its callout, with no trailing space for an

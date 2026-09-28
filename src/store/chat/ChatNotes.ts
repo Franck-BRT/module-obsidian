@@ -1,6 +1,8 @@
 import { normalizePath, TFile, type App } from 'obsidian'
 import {
   appendTurns,
+  branches,
+  withBranchBlock,
   chatNoteContent,
   chatNoteName,
   isChatNote,
@@ -30,7 +32,8 @@ export class ChatNotes {
     const base = chatNoteName(meta.title, meta.created)
     let path = normalizePath(`${folder}/${base}.md`)
     for (let n = 2; this.app.vault.getAbstractFileByPath(path); n++) path = normalizePath(`${folder}/${base} ${n}.md`)
-    return this.app.vault.create(path, chatNoteContent(meta, turns, words))
+    const content = chatNoteContent(meta, turns, words)
+    return this.app.vault.create(path, turns.some(branches) ? withBranchBlock(content) : content)
   }
 
   /**
@@ -40,7 +43,11 @@ export class ChatNotes {
   async append(path: string, turns: ChatTurn[], words: ChatNoteWords): Promise<TFile | null> {
     const file = this.app.vault.getAbstractFileByPath(path)
     if (!(file instanceof TFile)) return null
-    await this.app.vault.process(file, (content) => appendTurns(content, turns, words))
+    // The first branch brings the block that draws them, under the note's title.
+    await this.app.vault.process(file, (content) => {
+      const next = appendTurns(content, turns, words)
+      return turns.some(branches) ? withBranchBlock(next) : next
+    })
     return file
   }
 

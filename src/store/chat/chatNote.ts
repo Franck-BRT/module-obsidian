@@ -1,5 +1,8 @@
 import { parseFrontmatter } from '../YamlParser'
 import type { ChatTurn } from './chatSession'
+import { currentThread } from './chatBranches'
+
+export { currentThread } from './chatBranches'
 
 /**
  * A conversation kept as a note.
@@ -42,11 +45,16 @@ const FILES_MARK = '📎'
 const COLLECTION_MARK = '🗂'
 /** What marks a question asked again in place of an earlier one, before that one's time. */
 const RETAKE_MARK = '↻'
+/** What marks a question asked after going back to an earlier branch, before where it goes on from. */
+const FOLLOWS_MARK = '↪'
 /** The marks after which a link is not the note the question was about. */
 const MARKS = [REQUIREMENTS_MARK, PROJECT_MARK, FILES_MARK, COLLECTION_MARK]
 
 export interface ChatNote extends ChatNoteMeta {
+  /** The thread the conversation goes on from. */
   turns: ChatTurn[]
+  /** Every exchange the note holds, every branch, in the order they were had. */
+  all: ChatTurn[]
 }
 
 const two = (value: number): string => String(value).padStart(2, '0')
@@ -112,37 +120,10 @@ function linkedPath(title: string): string | undefined {
   )
 }
 
-/** The time of the question a question retakes, from the mark in its title. */
-function retaken(title: string): string | undefined {
-  const segment = title.split(' · ').find((part) => part.trim().startsWith(RETAKE_MARK))
+/** The time a mark in a question's title names: the question retaken, or gone on from. */
+function marked(title: string, mark: string): string | undefined {
+  const segment = title.split(' · ').find((part) => part.trim().startsWith(mark))
   return segment ? fromStamp(segment) : undefined
-}
-
-/**
- * The conversation as it now goes: a question asked again takes the place of the one it
- * retakes and of everything said after it. The note keeps them — it is the record, and
- * the reader may want to compare — but the thread picked up from it is the latest one.
- *
- * The question retaken is the last one asked at that minute before the retake, which is
- * as precise as the note's times are.
- */
-export function currentThread(turns: ChatTurn[]): ChatTurn[] {
-  const thread: ChatTurn[] = []
-  for (const turn of turns) {
-    if (turn.role === 'user' && turn.retakes) {
-      const stamp = localStamp(turn.retakes)
-      let from = -1
-      for (let at = thread.length - 1; at >= 0; at--) {
-        if (thread[at].role === 'user' && localStamp(thread[at].at) === stamp) {
-          from = at
-          break
-        }
-      }
-      if (from >= 0) thread.splice(from)
-    }
-    thread.push(turn)
-  }
-  return thread
 }
 
 /** The model a reply's title names after its time: `Assistant · 2026-09-28 14:10 · qwen3`. */
@@ -184,7 +165,14 @@ export function turnMarkdown(turn: ChatTurn, words: ChatNoteWords): string {
   // A reply says which model wrote it: a conversation may change model on the way, and
   // two answers to one question are compared knowing whose they are.
   const by = turn.role === 'assistant' && turn.model ? ` · ${turn.model}` : ''
-  const retake = turn.role === 'user' && turn.retakes ? ` · ${RETAKE_MARK} ${localStamp(turn.retakes)}` : ''
+  const retake =
+    turn.role !== 'user'
+      ? ''
+      : turn.retakes
+        ? ` · ${RETAKE_MARK} ${localStamp(turn.retakes)}`
+        : turn.follows
+          ? ` · ${FOLLOWS_MARK} ${localStamp(turn.follows)}`
+          : ''
   const head = `> [!${CALLOUT[turn.role]}] ${turn.role === 'user' ? words.user : words.assistant} · ${localStamp(turn.at)}${about}${retake}${by}`
   const body = turn.content.split('\n').map((line) => (line === '' ? '>' : `> ${line}`))
   return [head, ...body].join('\n')
@@ -266,7 +254,8 @@ export function readChatNote(content: string): ChatNote {
       const collections = role === 'user' ? namedNotes(start[2], COLLECTION_MARK) : []
       const files = role === 'user' ? namedFiles(start[2]) : []
       const model = role === 'assistant' ? writtenBy(start[2]) : undefined
-      const retakes = role === 'user' ? retaken(start[2]) : undefined
+      const retakes = role === 'user' ? marked(start[2], RETAKE_MARK) : undefined
+      const follows = role === 'user' && !retakes ? marked(start[2], FOLLOWS_MARK) : undefined
       current = {
         turn: {
           role,
@@ -278,6 +267,7 @@ export function readChatNote(content: string): ChatNote {
           ...(files.length ? { files } : {}),
           ...(model ? { model } : {}),
           ...(retakes ? { retakes } : {}),
+          ...(follows ? { follows } : {}),
           ...(requirements.length ? { requirements } : {})
         },
         lines: []
@@ -287,7 +277,35 @@ export function readChatNote(content: string): ChatNote {
     previous = line
   }
   close()
-  return { title: text('title'), model: text('model'), created, turns: currentThread(turns) }
+  return { title: text('title'), model: text('model'), created, turns: currentThread(turns), all: turns }
+}
+
+/** The block a conversation's note draws its branches with. */
+export const BRANCHES_LANGUAGE = 'pm-chat-branches'
+
+/** Whether a turn starts a branch: a question asked again, or asked after going back. */
+export function branches(turn: ChatTurn): boolean {
+  return turn.role === 'user' && !!(turn.retakes || turn.follows)
+}
+
+/**
+ * The note with the block that draws its branches, under its title — once, when the
+ * conversation first branches: a conversation that never did has nothing to draw, and
+ * its note stays as it was.
+ */
+export function withBranchBlock(content: string): string {
+  if (new RegExp('^```' + BRANCHES_LANGUAGE + '\\s*$', 'm').test(content)) return content
+  const block = '```' + BRANCHES_LANGUAGE + '\n```'
+  const lines = content.split('\n')
+  let at = 0
+  if (lines[0] === '---') {
+    const end = lines.indexOf('---', 1)
+    at = end >= 0 ? end + 1 : 0
+  }
+  const title = lines.findIndex((line, index) => index >= at && /^# /.test(line))
+  const after = title >= 0 ? title + 1 : at
+  lines.splice(after, 0, '', block)
+  return lines.join('\n')
 }
 
 /** Whether a note's front matter says it is a conversation. */

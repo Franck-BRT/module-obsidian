@@ -23,7 +23,7 @@ import {
   type ChatTurn,
   type ContextNote
 } from '../../store/chat/chatSession'
-import { chatTitle, isChatNote, localStamp, type ChatNoteWords } from '../../store/chat/chatNote'
+import { branches, chatTitle, isChatNote, localStamp, type ChatNoteWords } from '../../store/chat/chatNote'
 import { ChatNotes } from '../../store/chat/ChatNotes'
 import { currentRequirements, requirementsContext, type RequirementWords } from '../../store/chat/chatRequirements'
 import {
@@ -84,6 +84,8 @@ import { LlmClient, LlmError } from '../../store/llm'
 import { displayName, safeAsync, sanitizeFileName } from '../../utils'
 import { fillPrompt, promptParams } from '../../store/chat/promptParams'
 import { withSelection } from '../../store/chat/selection'
+import { branchEnd, conversationTree, threadTo } from '../../store/chat/chatBranches'
+import { BranchModal } from './branchGraph'
 import { askParams } from './ParamModal'
 import { replyNoteContent, replyTitle, withoutChangeBlocks } from '../../store/chat/replyNote'
 import { freePath } from '../../store/DocumentStore'
@@ -119,6 +121,13 @@ export class ChatView extends ItemView {
   private projects: string[] = []
   /** The collections talked about, by the paths of their notes: sent like the projects. */
   private collections: string[] = []
+  /**
+   * Where the next question goes on from when the reader went back to an older branch:
+   * the time of that branch's last question. Null on the latest branch.
+   */
+  private follows: string | null = null
+  /** Whether the conversation has branched: the way to its branches is then shown. */
+  private branched = false
   /** The question being rewritten, whose place the next one sent takes. */
   private editing: ChatTurn | null = null
   /** A passage chosen in a note, for the next question only. */
@@ -1089,10 +1098,20 @@ export class ChatView extends ItemView {
         safeAsync(() => this.app.workspace.openLinkText(path, '', 'tab'))
       )
     }
+    if (this.notePath && this.branched) {
+      const path = this.notePath
+      button(
+        'git-fork',
+        t('chat.branches'),
+        safeAsync(() => this.openBranches(path))
+      )
+    }
     button('history', t('chat.history'), () => this.pickConversation())
     button('square-pen', t('chat.new'), () => {
       this.turns = []
       this.editing = null
+      this.follows = null
+      this.branched = false
       this.notePath = null
       this.saved = new WeakSet()
       this.app.workspace.requestSaveLayout()
@@ -1358,6 +1377,8 @@ export class ChatView extends ItemView {
     const at = this.turns.indexOf(question)
     if (at < 0 || this.missing()) return
     this.editing = null
+    this.follows = null
+    this.branched = true
     this.turns = [...this.turns.slice(0, at), this.again(question, question.content)]
     await this.ask()
   }
@@ -1375,7 +1396,7 @@ export class ChatView extends ItemView {
 
   /** A question like this one, asked now, saying which one it takes the place of. */
   private again(question: ChatTurn, content: string): ChatTurn {
-    const { model: _model, cut: _cut, failed: _failed, retakes: _retakes, ...kept } = question
+    const { model: _model, cut: _cut, failed: _failed, retakes: _retakes, follows: _follows, ...kept } = question
     return { ...kept, content, at: new Date().toISOString(), retakes: question.at }
   }
 
@@ -1594,10 +1615,16 @@ export class ChatView extends ItemView {
     const at = editing ? this.turns.indexOf(editing) : -1
     this.editing = null
     if (editing && at >= 0) {
+      this.follows = null
+      this.branched = true
       this.turns = [...this.turns.slice(0, at), this.again(editing, content)]
       await this.ask()
       return
     }
+    // On an older branch, the question says where it goes on from.
+    const follows = this.follows
+    this.follows = null
+    if (follows) this.branched = true
     this.turns = [
       ...withoutFailure(this.turns),
       {
@@ -1608,7 +1635,8 @@ export class ChatView extends ItemView {
         ...(this.projects.length ? { projects: [...this.projects] } : {}),
         ...(this.collections.length ? { collections: [...this.collections] } : {}),
         ...(this.files.length ? { files: [...this.files] } : {}),
-        ...(this.attached.length ? { requirements: [...this.attached] } : {})
+        ...(this.attached.length ? { requirements: [...this.attached] } : {}),
+        ...(follows ? { follows } : {})
       }
     ]
     await this.ask()
@@ -1768,11 +1796,51 @@ export class ChatView extends ItemView {
     try {
       const note = await this.notes.load(file)
       this.editing = null
+      this.follows = null
+      this.branched = note.all.some(branches)
       this.turns = note.turns
-      this.saved = new WeakSet(note.turns)
+      this.saved = new WeakSet(note.all)
       this.notePath = file.path
       this.app.workspace.requestSaveLayout()
       this.render()
+    } catch (error) {
+      new Notice(t('chat.loadFailed', { reason: error instanceof Error ? error.message : String(error) }))
+    }
+  }
+
+  /** The conversation's branches, drawn; a question picked is gone back to. */
+  private async openBranches(path: string): Promise<void> {
+    const file = this.app.vault.getAbstractFileByPath(path)
+    if (!(file instanceof TFile)) return
+    const tree = conversationTree((await this.notes.load(file)).all)
+    new BranchModal(
+      this.app,
+      tree,
+      safeAsync((index: number) => this.goToBranch(file, index))
+    ).open()
+  }
+
+  /**
+   * A branch gone back to: the thread through the question picked, as far as that branch
+   * was taken. The next question goes on from there, and says so in the note, so the
+   * branch is the thread again when the conversation is picked up.
+   */
+  async goToBranch(file: TFile, index: number): Promise<void> {
+    if (this.pending) return
+    try {
+      const note = await this.notes.load(file)
+      const tree = conversationTree(note.all)
+      if (!tree.exchanges[index]) return
+      const end = branchEnd(tree, index)
+      this.turns = threadTo(tree, end)
+      this.saved = new WeakSet(note.all)
+      this.notePath = file.path
+      this.branched = note.all.some(branches)
+      this.editing = null
+      this.follows = end === tree.exchanges.length - 1 ? null : tree.exchanges[end].question.at
+      this.app.workspace.requestSaveLayout()
+      this.render()
+      new Notice(t('chat.branchResumed'))
     } catch (error) {
       new Notice(t('chat.loadFailed', { reason: error instanceof Error ? error.message : String(error) }))
     }

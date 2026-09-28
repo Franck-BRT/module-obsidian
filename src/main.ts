@@ -1,5 +1,5 @@
 import { ZoneRadar } from './store/ZoneRadar'
-import { MarkdownView, Plugin, Notice } from 'obsidian'
+import { MarkdownView, Plugin, Notice, TFile } from 'obsidian'
 import type { Editor } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
@@ -76,6 +76,7 @@ import { ReqEmbeddingIndex } from './store/requirements/ReqEmbeddings'
 import { cleanBlockFields } from './store/requirements/reqBlockFields'
 import { registerReqBlock } from './views/requirements/reqBlockRenderer'
 import { registerChangeBlock } from './views/chat/changeCard'
+import { registerBranchBlock } from './views/chat/branchGraph'
 import { noteExportLabel, registerReqEditorMenu } from './views/requirements/reqEditorMenu'
 import { exportNoteDocx } from './views/requirements/exportDocx'
 import { reqBlockRanges } from './store/requirements/reqFence'
@@ -182,6 +183,7 @@ export default class PMPlugin extends Plugin {
     this.registerTaskNoteSwap()
     registerReqBlock(this)
     registerChangeBlock(this)
+    registerBranchBlock(this)
     registerReqEditorMenu(this)
     if (__STYLEGUIDE__) registerStyleguide(this)
 
@@ -674,6 +676,15 @@ export default class PMPlugin extends Plugin {
     await this.openChat()
     const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
     if (view instanceof ChatView) view.attachProject(path)
+  }
+
+  /** The chat, opened on a branch of a saved conversation, picked in its note. */
+  async chatOnBranch(path: string, index: number): Promise<void> {
+    const file = this.app.vault.getAbstractFileByPath(path)
+    if (!(file instanceof TFile)) return
+    await this.openChat()
+    const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
+    if (view instanceof ChatView) await view.goToBranch(file, index)
   }
 
   /** The chat, opened on a passage chosen in a note, for the next question. */
