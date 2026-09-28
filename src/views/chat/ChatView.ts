@@ -1,6 +1,7 @@
 import {
   Component,
   ItemView,
+  Menu,
   MarkdownRenderer,
   MarkdownView,
   Notice,
@@ -26,6 +27,8 @@ import { ChatNotes } from '../../store/chat/ChatNotes'
 import { currentRequirements, requirementsContext, type RequirementWords } from '../../store/chat/chatRequirements'
 import { currentProject, projectContext, projectParts, type ProjectWords } from '../../store/chat/chatProject'
 import { withoutOpenChange } from '../../store/chat/chatChange'
+import { availablePrompts, parsePrompts, type ChatPrompt } from '../../store/chat/chatPrompts'
+import { builtinPrompts, scopeIcon } from './chatPresets'
 import { requirementOptions } from './changeCard'
 import type { Requirement } from '../../store/requirements/Requirement'
 import { ProjectScope, resolveScopePaths, type ScopeSpec } from '../../store/ProjectScope'
@@ -72,6 +75,8 @@ export class ChatView extends ItemView {
   /** The project talked about, by the path of its note: sent with every question until taken off. */
   private project: string | null = null
   private contextEl: HTMLElement | null = null
+  /** The ready questions offered while the conversation is empty. */
+  private presetsEl: HTMLElement | null = null
   /** The reply being written, drawn as it grows; null when none is. */
   private liveEl: HTMLElement | null = null
   private liveText = ''
@@ -179,6 +184,8 @@ export class ChatView extends ItemView {
    * requirements chosen in the library — each with the switch to leave it out.
    */
   private renderContext(): void {
+    // What is offered follows what is attached.
+    this.renderPresets()
     const el = this.contextEl
     if (!el) return
     el.empty()
@@ -489,6 +496,7 @@ export class ChatView extends ItemView {
     const missing = this.missing()
     if (missing) this.renderSetup(missing)
     else if (!this.turns.length) this.listEl.createDiv({ cls: 'pm-chat-empty', text: t('chat.empty') })
+    this.presetsEl = !missing && !this.turns.length ? this.listEl.createDiv('pm-chat-presets') : null
     for (const [at, turn] of this.turns.entries()) this.renderTurn(turn, at === this.turns.length - 1)
     if (this.pending) {
       this.liveEl = this.listEl.createDiv('pm-chat-turn pm-chat-turn--assistant pm-chat-typing')
@@ -513,6 +521,13 @@ export class ChatView extends ItemView {
         void this.send()
       }
     })
+    const ready = composer.createEl('button', {
+      cls: 'clickable-icon pm-chat-ready',
+      attr: { 'aria-label': t('chat.presets') }
+    })
+    setIcon(ready, 'zap')
+    ready.disabled = missing !== null || this.pending
+    ready.addEventListener('click', (event) => this.presetMenu(event))
     // While a reply is being written, the same button stops it.
     const stoppable = this.pending && this.stopper !== null
     this.sendEl = composer.createEl('button', {
@@ -608,10 +623,70 @@ export class ChatView extends ItemView {
     )
   }
 
-  private async send(): Promise<void> {
-    const text = this.inputEl.value.trim()
+  /** The ready questions that fit what is attached now. */
+  private presets(): ChatPrompt[] {
+    const settings = this.plugin.settings.chat
+    const all = [...parsePrompts(settings.prompts), ...(settings.builtinPrompts ? builtinPrompts() : [])]
+    return availablePrompts(all, {
+      note: this.useNote && this.contextFile !== null,
+      project: this.project !== null && this.plugin.index.projectRef(this.project) !== null,
+      requirements: this.attached.length > 0
+    })
+  }
+
+  /**
+   * The ready questions, as buttons, while nothing has been asked: the moment someone
+   * looks at an empty box and wonders what to ask. They go once the conversation starts;
+   * the button beside the box still has them.
+   */
+  private renderPresets(): void {
+    const el = this.presetsEl
+    if (!el) return
+    el.empty()
+    const presets = this.presets()
+    if (!presets.length) {
+      el.createDiv({ cls: 'pm-chat-presets-none', text: t('chat.presetsNone') })
+      return
+    }
+    for (const preset of presets) {
+      const chip = el.createEl('button', { cls: 'pm-chat-preset', attr: { title: preset.question } })
+      setIcon(chip.createSpan({ cls: 'pm-chat-preset-icon' }), scopeIcon(preset.scope))
+      chip.createSpan({ cls: 'pm-chat-preset-label', text: preset.label })
+      chip.addEventListener(
+        'click',
+        safeAsync(() => this.send(preset.question))
+      )
+    }
+  }
+
+  private presetMenu(event: MouseEvent): void {
+    const presets = this.presets()
+    if (!presets.length) {
+      new Notice(t('chat.presetsNone'))
+      return
+    }
+    const menu = new Menu()
+    let scope = presets[0].scope
+    for (const preset of presets) {
+      if (preset.scope !== scope) {
+        menu.addSeparator()
+        scope = preset.scope
+      }
+      menu.addItem((item) =>
+        item
+          .setTitle(preset.label)
+          .setIcon(scopeIcon(preset.scope))
+          .onClick(safeAsync(() => this.send(preset.question)))
+      )
+    }
+    menu.showAtMouseEvent(event)
+  }
+
+  /** Sends what is in the box, or a ready question — which leaves the box as it was. */
+  private async send(ready?: string): Promise<void> {
+    const text = (ready ?? this.inputEl.value).trim()
     if (!text || this.pending || this.missing()) return
-    this.inputEl.value = ''
+    if (ready === undefined) this.inputEl.value = ''
     const context = this.useNote && this.contextFile ? this.contextFile.path : undefined
     this.turns = [
       ...withoutFailure(this.turns),

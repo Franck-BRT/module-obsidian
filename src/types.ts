@@ -489,11 +489,17 @@ export interface ChatSettings {
   folder: string
   /** Replies shown as they are written, where the gateway allows it. */
   stream: boolean
+  /** Whether the questions the plugin ships are offered beside the reader's own. */
+  builtinPrompts: boolean
+  /** The reader's own ready questions, one a line: see `parsePrompts`. */
+  prompts: string
 }
 
 export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   folder: 'Chats',
-  stream: true
+  stream: true,
+  builtinPrompts: true,
+  prompts: ''
 }
 
 /** Anything the reader can restyle: an id that never changes, and the look they chose. */

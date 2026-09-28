@@ -1250,6 +1250,59 @@ export const en = {
   'chat.change.field.due': 'Due',
   'chat.change.field.progress': 'Progress',
   'chat.change.field.assignees': 'People',
+  'chat.presets': 'Ready questions',
+  'chat.presetsNone': 'Attach a note, a project or requirements to see the ready questions about them.',
+  'chat.presetScope.project': 'project',
+  'chat.presetScope.requirements': 'requirements',
+  'chat.presetScope.note': 'note',
+  'chat.preset.status': 'Status update',
+  'chat.preset.statusQ':
+    'Give a status update on this project: overall progress, what is late and what those delays hold up, the milestones of the next two weeks, and the three actions to take first.',
+  'chat.preset.late': 'Delays and blockers',
+  'chat.preset.lateQ':
+    'What is late in this project, what does each delay hold up through the dependencies, and what do you propose to catch up?',
+  'chat.preset.report': 'Progress report',
+  'chat.preset.reportQ':
+    'Write a progress report for this project, ready to send: a three-line summary, then what is done, in progress, late, the next deadlines and the points to watch.',
+  'chat.preset.risks': 'Two-week risks',
+  'chat.preset.risksQ':
+    'What are the risks to this project over the next two weeks: tight deadlines, fragile dependencies, awaited documents, tickets with no due date or nobody on them?',
+  'chat.preset.load': 'Team load',
+  'chat.preset.loadQ':
+    'How is the remaining work of this project spread across people? Point out who is overloaded, who has delays, and what nobody has taken.',
+  'chat.preset.verifiable': 'Make verifiable',
+  'chat.preset.verifiableQ':
+    'Read these requirements: are they clear, verifiable and unambiguous? For those that are not, explain why and propose a rewording.',
+  'chat.preset.coherence': 'Consistency',
+  'chat.preset.coherenceQ':
+    'Are these requirements consistent with each other? Point out contradictions, duplicates, overlaps and what seems to be missing.',
+  'chat.preset.verification': 'Verification method',
+  'chat.preset.verificationQ':
+    'For each of these requirements, propose a verification method and a measurable acceptance criterion.',
+  'chat.preset.translate': 'Translations',
+  'chat.preset.translateQ':
+    'Translate these requirements into the library languages where the translation is missing or behind the source language.',
+  'chat.preset.summary': 'Summarise the note',
+  'chat.preset.summaryQ': 'Summarise this note in a few points, keeping the figures, dates and decisions.',
+  'chat.preset.actions': 'Actions to take',
+  'chat.preset.actionsQ':
+    'List the actions to take in this note: what, who, by when. Point out those with no owner or no deadline.',
+  'chat.preset.extract': 'Implicit requirements',
+  'chat.preset.extractQ':
+    'Find the implicit requirements in this note (“must”, “shall”, thresholds, deadlines, constraints) and write each as a clear, verifiable requirement.',
+  'settings.chat.prompts': 'Ready questions',
+  'settings.chat.promptsDesc': 'The questions offered in one click in the chat, depending on what is attached.',
+  'settings.chat.promptsCount': { one: '{count} question of yours', other: '{count} questions of yours' },
+  'settings.chat.builtin': 'Built-in questions',
+  'settings.chat.builtinDesc':
+    'Offer the questions that come with the plugin (status update, progress report, requirement consistency…) besides your own.',
+  'settings.chat.own': 'Your questions',
+  'settings.chat.ownDesc':
+    'One question a line. Start the line with “project:”, “requirements:” or “note:” to offer it only when a project, requirements or a note are attached. Give it a short name before “::”. Example: project: Weekly :: Give the week’s status update for the committee.',
+  'settings.chat.copyBuiltin': 'Start from the built-in questions',
+  'settings.chat.copyBuiltinDesc':
+    'Add the built-in questions to your list, to adapt them. Then turn the built-in questions off so they are not offered twice.',
+  'settings.chat.copyBuiltinButton': 'Add to my list',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

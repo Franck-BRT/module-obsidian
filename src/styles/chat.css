@@ -334,3 +334,58 @@ a.pm-change-target {
 .pm-change--problem .pm-change-foot .pm-change-state-icon {
   margin-top: 2px;
 }
+
+/* ---- Ready questions ------------------------------------------------------ */
+
+.pm-chat-presets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--size-4-2);
+  padding: 0 var(--size-4-2);
+}
+
+.pm-chat-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  max-width: 100%;
+  height: auto;
+  padding: var(--size-4-1) var(--size-4-3);
+  border-radius: var(--radius-l, 12px);
+  font-size: var(--font-ui-small);
+  line-height: 1.3;
+  text-align: left;
+  white-space: normal;
+}
+
+.pm-chat-preset-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--text-muted);
+}
+
+.pm-chat-preset-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pm-chat-presets-none {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  text-align: center;
+}
+
+.pm-chat-ready {
+  flex: none;
+  align-self: flex-end;
+}
+
+/* The questions sit under the invitation, the pair centred together in the empty list. */
+.pm-chat-empty:has(+ .pm-chat-presets) {
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-chat-empty + .pm-chat-presets {
+  margin-bottom: auto;
+}

@@ -1,0 +1,66 @@
+import type { ChatPrompt, PromptScope } from '../../store/chat/chatPrompts'
+import { t } from '../../i18n'
+
+/**
+ * The questions the plugin ships, in the reader's language.
+ *
+ * Each says what a good answer holds rather than only what it is about: "fais le point"
+ * alone gets a paragraph, and the reader wanted what is late, what it holds up and what
+ * to do first.
+ */
+export function builtinPrompts(): ChatPrompt[] {
+  const prompt = (scope: PromptScope, label: string, question: string): ChatPrompt => ({
+    label,
+    question,
+    scope,
+    own: false
+  })
+  return [
+    prompt('project', t('chat.preset.status'), t('chat.preset.statusQ')),
+    prompt('project', t('chat.preset.late'), t('chat.preset.lateQ')),
+    prompt('project', t('chat.preset.report'), t('chat.preset.reportQ')),
+    prompt('project', t('chat.preset.risks'), t('chat.preset.risksQ')),
+    prompt('project', t('chat.preset.load'), t('chat.preset.loadQ')),
+    prompt('requirements', t('chat.preset.verifiable'), t('chat.preset.verifiableQ')),
+    prompt('requirements', t('chat.preset.coherence'), t('chat.preset.coherenceQ')),
+    prompt('requirements', t('chat.preset.verification'), t('chat.preset.verificationQ')),
+    prompt('requirements', t('chat.preset.translate'), t('chat.preset.translateQ')),
+    prompt('note', t('chat.preset.summary'), t('chat.preset.summaryQ')),
+    prompt('note', t('chat.preset.actions'), t('chat.preset.actionsQ')),
+    prompt('note', t('chat.preset.extract'), t('chat.preset.extractQ'))
+  ]
+}
+
+/** What each kind of question is about, in the word the settings list takes. */
+export function scopeWord(scope: PromptScope): string {
+  switch (scope) {
+    case 'project':
+      return t('chat.presetScope.project')
+    case 'requirements':
+      return t('chat.presetScope.requirements')
+    case 'note':
+      return t('chat.presetScope.note')
+    case 'any':
+      return ''
+  }
+}
+
+export function scopeIcon(scope: PromptScope): string {
+  switch (scope) {
+    case 'project':
+      return 'folder-kanban'
+    case 'requirements':
+      return 'list-checks'
+    case 'note':
+      return 'file-text'
+    case 'any':
+      return 'message-circle'
+  }
+}
+
+/** A question as a line of the settings list, so a shipped one can be copied and adjusted. */
+export function promptLine(prompt: ChatPrompt): string {
+  const word = scopeWord(prompt.scope)
+  const named = prompt.label !== prompt.question ? `${prompt.label} :: ` : ''
+  return `${word ? `${word} : ` : ''}${named}${prompt.question}`
+}

@@ -12,6 +12,8 @@ import {
 import { flattenTasks } from './store/TaskTreeOps'
 import { safeAsync, saveShortcutLabel } from './utils'
 import { LlmClient } from './store/llm'
+import { parsePrompts } from './store/chat/chatPrompts'
+import { builtinPrompts, promptLine } from './views/chat/chatPresets'
 import { PROMPT_DEFS, type PromptDef } from './views/requirements/promptDefs'
 import { DEFAULT_REQ_BLOCK_FIELDS, REQ_BLOCK_BREAK, REQ_BLOCK_FIELDS } from './store/requirements/reqBlockFields'
 import { reqBlockFieldLabel } from './views/requirements/reqPalette'
@@ -849,6 +851,57 @@ export class PMSettingTab extends PluginSettingTab {
   }
 
   /**
+   * The chat's ready questions: the shipped ones, which can be turned off, and the
+   * reader's own, as a plain list. A shipped question can be copied into the list to be
+   * adjusted, which is how a house makes one its own without the plugin keeping two
+   * versions of it.
+   */
+  private chatPromptsPage(): SettingDefinitionPage {
+    const chat = this.plugin.settings.chat
+    return {
+      type: 'page',
+      name: t('settings.chat.prompts'),
+      desc: t('settings.chat.promptsDesc'),
+      displayValue: () => t('settings.chat.promptsCount', { count: parsePrompts(chat.prompts).length }),
+      items: [
+        {
+          name: t('settings.chat.builtin'),
+          desc: t('settings.chat.builtinDesc'),
+          control: { type: 'toggle', key: 'chat.builtinPrompts' }
+        },
+        {
+          name: t('settings.chat.own'),
+          desc: t('settings.chat.ownDesc'),
+          render: (setting: Setting) => {
+            setting.setClass('pm-settings-prompt')
+            setting.addTextArea((area) => {
+              area.inputEl.rows = 12
+              area.setValue(chat.prompts).onChange((value) => {
+                chat.prompts = value
+                this.persist()
+              })
+            })
+          }
+        },
+        {
+          name: t('settings.chat.copyBuiltin'),
+          desc: t('settings.chat.copyBuiltinDesc'),
+          render: (setting: Setting) => {
+            setting.addButton((button) =>
+              button.setButtonText(t('settings.chat.copyBuiltinButton')).onClick(() => {
+                const lines = builtinPrompts().map(promptLine)
+                chat.prompts = [chat.prompts.trimEnd(), ...lines].filter(Boolean).join('\n')
+                this.persist()
+                this.update()
+              })
+            )
+          }
+        }
+      ]
+    }
+  }
+
+  /**
    * An instruction the model is given, as something the reader owns.
    *
    * Editable because every line of one is a judgement about how this organisation works,
@@ -1057,6 +1110,7 @@ export class PMSettingTab extends PluginSettingTab {
           desc: t('settings.chat.streamDesc'),
           control: { type: 'toggle', key: 'chat.stream' }
         },
+        this.chatPromptsPage(),
         {
           name: t('settings.llm.timeout'),
           render: (setting: Setting) => {

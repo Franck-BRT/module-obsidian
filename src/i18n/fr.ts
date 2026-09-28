@@ -1229,6 +1229,60 @@ export const fr: Catalog = {
   'chat.change.field.due': 'Échéance',
   'chat.change.field.progress': 'Avancement',
   'chat.change.field.assignees': 'Personnes',
+  'chat.presets': 'Questions toutes prêtes',
+  'chat.presetsNone':
+    'Joins une note, un projet ou des exigences pour voir les questions toutes prêtes qui s’y rapportent.',
+  'chat.presetScope.project': 'projet',
+  'chat.presetScope.requirements': 'exigences',
+  'chat.presetScope.note': 'note',
+  'chat.preset.status': 'Point d’avancement',
+  'chat.preset.statusQ':
+    'Fais le point sur ce projet : avancement global, ce qui est en retard et ce que ces retards bloquent, les jalons des deux prochaines semaines, et les trois actions à mener en priorité.',
+  'chat.preset.late': 'Retards et blocages',
+  'chat.preset.lateQ':
+    'Qu’est-ce qui est en retard dans ce projet, qu’est-ce que chaque retard bloque par les dépendances, et que proposes-tu pour rattraper ?',
+  'chat.preset.report': 'Compte rendu',
+  'chat.preset.reportQ':
+    'Rédige un compte rendu d’avancement de ce projet, prêt à envoyer : une synthèse en trois lignes, puis ce qui est terminé, en cours, en retard, les prochaines échéances et les points de vigilance.',
+  'chat.preset.risks': 'Risques à deux semaines',
+  'chat.preset.risksQ':
+    'Quels sont les risques de ce projet pour les deux prochaines semaines : échéances serrées, dépendances fragiles, documents attendus, tickets sans échéance ou sans personne ?',
+  'chat.preset.load': 'Charge de l’équipe',
+  'chat.preset.loadQ':
+    'Comment le travail restant de ce projet est-il réparti entre les personnes ? Signale qui est surchargé, qui a des retards, et ce qui n’est attribué à personne.',
+  'chat.preset.verifiable': 'Rendre vérifiables',
+  'chat.preset.verifiableQ':
+    'Relis ces exigences : sont-elles claires, vérifiables et sans ambiguïté ? Pour celles qui ne le sont pas, explique pourquoi et propose une reformulation.',
+  'chat.preset.coherence': 'Cohérence',
+  'chat.preset.coherenceQ':
+    'Ces exigences sont-elles cohérentes entre elles ? Signale les contradictions, les doublons, les recouvrements et ce qui semble manquer.',
+  'chat.preset.verification': 'Méthode de vérification',
+  'chat.preset.verificationQ':
+    'Pour chacune de ces exigences, propose une méthode de vérification et un critère d’acceptation mesurable.',
+  'chat.preset.translate': 'Traductions',
+  'chat.preset.translateQ':
+    'Traduis ces exigences dans les langues de la bibliothèque où la traduction manque ou est en retard sur la langue source.',
+  'chat.preset.summary': 'Résumer la note',
+  'chat.preset.summaryQ': 'Résume cette note en quelques points, en gardant les chiffres, les dates et les décisions.',
+  'chat.preset.actions': 'Actions à mener',
+  'chat.preset.actionsQ':
+    'Relève les actions à mener dans cette note, sous forme de liste : quoi, qui, pour quand. Signale celles qui n’ont pas de responsable ou pas d’échéance.',
+  'chat.preset.extract': 'Exigences implicites',
+  'chat.preset.extractQ':
+    'Relève dans cette note les exigences implicites (« doit », « devra », seuils, délais, contraintes) et formule chacune comme une exigence claire et vérifiable.',
+  'settings.chat.prompts': 'Questions toutes prêtes',
+  'settings.chat.promptsDesc': 'Les questions proposées en un clic dans le chat, selon ce qui est joint.',
+  'settings.chat.promptsCount': { one: '{count} question à toi', other: '{count} questions à toi' },
+  'settings.chat.builtin': 'Questions intégrées',
+  'settings.chat.builtinDesc':
+    'Propose les questions fournies avec le plugin (point d’avancement, compte rendu, cohérence des exigences…) en plus des tiennes.',
+  'settings.chat.own': 'Tes questions',
+  'settings.chat.ownDesc':
+    'Une question par ligne. Commence la ligne par « projet : », « exigences : » ou « note : » pour ne la proposer que quand un projet, des exigences ou une note sont joints. Donne-lui un nom court avant « :: ». Exemple : projet : Point hebdo :: Fais le point de la semaine pour le comité.',
+  'settings.chat.copyBuiltin': 'Partir des questions intégrées',
+  'settings.chat.copyBuiltinDesc':
+    'Ajoute les questions intégrées à ta liste, pour les adapter. Désactive ensuite les questions intégrées pour ne pas les voir en double.',
+  'settings.chat.copyBuiltinButton': 'Ajouter à ma liste',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',
