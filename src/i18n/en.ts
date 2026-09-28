@@ -1742,5 +1742,23 @@ export const en = {
   'library.reread': 'Read the contents again',
   'library.scanNoModel':
     'No model is set up to read scans: set the vision (OCR) model or the text model in the plugin settings.',
-  'library.scanFailed': '“{title}” could not be read: {reason}'
+  'library.scanFailed': '“{title}” could not be read: {reason}',
+  'chat.attachVault': 'A file in the vault…',
+  'chat.attachLibrary': 'A document from the library…',
+  'chat.attachProjectDocs': {
+    one: '{count} document of {project} in the library',
+    other: 'The {count} documents of {project} in the library'
+  },
+  'chat.libraryPick': 'Find a document by its title, its project or what it says…',
+  'chat.fileExcerpted':
+    '[… the file is long: only its start and the passages about the question are sent, {sent} characters of {total}. Say so if the answer may be elsewhere.]',
+  'chat.filePassages':
+    '“{name}” is long ({total} characters): its start and the passages about the question are sent to the model.',
+  'chat.filesShared':
+    '{count} attached documents are long: each is sent by its start and the passages about the question, about {share} characters each.',
+  'library.askChat': 'Ask the chat',
+  'library.picked': { one: '{count} document ticked', other: '{count} documents ticked' },
+  'library.unpick': 'Untick all',
+  'library.pickAll': 'Tick every document shown',
+  'library.pickOne': 'Tick “{title}”'
 } as const

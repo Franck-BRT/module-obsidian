@@ -3,12 +3,16 @@ import { buildXlsx } from '../xlsx'
 import {
   blocksText,
   currentFiles,
+  excerptFor,
+  FILE_BUDGET,
+  fileShare,
   fileText,
   filesContext,
   FileReadError,
   imageDataUrl,
   isImage,
-  isReadable
+  isReadable,
+  questionWords
 } from './chatFile'
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
@@ -98,6 +102,96 @@ describe('filesContext', () => {
     const body = sent.slice(sent.indexOf('>\n') + 2, sent.indexOf('\n\n['))
     expect(body.endsWith('ligne 6')).toBe(true)
     expect(sent).toContain(`[coupé : ${body.length} sur ${text.length}]`)
+  })
+})
+
+describe('sharing the files’ budget', () => {
+  it('sends a few files whole, and many a fair part each, never below a few pages', () => {
+    expect(fileShare(1)).toBe(FILE_BUDGET)
+    expect(fileShare(3)).toBe(FILE_BUDGET)
+    expect(fileShare(5)).toBe(30000)
+    expect(fileShare(10)).toBe(15000)
+    expect(fileShare(100)).toBe(6000)
+  })
+
+  it('looks for the question’s words of four letters or more, folded, once each', () => {
+    expect(questionWords('Quand le radier est-il coulé ? Et le RADIER de la zone B ?')).toEqual([
+      'quand',
+      'radier',
+      'coule',
+      'zone'
+    ])
+  })
+})
+
+describe('excerptFor', () => {
+  const filler = (n: number): string =>
+    Array.from({ length: n }, (_, at) => `Paragraphe ${at} sans rapport.`).join('\n\n')
+  const text = [
+    '# Compte rendu',
+    filler(40),
+    'Le radier est décalé au 19/10.',
+    filler(40),
+    'Radier : coulage en zone B.',
+    filler(10)
+  ].join('\n\n')
+
+  it('sends the opening, then the passages speaking of the question, in the document’s order', () => {
+    const sent = excerptFor(text, 600, ['radier', 'zone']) ?? ''
+    expect(sent.startsWith('# Compte rendu')).toBe(true)
+    expect(sent).toContain('Le radier est décalé au 19/10.')
+    expect(sent).toContain('Radier : coulage en zone B.')
+    expect(sent.indexOf('décalé')).toBeLessThan(sent.indexOf('coulage'))
+    // A mark wherever something was left out, between the passages too.
+    expect(sent).toMatch(/décalé au 19\/10\.\n\n\[…\]\n\nRadier : coulage/)
+    expect(sent).toContain('[…]')
+    expect(sent.length).toBeLessThanOrEqual(600 + 40)
+    expect(sent.endsWith('[…]')).toBe(true)
+  })
+
+  it('takes the passages holding the most of the words first when not all fit', () => {
+    const sent = excerptFor(text, 45, ['radier', 'zone']) ?? ''
+    expect(sent).toContain('coulage en zone B')
+    expect(sent).not.toContain('décalé')
+  })
+
+  it('has nothing to offer when the text fits, or no passage holds a word', () => {
+    expect(excerptFor('court', 600, ['radier'])).toBeNull()
+    expect(excerptFor(text, 600, ['tunnel'])).toBeNull()
+    expect(excerptFor(text, 600, [])).toBeNull()
+  })
+
+  it('takes a long table a few rows at a time', () => {
+    const rows = Array.from(
+      { length: 400 },
+      (_, at) => `| Tâche ${at} | ${at === 250 ? 'Radier' : 'Autre'} | 19/10 |`
+    ).join('\n')
+    const sent = excerptFor(`# Planning\n\n${rows}`, 3000, ['radier']) ?? ''
+    expect(sent).toContain('| Tâche 250 | Radier | 19/10 |')
+    // Whole rows: none cut in the middle.
+    for (const line of sent.split('\n').filter((each) => each.startsWith('|'))) expect(line).toMatch(/ \|$/)
+    expect(sent.length).toBeLessThanOrEqual(3100)
+  })
+})
+
+describe('filesContext with a question', () => {
+  const words = {
+    heading: (name: string) => `Fichier : ${name}`,
+    truncated: (sent: number, total: number) => `[coupé : ${sent} sur ${total}]`,
+    excerpted: (sent: number, total: number) => `[extraits : ${sent} sur ${total}]`
+  }
+  const text = `${'Début.\n\n'.repeat(30)}Le radier est décalé.\n\n${'Suite.\n\n'.repeat(30)}`
+
+  it('sends the passages the question needs, and says it sent passages', () => {
+    const sent = filesContext([{ path: 'p.pdf', name: 'p.pdf', text }], words, 120, ['radier'])
+    expect(sent).toContain('Le radier est décalé.')
+    expect(sent).toMatch(/\[extraits : \d+ sur \d+\]/)
+  })
+
+  it('cuts at the start as before when no passage speaks of it', () => {
+    const sent = filesContext([{ path: 'p.pdf', name: 'p.pdf', text }], words, 120, ['tunnel'])
+    expect(sent).not.toContain('radier')
+    expect(sent).toMatch(/\[coupé : \d+ sur \d+\]/)
   })
 })
 

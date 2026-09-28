@@ -888,6 +888,14 @@ export default class PMPlugin extends Plugin {
     if (view instanceof ChatView) view.attachProject(path)
   }
 
+  /** The chat, opened on documents chosen in the library: they go with the next questions. */
+  async chatAboutDocuments(paths: string[]): Promise<void> {
+    if (!paths.length) return
+    await this.openChat()
+    const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
+    if (view instanceof ChatView) view.attachFiles(paths)
+  }
+
   /** The chat, opened on a branch of a saved conversation, picked in its note. */
   async chatOnBranch(path: string, index: number): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(path)

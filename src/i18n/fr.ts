@@ -1722,5 +1722,23 @@ export const fr: Catalog = {
   'library.reread': 'Relire le contenu',
   'library.scanNoModel':
     'Aucun modèle n’est configuré pour lire les scans : renseigne le modèle de vision (OCR) ou le modèle de texte dans les paramètres du plugin.',
-  'library.scanFailed': '« {title} » n’a pas pu être lu : {reason}'
+  'library.scanFailed': '« {title} » n’a pas pu être lu : {reason}',
+  'chat.attachVault': 'Un fichier du coffre…',
+  'chat.attachLibrary': 'Un document de la bibliothèque…',
+  'chat.attachProjectDocs': {
+    one: '{count} document de {project} dans la bibliothèque',
+    other: 'Les {count} documents de {project} dans la bibliothèque'
+  },
+  'chat.libraryPick': 'Cherche un document par son titre, son projet ou son contenu…',
+  'chat.fileExcerpted':
+    '[… le fichier est long : seuls son début et les passages qui parlent de la question sont envoyés, {sent} caractères sur {total}. Dis-le si la réponse peut se trouver ailleurs.]',
+  'chat.filePassages':
+    '« {name} » est long ({total} caractères) : son début et les passages qui parlent de la question sont envoyés au modèle.',
+  'chat.filesShared':
+    '{count} documents joints sont longs : chacun est envoyé par son début et les passages qui parlent de la question, environ {share} caractères chacun.',
+  'library.askChat': 'Demander au chat',
+  'library.picked': { one: '{count} document coché', other: '{count} documents cochés' },
+  'library.unpick': 'Tout décocher',
+  'library.pickAll': 'Cocher tous les documents affichés',
+  'library.pickOne': 'Cocher « {title} »'
 }

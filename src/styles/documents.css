@@ -412,3 +412,81 @@ button.pm-docs-chip:not(.clickable-icon):hover {
   color: var(--text-muted);
   text-align: center;
 }
+
+/* Documents ticked, to be asked about together. */
+.pm-docs-summary-left {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.pm-docs-summary-left input,
+.pm-docs-tick {
+  flex: none;
+  margin: 0;
+  cursor: pointer;
+}
+
+.pm-docs-tick {
+  margin-top: 10px;
+}
+
+.pm-docs-row.is-picked {
+  background: rgb(from var(--interactive-accent) r g b / 8%);
+}
+
+.pm-docs-picked {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--interactive-accent);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+}
+
+.pm-docs-picked-count {
+  margin-right: auto;
+  font-weight: var(--font-medium);
+}
+
+/* A document picked from the chat: its title, where it is from, where the words are. */
+.pm-docs-pick-line {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.pm-docs-pick-icon {
+  display: inline-flex;
+  color: var(--pm-docs-kind, var(--text-muted));
+}
+
+.pm-docs-pick-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pm-docs-pick-detail {
+  display: block;
+  padding-left: 24px;
+  color: var(--text-faint);
+}
+
+.pm-docs-pick-snippet {
+  margin: var(--size-2-2) 0 0 24px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-docs-pick-snippet mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: rgb(from var(--text-highlight-bg, var(--color-yellow)) r g b / 35%);
+  color: var(--text-normal);
+}

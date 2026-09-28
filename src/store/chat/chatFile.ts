@@ -4,6 +4,7 @@ import { readPdf } from '../pdfRead'
 import { pdfBlocks } from '../pdfText'
 import { readPptx } from '../pptxRead'
 import { readXlsx } from '../xlsxRead'
+import { fold } from '../library/libraryDoc'
 
 /**
  * A file, as text a model can read.
@@ -162,6 +163,97 @@ export async function fileText(extension: string, bytes: Uint8Array): Promise<st
  */
 export const FILE_BUDGET = 50000
 
+/**
+ * What all the files sent with one question may add up to, in characters: three long
+ * files whole, and a dozen documents of a project each with a fair part of it — within
+ * what a model with a large context reads in one go.
+ */
+export const FILES_TOTAL = 150000
+
+/** How much of each file goes, when this many go together: never below a few pages. */
+export function fileShare(count: number): number {
+  if (count <= 1) return FILE_BUDGET
+  return Math.min(FILE_BUDGET, Math.max(6000, Math.floor(FILES_TOTAL / count)))
+}
+
+/** The words of a question worth looking for in a document: four letters or more, folded, once each. */
+export function questionWords(question: string): string[] {
+  const words = fold(question)
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word.length >= 4)
+  return [...new Set(words)]
+}
+
+/** A long block split into pieces of whole lines, so a table is taken a few rows at a time. */
+const PIECE = 2000
+
+function pieces(text: string): { at: number; text: string }[] {
+  const out: { at: number; text: string }[] = []
+  const blocks = text.split(/(\n{2,})/)
+  let at = 0
+  for (const block of blocks) {
+    if (/^\n+$/.test(block) || !block) {
+      at += block.length
+      continue
+    }
+    if (block.length <= PIECE) out.push({ at, text: block })
+    else {
+      let start = 0
+      while (start < block.length) {
+        let end = Math.min(block.length, start + PIECE)
+        const line = block.lastIndexOf('\n', end)
+        if (end < block.length && line > start) end = line
+        out.push({ at: at + start, text: block.slice(start, end).replace(/^\n/, '') })
+        start = end
+      }
+    }
+    at += block.length
+  }
+  return out
+}
+
+/**
+ * The part of a long text a question needs, within a budget: its opening — what the
+ * document is — then the passages holding the most of the question's words, in the order
+ * the document gives them, a mark where something was left out. Null when no passage
+ * holds any of them, and the text is better cut at its budget from the start.
+ */
+export function excerptFor(text: string, budget: number, words: string[]): string | null {
+  if (text.length <= budget || !words.length) return null
+  const all = pieces(text)
+  const scored = all.map((piece, index) => {
+    const folded = fold(piece.text)
+    return { index, piece, score: words.filter((word) => folded.includes(word)).length }
+  })
+  if (!scored.some((each) => each.score > 0)) return null
+  const chosen = new Set<number>()
+  let used = 0
+  // The opening, up to a third of the budget.
+  for (const each of scored) {
+    if (used + each.piece.text.length > budget / 3) break
+    chosen.add(each.index)
+    used += each.piece.text.length
+  }
+  // Then the passages that speak of the question, the most of its words first.
+  const ranked = scored
+    .filter((each) => each.score > 0 && !chosen.has(each.index))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+  for (const each of ranked) {
+    if (used + each.piece.text.length > budget) continue
+    chosen.add(each.index)
+    used += each.piece.text.length
+  }
+  const parts: string[] = []
+  let last = -1
+  for (const index of [...chosen].sort((a, b) => a - b)) {
+    if (index !== last + 1) parts.push('[…]')
+    parts.push(all[index].text)
+    last = index
+  }
+  if (last !== all.length - 1) parts.push('[…]')
+  return parts.join('\n\n')
+}
+
 export interface ContextFile {
   path: string
   name: string
@@ -171,18 +263,35 @@ export interface ContextFile {
 export interface FileWords {
   heading: (name: string, path: string) => string
   truncated: (sent: number, total: number) => string
+  /** Said when the passages a question needs were sent rather than the file's start. */
+  excerpted?: (sent: number, total: number) => string
 }
 
-/** The attached files, each whole or cut at a line with the model told so, for the instructions. */
-export function filesContext(files: ContextFile[], words: FileWords, budget = FILE_BUDGET): string {
+/**
+ * The attached files, for the instructions: each whole when it fits its budget; otherwise
+ * the passages the question's words are in, or its start cut at a line — the model told
+ * which, either way.
+ */
+export function filesContext(
+  files: ContextFile[],
+  words: FileWords,
+  budget = FILE_BUDGET,
+  question: string[] = []
+): string {
   return files
     .map((file) => {
       let sent = file.text
       let tail = ''
       if (sent.length > budget) {
-        const line = sent.lastIndexOf('\n', budget)
-        sent = sent.slice(0, line > budget * 0.8 ? line : budget).trimEnd()
-        tail = `\n\n${words.truncated(sent.length, file.text.length)}`
+        const excerpt = words.excerpted ? excerptFor(file.text, budget, question) : null
+        if (excerpt !== null && words.excerpted) {
+          sent = excerpt
+          tail = `\n\n${words.excerpted(sent.length, file.text.length)}`
+        } else {
+          const line = sent.lastIndexOf('\n', budget)
+          sent = sent.slice(0, line > budget * 0.8 ? line : budget).trimEnd()
+          tail = `\n\n${words.truncated(sent.length, file.text.length)}`
+        }
       }
       return `${words.heading(file.name, file.path)}\n<file path="${file.path}">\n${sent}${tail}\n</file>`
     })

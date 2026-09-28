@@ -55,6 +55,8 @@ export class DocumentsView extends ItemView {
   private bodyEl!: HTMLElement
   private redrawTimer: number | null = null
   private textTimer: number | null = null
+  /** The documents ticked, by their records, to be asked about together. */
+  private picked = new Set<string>()
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -265,14 +267,37 @@ export class DocumentsView extends ItemView {
       ),
       this.sort
     )
+    // A ticked document no longer in the library is no longer ticked.
+    const records = new Set(all.map((doc) => doc.record))
+    for (const record of this.picked) if (!records.has(record)) this.picked.delete(record)
     const summary = this.bodyEl.createDiv('pm-docs-summary')
-    summary.createSpan({
+    const counts = summary.createSpan('pm-docs-summary-left')
+    // Everything found, ticked or unticked at once: a search, then a question about all of it.
+    const withFile = found.filter((doc) => doc.file)
+    if (withFile.length) {
+      const every = counts.createEl('input', {
+        cls: 'pm-docs-pick-all',
+        attr: { type: 'checkbox', 'aria-label': t('library.pickAll') }
+      })
+      const ticked = withFile.filter((doc) => this.picked.has(doc.record)).length
+      every.checked = ticked === withFile.length
+      every.indeterminate = ticked > 0 && ticked < withFile.length
+      every.addEventListener('change', () => {
+        for (const doc of withFile) {
+          if (every.checked) this.picked.add(doc.record)
+          else this.picked.delete(doc.record)
+        }
+        this.renderBody()
+      })
+    }
+    counts.createSpan({
       text:
         found.length === all.length
           ? t('library.count', { count: all.length })
           : t('library.found', { count: found.length, total: all.length })
     })
     this.renderTextStatus(summary, all)
+    if (this.picked.size) this.renderPickedBar(all)
     if (!found.length) {
       this.bodyEl.createDiv({ cls: 'pm-docs-none', text: t('library.nothingFound') })
       return
@@ -287,6 +312,26 @@ export class DocumentsView extends ItemView {
           this.renderBody()
         })
     }
+  }
+
+  /** What is ticked, and what can be done with it: asked about in the chat, or let go. */
+  private renderPickedBar(all: LibraryDoc[]): void {
+    const picked = all.filter((doc) => this.picked.has(doc.record) && doc.file)
+    const bar = this.bodyEl.createDiv('pm-docs-picked')
+    bar.createSpan({ cls: 'pm-docs-picked-count', text: t('library.picked', { count: picked.length }) })
+    new ButtonComponent(bar)
+      .setButtonText(t('library.askChat'))
+      .setIcon('messages-square')
+      .setCta()
+      .onClick(
+        safeAsync(async () => {
+          await this.plugin.chatAboutDocuments(picked.map((doc) => doc.file))
+        })
+      )
+    new ButtonComponent(bar).setButtonText(t('library.unpick')).onClick(() => {
+      this.picked.clear()
+      this.renderBody()
+    })
   }
 
   /** How far the reading of what the documents say has got, and the scans left to read. */
@@ -346,6 +391,18 @@ export class DocumentsView extends ItemView {
   private renderRow(list: HTMLElement, doc: LibraryDoc): void {
     const row = list.createDiv('pm-docs-row')
     if (!doc.file) row.addClass('is-missing')
+    const tick = row.createEl('input', {
+      cls: 'pm-docs-tick',
+      attr: { type: 'checkbox', 'aria-label': t('library.pickOne', { title: doc.title }) }
+    })
+    tick.checked = this.picked.has(doc.record)
+    tick.disabled = !doc.file
+    tick.addEventListener('change', () => {
+      if (tick.checked) this.picked.add(doc.record)
+      else this.picked.delete(doc.record)
+      this.renderBody()
+    })
+    if (tick.checked) row.addClass('is-picked')
     const family = familyOf(doc.file || doc.title)
     setIcon(row.createDiv({ cls: `pm-docs-icon pm-docs-icon--${family}` }), FAMILY_ICONS[family])
 
@@ -432,6 +489,13 @@ export class DocumentsView extends ItemView {
         .setIcon('file-search')
         .setDisabled(!doc.file)
         .onClick(safeAsync(() => this.openDoc(doc)))
+    )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('library.askChat'))
+        .setIcon('messages-square')
+        .setDisabled(!doc.file)
+        .onClick(safeAsync(() => this.plugin.chatAboutDocuments([doc.file])))
     )
     menu.addItem((item) =>
       item

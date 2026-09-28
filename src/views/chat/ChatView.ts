@@ -40,7 +40,9 @@ import { changeBlocks, parseChange, withoutOpenChange } from '../../store/chat/c
 import { applyCreate, applyToRequirement, applyToTicket, type Applied } from '../../store/chat/applyChange'
 import {
   currentFiles,
-  FILE_BUDGET,
+  excerptFor,
+  fileShare,
+  questionWords,
   fileText,
   filesContext,
   FileReadError,
@@ -52,6 +54,8 @@ import {
 } from '../../store/chat/chatFile'
 import { needsOcr, transcriptPath } from '../../store/chat/ocr'
 import { scanPages, transcribeScan } from './scanReader'
+import { LibraryDocPicker } from '../documents/LibraryDocPicker'
+import { sortDocs, type LibraryDoc } from '../../store/library/libraryDoc'
 import { keepDroppedFile } from '../../store/chat/keepFile'
 import { chatModel, chatModels } from '../../store/chat/chatModels'
 import { availablePrompts, parsePrompts, type ChatPrompt } from '../../store/chat/chatPrompts'
@@ -413,12 +417,15 @@ export class ChatView extends ItemView {
 
   /** One row a file attached, with the way to open it and the way to take it off. */
   private renderFileRows(el: HTMLElement): void {
+    // A document of the library goes by its title, as it does there.
+    const titles = new Map(this.plugin.library.docs().map((doc) => [doc.file, doc.title]))
     for (const path of this.files) {
       const row = el.createDiv('pm-chat-context-row')
-      setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'paperclip')
+      const title = titles.get(path)
+      setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), title ? 'library-big' : 'paperclip')
       const name = row.createEl('a', {
         cls: 'pm-chat-context-name',
-        text: path.slice(path.lastIndexOf('/') + 1),
+        text: title ?? path.slice(path.lastIndexOf('/') + 1),
         attr: { title: path }
       })
       name.addEventListener(
@@ -464,9 +471,66 @@ export class ChatView extends ItemView {
    * off, like the note and the project.
    */
   attachFile(path: string): void {
-    if (!this.files.includes(path)) this.files = [...this.files, path]
+    this.attachFiles([path])
+  }
+
+  /** Several files at once: documents chosen in the library, or all of a project's. */
+  attachFiles(paths: string[]): void {
+    const added = paths.filter((path) => !this.files.includes(path))
+    if (added.length) this.files = [...this.files, ...added]
     this.renderContext()
     window.setTimeout(() => this.inputEl?.focus(), 0)
+  }
+
+  /**
+   * What can be joined to the questions: a file of the vault, a document of the library —
+   * found by what it says as well as by its name — or, in one go, every document the
+   * library holds for a project attached.
+   */
+  private showAttachMenu(event: MouseEvent): void {
+    const menu = new Menu()
+    menu.addItem((item) =>
+      item
+        .setTitle(t('chat.attachVault'))
+        .setIcon('paperclip')
+        .onClick(() => this.pickFile())
+    )
+    const docs = this.plugin.library.docs().filter((doc) => doc.file && !this.files.includes(doc.file))
+    menu.addItem((item) =>
+      item
+        .setTitle(t('chat.attachLibrary'))
+        .setIcon('library-big')
+        .setDisabled(!docs.length)
+        .onClick(() => this.pickLibraryDoc(docs))
+    )
+    const byProject = this.projects
+      .map((path) => ({ path, docs: docs.filter((doc) => doc.projects.includes(path)) }))
+      .filter((entry) => entry.docs.length)
+    if (byProject.length) menu.addSeparator()
+    for (const entry of byProject) {
+      const title = this.plugin.index.projectRef(entry.path)?.title ?? entry.path
+      menu.addItem((item) =>
+        item
+          .setTitle(t('chat.attachProjectDocs', { count: entry.docs.length, project: title }))
+          .setIcon('folder-kanban')
+          .onClick(() => this.attachFiles(entry.docs.map((doc) => doc.file)))
+      )
+    }
+    menu.showAtMouseEvent(event)
+  }
+
+  /** A document of the library, found by its title, its projects or what it says. */
+  private pickLibraryDoc(docs: LibraryDoc[]): void {
+    const texts = this.plugin.libraryText
+    void texts.refresh(this.plugin.library.docs())
+    new LibraryDocPicker(
+      this.app,
+      sortDocs(docs, 'added'),
+      (path) => this.plugin.index.projectRef(path)?.title ?? path,
+      (doc) => texts.folded(doc),
+      (doc) => this.attachFile(doc.file),
+      (doc) => texts.entry(doc)?.text ?? ''
+    ).open()
   }
 
   /**
@@ -542,15 +606,27 @@ export class ChatView extends ItemView {
    * cannot be read is named with why, so the model says so rather than answering as if
    * it had read it; the reader is told too.
    */
-  private async filesBlock(paths: string[]): Promise<string> {
+  private async filesBlock(paths: string[], question: string): Promise<string> {
     const read: ContextFile[] = []
     const unread: string[] = []
+    const library = new Map(this.plugin.library.docs().map((doc) => [doc.file, doc]))
     for (const path of paths) {
       const file = this.app.vault.getAbstractFileByPath(path)
       if (!(file instanceof TFile)) continue
       const key = `${path}|${this.ocrForced.has(path) ? 'ocr' : 'text'}`
       const cached = this.fileCache.get(key)
       let text = cached && cached.mtime === file.stat.mtime ? cached.text : null
+      // What the library has read of it already, scans included: not read a second time.
+      const doc = library.get(path)
+      const kept = doc ? this.plugin.libraryText.entry(doc) : undefined
+      if (
+        text === null &&
+        kept?.state === 'ok' &&
+        kept.mtime === file.stat.mtime &&
+        (kept.ocr || !this.ocrForced.has(path))
+      ) {
+        text = kept.text
+      }
       if (text === null) {
         try {
           text = await this.readAttached(file)
@@ -569,14 +645,34 @@ export class ChatView extends ItemView {
       }
       read.push({ path: file.path, name: file.name, text })
     }
-    // A file cut is a planning whose last tasks the model never saw: the reader is told.
-    for (const file of read.filter((each) => each.text.length > FILE_BUDGET)) {
-      new Notice(t('chat.fileCut', { name: file.name, sent: FILE_BUDGET, total: file.text.length }), 12000)
+    // Several files share what can be sent; one too long for its share goes by the
+    // passages the question speaks of, or by its start — and the reader is told which.
+    const share = fileShare(read.length)
+    const words = questionWords(question)
+    const long = read.filter((each) => each.text.length > share)
+    if (long.length > 2) {
+      new Notice(t('chat.filesShared', { count: long.length, share }), 12000)
+    } else {
+      for (const file of long) {
+        const passages = excerptFor(file.text, share, words) !== null
+        new Notice(
+          passages
+            ? t('chat.filePassages', { name: file.name, total: file.text.length })
+            : t('chat.fileCut', { name: file.name, sent: share, total: file.text.length }),
+          12000
+        )
+      }
     }
-    const block = filesContext(read, {
-      heading: (name, path) => t('chat.fileHeading', { name, path }),
-      truncated: (sent, total) => t('chat.fileTruncated', { sent, total })
-    })
+    const block = filesContext(
+      read,
+      {
+        heading: (name, path) => t('chat.fileHeading', { name, path }),
+        truncated: (sent, total) => t('chat.fileTruncated', { sent, total }),
+        excerpted: (sent, total) => t('chat.fileExcerpted', { sent, total })
+      },
+      share,
+      words
+    )
     return [block, ...unread].filter(Boolean).join('\n\n')
   }
 
@@ -1125,7 +1221,7 @@ export class ChatView extends ItemView {
     })
     setIcon(attach, 'paperclip')
     attach.disabled = missing !== null || this.pending
-    attach.addEventListener('click', () => this.pickFile())
+    attach.addEventListener('click', (event) => this.showAttachMenu(event))
     const ready = composer.createEl('button', {
       cls: 'clickable-icon pm-chat-ready',
       attr: { 'aria-label': t('chat.presets') }
@@ -1654,7 +1750,8 @@ export class ChatView extends ItemView {
       const project = await this.projectsBlock(currentProjects(this.turns), currentCollections(this.turns))
       // The files as they are now: a planning replaced by its next issue is read again.
       const paths = currentFiles(this.turns)
-      const files = await this.filesBlock(paths)
+      const asked = [...this.turns].reverse().find((turn) => turn.role === 'user')?.content ?? ''
+      const files = await this.filesBlock(paths, asked)
       const how = this.changeInstructions(requirements.length > 0, project, paths.length > 0)
       const request = {
         model,
