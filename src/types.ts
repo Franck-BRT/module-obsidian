@@ -493,13 +493,16 @@ export interface ChatSettings {
   builtinPrompts: boolean
   /** The reader's own ready questions, one a line: see `parsePrompts`. */
   prompts: string
+  /** The model the chat talks to, chosen in the panel; empty uses the settings' text model. */
+  model: string
 }
 
 export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   folder: 'Chats',
   stream: true,
   builtinPrompts: true,
-  prompts: ''
+  prompts: '',
+  model: ''
 }
 
 /** Anything the reader can restyle: an id that never changes, and the look they chose. */

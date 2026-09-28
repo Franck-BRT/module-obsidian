@@ -108,6 +108,14 @@ function linkedPath(title: string): string | undefined {
   )
 }
 
+/** The model a reply's title names after its time: `Assistant · 2026-09-28 14:10 · qwen3`. */
+function writtenBy(title: string): string | undefined {
+  const parts = title.split(' · ').map((part) => part.trim())
+  const at = parts.findIndex((part) => /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(part))
+  const model = at >= 0 ? parts[at + 1] : undefined
+  return model && !model.includes('[[') ? model : undefined
+}
+
 /** The files a callout's title names after its mark, by path. */
 function namedFiles(title: string): string[] {
   const segment = title.split(' · ').find((part) => part.trim().startsWith(FILES_MARK))
@@ -131,7 +139,10 @@ export function turnMarkdown(turn: ChatTurn, words: ChatNoteWords): string {
     (turn.project ? ` · ${PROJECT_MARK} ${noteLink(turn.project)}` : '') +
     (turn.files?.length ? ` · ${FILES_MARK} ${turn.files.map(noteLink).join(', ')}` : '') +
     (turn.requirements?.length ? ` · ${REQUIREMENTS_MARK} ${turn.requirements.map(link).join(', ')}` : '')
-  const head = `> [!${CALLOUT[turn.role]}] ${turn.role === 'user' ? words.user : words.assistant} · ${localStamp(turn.at)}${about}`
+  // A reply says which model wrote it: a conversation may change model on the way, and
+  // two answers to one question are compared knowing whose they are.
+  const by = turn.role === 'assistant' && turn.model ? ` · ${turn.model}` : ''
+  const head = `> [!${CALLOUT[turn.role]}] ${turn.role === 'user' ? words.user : words.assistant} · ${localStamp(turn.at)}${about}${by}`
   const body = turn.content.split('\n').map((line) => (line === '' ? '>' : `> ${line}`))
   return [head, ...body].join('\n')
 }
@@ -210,6 +221,7 @@ export function readChatNote(content: string): ChatNote {
       const requirements = role === 'user' ? namedRequirements(start[2]) : []
       const project = role === 'user' ? namedProject(start[2]) : undefined
       const files = role === 'user' ? namedFiles(start[2]) : []
+      const model = role === 'assistant' ? writtenBy(start[2]) : undefined
       current = {
         turn: {
           role,
@@ -218,6 +230,7 @@ export function readChatNote(content: string): ChatNote {
           ...(context ? { context } : {}),
           ...(project ? { project } : {}),
           ...(files.length ? { files } : {}),
+          ...(model ? { model } : {}),
           ...(requirements.length ? { requirements } : {})
         },
         lines: []

@@ -39,6 +39,7 @@ import {
   type FileProblem
 } from '../../store/chat/chatFile'
 import { keepDroppedFile } from '../../store/chat/keepFile'
+import { chatModel, chatModels } from '../../store/chat/chatModels'
 import { availablePrompts, parsePrompts, type ChatPrompt } from '../../store/chat/chatPrompts'
 import { builtinPrompts, scopeIcon } from './chatPresets'
 import { requirementOptions } from './changeCard'
@@ -627,12 +628,67 @@ export class ChatView extends ItemView {
     return new LlmClient({ settings: this.plugin.settings.llm })
   }
 
+  /** The model the chat talks to: the one chosen in the panel, or the settings' text model. */
+  private get model(): string {
+    return chatModel(this.plugin.settings.chat.model, this.plugin.settings.llm.modelText)
+  }
+
   /** What is missing before a question can be asked, or null when nothing is. */
   private missing(): string | null {
     const settings = this.plugin.settings.llm
     if (!settings.enabled || !settings.baseUrl.trim()) return t('chat.notConfigured')
-    if (!settings.modelText.trim()) return t('chat.noModel')
+    if (!this.model) return t('chat.noModel')
     return null
+  }
+
+  /**
+   * The models the gateway offers, asked for when the list is opened — a gateway gains
+   * and loses models, and a list fetched at start would go stale — and shown where the
+   * click was. The settings' text model comes first, as the one the chat falls back to.
+   */
+  private async pickModel(event: MouseEvent): Promise<void> {
+    const at = { x: event.clientX, y: event.clientY }
+    let offered: string[] = []
+    let problem = ''
+    try {
+      offered = chatModels(await this.llm.models())
+    } catch (error) {
+      problem = error instanceof Error ? error.message : String(error)
+    }
+    const chat = this.plugin.settings.chat
+    const fallback = this.plugin.settings.llm.modelText.trim()
+    const choose = (model: string): void => {
+      chat.model = model
+      void this.plugin.saveSettings()
+      this.render()
+    }
+    const menu = new Menu()
+    if (fallback) {
+      menu.addItem((item) =>
+        item
+          .setTitle(t('chat.modelDefault', { model: fallback }))
+          .setChecked(!chat.model.trim())
+          .onClick(() => choose(''))
+      )
+      menu.addSeparator()
+    }
+    // The model in use stays offered even when the gateway no longer lists it, so the
+    // menu never pretends the chat is talking to something else.
+    const names = offered.includes(this.model) || !this.model ? offered : [this.model, ...offered]
+    for (const name of names) {
+      menu.addItem((item) =>
+        item
+          .setTitle(name)
+          .setChecked(!!chat.model.trim() && name === this.model)
+          .onClick(() => choose(name))
+      )
+    }
+    if (problem) {
+      menu.addItem((item) => item.setTitle(t('chat.modelsUnavailable', { reason: problem })).setDisabled(true))
+    } else if (!offered.length) {
+      menu.addItem((item) => item.setTitle(t('chat.modelsNone')).setDisabled(true))
+    }
+    menu.showAtPosition(at)
   }
 
   private render(): void {
@@ -643,8 +699,22 @@ export class ChatView extends ItemView {
     const head = root.createDiv('pm-chat-head')
     const titles = head.createDiv('pm-chat-titles')
     titles.createDiv({ cls: 'pm-chat-title', text: t('chat.title') })
-    const model = this.plugin.settings.llm.modelText.trim()
-    if (model) titles.createDiv({ cls: 'pm-chat-model', text: model })
+    // The model, as a button: the list of what the gateway offers is one click away.
+    const model = this.model
+    const configured = this.plugin.settings.llm.enabled && this.plugin.settings.llm.baseUrl.trim() !== ''
+    if (configured) {
+      const pick = titles.createEl('button', {
+        cls: 'pm-chat-model pm-chat-model-pick',
+        attr: { 'aria-label': t('chat.modelPick'), title: t('chat.modelPick') }
+      })
+      pick.createSpan({ cls: 'pm-chat-model-name', text: model || t('chat.modelNone') })
+      setIcon(pick.createSpan({ cls: 'pm-chat-model-caret' }), 'chevron-down')
+      pick.disabled = this.pending
+      pick.addEventListener(
+        'click',
+        safeAsync((event: MouseEvent) => this.pickModel(event))
+      )
+    }
     const button = (icon: string, label: string, run: () => void): void => {
       const el = head.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': label } })
       setIcon(el, icon)
@@ -805,6 +875,14 @@ export class ChatView extends ItemView {
     }
     // A reply is copied into a note; a question is still in the reader's head.
     if (turn.role !== 'assistant') return
+    // Which model wrote it, once the chat has talked to more than one.
+    if (turn.model && this.turns.some((other) => other.model && other.model !== turn.model)) {
+      actions.createSpan({
+        cls: 'pm-chat-by',
+        text: turn.model,
+        attr: { title: t('chat.modelBy', { model: turn.model }) }
+      })
+    }
     // A revised planning is a dozen proposals: one click for all of them, each still
     // checked as its own card would check it.
     const blocks = changeBlocks(turn.content)
@@ -985,7 +1063,8 @@ export class ChatView extends ItemView {
     this.liveText = ''
     this.stopper = this.plugin.settings.chat.stream ? new AbortController() : null
     this.render()
-    const settings = this.plugin.settings.llm
+    // Taken now: a model chosen while the reply is written is for the next question.
+    const model = this.model
     try {
       // The note as it is at the moment of asking: the reader may have just edited it.
       const note = await this.contextNote(currentContext(this.turns))
@@ -1005,7 +1084,7 @@ export class ChatView extends ItemView {
       const files = await this.filesBlock(paths)
       const how = this.changeInstructions(requirements.length > 0, project, paths.length > 0)
       const request = {
-        model: settings.modelText,
+        model,
         messages: chatMessages(this.turns, [system, project?.text, block, files, how].filter(Boolean).join('\n\n'))
       }
       let reply: string
@@ -1020,7 +1099,7 @@ export class ChatView extends ItemView {
       } else reply = await this.llm.chat(request)
       if (reply.trim()) {
         // Stopped part way, what had been written is kept: it is what the reader read.
-        this.turns = [...this.turns, { role: 'assistant', content: reply.trim(), at: new Date().toISOString() }]
+        this.turns = [...this.turns, { role: 'assistant', content: reply.trim(), at: new Date().toISOString(), model }]
         await this.persist()
       } else if (stopped) {
         this.turns = [
@@ -1065,7 +1144,7 @@ export class ChatView extends ItemView {
         file = await this.notes.create(
           {
             title: chatTitle(question, t('chat.untitled')),
-            model: this.plugin.settings.llm.modelText,
+            model: this.model,
             created: said[0]?.at ?? new Date().toISOString()
           },
           said,

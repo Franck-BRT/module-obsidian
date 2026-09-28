@@ -224,3 +224,20 @@ describe('the files a question was asked with', () => {
     expect(read.context).toBeUndefined()
   })
 })
+
+describe('the model a reply was written by', () => {
+  const reply = { ...turn('assistant', 'Réponse.', 4), model: 'qwen3-32b-instruct' }
+
+  it('is named after the reply’s time, and read back', () => {
+    expect(turnMarkdown(reply, WORDS).split('\n')[0]).toBe(
+      `> [!note] Assistant · ${localStamp(at(4))} · qwen3-32b-instruct`
+    )
+    expect(readChatNote(chatNoteContent(META, [turn('user', 'Q', 3), reply], WORDS)).turns[1]).toEqual(reply)
+  })
+
+  // A reply written before models were recorded, or a title edited by hand, has none.
+  it('is left unknown where the title does not say', () => {
+    const read = readChatNote(chatNoteContent(META, [turn('assistant', 'Ancienne.', 4)], WORDS)).turns[0]
+    expect(read.model).toBeUndefined()
+  })
+})

@@ -418,3 +418,45 @@ a.pm-change-target {
   text-decoration: none;
   background: none;
 }
+
+/* ---- The model ------------------------------------------------------------ */
+
+/* The model under the title, as a quiet button: the list is there, not in the way. */
+.pm-chat-model-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  height: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.pm-chat-model-pick:hover {
+  color: var(--text-normal);
+}
+
+.pm-chat-model-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-chat-model-caret {
+  display: inline-flex;
+  flex: none;
+}
+
+.pm-chat-model-caret svg {
+  width: 12px;
+  height: 12px;
+}
+
+.pm-chat-by {
+  margin-right: auto;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}

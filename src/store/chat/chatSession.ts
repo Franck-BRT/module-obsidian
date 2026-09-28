@@ -25,6 +25,8 @@ export interface ChatTurn {
   project?: string
   /** The files a question was asked with — a planning, a report — by path. */
   files?: string[]
+  /** The model a reply was written by, where it is known. */
+  model?: string
 }
 
 /**
