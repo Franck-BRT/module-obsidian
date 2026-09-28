@@ -1379,6 +1379,12 @@ export const en = {
   'settings.chat.maxTokens': 'Longest reply',
   'settings.chat.maxTokensDesc':
     'In tokens. 0: no limit of the plugin’s own, the gateway’s applies (recommended: a planning update proposes many changes).',
+  'chat.saveReply': 'Save the reply as a note (in the attached project’s folder)',
+  'chat.insertReply': 'Insert the reply into the open note',
+  'chat.savedReply': 'Reply saved in {path}.',
+  'chat.insertNone': 'No open note to insert the reply into.',
+  'chat.inserted': 'Reply inserted at the cursor in “{name}”.',
+  'chat.appended': 'Reply added at the end of “{name}”.',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

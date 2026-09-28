@@ -70,7 +70,10 @@ import {
   verificationLabel
 } from '../requirements/reqPalette'
 import { LlmClient, LlmError } from '../../store/llm'
-import { safeAsync } from '../../utils'
+import { safeAsync, sanitizeFileName } from '../../utils'
+import { replyNoteContent, replyTitle, withoutChangeBlocks } from '../../store/chat/replyNote'
+import { freePath } from '../../store/DocumentStore'
+import { ensureFolder } from '../../store/vaultFs'
 import { t } from '../../i18n'
 
 export const PM_CHAT_VIEW_TYPE = 'pm-chat'
@@ -1033,6 +1036,23 @@ export class ChatView extends ItemView {
         })
       )
     }
+    // Where a reply goes once it is worth keeping: into a note of its own, or into the
+    // note being written.
+    const insert = actions.createEl('button', {
+      cls: 'clickable-icon',
+      attr: { 'aria-label': t('chat.insertReply') }
+    })
+    setIcon(insert, 'text-cursor-input')
+    insert.addEventListener(
+      'click',
+      safeAsync(() => this.insertReply(turn))
+    )
+    const keep = actions.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.saveReply') } })
+    setIcon(keep, 'file-plus-2')
+    keep.addEventListener(
+      'click',
+      safeAsync(() => this.saveReply(turn))
+    )
     const copy = actions.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.copy') } })
     setIcon(copy, 'copy')
     copy.addEventListener(
@@ -1042,6 +1062,74 @@ export class ChatView extends ItemView {
         new Notice(t('chat.copied'))
       })
     )
+  }
+
+  /** The question a reply answers: the last one asked before it. */
+  private questionOf(turn: ChatTurn): ChatTurn | undefined {
+    const at = this.turns.indexOf(turn)
+    return this.turns
+      .slice(0, at < 0 ? this.turns.length : at)
+      .reverse()
+      .find((each) => each.role === 'user')
+  }
+
+  /**
+   * A reply as a note of its own, beside the project it is about — or among the
+   * conversations when it is about none — named after its first heading or its question,
+   * and opened.
+   */
+  private async saveReply(turn: ChatTurn): Promise<void> {
+    const body = withoutChangeBlocks(turn.content)
+    if (!body) return
+    const question = this.questionOf(turn)
+    const ref = this.plugin.index.projectRef(question?.project ?? this.project ?? '')
+    const folder = ref ? ref.path.slice(0, Math.max(0, ref.path.lastIndexOf('/'))) : this.plugin.settings.chat.folder
+    const title = replyTitle(body, chatTitle(question?.content ?? '', t('chat.untitled')))
+    try {
+      if (folder) await ensureFolder(this.app, normalizePath(folder))
+      const path = await freePath(this.app, normalizePath(folder || '/'), sanitizeFileName(title) || 'note', 'md')
+      const file = await this.app.vault.create(
+        path,
+        replyNoteContent(
+          {
+            created: new Date().toISOString(),
+            model: turn.model ?? this.model,
+            ...(this.notePath ? { chat: this.notePath } : {}),
+            ...(ref ? { project: ref.path } : {})
+          },
+          body
+        )
+      )
+      await this.app.workspace.getLeaf('tab').openFile(file)
+      new Notice(t('chat.savedReply', { path: file.path }))
+    } catch (error) {
+      new Notice(t('chat.saveFailed', { reason: error instanceof Error ? error.message : String(error) }))
+    }
+  }
+
+  /**
+   * A reply put into the note open beside the chat: at the cursor when the note is being
+   * edited, at its end otherwise — never over what the reader wrote.
+   */
+  private async insertReply(turn: ChatTurn): Promise<void> {
+    const file = this.contextFile
+    if (!file) {
+      new Notice(t('chat.insertNone'))
+      return
+    }
+    const body = withoutChangeBlocks(turn.content)
+    if (!body) return
+    const view = this.app.workspace
+      .getLeavesOfType('markdown')
+      .map((leaf) => leaf.view)
+      .find((each): each is MarkdownView => each instanceof MarkdownView && each.file === file)
+    if (view && view.getMode() === 'source') {
+      view.editor.replaceSelection(`${body}\n`)
+      new Notice(t('chat.inserted', { name: file.basename }))
+      return
+    }
+    await this.app.vault.process(file, (content) => `${content.replace(/\s+$/, '')}\n\n${body}\n`)
+    new Notice(t('chat.appended', { name: file.basename }))
   }
 
   /** Every proposal of a reply, applied one after the other, with one report at the end. */

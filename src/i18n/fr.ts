@@ -1358,6 +1358,12 @@ export const fr: Catalog = {
   'settings.chat.maxTokens': 'Longueur maximale des réponses',
   'settings.chat.maxTokensDesc':
     'En jetons. 0 : aucune limite du plugin, celle de la passerelle s’applique (recommandé : une mise à jour de planning propose beaucoup de modifications).',
+  'chat.saveReply': 'Enregistrer la réponse comme note (dans le dossier du projet joint)',
+  'chat.insertReply': 'Insérer la réponse dans la note ouverte',
+  'chat.savedReply': 'Réponse enregistrée dans {path}.',
+  'chat.insertNone': 'Aucune note ouverte où insérer la réponse.',
+  'chat.inserted': 'Réponse insérée au curseur dans « {name} ».',
+  'chat.appended': 'Réponse ajoutée à la fin de « {name} ».',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',
