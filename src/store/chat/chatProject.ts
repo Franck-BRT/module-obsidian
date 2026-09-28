@@ -272,10 +272,29 @@ export function projectParts(primary: Project, projects: Project[]): ProjectPart
     .map((project) => ({ title: project.title, path: project.filePath, tasks: current(project.tasks) }))
 }
 
-/** The project the conversation's latest question was asked about, by its path. */
-export function currentProject(turns: { role: string; project?: string }[]): string | undefined {
+/** The projects the conversation's latest question was asked about, by path. */
+export function currentProjects(turns: { role: string; projects?: string[] }[]): string[] {
   for (let at = turns.length - 1; at >= 0; at--) {
-    if (turns[at].role === 'user') return turns[at].project
+    if (turns[at].role === 'user') return turns[at].projects ?? []
   }
-  return undefined
+  return []
+}
+
+/**
+ * The projects to write out, each once: one attached with a programme above it already
+ * attached comes with that programme, and would otherwise be written twice.
+ */
+export function withoutNested(paths: string[], ancestorsOf: (path: string) => string[]): string[] {
+  const chosen = new Set(paths)
+  const unique = [...new Set(paths)]
+  return unique.filter((path) => !ancestorsOf(path).some((ancestor) => chosen.has(ancestor)))
+}
+
+/**
+ * How much room each project is given, in characters: the whole budget for one, and a
+ * share of a larger one for several — never so little that a project is its title alone.
+ */
+export function projectShare(count: number): number {
+  if (count <= 1) return PROJECT_BUDGET
+  return Math.max(6000, Math.floor((PROJECT_BUDGET * 2) / count))
 }

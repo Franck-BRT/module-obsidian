@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PRIORITIES, DEFAULT_STATUSES, makeDocument, makeProject, makeTask, type Task } from '../../types'
 import {
-  currentProject,
+  currentProjects,
   projectContext,
+  projectShare,
+  PROJECT_BUDGET,
+  withoutNested,
   projectParts,
   type ProjectContextInput,
   type ProjectWords
@@ -218,17 +221,35 @@ describe('projectContext', () => {
   })
 })
 
-describe('currentProject', () => {
-  it('is the project of the latest question', () => {
+describe('currentProjects', () => {
+  it('is the projects of the latest question', () => {
     expect(
-      currentProject([
-        { role: 'user', project: 'a.md' },
+      currentProjects([
+        { role: 'user', projects: ['a.md'] },
         { role: 'assistant' },
-        { role: 'user', project: 'b.md' },
+        { role: 'user', projects: ['b.md', 'c.md'] },
         { role: 'assistant' }
       ])
-    ).toBe('b.md')
-    expect(currentProject([{ role: 'user', project: 'a.md' }, { role: 'user' }])).toBeUndefined()
+    ).toEqual(['b.md', 'c.md'])
+    expect(currentProjects([{ role: 'user', projects: ['a.md'] }, { role: 'user' }])).toEqual([])
+  })
+})
+
+describe('several projects', () => {
+  // A programme brings the projects under it: one of them attached beside it is not
+  // written a second time.
+  it('are each written once', () => {
+    const ancestors: Record<string, string[]> = { 'gc.md': ['l6.md'], 'eq.md': ['l6.md'], 'l6.md': [] }
+    const of = (path: string): string[] => ancestors[path] ?? []
+    expect(withoutNested(['gc.md', 'l6.md', 'autre.md', 'gc.md'], of)).toEqual(['l6.md', 'autre.md'])
+    expect(withoutNested(['gc.md', 'eq.md'], of)).toEqual(['gc.md', 'eq.md'])
+  })
+
+  it('share the room, each keeping enough to be read', () => {
+    expect(projectShare(1)).toBe(PROJECT_BUDGET)
+    expect(projectShare(2)).toBe(PROJECT_BUDGET)
+    expect(projectShare(4)).toBe(PROJECT_BUDGET / 2)
+    expect(projectShare(20)).toBe(6000)
   })
 })
 

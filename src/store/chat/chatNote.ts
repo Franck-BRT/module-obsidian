@@ -123,10 +123,14 @@ function namedFiles(title: string): string[] {
   return [...segment.matchAll(/\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/g)].map((found) => found[1].trim())
 }
 
-/** The project a callout's title names after its mark, as the path of its note. */
-function namedProject(title: string): string | undefined {
+/** The projects a callout's title names after their mark, as the paths of their notes. */
+function namedProjects(title: string): string[] {
   const segment = title.split(' · ').find((part) => part.trim().startsWith(PROJECT_MARK))
-  return segment ? pathIn(segment) : undefined
+  if (!segment) return []
+  return segment
+    .split(/\]\]\s*,/)
+    .map((piece) => pathIn(piece.trim().endsWith(']]') ? piece : `${piece}]]`))
+    .filter((path): path is string => !!path)
 }
 
 /** One turn, as its callout. */
@@ -136,7 +140,7 @@ export function turnMarkdown(turn: ChatTurn, words: ChatNoteWords): string {
   const link = words.requirement ?? ((id: string) => id)
   const about =
     (turn.context ? ` · ${noteLink(turn.context)}` : '') +
-    (turn.project ? ` · ${PROJECT_MARK} ${noteLink(turn.project)}` : '') +
+    (turn.projects?.length ? ` · ${PROJECT_MARK} ${turn.projects.map(noteLink).join(', ')}` : '') +
     (turn.files?.length ? ` · ${FILES_MARK} ${turn.files.map(noteLink).join(', ')}` : '') +
     (turn.requirements?.length ? ` · ${REQUIREMENTS_MARK} ${turn.requirements.map(link).join(', ')}` : '')
   // A reply says which model wrote it: a conversation may change model on the way, and
@@ -219,7 +223,7 @@ export function readChatNote(content: string): ChatNote {
       close()
       const context = role === 'user' ? linkedPath(start[2]) : undefined
       const requirements = role === 'user' ? namedRequirements(start[2]) : []
-      const project = role === 'user' ? namedProject(start[2]) : undefined
+      const projects = role === 'user' ? namedProjects(start[2]) : []
       const files = role === 'user' ? namedFiles(start[2]) : []
       const model = role === 'assistant' ? writtenBy(start[2]) : undefined
       current = {
@@ -228,7 +232,7 @@ export function readChatNote(content: string): ChatNote {
           content: '',
           at: fromStamp(start[2]) ?? created,
           ...(context ? { context } : {}),
-          ...(project ? { project } : {}),
+          ...(projects.length ? { projects } : {}),
           ...(files.length ? { files } : {}),
           ...(model ? { model } : {}),
           ...(requirements.length ? { requirements } : {})

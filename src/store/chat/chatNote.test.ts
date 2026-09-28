@@ -171,11 +171,11 @@ describe('chatNoteName', () => {
   })
 })
 
-describe('the project a question was asked about', () => {
+describe('the projects a question was asked about', () => {
   const question = {
     ...turn('user', 'Où en est-on ?', 3),
     context: 'Specs/Thermique.md',
-    project: 'Projets/Refonte chaufferie.md',
+    projects: ['Projets/Refonte chaufferie.md'],
     requirements: ['REQ-THERM-0001']
   }
 
@@ -191,10 +191,23 @@ describe('the project a question was asked about', () => {
   })
 
   it('is read back alone, the question then about no note', () => {
-    const alone = { ...turn('user', 'Q', 3), project: 'Refonte.md' }
+    const alone = { ...turn('user', 'Q', 3), projects: ['Refonte.md'] }
     const read = readChatNote(chatNoteContent(META, [alone], WORDS)).turns[0]
-    expect(read.project).toBe('Refonte.md')
+    expect(read.projects).toEqual(['Refonte.md'])
     expect(read.context).toBeUndefined()
+  })
+
+  // Several projects at once: each a link, read back in order, a project with a comma in
+  // its name included.
+  it('are all named, and all read back', () => {
+    const several = {
+      ...turn('user', 'Compare-les.', 3),
+      projects: ['Work/Génie civil.md', 'Work/Équipements, lot 2.md', 'Ligne 6.md']
+    }
+    expect(turnMarkdown(several, WORDS).split('\n')[0]).toBe(
+      `> [!question] Vous · ${localStamp(at(3))} · 📁 [[Work/Génie civil|Génie civil]], [[Work/Équipements, lot 2|Équipements, lot 2]], [[Ligne 6]]`
+    )
+    expect(readChatNote(chatNoteContent(META, [several], WORDS)).turns).toEqual([several])
   })
 })
 
@@ -202,7 +215,7 @@ describe('the files a question was asked with', () => {
   const question = {
     ...turn('user', 'Mets le planning à jour.', 3),
     context: 'Specs/Thermique.md',
-    project: 'Projets/Ligne 6.md',
+    projects: ['Projets/Ligne 6.md'],
     files: ['Projets/Ligne 6/_docs/Planning indice C.pdf', 'Planning.xlsx']
   }
 

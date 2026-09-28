@@ -26,7 +26,14 @@ import {
 import { chatTitle, isChatNote, localStamp, type ChatNoteWords } from '../../store/chat/chatNote'
 import { ChatNotes } from '../../store/chat/ChatNotes'
 import { currentRequirements, requirementsContext, type RequirementWords } from '../../store/chat/chatRequirements'
-import { currentProject, projectContext, projectParts, type ProjectWords } from '../../store/chat/chatProject'
+import {
+  currentProjects,
+  projectContext,
+  projectParts,
+  projectShare,
+  withoutNested,
+  type ProjectWords
+} from '../../store/chat/chatProject'
 import { changeBlocks, parseChange, withoutOpenChange } from '../../store/chat/chatChange'
 import { applyCreate, applyToRequirement, applyToTicket, type Applied } from '../../store/chat/applyChange'
 import {
@@ -101,8 +108,8 @@ export class ChatView extends ItemView {
   private useNote = true
   /** Requirements chosen in the library, sent with every question until taken off. */
   private attached: string[] = []
-  /** The project talked about, by the path of its note: sent with every question until taken off. */
-  private project: string | null = null
+  /** The projects talked about, by the paths of their notes: sent with every question until taken off. */
+  private projects: string[] = []
   private contextEl: HTMLElement | null = null
   /** The ready questions offered while the conversation is empty. */
   private presetsEl: HTMLElement | null = null
@@ -155,8 +162,8 @@ export class ChatView extends ItemView {
     this.registerEvent(
       this.app.vault.on('rename', (file, oldPath) => {
         if (oldPath === this.notePath) this.notePath = file.path
-        if (oldPath === this.project) {
-          this.project = file.path
+        if (this.projects.includes(oldPath)) {
+          this.projects = this.projects.map((path) => (path === oldPath ? file.path : path))
           this.renderContext()
         }
         if (this.files.includes(oldPath)) {
@@ -199,7 +206,7 @@ export class ChatView extends ItemView {
       const dropped = event.dataTransfer?.files
       if (!dropped?.length) return
       event.preventDefault()
-      void this.dropFiles(Array.from(dropped))
+      void this.dropFiles(Array.from(dropped), { x: event.clientX, y: event.clientY })
     })
     this.render()
     return Promise.resolve()
@@ -272,7 +279,7 @@ export class ChatView extends ItemView {
       })
     }
 
-    this.renderProjectRow(el)
+    this.renderProjectRows(el)
     this.renderFileRows(el)
 
     if (!this.attached.length) return
@@ -292,33 +299,45 @@ export class ChatView extends ItemView {
     })
   }
 
-  /** The project row: the one attached, with the way to take it off, or the way to choose one. */
-  private renderProjectRow(el: HTMLElement): void {
-    const row = el.createDiv('pm-chat-context-row')
-    setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'folder-kanban')
-    const ref = this.project ? this.plugin.index.projectRef(this.project) : null
-    if (!ref) {
-      row.addClass('pm-chat-context--empty')
-      row.createSpan({ cls: 'pm-chat-context-name', text: t('chat.noProject') })
-      const pick = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.pickProject') } })
+  /**
+   * The project rows: one a project attached, each with the way to take it off, and on the
+   * last the way to add another — or, with none, the way to choose one.
+   */
+  private renderProjectRows(el: HTMLElement): void {
+    const refs = this.projects
+      .map((path) => this.plugin.index.projectRef(path))
+      .filter((ref): ref is ProjectRef => ref !== null)
+    const add = (row: HTMLElement, label: string): void => {
+      const pick = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': label } })
       setIcon(pick, 'plus')
       pick.addEventListener('click', () => this.pickProject())
+    }
+    if (!refs.length) {
+      const row = el.createDiv('pm-chat-context-row pm-chat-context--empty')
+      setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'folder-kanban')
+      row.createSpan({ cls: 'pm-chat-context-name', text: t('chat.noProject') })
+      add(row, t('chat.pickProject'))
       return
     }
-    const name = row.createEl('a', {
-      cls: 'pm-chat-context-name',
-      text: ref.program ? `${ref.title} (${t('chat.projectProgram')})` : ref.title,
-      attr: { title: t('chat.projectOpen') }
-    })
-    name.addEventListener(
-      'click',
-      safeAsync(() => this.plugin.router.openProjectLink(ref.path))
-    )
-    const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.projectOff') } })
-    setIcon(off, 'x')
-    off.addEventListener('click', () => {
-      this.project = null
-      this.renderContext()
+    refs.forEach((ref, at) => {
+      const row = el.createDiv('pm-chat-context-row')
+      setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'folder-kanban')
+      const name = row.createEl('a', {
+        cls: 'pm-chat-context-name',
+        text: ref.program ? `${ref.title} (${t('chat.projectProgram')})` : ref.title,
+        attr: { title: t('chat.projectOpen') }
+      })
+      name.addEventListener(
+        'click',
+        safeAsync(() => this.plugin.router.openProjectLink(ref.path))
+      )
+      if (at === refs.length - 1) add(row, t('chat.pickAnotherProject'))
+      const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.projectOff') } })
+      setIcon(off, 'x')
+      off.addEventListener('click', () => {
+        this.projects = this.projects.filter((path) => path !== ref.path)
+        this.renderContext()
+      })
     })
   }
 
@@ -385,14 +404,14 @@ export class ChatView extends ItemView {
    * a question about it is most likely about — then the most recently changed.
    */
   private pickFile(): void {
-    const ref = this.project ? this.plugin.index.projectRef(this.project) : null
-    const folder = ref ? ref.path.slice(0, ref.path.lastIndexOf('/') + 1) : null
+    // Every attached project's folder: its documents first.
+    const folders = this.projects.map((path) => path.slice(0, path.lastIndexOf('/') + 1)).filter(Boolean)
     const files = this.app.vault
       .getFiles()
       .filter((file) => isReadable(file.extension) && !this.files.includes(file.path))
       .filter((file) => file.extension !== 'md' || !isChatNote(this.app.metadataCache.getFileCache(file)?.frontmatter))
       .sort((a, b) => {
-        const own = (file: TFile): number => (folder && file.path.startsWith(folder) ? 0 : 1)
+        const own = (file: TFile): number => (folders.some((folder) => file.path.startsWith(folder)) ? 0 : 1)
         return own(a) - own(b) || b.stat.mtime - a.stat.mtime
       })
     if (!files.length) {
@@ -406,8 +425,11 @@ export class ChatView extends ItemView {
    * Files dropped from outside the vault: kept first — into the attached project as
    * received documents, or beside the conversations — then attached by where they now are.
    */
-  private async dropFiles(files: File[]): Promise<void> {
+  private async dropFiles(files: File[], at: { x: number; y: number }): Promise<void> {
     const settings = this.plugin.settings
+    // With several projects attached, the reader says which one the files belong to.
+    const into = await this.dropTarget(at)
+    if (into === undefined) return
     for (const file of files) {
       const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.') + 1) : ''
       if (!isReadable(extension)) {
@@ -427,10 +449,10 @@ export class ChatView extends ItemView {
           },
           file.name,
           new Uint8Array(await file.arrayBuffer()),
-          this.project
+          into
         )
         this.attachFile(kept.path)
-        const project = this.project ? (this.plugin.index.projectRef(this.project)?.title ?? '') : ''
+        const project = into ? (this.plugin.index.projectRef(into)?.title ?? '') : ''
         new Notice(
           kept.filed
             ? t('chat.fileFiled', { name: file.name, project })
@@ -558,29 +580,95 @@ export class ChatView extends ItemView {
     }
   }
 
+  /**
+   * The project dropped files go into: the one attached, none when none is, and the
+   * reader's choice when there are several — undefined when they chose nothing.
+   */
+  private dropTarget(at: { x: number; y: number }): Promise<string | null | undefined> {
+    const refs = this.projects
+      .map((path) => this.plugin.index.projectRef(path))
+      .filter((ref): ref is ProjectRef => ref !== null && !ref.program)
+    if (refs.length <= 1) return Promise.resolve(refs[0]?.path ?? null)
+    return new Promise((resolve) => {
+      let chosen: string | null | undefined
+      const menu = new Menu()
+      menu.addItem((item) => item.setTitle(t('chat.dropInto')).setIsLabel(true))
+      for (const ref of refs) {
+        menu.addItem((item) =>
+          item
+            .setTitle(ref.title)
+            .setIcon('folder-kanban')
+            .onClick(() => {
+              chosen = ref.path
+            })
+        )
+      }
+      menu.addSeparator()
+      menu.addItem((item) =>
+        item
+          .setTitle(t('chat.dropLoose'))
+          .setIcon('messages-square')
+          .onClick(() => {
+            chosen = null
+          })
+      )
+      // Hidden after the click is handled: what was chosen, or nothing.
+      menu.onHide(() => window.setTimeout(() => resolve(chosen), 0))
+      menu.showAtPosition(at)
+    })
+  }
+
   private pickProject(): void {
-    new ProjectPicker(this.app, this.plugin.index.projectRefs(), (ref) => this.attachProject(ref.path)).open()
+    const refs = this.plugin.index.projectRefs().filter((ref) => !this.projects.includes(ref.path))
+    new ProjectPicker(this.app, refs, (ref) => this.attachProject(ref.path)).open()
   }
 
   /**
-   * A project to talk about: it goes with every question from here on, until taken off,
-   * the way the open note does. One at a time — a programme stands for the projects it
-   * groups.
+   * A project to talk about, beside any already attached: it goes with every question from
+   * here on, until taken off, the way the open note does. A programme stands for the
+   * projects it groups.
    */
   attachProject(path: string): void {
-    this.project = path
+    if (!this.projects.includes(path)) this.projects = [...this.projects, path]
     this.renderContext()
     window.setTimeout(() => this.inputEl?.focus(), 0)
   }
 
   /**
-   * The project a question was asked about, written out as it stands now; '' when it is
-   * gone. The projects under it come with it, each with its own tickets.
+   * The projects a question was asked about, written out as they stand now; null when none
+   * is left. Each comes with the projects under it, and one already under another attached
+   * is written once, with it. Several share the room the one would have had, more or less.
+   */
+  private async projectsBlock(
+    paths: string[]
+  ): Promise<{ text: string; statuses: string[]; priorities: string[] } | null> {
+    const index = this.plugin.index
+    const alive = paths.filter((path) => index.projectRef(path) !== null)
+    const unique = withoutNested(alive, (path) => index.ancestorRefs(path).map((ref) => ref.path))
+    const budget = projectShare(unique.length)
+    const texts: string[] = []
+    const statuses = new Set<string>()
+    const priorities = new Set<string>()
+    for (const path of unique) {
+      const one = await this.projectBlock(path, budget)
+      if (!one) continue
+      texts.push(one.text)
+      for (const label of one.statuses) statuses.add(label)
+      for (const label of one.priorities) priorities.add(label)
+    }
+    if (!texts.length) return null
+    return { text: texts.join('\n\n'), statuses: [...statuses], priorities: [...priorities] }
+  }
+
+  /**
+   * One project, written out as it stands now; null when it is gone. The projects under it
+   * come with it, each with its own tickets.
    */
   private async projectBlock(
-    path: string | undefined
+    path: string,
+    budget: number
   ): Promise<{ text: string; statuses: string[]; priorities: string[] } | null> {
-    const ref = path ? this.plugin.index.projectRef(path) : null
+    const ref = this.plugin.index.projectRef(path)
     if (!ref) return null
     // With what is under it: a programme is the projects it groups, and a project's own
     // sub-projects are part of what someone asking about it means.
@@ -608,7 +696,8 @@ export class ChatView extends ItemView {
         // A dependency on a ticket in another project is named by that ticket's title too.
         titleOf: (id) => this.plugin.index.task(id)?.title
       },
-      this.projectWords
+      this.projectWords,
+      budget
     )
     return {
       text,
@@ -958,14 +1047,14 @@ export class ChatView extends ItemView {
       about.createSpan({ text: turn.context.replace(/^.*\//, '').replace(/\.md$/i, '') })
       about.setAttr('title', turn.context)
     }
-    if (turn.project) {
+    if (turn.projects?.length) {
+      const names = turn.projects.map(
+        (path) => this.plugin.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/i, '')
+      )
       const about = this.listEl.createDiv('pm-chat-about')
       setIcon(about.createSpan(), 'folder-kanban')
-      about.createSpan({
-        text:
-          this.plugin.index.projectRef(turn.project)?.title ?? turn.project.replace(/^.*\//, '').replace(/\.md$/i, '')
-      })
-      about.setAttr('title', turn.project)
+      about.createSpan({ text: names.join(', ') })
+      about.setAttr('title', turn.projects.join('\n'))
     }
     if (turn.files?.length) {
       const names = turn.files.map((path) => path.slice(path.lastIndexOf('/') + 1))
@@ -1082,7 +1171,8 @@ export class ChatView extends ItemView {
     const body = withoutChangeBlocks(turn.content)
     if (!body) return
     const question = this.questionOf(turn)
-    const ref = this.plugin.index.projectRef(question?.project ?? this.project ?? '')
+    // The first project the question was about: a report on two projects goes with the first.
+    const ref = this.plugin.index.projectRef(question?.projects?.[0] ?? this.projects[0] ?? '')
     const folder = ref ? ref.path.slice(0, Math.max(0, ref.path.lastIndexOf('/'))) : this.plugin.settings.chat.folder
     const title = replyTitle(body, chatTitle(question?.content ?? '', t('chat.untitled')))
     try {
@@ -1172,7 +1262,7 @@ export class ChatView extends ItemView {
     const all = [...parsePrompts(settings.prompts), ...(settings.builtinPrompts ? builtinPrompts() : [])]
     return availablePrompts(all, {
       note: this.useNote && this.contextFile !== null,
-      project: this.project !== null && this.plugin.index.projectRef(this.project) !== null,
+      project: this.projects.some((path) => this.plugin.index.projectRef(path) !== null),
       requirements: this.attached.length > 0,
       file: this.files.length > 0
     })
@@ -1239,7 +1329,7 @@ export class ChatView extends ItemView {
         content: text,
         at: new Date().toISOString(),
         ...(context ? { context } : {}),
-        ...(this.project ? { project: this.project } : {}),
+        ...(this.projects.length ? { projects: [...this.projects] } : {}),
         ...(this.files.length ? { files: [...this.files] } : {}),
         ...(this.attached.length ? { requirements: [...this.attached] } : {})
       }
@@ -1299,7 +1389,7 @@ export class ChatView extends ItemView {
         .filter((found): found is Requirement => found !== undefined && found !== null)
       const block = requirementsContext(requirements, this.requirementWords)
       // The project as it stands at the moment of asking, like the note.
-      const project = await this.projectBlock(currentProject(this.turns))
+      const project = await this.projectsBlock(currentProjects(this.turns))
       // The files as they are now: a planning replaced by its next issue is read again.
       const paths = currentFiles(this.turns)
       const files = await this.filesBlock(paths)
