@@ -21,7 +21,7 @@
  * What a question is about. `planning` is a file read against a project — a planning
  * received, compared with the plan — so it needs both.
  */
-export type PromptScope = 'any' | 'note' | 'project' | 'requirements' | 'file' | 'planning'
+export type PromptScope = 'any' | 'note' | 'project' | 'requirements' | 'file' | 'planning' | 'selection'
 
 export interface ChatPrompt {
   /** What the button says. */
@@ -47,6 +47,9 @@ const SCOPE_WORDS: Record<string, PromptScope> = {
   file: 'file',
   files: 'file',
   planning: 'planning',
+  selection: 'selection',
+  sélection: 'selection',
+  passage: 'selection',
   tout: 'any',
   toujours: 'any',
   any: 'any',
@@ -81,10 +84,12 @@ export interface PromptContext {
   project: boolean
   requirements: boolean
   file: boolean
+  /** A passage chosen in a note, for the next question. */
+  selection: boolean
 }
 
 /** The order the groups are offered in: the most particular first. */
-export const SCOPE_ORDER: PromptScope[] = ['planning', 'project', 'requirements', 'file', 'note', 'any']
+export const SCOPE_ORDER: PromptScope[] = ['selection', 'planning', 'project', 'requirements', 'file', 'note', 'any']
 
 /**
  * The questions that make sense now, the reader's before the plugin's within each group,

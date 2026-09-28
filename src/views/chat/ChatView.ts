@@ -83,6 +83,7 @@ import {
 import { LlmClient, LlmError } from '../../store/llm'
 import { displayName, safeAsync, sanitizeFileName } from '../../utils'
 import { fillPrompt, promptParams } from '../../store/chat/promptParams'
+import { withSelection } from '../../store/chat/selection'
 import { askParams } from './ParamModal'
 import { replyNoteContent, replyTitle, withoutChangeBlocks } from '../../store/chat/replyNote'
 import { freePath } from '../../store/DocumentStore'
@@ -118,6 +119,8 @@ export class ChatView extends ItemView {
   private projects: string[] = []
   /** The collections talked about, by the paths of their notes: sent like the projects. */
   private collections: string[] = []
+  /** A passage chosen in a note, for the next question only. */
+  private selection: { text: string; path: string } | null = null
   private contextEl: HTMLElement | null = null
   /** The ready questions offered while the conversation is empty. */
   private presetsEl: HTMLElement | null = null
@@ -291,6 +294,7 @@ export class ChatView extends ItemView {
       })
     }
 
+    this.renderSelectionRow(el)
     this.renderProjectRows(el)
     this.renderFileRows(el)
 
@@ -372,6 +376,36 @@ export class ChatView extends ItemView {
         this.renderContext()
       })
     })
+  }
+
+  /** The passage chosen for the next question, with its size and the way to leave it out. */
+  private renderSelectionRow(el: HTMLElement): void {
+    const chosen = this.selection
+    if (!chosen) return
+    const row = el.createDiv('pm-chat-context-row')
+    setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'text-select')
+    const name = chosen.path.replace(/^.*\//, '').replace(/\.md$/i, '')
+    row.createSpan({
+      cls: 'pm-chat-context-name',
+      text: t('chat.selection', { name, count: chosen.text.length }),
+      attr: { title: chosen.text.slice(0, 500) }
+    })
+    const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.selectionOff') } })
+    setIcon(off, 'x')
+    off.addEventListener('click', () => {
+      this.selection = null
+      this.renderContext()
+    })
+  }
+
+  /**
+   * A passage to ask about, chosen in a note: it goes with the next question, quoted
+   * under it, and the ready questions for a passage are offered first.
+   */
+  attachSelection(text: string, path: string): void {
+    this.selection = { text, path }
+    this.renderContext()
+    window.setTimeout(() => this.inputEl?.focus(), 0)
   }
 
   /** One row a file attached, with the way to open it and the way to take it off. */
@@ -1189,8 +1223,10 @@ export class ChatView extends ItemView {
       about.createSpan({ text: turn.requirements.join(', ') })
       about.setAttr('title', turn.requirements.join(', '))
     }
-    if (turn.role === 'assistant' && !turn.failed) {
-      // A reply is written in Markdown more often than not: lists, code, tables.
+    // A reply is written in Markdown more often than not: lists, code, tables. A question
+    // is too when it quotes a passage, which reads as a quote rather than as marks.
+    const quoting = turn.role === 'user' && /(^|\n)> /.test(turn.content)
+    if ((turn.role === 'assistant' && !turn.failed) || quoting) {
       void MarkdownRenderer.render(this.app, turn.content, body, '', this.turnsComponent ?? this)
     } else body.setText(turn.content)
 
@@ -1387,7 +1423,8 @@ export class ChatView extends ItemView {
         this.projects.some((path) => this.plugin.index.projectRef(path) !== null) ||
         this.collections.some((path) => this.plugin.index.collectionRef(path) !== null),
       requirements: this.attached.length > 0,
-      file: this.files.length > 0
+      file: this.files.length > 0,
+      selection: this.selection !== null
     })
   }
 
@@ -1475,11 +1512,17 @@ export class ChatView extends ItemView {
     if (!text || this.pending || this.missing()) return
     if (ready === undefined) this.inputEl.value = ''
     const context = this.useNote && this.contextFile ? this.contextFile.path : undefined
+    // The passage chosen goes with this question, quoted under it, and only this one.
+    const chosen = this.selection
+    const content = chosen
+      ? withSelection(text, chosen.text, (sent, total) => t('chat.selectionCut', { sent, total }))
+      : text
+    this.selection = null
     this.turns = [
       ...withoutFailure(this.turns),
       {
         role: 'user',
-        content: text,
+        content,
         at: new Date().toISOString(),
         ...(context ? { context } : {}),
         ...(this.projects.length ? { projects: [...this.projects] } : {}),

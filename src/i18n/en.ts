@@ -1380,7 +1380,7 @@ export const en = {
   'settings.chat.maxTokensDesc':
     'In tokens. 0: no limit of the plugin’s own, the gateway’s applies (recommended: a planning update proposes many changes).',
   'chat.saveReply': 'Save the reply as a note (in the attached project’s folder)',
-  'chat.insertReply': 'Insert the reply into the open note',
+  'chat.insertReply': 'Insert the reply into the open note (in place of the selection, if any)',
   'chat.savedReply': 'Reply saved in {path}.',
   'chat.insertNone': 'No open note to insert the reply into.',
   'chat.inserted': 'Reply inserted at the cursor in “{name}”.',
@@ -1402,6 +1402,30 @@ export const en = {
     'What are the tasks of {Person:person} in this project: in progress, late, coming up? Point out what holds them up and what they hold up.',
   'chat.preset.translateTo': 'Translate into a language',
   'chat.preset.translateToQ': 'Translate these requirements into {Language:language}.',
+  'command.askChat': 'Ask the chat about the selection',
+  'chat.selection': {
+    one: 'Selection from “{name}”: {count} character',
+    other: 'Selection from “{name}”: {count} characters'
+  },
+  'chat.selectionOff': 'Do not attach this passage',
+  'chat.selectionCut': '[… the passage is cut here: {sent} characters sent out of {total}.]',
+  'chat.presetScope.selection': 'selection',
+  'chat.preset.rephrase': 'Rephrase',
+  'chat.preset.rephraseQ':
+    'Rephrase this passage to make it clearer and more direct, without changing its meaning or its figures.',
+  'chat.preset.shorten': 'Shorten',
+  'chat.preset.shortenQ': 'Shorten this passage by about half, keeping the facts, figures and decisions.',
+  'chat.preset.proofread': 'Proofread',
+  'chat.preset.proofreadQ':
+    'Correct the spelling, grammar and punctuation of this passage without changing its style; give the corrected text, then the list of corrections.',
+  'chat.preset.explain': 'Explain',
+  'chat.preset.explainQ':
+    'Explain this passage simply: what it says, what it implies, and the technical terms it uses.',
+  'chat.preset.toRequirements': 'Turn into requirements',
+  'chat.preset.toRequirementsQ':
+    'Write this passage as clear, verifiable requirements, one per obligation, each with a verification method.',
+  'chat.preset.translateSelection': 'Translate',
+  'chat.preset.translateSelectionQ': 'Translate this passage into {Language:language}, keeping its formatting.',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

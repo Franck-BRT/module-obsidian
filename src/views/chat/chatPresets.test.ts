@@ -14,7 +14,7 @@ describe('the shipped questions', () => {
 
   it('offer something for a project, requirements, a note, a file and a planning', () => {
     const scopes = new Set(builtinPrompts().map((prompt) => prompt.scope))
-    expect([...scopes].sort()).toEqual(['file', 'note', 'planning', 'project', 'requirements'])
+    expect([...scopes].sort()).toEqual(['file', 'note', 'planning', 'project', 'requirements', 'selection'])
   })
 })
 
@@ -24,6 +24,6 @@ describe('the shipped questions with blanks', () => {
     const kinds = builtinPrompts()
       .map((prompt) => promptParams(prompt.question).map((param) => param.kind))
       .filter((found) => found.length)
-    expect(kinds).toEqual([['date'], ['person'], ['language']])
+    expect(kinds).toEqual([['language'], ['date'], ['person'], ['language']])
   })
 })

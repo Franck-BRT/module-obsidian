@@ -71,12 +71,12 @@ describe('availablePrompts', () => {
 
   it('offers only what fits what is attached, the most particular first', () => {
     expect(
-      availablePrompts(prompts, { note: true, project: false, requirements: false, file: false }).map(
+      availablePrompts(prompts, { note: true, project: false, requirements: false, file: false, selection: false }).map(
         (prompt) => prompt.question
       )
     ).toEqual(['Résume la note.', 'Tout'])
     expect(
-      availablePrompts(prompts, { note: false, project: false, requirements: true, file: false }).map(
+      availablePrompts(prompts, { note: false, project: false, requirements: true, file: false, selection: false }).map(
         (prompt) => prompt.question
       )
     ).toEqual(['Rends-les vérifiables.', 'Tout'])
@@ -85,7 +85,7 @@ describe('availablePrompts', () => {
   // The reader's own first within a group, and a shipped question they copied only once.
   it('puts the reader’s own first, and offers one question once', () => {
     expect(
-      availablePrompts(prompts, { note: false, project: true, requirements: false, file: false }).map(
+      availablePrompts(prompts, { note: false, project: true, requirements: false, file: false, selection: false }).map(
         (prompt) => prompt.question
       )
     ).toEqual(['Point hebdo.', 'fais le  point.', 'Tout'])
@@ -98,9 +98,24 @@ describe('a planning question', () => {
   // A file read against a project: offered only with both, before anything else.
   it('is offered only with a file and a project, first', () => {
     const offered = (file: boolean, project: boolean): string[] =>
-      availablePrompts(prompts, { note: false, requirements: false, file, project }).map((prompt) => prompt.question)
+      availablePrompts(prompts, { note: false, requirements: false, file, project, selection: false }).map(
+        (prompt) => prompt.question
+      )
     expect(offered(true, true)).toEqual(['Mets à jour', 'Point', 'Résume le document'])
     expect(offered(true, false)).toEqual(['Résume le document'])
     expect(offered(false, true)).toEqual(['Point'])
+  })
+})
+
+describe('a question about a passage', () => {
+  // The passage chosen is what the reader wants to talk about now: its questions first.
+  it('is offered with a passage chosen, before any other', () => {
+    const prompts = parsePrompts('sélection : Reformule.\nprojet : Point\nTout')
+    const offered = (selection: boolean): string[] =>
+      availablePrompts(prompts, { note: false, requirements: false, file: false, project: true, selection }).map(
+        (prompt) => prompt.question
+      )
+    expect(offered(true)).toEqual(['Reformule.', 'Point', 'Tout'])
+    expect(offered(false)).toEqual(['Point', 'Tout'])
   })
 })

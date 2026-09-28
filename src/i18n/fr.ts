@@ -1359,7 +1359,7 @@ export const fr: Catalog = {
   'settings.chat.maxTokensDesc':
     'En jetons. 0 : aucune limite du plugin, celle de la passerelle s’applique (recommandé : une mise à jour de planning propose beaucoup de modifications).',
   'chat.saveReply': 'Enregistrer la réponse comme note (dans le dossier du projet joint)',
-  'chat.insertReply': 'Insérer la réponse dans la note ouverte',
+  'chat.insertReply': 'Insérer la réponse dans la note ouverte (à la place de la sélection s’il y en a une)',
   'chat.savedReply': 'Réponse enregistrée dans {path}.',
   'chat.insertNone': 'Aucune note ouverte où insérer la réponse.',
   'chat.inserted': 'Réponse insérée au curseur dans « {name} ».',
@@ -1381,6 +1381,31 @@ export const fr: Catalog = {
     'Quelles sont les tâches de {Personne:personne} dans ce projet : en cours, en retard, à venir ? Signale ce qui la bloque et ce qu’elle bloque.',
   'chat.preset.translateTo': 'Traduire dans une langue',
   'chat.preset.translateToQ': 'Traduis ces exigences en {Langue:langue}.',
+  'command.askChat': 'Demander au chat à propos de la sélection',
+  'chat.selection': {
+    one: 'Sélection de « {name} » : {count} caractère',
+    other: 'Sélection de « {name} » : {count} caractères'
+  },
+  'chat.selectionOff': 'Ne pas joindre ce passage',
+  'chat.selectionCut': '[… le passage est coupé ici : {sent} caractères envoyés sur {total}.]',
+  'chat.presetScope.selection': 'sélection',
+  'chat.preset.rephrase': 'Reformuler',
+  'chat.preset.rephraseQ':
+    'Reformule ce passage pour qu’il soit plus clair et plus direct, sans en changer le sens ni les chiffres.',
+  'chat.preset.shorten': 'Raccourcir',
+  'chat.preset.shortenQ':
+    'Raccourcis ce passage de moitié environ, en gardant les faits, les chiffres et les décisions.',
+  'chat.preset.proofread': 'Corriger',
+  'chat.preset.proofreadQ':
+    'Corrige l’orthographe, la grammaire et la ponctuation de ce passage, sans changer son style ; donne le texte corrigé, puis la liste des corrections.',
+  'chat.preset.explain': 'Expliquer',
+  'chat.preset.explainQ':
+    'Explique ce passage simplement : ce qu’il dit, ce qu’il implique, et les termes techniques qu’il emploie.',
+  'chat.preset.toRequirements': 'En faire des exigences',
+  'chat.preset.toRequirementsQ':
+    'Formule ce passage en exigences claires et vérifiables, une par obligation, chacune avec une méthode de vérification.',
+  'chat.preset.translateSelection': 'Traduire',
+  'chat.preset.translateSelectionQ': 'Traduis ce passage en {Langue:langue}, en gardant sa mise en forme.',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

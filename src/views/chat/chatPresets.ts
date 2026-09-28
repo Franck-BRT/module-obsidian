@@ -16,6 +16,12 @@ export function builtinPrompts(): ChatPrompt[] {
     own: false
   })
   return [
+    prompt('selection', t('chat.preset.rephrase'), t('chat.preset.rephraseQ')),
+    prompt('selection', t('chat.preset.shorten'), t('chat.preset.shortenQ')),
+    prompt('selection', t('chat.preset.proofread'), t('chat.preset.proofreadQ')),
+    prompt('selection', t('chat.preset.explain'), t('chat.preset.explainQ')),
+    prompt('selection', t('chat.preset.toRequirements'), t('chat.preset.toRequirementsQ')),
+    prompt('selection', t('chat.preset.translateSelection'), t('chat.preset.translateSelectionQ')),
     prompt('planning', t('chat.preset.planning'), t('chat.preset.planningQ')),
     prompt('project', t('chat.preset.status'), t('chat.preset.statusQ')),
     prompt('project', t('chat.preset.late'), t('chat.preset.lateQ')),
@@ -49,6 +55,8 @@ export function scopeWord(scope: PromptScope): string {
       return t('chat.presetScope.file')
     case 'planning':
       return t('chat.presetScope.planning')
+    case 'selection':
+      return t('chat.presetScope.selection')
     case 'any':
       return ''
   }
@@ -66,6 +74,8 @@ export function scopeIcon(scope: PromptScope): string {
       return 'paperclip'
     case 'planning':
       return 'calendar-sync'
+    case 'selection':
+      return 'text-select'
     case 'any':
       return 'message-circle'
   }

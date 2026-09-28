@@ -365,15 +365,33 @@ export default class PMPlugin extends Plugin {
       }
     })
 
+    this.addCommand({
+      id: 'ask-chat-selection',
+      name: t('command.askChat'),
+      editorCheckCallback: (checking, editor, context) => {
+        const selection = editor.getSelection()
+        if (!selection.trim()) return false
+        if (checking) return true
+        void this.chatAboutSelection(selection, context.file?.path ?? '')
+        return true
+      }
+    })
+
     this.registerEvent(
-      this.app.workspace.on('editor-menu', (menu, editor) => {
-        const selection = editor.getSelection().trim()
-        if (!selection) return
+      this.app.workspace.on('editor-menu', (menu, editor, context) => {
+        const selection = editor.getSelection()
+        if (!selection.trim()) return
+        menu.addItem((item) =>
+          item
+            .setTitle(t('command.askChat'))
+            .setIcon('messages-square')
+            .onClick(safeAsync(() => this.chatAboutSelection(selection, context.file?.path ?? '')))
+        )
         menu.addItem((item) =>
           item
             .setTitle(t('command.taskFromSelection'))
             .setIcon('list-plus')
-            .onClick(() => this.createTaskFromText(selection))
+            .onClick(() => this.createTaskFromText(selection.trim()))
         )
       })
     )
@@ -656,6 +674,13 @@ export default class PMPlugin extends Plugin {
     await this.openChat()
     const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
     if (view instanceof ChatView) view.attachProject(path)
+  }
+
+  /** The chat, opened on a passage chosen in a note, for the next question. */
+  async chatAboutSelection(text: string, path: string): Promise<void> {
+    await this.openChat()
+    const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
+    if (view instanceof ChatView) view.attachSelection(text, path)
   }
 
   /** The chat, opened on a collection: its tickets go with every question until taken off. */
