@@ -1,6 +1,8 @@
 import { Modal, Setting, setIcon, type App } from 'obsidian'
 import { fold } from '../../store/library/libraryDoc'
 import { t } from '../../i18n'
+import type { Classification } from '../../store/library/libraryClass'
+import { renderClassifyFields, type ClassifyChoices } from './classifyFields'
 
 /**
  * Which projects documents belong to: none, one or several, ticked in a list that a few
@@ -23,12 +25,15 @@ export interface ChooserRequest {
   chosen: string[]
   /** Offered when some of the files are already in the vault. */
   offerMove?: boolean
+  /** Asked too when documents are poured: how they are filed. */
+  classify?: ClassifyChoices
   confirm: string
 }
 
 export interface ChooserAnswer {
   projects: string[]
   move: boolean
+  classification?: Classification
 }
 
 export function chooseProjects(app: App, request: ChooserRequest): Promise<ChooserAnswer | null> {
@@ -85,6 +90,15 @@ class ProjectChooser extends Modal {
     this.listEl = this.contentEl.createDiv('pm-docs-chooser-list')
     this.renderList()
 
+    const readClassification = request.classify
+      ? renderClassifyFields(
+          this.contentEl.createDiv('pm-docs-chooser-classify'),
+          request.classify,
+          { category: '', lot: '', issuer: '', tags: [] },
+          'guess'
+        )
+      : null
+
     if (request.offerMove) {
       new Setting(this.contentEl)
         .setName(t('library.moveIn'))
@@ -106,7 +120,11 @@ class ProjectChooser extends Modal {
             this.done = true
             // In the order the list gives them, not the order they were ticked.
             const projects = request.projects.map((project) => project.path).filter((path) => this.chosen.has(path))
-            this.resolve({ projects, move: this.move })
+            this.resolve({
+              projects,
+              move: this.move,
+              ...(readClassification ? { classification: readClassification() } : {})
+            })
             this.close()
           })
       )

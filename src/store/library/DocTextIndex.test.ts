@@ -30,6 +30,9 @@ const docOf = (hash: string, file: string): LibraryDoc => ({
   added: '2026-09-28',
   size: 1,
   hash,
+  category: '',
+  lot: '',
+  issuer: '',
   tags: []
 })
 

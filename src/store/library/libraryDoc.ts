@@ -34,6 +34,12 @@ export interface LibraryDoc {
   size: number
   /** SHA-256 of its bytes: the same document poured twice is known by it. */
   hash: string
+  /** What kind of document it is — plan, planning, report —, from the reader's list. */
+  category: string
+  /** The lot or package it belongs to. */
+  lot: string
+  /** Who issued it: a firm, a person. */
+  issuer: string
   tags: string[]
 }
 
@@ -117,6 +123,10 @@ export interface RecordFields {
   added: string
   size: number
   hash: string
+  category?: string
+  lot?: string
+  issuer?: string
+  tags?: string[]
 }
 
 /** The record's text: its fields up top, and a place for the reader's own notes. */
@@ -129,7 +139,11 @@ export function recordContent(fields: RecordFields, notesHeading: string): strin
     added: fields.added,
     size: fields.size,
     sha256: fields.hash,
-    tags: []
+    // Written even empty, so Obsidian's properties show where they are to be filled.
+    category: fields.category ?? '',
+    lot: fields.lot ?? '',
+    issuer: fields.issuer ?? '',
+    tags: fields.tags ?? []
   }
   return `---\n${stringifyYaml(frontmatter).trimEnd()}\n---\n\n## ${notesHeading}\n\n`
 }
@@ -165,6 +179,22 @@ export interface DocQuery {
   project: string
   /** '' for every kind. */
   family: DocFamily | ''
+  /** '' for any; `NO_VALUE` for documents that have none. */
+  category?: string
+  lot?: string
+  issuer?: string
+  /** '' for any tag. */
+  tag?: string
+}
+
+/** Stands for the documents a field was left empty on, in a filter. */
+export const NO_VALUE = ':empty'
+
+/** Whether a field's value answers its filter: any, none, or this one. */
+function answers(value: string, wanted: string | undefined): boolean {
+  if (!wanted) return true
+  if (wanted === NO_VALUE) return !value
+  return fold(value) === fold(wanted)
 }
 
 /**
@@ -182,24 +212,39 @@ export function matchesDoc(
   if (query.project === NO_PROJECT) {
     if (doc.projects.length) return false
   } else if (query.project && !doc.projects.includes(query.project)) return false
+  if (!answers(doc.category, query.category) || !answers(doc.lot, query.lot) || !answers(doc.issuer, query.issuer)) {
+    return false
+  }
+  if (query.tag && !doc.tags.some((tag) => fold(tag) === fold(query.tag ?? ''))) return false
   const words = fold(query.text).split(/\s+/).filter(Boolean)
   if (!words.length) return true
   const name = doc.file.slice(doc.file.lastIndexOf('/') + 1)
-  const haystack = fold([doc.title, name, ...doc.projects.map(projectTitle), ...doc.tags].join('\n'))
+  const haystack = fold(
+    [doc.title, name, doc.category, doc.lot, doc.issuer, ...doc.projects.map(projectTitle), ...doc.tags].join('\n')
+  )
   if (words.every((word) => haystack.includes(word))) return true
   const text = content(doc)
   return !!text && words.every((word) => haystack.includes(word) || text.includes(word))
 }
 
-export type DocSort = 'added' | 'title'
+export type DocSort = 'added' | 'title' | 'category'
 
 const collator = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' })
 
-/** The latest in first, or by title as a person would file them: « Lot 2 » before « Lot 10 ». */
+/** The latest in first, by title as a person would file them — « Lot 2 » before « Lot 10 » —, or by category. */
 export function sortDocs(docs: LibraryDoc[], by: DocSort): LibraryDoc[] {
   const byTitle = (a: LibraryDoc, b: LibraryDoc): number =>
     collator.compare(a.title, b.title) || a.record.localeCompare(b.record)
-  return [...docs].sort((a, b) => (by === 'title' ? byTitle(a, b) : b.added.localeCompare(a.added) || byTitle(a, b)))
+  // By category, the uncategorised last, then by title within each.
+  const byCategory = (a: LibraryDoc, b: LibraryDoc): number =>
+    Number(!a.category) - Number(!b.category) || collator.compare(a.category, b.category) || byTitle(a, b)
+  return [...docs].sort((a, b) =>
+    by === 'title'
+      ? byTitle(a, b)
+      : by === 'category'
+        ? byCategory(a, b)
+        : b.added.localeCompare(a.added) || byTitle(a, b)
+  )
 }
 
 /** The fingerprint of a file's bytes, in hexadecimal. */

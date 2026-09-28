@@ -7,6 +7,7 @@ import {
   linkPath,
   matchesDoc,
   NO_PROJECT,
+  NO_VALUE,
   sortDocs,
   stringList,
   titleFromName,
@@ -21,6 +22,9 @@ const doc = (over: Partial<LibraryDoc>): LibraryDoc => ({
   added: '2026-09-28',
   size: 1,
   hash: '',
+  category: '',
+  lot: '',
+  issuer: '',
   tags: [],
   ...over
 })
@@ -107,6 +111,37 @@ describe('libraryDoc', () => {
     expect(matchesDoc(inGc, query('', { project: NO_PROJECT }), title)).toBe(false)
     expect(matchesDoc(loose, query('', { family: 'sheet' }), title)).toBe(true)
     expect(matchesDoc(inGc, query('', { family: 'sheet' }), title)).toBe(false)
+  })
+
+  it('filters by category, lot, issuer — or their absence — and tag, whatever the case', () => {
+    const plan = doc({ category: 'Plan', lot: 'Lot 2', issuer: 'Setec', tags: ['Chantier'] })
+    const bare = doc({})
+    const q = (over: object) => ({ ...query(''), ...over })
+    expect(matchesDoc(plan, q({ category: 'plan' }), title)).toBe(true)
+    expect(matchesDoc(bare, q({ category: 'Plan' }), title)).toBe(false)
+    expect(matchesDoc(bare, q({ category: NO_VALUE }), title)).toBe(true)
+    expect(matchesDoc(plan, q({ category: NO_VALUE }), title)).toBe(false)
+    expect(matchesDoc(plan, q({ lot: 'Lot 2', issuer: 'setec' }), title)).toBe(true)
+    expect(matchesDoc(plan, q({ lot: 'Lot 1' }), title)).toBe(false)
+    expect(matchesDoc(plan, q({ issuer: NO_VALUE }), title)).toBe(false)
+    expect(matchesDoc(plan, q({ tag: 'chantier' }), title)).toBe(true)
+    expect(matchesDoc(bare, q({ tag: 'chantier' }), title)).toBe(false)
+  })
+
+  it('finds a document by its category, lot and issuer typed in the search', () => {
+    const plan = doc({ title: 'Coffrage', category: 'Plan', lot: 'Lot 2', issuer: 'Setec' })
+    expect(matchesDoc(plan, query('plan setec'), title)).toBe(true)
+    expect(matchesDoc(plan, query('lot 2'), title)).toBe(true)
+  })
+
+  it('sorts by category, those with none last, then by title', () => {
+    const docs = [
+      doc({ record: 'a', title: 'Z', category: 'Plan' }),
+      doc({ record: 'b', title: 'A', category: '' }),
+      doc({ record: 'c', title: 'B', category: 'Compte rendu' }),
+      doc({ record: 'd', title: 'A', category: 'Plan' })
+    ]
+    expect(sortDocs(docs, 'category').map((d) => d.record)).toEqual(['c', 'd', 'a', 'b'])
   })
 
   it('sorts the latest first, or by title with numbers read as numbers', () => {

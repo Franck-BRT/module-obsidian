@@ -2,6 +2,7 @@ import { TFile, type App } from 'obsidian'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { makeFakeApp, type FakeVault } from '../../../test/fakeVault'
 import { DocLibrary, type PourItem } from './DocLibrary'
+import { parseCategories } from './libraryClass'
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
 const outside = (name: string, text: string): PourItem => ({ kind: 'bytes', name, bytes: bytes(text) })
@@ -210,6 +211,80 @@ describe('DocLibrary', () => {
     expect(library.pourable(fileAt(GC))).toBe(false)
     expect(library.pourable(fileAt('Chats/Conversation.md'))).toBe(false)
     expect(library.pourable(fileAt('Bibliothèque/x.md'))).toBe(false)
+  })
+
+  it('files what it pours: the classification given, the category guessed from the name when none is', async () => {
+    const categories = parseCategories('Plan : plan, coupe\nCompte rendu : cr, réunion')
+    await library.pour(
+      [outside('CR réunion 12.pdf', 'cr'), outside('Coupe AA.pdf', 'coupe'), outside('Divers.pdf', 'd')],
+      {
+        projects: [],
+        move: false,
+        today: TODAY,
+        categories,
+        classification: { lot: 'Lot 2', issuer: 'Setec', tags: ['#chantier', 'zone B'] }
+      }
+    )
+    const byTitle = new Map(library.docs().map((doc) => [doc.title, doc]))
+    expect(byTitle.get('CR réunion 12')).toMatchObject({
+      category: 'Compte rendu',
+      lot: 'Lot 2',
+      issuer: 'Setec',
+      tags: ['chantier', 'zone-B']
+    })
+    expect(byTitle.get('Coupe AA')?.category).toBe('Plan')
+    expect(byTitle.get('Divers')?.category).toBe('')
+    // A category given is not second-guessed.
+    await library.pour([outside('CR 13.pdf', 'cr13')], {
+      projects: [],
+      move: false,
+      today: TODAY,
+      categories,
+      classification: { category: 'Plan' }
+    })
+    expect(library.docs().find((doc) => doc.title === 'CR 13')?.category).toBe('Plan')
+  })
+
+  it('poured again, keeps how it was filed and only fills what it lacked', async () => {
+    await library.pour([outside('x.pdf', 'x')], {
+      projects: [],
+      move: false,
+      today: TODAY,
+      classification: { category: 'Plan', tags: ['a'] }
+    })
+    await library.pour([outside('x.pdf', 'x')], {
+      projects: [],
+      move: false,
+      today: TODAY,
+      classification: { category: 'Devis', lot: 'Lot 3', tags: ['b'] }
+    })
+    expect(library.docs()[0]).toMatchObject({ category: 'Plan', lot: 'Lot 3', tags: ['a', 'b'] })
+    const before = vault.modifyCount.get('Bibliothèque/x.md') ?? 0
+    await library.pour([outside('x.pdf', 'x')], {
+      projects: [],
+      move: false,
+      today: TODAY,
+      classification: { category: 'Devis', lot: 'Lot 4', tags: ['a'] }
+    })
+    expect(vault.modifyCount.get('Bibliothèque/x.md') ?? 0).toBe(before)
+  })
+
+  it('files a document again, the fields given replacing, tags added, and takes tags off', async () => {
+    await library.pour([outside('x.pdf', 'x')], {
+      projects: [],
+      move: false,
+      today: TODAY,
+      classification: { category: 'Plan', lot: 'Lot 1', tags: ['a'] }
+    })
+    await library.classify(library.docs()[0], { lot: 'Lot 2', issuer: '', tags: ['b'] })
+    expect(library.docs()[0]).toMatchObject({ category: 'Plan', lot: 'Lot 2', issuer: '', tags: ['a', 'b'] })
+    await library.untag(library.docs()[0], ['A'])
+    expect(library.docs()[0].tags).toEqual(['b'])
+  })
+
+  it('reads a lot written as a bare number, and tags written with a hash', async () => {
+    await vault.create('Bibliothèque/Main.md', '---\npm-library-doc: true\nlot: 2\ntags:\n  - "#chantier"\n---\n')
+    expect(library.docs()[0]).toMatchObject({ lot: '2', category: '', issuer: '', tags: ['chantier'] })
   })
 
   it('finds a record wherever it has been moved, and tells records from other notes', async () => {

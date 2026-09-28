@@ -645,6 +645,8 @@ export interface PMSettings {
   projectsFolder: string
   /** Where the document library keeps its records, and the files brought into it. */
   libraryFolder: string
+  /** The library's categories, one a line with the words that recognise them; empty is the shipped list. */
+  libraryCategories: string
   peopleFolder: string
   /** Folders discovery skips, for templates and archives holding pm-project notes. */
   excludedFolders: string[]
@@ -951,6 +953,7 @@ export function seedPriorities(): PriorityConfig[] {
 export const DEFAULT_SETTINGS: PMSettings = {
   projectsFolder: 'Projects',
   libraryFolder: 'Library',
+  libraryCategories: '',
   peopleFolder: 'People',
   excludedFolders: [],
   defaultView: 'table',

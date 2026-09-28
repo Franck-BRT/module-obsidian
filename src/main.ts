@@ -89,6 +89,8 @@ import {
 import { DocLibrary, type PourItem } from './store/library/DocLibrary'
 import { DocTextIndex, folderShelf } from './store/library/DocTextIndex'
 import type { LibraryDoc } from './store/library/libraryDoc'
+import { guessCategory, knownValues, parseCategories, type Category } from './store/library/libraryClass'
+import { askClassification, GUESS_CATEGORY, type ClassifyChoices } from './views/documents/classifyFields'
 import { keptTranscript, scanPages, transcribeScan } from './views/chat/scanReader'
 import { LlmClient } from './store/llm/client'
 import { chatModel } from './store/chat/chatModels'
@@ -782,6 +784,56 @@ export default class PMPlugin extends Plugin {
       .sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }))
   }
 
+  /** The library's categories: the reader's list, or the one shipped when it is empty. */
+  libraryCategories(): Category[] {
+    return parseCategories(this.settings.libraryCategories.trim() || t('library.defaultCategories'))
+  }
+
+  /** What the fields a document is filed by offer: the categories, and what the library already holds. */
+  libraryChoices(): ClassifyChoices {
+    const docs = this.library.docs()
+    const categories = this.libraryCategories().map((category) => category.name)
+    for (const used of knownValues(docs, 'category')) if (!categories.includes(used)) categories.push(used)
+    return {
+      categories,
+      lots: knownValues(docs, 'lot'),
+      issuers: knownValues(docs, 'issuer'),
+      tags: knownValues(docs, 'tags')
+    }
+  }
+
+  /**
+   * Files documents: one as its fields are to be edited, several at once where an empty
+   * field leaves each one's own alone and tags are added.
+   */
+  async classifyDocuments(docs: LibraryDoc[]): Promise<void> {
+    if (!docs.length) return
+    const one = docs.length === 1 ? docs[0] : null
+    const given = await askClassification(
+      this.app,
+      one ? t('library.classifyOne', { title: one.title }) : t('library.classifySeveral', { count: docs.length }),
+      this.libraryChoices(),
+      one
+        ? { category: one.category, lot: one.lot, issuer: one.issuer, tags: one.tags }
+        : { category: '', lot: '', issuer: '', tags: [] },
+      !one
+    )
+    if (!given) return
+    if (one) {
+      await this.library.setClassification(one, given)
+      return
+    }
+    // Asked to guess: each one without a category gets the one its name suggests.
+    const categories = this.libraryCategories()
+    for (const doc of docs) {
+      const category =
+        given.category === GUESS_CATEGORY
+          ? doc.category || guessCategory(`${doc.title} ${doc.file.slice(doc.file.lastIndexOf('/') + 1)}`, categories)
+          : given.category
+      await this.library.classify(doc, { ...given, category })
+    }
+  }
+
   askLibraryProjects(request: Omit<ChooserRequest, 'projects'>): Promise<ChooserAnswer | null> {
     return chooseProjects(this.app, { ...request, projects: this.libraryProjects() })
   }
@@ -798,13 +850,20 @@ export default class PMPlugin extends Plugin {
       names: items.map((item) => (item.kind === 'vault' ? item.file.path : item.name)),
       chosen: preset,
       offerMove: inVault,
+      classify: this.libraryChoices(),
       confirm: t('library.pourConfirm')
     })
     if (!answer) return
     const progress = items.length > 3 ? new Notice(t('library.pouring', { done: 0, total: items.length }), 0) : null
     const report = await this.library.pour(
       items,
-      { projects: answer.projects, move: answer.move, today: today().toString() },
+      {
+        projects: answer.projects,
+        move: answer.move,
+        today: today().toString(),
+        classification: answer.classification,
+        categories: this.libraryCategories()
+      },
       (done, total) => progress?.setMessage(t('library.pouring', { done, total }))
     )
     progress?.hide()

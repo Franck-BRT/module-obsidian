@@ -3,6 +3,7 @@ import { sanitizeFileName } from '../../utils'
 import { DOCS_FOLDER_NAME, freePath } from '../DocumentStore'
 import { refLink } from '../refs'
 import { ensureFolder } from '../vaultFs'
+import { cleanTags, guessCategory, mergeClassification, type Category, type Classification } from './libraryClass'
 import {
   baseNameOf,
   extensionOf,
@@ -45,6 +46,10 @@ export interface PourOptions {
   move: boolean
   /** The day, YYYY-MM-DD, the documents are recorded as having come in. */
   today: string
+  /** How they are filed; an empty category is guessed from each one's name. */
+  classification?: Partial<Classification>
+  /** The categories a name is recognised against. */
+  categories?: Category[]
 }
 
 export interface PourReport {
@@ -110,7 +115,10 @@ export class DocLibrary {
       added: typeof fm.added === 'string' ? fm.added : '',
       size: typeof fm.size === 'number' ? fm.size : 0,
       hash: typeof fm.sha256 === 'string' ? fm.sha256 : '',
-      tags: stringList(fm.tags)
+      category: text(fm.category),
+      lot: text(fm.lot),
+      issuer: text(fm.issuer),
+      tags: cleanTags(stringList(fm.tags))
     }
   }
 
@@ -147,7 +155,9 @@ export class DocLibrary {
         known ??= byHash.get(hash)
         if (known) {
           const projects = await this.addProjects(known, options.projects)
-          const updated = { ...known, projects }
+          // Poured again, it keeps how it was filed; only what it lacked is given.
+          const filed = await this.fillClassification(known, this.classificationFor(name, options))
+          const updated = { ...known, ...filed, projects }
           byHash.set(hash, updated)
           if (known.file) byFile.set(known.file, updated)
           if (!report.known.includes(known.record)) report.known.push(known.record)
@@ -187,6 +197,10 @@ export class DocLibrary {
     const recordPath = await freePath(this.app, this.root, clean, 'md')
     const title = titleFromName(name)
     const projects = [...new Set(options.projects)]
+    const filed = mergeClassification(
+      { category: '', lot: '', issuer: '', tags: [] },
+      this.classificationFor(name, options)
+    )
     const record = await this.app.vault.create(
       recordPath,
       recordContent(
@@ -196,7 +210,8 @@ export class DocLibrary {
           projectLinks: projects.map((path) => this.projectLink(path, recordPath)),
           added: options.today,
           size: bytes.byteLength,
-          hash
+          hash,
+          ...filed
         },
         this.words().notesHeading
       )
@@ -209,8 +224,66 @@ export class DocLibrary {
       added: options.today,
       size: bytes.byteLength,
       hash,
-      tags: []
+      ...filed
     }
+  }
+
+  /** What a poured file is filed as: what was given, its category guessed from its name when none was. */
+  private classificationFor(name: string, options: PourOptions): Partial<Classification> {
+    const given = options.classification ?? {}
+    const category = given.category?.trim() || guessCategory(name, options.categories ?? [])
+    return { ...given, category }
+  }
+
+  /** Gives a document the fields it had left empty, and the tags it lacked; returns how it is filed. */
+  private async fillClassification(doc: LibraryDoc, given: Partial<Classification>): Promise<Classification> {
+    const current = { category: doc.category, lot: doc.lot, issuer: doc.issuer, tags: doc.tags }
+    const filled = mergeClassification(current, {
+      category: current.category ? '' : given.category,
+      lot: current.lot ? '' : given.lot,
+      issuer: current.issuer ? '' : given.issuer,
+      tags: given.tags
+    })
+    if (JSON.stringify(filled) !== JSON.stringify(current)) await this.writeClassification(doc, filled)
+    return filled
+  }
+
+  /**
+   * Files a document: the fields given replace what it had, the empty ones leave it, and
+   * tags are added to — so a lot given to forty documents at once wipes none of their categories.
+   */
+  async classify(doc: LibraryDoc, given: Partial<Classification>): Promise<void> {
+    await this.writeClassification(
+      doc,
+      mergeClassification({ category: doc.category, lot: doc.lot, issuer: doc.issuer, tags: doc.tags }, given)
+    )
+  }
+
+  /** Files a document exactly so: every field, tags included, as given. */
+  async setClassification(doc: LibraryDoc, filed: Classification): Promise<void> {
+    await this.writeClassification(doc, { ...filed, tags: cleanTags(filed.tags) })
+  }
+
+  /** Takes tags off a document. */
+  async untag(doc: LibraryDoc, tags: string[]): Promise<void> {
+    const off = new Set(tags.map((tag) => tag.toLowerCase()))
+    await this.writeClassification(doc, {
+      category: doc.category,
+      lot: doc.lot,
+      issuer: doc.issuer,
+      tags: doc.tags.filter((tag) => !off.has(tag.toLowerCase()))
+    })
+  }
+
+  private async writeClassification(doc: LibraryDoc, filed: Classification): Promise<void> {
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return
+    await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+      fm.category = filed.category
+      fm.lot = filed.lot
+      fm.issuer = filed.issuer
+      fm.tags = filed.tags
+    })
   }
 
   /**
@@ -258,4 +331,11 @@ export class DocLibrary {
       await this.app.fileManager.trashFile(file)
     }
   }
+}
+
+/** A frontmatter field as text: a number written bare in YAML — a lot « 2 » — read as one too. */
+function text(raw: unknown): string {
+  if (typeof raw === 'string') return raw.trim()
+  if (typeof raw === 'number') return String(raw)
+  return ''
 }

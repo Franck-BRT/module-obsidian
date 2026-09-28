@@ -20,6 +20,7 @@ import {
   familyOf,
   matchesDoc,
   NO_PROJECT,
+  NO_VALUE,
   sortDocs,
   type DocFamily,
   type DocQuery,
@@ -33,6 +34,7 @@ import { documentOf } from '../../store/Document'
 import { openTaskModal } from '../../ui/ModalFactory'
 import { docStateLabel } from '../library/docStateLabel'
 import { fileInRegister } from './registerActions'
+import { knownValues } from '../../store/library/libraryClass'
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
@@ -246,10 +248,45 @@ export class DocumentsView extends ItemView {
         this.renderBody()
       }
     )
+    // How the documents are filed: a filter a field, once the library holds a value for it.
+    const docs = this.plugin.library.docs()
+    const field = (key: 'category' | 'lot' | 'issuer', all: string, none: string): void => {
+      const values = knownValues(docs, key)
+      const current = this.query[key] ?? ''
+      if (!values.length && !current) return
+      if (current && current !== NO_VALUE && !values.includes(current)) values.unshift(current)
+      select(
+        [['', all], [NO_VALUE, none], ...values.map((value): [string, string] => [value, value])],
+        current,
+        (chosen) => {
+          this.query = { ...this.query, [key]: chosen }
+          this.shown = PAGE
+          this.renderBody()
+        }
+      )
+    }
+    field('category', t('library.allCategories'), t('library.noCategory'))
+    field('lot', t('library.allLots'), t('library.noLot'))
+    field('issuer', t('library.allIssuers'), t('library.noIssuer'))
+    const tags = knownValues(docs, 'tags')
+    if (tags.length || this.query.tag) {
+      const current = this.query.tag ?? ''
+      if (current && !tags.includes(current)) tags.unshift(current)
+      select(
+        [['', t('library.allTags')], ...tags.map((tag): [string, string] => [tag, `#${tag}`])],
+        current,
+        (chosen) => {
+          this.query = { ...this.query, tag: chosen }
+          this.shown = PAGE
+          this.renderBody()
+        }
+      )
+    }
     select(
       [
         ['added', t('library.sortAdded')],
-        ['title', t('library.sortTitle')]
+        ['title', t('library.sortTitle')],
+        ['category', t('library.sortCategory')]
       ],
       this.sort,
       (sort) => {
@@ -347,6 +384,10 @@ export class DocumentsView extends ItemView {
           await this.plugin.chatAboutDocuments(picked.map((doc) => doc.file))
         })
       )
+    new ButtonComponent(bar)
+      .setButtonText(t('library.classify'))
+      .setIcon('tags')
+      .onClick(safeAsync(() => this.plugin.classifyDocuments(all.filter((doc) => this.picked.has(doc.record)))))
     new ButtonComponent(bar).setButtonText(t('library.unpick')).onClick(() => {
       this.picked.clear()
       this.renderBody()
@@ -432,11 +473,14 @@ export class DocumentsView extends ItemView {
       void this.openDoc(doc)
     })
     const meta = main.createDiv('pm-docs-meta')
+    if (doc.category) meta.createSpan({ cls: 'pm-docs-category', text: doc.category })
     if (doc.file) {
       meta.createSpan({ cls: 'pm-docs-name', text: doc.file.slice(doc.file.lastIndexOf('/') + 1) })
     } else meta.createSpan({ cls: 'pm-docs-lost', text: t('library.fileMissing') })
     if (doc.size) meta.createSpan({ text: formatBytes(doc.size, this.units()) })
     if (doc.added) meta.createSpan({ text: t('library.addedOn', { date: formatDate(doc.added) }) })
+    if (doc.lot) meta.createSpan({ text: doc.lot })
+    if (doc.issuer) meta.createSpan({ text: t('library.issuedBy', { issuer: doc.issuer }) })
     this.renderTextState(meta, doc)
 
     // Where the words searched for are in what it says.
@@ -465,6 +509,20 @@ export class DocumentsView extends ItemView {
       })
       chip.addEventListener('click', () => {
         this.query = { ...this.query, project: path }
+        this.shown = PAGE
+        this.renderFilters()
+        this.renderBody()
+      })
+    }
+    // Its tags, each one a filter.
+    for (const tag of doc.tags) {
+      const chip = chips.createEl('button', {
+        cls: 'pm-docs-chip pm-docs-tag',
+        text: `#${tag}`,
+        attr: { title: t('library.filterTag', { tag }) }
+      })
+      chip.addEventListener('click', () => {
+        this.query = { ...this.query, tag }
         this.shown = PAGE
         this.renderFilters()
         this.renderBody()
@@ -575,6 +633,12 @@ export class DocumentsView extends ItemView {
         .setTitle(t('library.editProjects'))
         .setIcon('folder-kanban')
         .onClick(safeAsync(() => this.editProjects(doc)))
+    )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('library.classify'))
+        .setIcon('tags')
+        .onClick(safeAsync(() => this.plugin.classifyDocuments([doc])))
     )
     const family = familyOf(doc.file || doc.title)
     if (doc.file && (family === 'pdf' || family === 'image')) {

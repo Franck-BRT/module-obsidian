@@ -107,6 +107,32 @@ export class PMSettingTab extends PluginSettingTab {
               placeholder: 'Library'
             }
           },
+          {
+            name: t('settings.libraryCategories.name'),
+            desc: t('settings.libraryCategories.desc'),
+            render: (setting: Setting) => {
+              setting.setClass('pm-settings-prompt')
+              setting.addTextArea((area) => {
+                area.inputEl.rows = 10
+                // The shipped list shown when the reader has none of their own, to start from.
+                area
+                  .setPlaceholder(t('library.defaultCategories'))
+                  .setValue(this.plugin.settings.libraryCategories)
+                  .onChange((value) => {
+                    this.plugin.settings.libraryCategories = value
+                    this.persist()
+                  })
+              })
+              setting.addButton((button) =>
+                button.setButtonText(t('settings.libraryCategories.copy')).onClick(() => {
+                  if (this.plugin.settings.libraryCategories.trim()) return
+                  this.plugin.settings.libraryCategories = t('library.defaultCategories')
+                  this.persist()
+                  this.update()
+                })
+              )
+            }
+          },
           this.excludedFoldersPage(),
           {
             name: t('settings.projectSurface.name'),

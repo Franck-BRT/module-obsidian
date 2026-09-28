@@ -554,3 +554,29 @@ button.pm-docs-reg.is-old:not(.clickable-icon) {
 .pm-docs-reg--obsolete {
   --pm-docs-reg: var(--text-faint);
 }
+
+/* How a document is filed: its category first in its line, its tags among its projects. */
+.pm-docs-category {
+  padding: 0 var(--size-4-1);
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-weight: var(--font-medium);
+}
+
+button.pm-docs-tag:not(.clickable-icon) {
+  border-color: transparent;
+  background: rgb(from var(--text-accent) r g b / 10%);
+  color: var(--text-accent);
+}
+
+.pm-docs-classify-head {
+  margin: var(--size-4-4) 0 var(--size-4-1);
+  font-weight: var(--font-semibold);
+}
+
+.pm-docs-classify-note {
+  margin-top: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
