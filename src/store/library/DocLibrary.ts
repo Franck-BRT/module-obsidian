@@ -55,6 +55,8 @@ export interface PourOptions {
 export interface PourReport {
   /** Records written, one a new document. */
   added: string[]
+  /** The new documents as the library reads them — before Obsidian has, a moment after. */
+  docs: LibraryDoc[]
   /** Documents that were already there, by their records; the projects were added to them. */
   known: string[]
   failed: { name: string; reason: string }[]
@@ -141,7 +143,7 @@ export class DocLibrary {
     options: PourOptions,
     onProgress?: (done: number, total: number) => void
   ): Promise<PourReport> {
-    const report: PourReport = { added: [], known: [], failed: [] }
+    const report: PourReport = { added: [], docs: [], known: [], failed: [] }
     const existing = this.docs()
     const byHash = new Map(existing.filter((doc) => doc.hash).map((doc) => [doc.hash, doc]))
     const byFile = new Map(existing.filter((doc) => doc.file).map((doc) => [doc.file, doc]))
@@ -166,6 +168,7 @@ export class DocLibrary {
           byHash.set(hash, doc)
           if (doc.file) byFile.set(doc.file, doc)
           report.added.push(doc.record)
+          report.docs.push(doc)
         }
       } catch (error) {
         report.failed.push({ name, reason: error instanceof Error ? error.message : String(error) })

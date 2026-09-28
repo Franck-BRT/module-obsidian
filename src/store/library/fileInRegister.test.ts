@@ -8,7 +8,7 @@ import { ProjectStore } from '../ProjectStore'
 import { VaultIndex } from '../VaultIndex'
 import { DocLibrary } from './DocLibrary'
 import { fileAsNew, fileAsVersion, type RegisterDeps } from './fileInRegister'
-import { registerCandidates, registerEntries } from './libraryRegister'
+import { proposeMatches, registerCandidates, registerEntries } from './libraryRegister'
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
 const DEPOSIT = { by: 'Anne', note: 'Versé depuis la bibliothèque' }
@@ -131,5 +131,37 @@ describe('a library document followed in a register', () => {
       status: statusForState('received', store.configFor(await reload()).statuses)
     })
     expect(documentOf(written ?? makeTask())).toMatchObject({ state: 'received', file: doc.file, linked: true })
+  })
+
+  it('proposes, right after a pour, the awaited document a file is, and files it there once chosen', async () => {
+    await store.insertTask(
+      project,
+      makeTask({ title: 'Plan de coffrage radier', type: 'document', document: makeDocument({ reference: 'PL-002' }) })
+    )
+    await store.insertTask(
+      project,
+      makeTask({ title: 'Note de calcul radier', type: 'document', document: makeDocument({ reference: 'NDC-04' }) })
+    )
+    const report = await library.pour(
+      [
+        { kind: 'bytes', name: 'PL_002 indice A.pdf', bytes: bytes('plan') },
+        { kind: 'bytes', name: 'Facture 12.pdf', bytes: bytes('facture') }
+      ],
+      { projects: [project.filePath], move: false, today: '2026-09-28' }
+    )
+    // The new documents come back from the pour itself, not from a cache still catching up.
+    const proposals = proposeMatches(
+      report.docs.map((doc) => ({ key: doc.record, title: doc.title, file: doc.file, projects: doc.projects })),
+      [await reload()]
+    )
+    expect(proposals.map((p) => [p.subject.title, p.chosen?.task.title])).toEqual([
+      ['PL 002 indice A', 'Plan de coffrage radier']
+    ])
+    const [proposal] = proposals
+    const match = proposal.chosen
+    if (!match) throw new Error('no match')
+    await fileAsVersion(deps, match.project, match.task, fileAt(proposal.subject.file), DEPOSIT)
+    const ticket = (await reload()).tasks.find((task) => task.title === 'Plan de coffrage radier')
+    expect(documentOf(ticket ?? makeTask())).toMatchObject({ state: 'received', file: proposal.subject.file })
   })
 })

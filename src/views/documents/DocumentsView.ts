@@ -34,6 +34,7 @@ import { documentOf } from '../../store/Document'
 import { openTaskModal } from '../../ui/ModalFactory'
 import { docStateLabel } from '../library/docStateLabel'
 import { fileInRegister } from './registerActions'
+import { proposeRegisterMatches } from './matchRegister'
 import { knownValues } from '../../store/library/libraryClass'
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
@@ -388,6 +389,15 @@ export class DocumentsView extends ItemView {
       .setButtonText(t('library.classify'))
       .setIcon('tags')
       .onClick(safeAsync(() => this.plugin.classifyDocuments(all.filter((doc) => this.picked.has(doc.record)))))
+    new ButtonComponent(bar)
+      .setButtonText(t('library.matchPicked'))
+      .setIcon('clipboard-list')
+      .onClick(
+        safeAsync(async () => {
+          await proposeRegisterMatches(this.plugin, picked, true)
+          await this.loadRegister()
+        })
+      )
     new ButtonComponent(bar).setButtonText(t('library.unpick')).onClick(() => {
       this.picked.clear()
       this.renderBody()

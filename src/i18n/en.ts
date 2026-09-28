@@ -1808,5 +1808,20 @@ export const en = {
   'library.sortCategory': 'By category',
   'library.issuedBy': 'issued by {issuer}',
   'library.filterTag': 'Show only the documents tagged #{tag}',
-  'library.categoryGuessMissing': 'From each file’s name, for those that have none'
+  'library.categoryGuessMissing': 'From each file’s name, for those that have none',
+  'library.matchTitle': {
+    one: '{count} document looks like an awaited document',
+    other: '{count} documents look like awaited documents'
+  },
+  'library.matchIntro':
+    'The projects’ registers were waiting for documents that look like these. Each file chosen becomes version 1 of the awaited document, which moves to received; the file stays in the library.',
+  'library.matchSkip': 'Do not match',
+  'library.matchLater': 'Later',
+  'library.matchConfirm': 'Match',
+  'library.matchDone': {
+    one: '{count} document matched with the register.',
+    other: '{count} documents matched with the register.'
+  },
+  'library.matchNone': 'No document awaited by the registers looks like these documents.',
+  'library.matchPicked': 'Match with the register'
 } as const

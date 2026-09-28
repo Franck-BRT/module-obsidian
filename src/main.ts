@@ -91,6 +91,7 @@ import { DocTextIndex, folderShelf } from './store/library/DocTextIndex'
 import type { LibraryDoc } from './store/library/libraryDoc'
 import { guessCategory, knownValues, parseCategories, type Category } from './store/library/libraryClass'
 import { askClassification, GUESS_CATEGORY, type ClassifyChoices } from './views/documents/classifyFields'
+import { proposeRegisterMatches } from './views/documents/matchRegister'
 import { keptTranscript, scanPages, transcribeScan } from './views/chat/scanReader'
 import { LlmClient } from './store/llm/client'
 import { chatModel } from './store/chat/chatModels'
@@ -880,6 +881,8 @@ export default class PMPlugin extends Plugin {
     await this.openDocuments(answer.projects.length === 1 ? answer.projects[0] : '')
     // Read what they say, for searching; the library shows how far it has got.
     void this.libraryText.refresh(this.library.docs())
+    // Those that look like documents a register is waiting for, offered to be filed as them.
+    if (report.docs.length) await proposeRegisterMatches(this, report.docs, false)
   }
 
   /**

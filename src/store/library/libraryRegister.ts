@@ -87,3 +87,122 @@ export function registerCandidates(project: Project, title: string, file: string
     )
     .map((each) => each.task)
 }
+
+/**
+ * Words too common in a document's name to say which one it is: an issue, a version, the
+ * little words of a title.
+ */
+const COMMON = new Set([
+  'les',
+  'des',
+  'pour',
+  'avec',
+  'sur',
+  'dans',
+  'une',
+  'aux',
+  'par',
+  'the',
+  'and',
+  'for',
+  'with',
+  'indice',
+  'ind',
+  'version',
+  'rev',
+  'revision',
+  'issue',
+  'copie',
+  'copy',
+  'final',
+  'pdf',
+  'doc',
+  'docx'
+])
+
+/** A reference as its letters and digits alone: « PL-002 », « pl_002 » and « PL 002 » are one. */
+function squeezed(text: string): string {
+  return fold(text).replace(/[^\p{L}\p{N}]+/gu, '')
+}
+
+/**
+ * How surely a file is the awaited document a ticket stands for, 0 when it is not one.
+ *
+ * The ticket's reference written in the file's name is all but proof — a drawing is sent
+ * under its number. Otherwise the words they share must be most of the ticket's title:
+ * « Planning génie civil » is « Planning_GC_genie_civil_indC.pdf », but « Planning » alone,
+ * shared by every planning of the project, is not enough.
+ */
+export function matchScore(ticket: Task, title: string, fileName: string): number {
+  const meta = documentOf(ticket)
+  const name = `${title} ${fileName.replace(/\.[^.]+$/, '')}`
+  const reference = squeezed(meta.reference)
+  // Four characters at least, so « A » or « 02 » is not found in every name.
+  const byReference = reference.length >= 4 && squeezed(name).includes(reference) ? 10 : 0
+  const wanted = titleWords(name)
+  const own = [...titleWords(ticket.title)].filter((word) => !COMMON.has(word))
+  const shared = own.filter((word) => wanted.has(word)).length
+  // Three words in four at least: « Note de calcul des pieux » is not « Note de calcul du radier ».
+  const byWords = own.length && shared >= 2 && shared / own.length >= 0.75 ? shared : 0
+  return byReference + byWords
+}
+
+export interface MatchCandidate {
+  project: Project
+  task: Task
+  score: number
+}
+
+export interface MatchSubject {
+  /** What tells one document from another in the answer: its record's path. */
+  key: string
+  title: string
+  file: string
+  projects: string[]
+}
+
+export interface MatchProposal {
+  subject: MatchSubject
+  /** The awaited tickets it may be, the likeliest first. */
+  candidates: MatchCandidate[]
+  /** The one proposed: the likeliest no other document was given first. */
+  chosen: MatchCandidate | null
+}
+
+/**
+ * The awaited documents new files may be, each file offered the tickets of its own
+ * projects that it looks like — or, when it belongs to none, only those whose reference its
+ * name carries. Each ticket is proposed once: to the file it looks most like, the others
+ * offered their next likeliest. Files that look like nothing are left out.
+ */
+export function proposeMatches(subjects: MatchSubject[], projects: Project[]): MatchProposal[] {
+  const proposals: MatchProposal[] = []
+  for (const subject of subjects) {
+    const name = subject.file.slice(subject.file.lastIndexOf('/') + 1)
+    const scope = subject.projects.length
+      ? projects.filter((project) => subject.projects.includes(project.filePath))
+      : projects
+    const candidates: MatchCandidate[] = []
+    for (const project of scope) {
+      for (const { task } of flattenTasks(project.tasks)) {
+        if (!isDocument(task) || documentOf(task).state !== 'expected') continue
+        const score = matchScore(task, subject.title, name)
+        // Outside its own projects, only a reference is sure enough.
+        if (score > 0 && (subject.projects.length || score >= 10)) candidates.push({ project, task, score })
+      }
+    }
+    candidates.sort((a, b) => b.score - a.score || a.task.title.localeCompare(b.task.title))
+    if (candidates.length) proposals.push({ subject, candidates, chosen: null })
+  }
+  // The surest pairs first: a ticket goes to the file it looks most like.
+  const pairs = proposals
+    .flatMap((proposal) => proposal.candidates.map((candidate) => ({ proposal, candidate })))
+    .sort((a, b) => b.candidate.score - a.candidate.score)
+  const taken = new Set<string>()
+  for (const { proposal, candidate } of pairs) {
+    if (proposal.chosen || taken.has(candidate.task.id)) continue
+    proposal.chosen = candidate
+    taken.add(candidate.task.id)
+  }
+  return proposals
+}

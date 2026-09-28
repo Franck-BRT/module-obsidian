@@ -43,7 +43,8 @@ describe('DocLibrary', () => {
       move: false,
       today: TODAY
     })
-    expect(report).toEqual({ added: ['Bibliothèque/Planning_GC  S39.md'], known: [], failed: [] })
+    expect(report).toMatchObject({ added: ['Bibliothèque/Planning_GC  S39.md'], known: [], failed: [] })
+    expect(report.docs.map((each) => each.record)).toEqual(report.added)
     expect(vault.getAbstractFileByPath('Bibliothèque/Fichiers/Planning_GC  S39.pdf')).toBeInstanceOf(TFile)
     const [doc] = library.docs()
     expect(doc).toMatchObject({
@@ -73,7 +74,7 @@ describe('DocLibrary', () => {
       move: false,
       today: TODAY
     })
-    expect(report).toEqual({ added: [], known: ['Bibliothèque/CR 12.md'], failed: [] })
+    expect(report).toMatchObject({ added: [], docs: [], known: ['Bibliothèque/CR 12.md'], failed: [] })
     expect(library.docs()).toHaveLength(1)
     expect(library.docs()[0].projects).toEqual([GC, TUNNEL])
     expect(vault.getAbstractFileByPath('Bibliothèque/Fichiers/CR 12 (copie).pdf')).toBeNull()

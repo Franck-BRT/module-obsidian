@@ -1789,5 +1789,20 @@ export const fr: Catalog = {
   'library.sortCategory': 'Par catégorie',
   'library.issuedBy': 'émis par {issuer}',
   'library.filterTag': 'Ne montrer que les documents étiquetés #{tag}',
-  'library.categoryGuessMissing': 'D’après le nom de chaque fichier, pour ceux qui n’en ont pas'
+  'library.categoryGuessMissing': 'D’après le nom de chaque fichier, pour ceux qui n’en ont pas',
+  'library.matchTitle': {
+    one: '{count} document ressemble à un document attendu',
+    other: '{count} documents ressemblent à des documents attendus'
+  },
+  'library.matchIntro':
+    'Le registre des projets attendait des documents qui ressemblent à ceux-ci. Chaque fichier choisi devient la version 1 du document attendu, qui passe à « reçu » ; le fichier reste dans la bibliothèque.',
+  'library.matchSkip': 'Ne pas rapprocher',
+  'library.matchLater': 'Plus tard',
+  'library.matchConfirm': 'Rapprocher',
+  'library.matchDone': {
+    one: '{count} document rapproché du registre.',
+    other: '{count} documents rapprochés du registre.'
+  },
+  'library.matchNone': 'Aucun document attendu des registres ne ressemble à ces documents.',
+  'library.matchPicked': 'Rapprocher du registre'
 }
