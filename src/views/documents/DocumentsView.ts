@@ -27,6 +27,7 @@ import {
   type LibraryDoc
 } from '../../store/library/libraryDoc'
 import type { PourItem } from '../../store/library/DocLibrary'
+import { snippet } from '../../store/library/docText'
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
@@ -53,6 +54,7 @@ export class DocumentsView extends ItemView {
   private filtersEl!: HTMLElement
   private bodyEl!: HTMLElement
   private redrawTimer: number | null = null
+  private textTimer: number | null = null
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -107,6 +109,9 @@ export class DocumentsView extends ItemView {
     this.registerEvent(this.app.vault.on('delete', later))
     this.registerEvent(this.app.vault.on('rename', later))
     this.register(this.plugin.index.onChange(later))
+    // What the documents say, read in the background: the list follows as it comes in.
+    this.register(this.plugin.libraryText.onChange(() => this.textSoon()))
+    void this.plugin.libraryText.refresh(this.plugin.library.docs())
 
     this.registerDomEvent(this.containerEl, 'dragover', (event) => {
       if (!event.dataTransfer?.types.includes('Files')) return
@@ -129,6 +134,7 @@ export class DocumentsView extends ItemView {
 
   onClose(): Promise<void> {
     if (this.redrawTimer !== null) window.clearTimeout(this.redrawTimer)
+    if (this.textTimer !== null) window.clearTimeout(this.textTimer)
     return Promise.resolve()
   }
 
@@ -138,7 +144,21 @@ export class DocumentsView extends ItemView {
       this.redrawTimer = null
       this.renderToolbar()
       this.renderBody()
+      // A document come in, or changed, has its text read.
+      void this.plugin.libraryText.refresh(this.plugin.library.docs())
     }, 300)
+  }
+
+  /**
+   * The list drawn again as texts come in — at most a few times a second, so a long reading
+   * shows its progress without redrawing a thousand rows for every document.
+   */
+  private textSoon(): void {
+    if (this.textTimer !== null) return
+    this.textTimer = window.setTimeout(() => {
+      this.textTimer = null
+      this.renderBody()
+    }, 400)
   }
 
   private renderToolbar(): void {
@@ -233,16 +253,26 @@ export class DocumentsView extends ItemView {
       this.renderEmpty()
       return
     }
+    const texts = this.plugin.libraryText
     const found = sortDocs(
-      all.filter((doc) => matchesDoc(doc, this.query, (path) => this.projectTitle(path))),
+      all.filter((doc) =>
+        matchesDoc(
+          doc,
+          this.query,
+          (path) => this.projectTitle(path),
+          (each) => texts.folded(each)
+        )
+      ),
       this.sort
     )
     const summary = this.bodyEl.createDiv('pm-docs-summary')
-    summary.setText(
-      found.length === all.length
-        ? t('library.count', { count: all.length })
-        : t('library.found', { count: found.length, total: all.length })
-    )
+    summary.createSpan({
+      text:
+        found.length === all.length
+          ? t('library.count', { count: all.length })
+          : t('library.found', { count: found.length, total: all.length })
+    })
+    this.renderTextStatus(summary, all)
     if (!found.length) {
       this.bodyEl.createDiv({ cls: 'pm-docs-none', text: t('library.nothingFound') })
       return
@@ -257,6 +287,48 @@ export class DocumentsView extends ItemView {
           this.renderBody()
         })
     }
+  }
+
+  /** How far the reading of what the documents say has got, and the scans left to read. */
+  private renderTextStatus(parent: HTMLElement, all: LibraryDoc[]): void {
+    const texts = this.plugin.libraryText
+    const status = parent.createSpan('pm-docs-text-status')
+    const progress = texts.progress
+    if (progress?.total) {
+      status.createSpan({
+        cls: 'pm-docs-reading',
+        text: t('library.textReading', { done: progress.done, total: progress.total })
+      })
+      return
+    }
+    const counts = texts.counts(all)
+    status.createSpan({ text: t('library.textRead', { count: counts.read, total: all.length }) })
+    const scans = all.filter((doc) => texts.entry(doc)?.state === 'scan')
+    if (scans.length) {
+      const link = status.createEl('a', {
+        cls: 'pm-docs-scans',
+        href: '#',
+        text: t('library.scansWaiting', { count: scans.length })
+      })
+      link.setAttr('title', t('library.readScansHint'))
+      link.addEventListener('click', (event) => {
+        event.preventDefault()
+        this.confirmReadScans(scans)
+      })
+    }
+  }
+
+  private confirmReadScans(scans: LibraryDoc[]): void {
+    new ConfirmModal(
+      this.plugin,
+      t('library.readScansTitle', { count: scans.length }),
+      t('library.readScansText'),
+      t('library.readScans'),
+      false,
+      async () => {
+        await this.plugin.readLibraryScans(scans)
+      }
+    ).open()
   }
 
   private renderEmpty(): void {
@@ -289,6 +361,21 @@ export class DocumentsView extends ItemView {
     } else meta.createSpan({ cls: 'pm-docs-lost', text: t('library.fileMissing') })
     if (doc.size) meta.createSpan({ text: formatBytes(doc.size, this.units()) })
     if (doc.added) meta.createSpan({ text: t('library.addedOn', { date: formatDate(doc.added) }) })
+    this.renderTextState(meta, doc)
+
+    // Where the words searched for are in what it says.
+    const words = this.query.text.split(/\s+/).filter(Boolean)
+    const entry = words.length ? this.plugin.libraryText.entry(doc) : undefined
+    const found = entry?.text ? snippet(entry.text, words, this.plugin.libraryText.folded(doc)) : null
+    if (found) {
+      const line = main.createDiv('pm-docs-snippet')
+      if (found.before) line.appendText('… ')
+      for (const part of found.parts) {
+        if (part.hit) line.createEl('mark', { text: part.text })
+        else line.appendText(part.text)
+      }
+      if (found.after) line.appendText(' …')
+    }
 
     const chips = main.createDiv('pm-docs-projects')
     if (!doc.projects.length) chips.createSpan({ cls: 'pm-docs-chip is-none', text: t('library.noProject') })
@@ -317,6 +404,26 @@ export class DocumentsView extends ItemView {
       .extraSettingsEl.addEventListener('click', (event) => this.showMenu(doc, event))
   }
 
+  /** Said when its text could not be read, and offered to a model when it is a scan. */
+  private renderTextState(meta: HTMLElement, doc: LibraryDoc): void {
+    const entry = this.plugin.libraryText.entry(doc)
+    if (!entry || entry.state === 'ok') return
+    if (entry.state === 'scan') {
+      const badge = meta.createEl('a', { cls: 'pm-docs-badge is-scan', href: '#', text: t('library.scanBadge') })
+      badge.setAttr('title', t('library.scanBadgeHint'))
+      badge.addEventListener('click', (event) => {
+        event.preventDefault()
+        void this.plugin.readLibraryScans([doc])
+      })
+      return
+    }
+    meta.createSpan({
+      cls: 'pm-docs-badge',
+      text: t('library.noText'),
+      attr: { title: t(`library.noText.${entry.state}`) }
+    })
+  }
+
   private showMenu(doc: LibraryDoc, event: MouseEvent): void {
     const menu = new Menu()
     menu.addItem((item) =>
@@ -338,6 +445,27 @@ export class DocumentsView extends ItemView {
         .setIcon('folder-kanban')
         .onClick(safeAsync(() => this.editProjects(doc)))
     )
+    const family = familyOf(doc.file || doc.title)
+    if (doc.file && (family === 'pdf' || family === 'image')) {
+      menu.addItem((item) =>
+        item
+          .setTitle(t('library.readScan'))
+          .setIcon('scan-text')
+          .onClick(
+            safeAsync(async () => {
+              await this.plugin.readLibraryScans([doc])
+            })
+          )
+      )
+    }
+    if (doc.file) {
+      menu.addItem((item) =>
+        item
+          .setTitle(t('library.reread'))
+          .setIcon('refresh-cw')
+          .onClick(safeAsync(() => this.plugin.libraryText.reread(doc)))
+      )
+    }
     menu.addSeparator()
     menu.addItem((item) =>
       item
@@ -379,6 +507,8 @@ export class DocumentsView extends ItemView {
       this.plugin,
       t('library.removeTitle', { title: doc.title }),
       keptInLibrary ? t('library.removeWithFile') : t('library.removeRecordOnly'),
+      t('library.remove'),
+      true,
       () => this.plugin.library.remove(doc)
     ).open()
   }
@@ -415,12 +545,14 @@ export class DocumentsView extends ItemView {
   }
 }
 
-/** A yes or no before something that cannot be taken back from here. */
+/** A yes or no before something that cannot be taken back, or that takes its time. */
 class ConfirmModal extends Modal {
   constructor(
     private plugin: PMPlugin,
     private heading: string,
     private text: string,
+    private confirm: string,
+    private destructive: boolean,
     private run: () => Promise<void>
   ) {
     super(plugin.app)
@@ -432,15 +564,12 @@ class ConfirmModal extends Modal {
     new Setting(this.contentEl)
       .addButton((button) => button.setButtonText(t('common.cancel')).onClick(() => this.close()))
       .addButton((button) =>
-        button
-          .setButtonText(t('library.remove'))
-          .setDestructive()
-          .onClick(
-            safeAsync(async () => {
-              this.close()
-              await this.run()
-            })
-          )
+        (this.destructive ? button.setDestructive() : button.setCta()).setButtonText(this.confirm).onClick(
+          safeAsync(async () => {
+            this.close()
+            await this.run()
+          })
+        )
       )
   }
 

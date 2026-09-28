@@ -169,9 +169,15 @@ export interface DocQuery {
 
 /**
  * Whether a document answers a search: every word typed is found somewhere in its title,
- * its file's name, the names of its projects or its tags, whatever the case and accents.
+ * its file's name, the names of its projects, its tags or what it says, whatever the case
+ * and accents. `content` gives what it says, already folded.
  */
-export function matchesDoc(doc: LibraryDoc, query: DocQuery, projectTitle: (path: string) => string): boolean {
+export function matchesDoc(
+  doc: LibraryDoc,
+  query: DocQuery,
+  projectTitle: (path: string) => string,
+  content: (doc: LibraryDoc) => string = () => ''
+): boolean {
   if (query.family && familyOf(doc.file || doc.title) !== query.family) return false
   if (query.project === NO_PROJECT) {
     if (doc.projects.length) return false
@@ -180,7 +186,9 @@ export function matchesDoc(doc: LibraryDoc, query: DocQuery, projectTitle: (path
   if (!words.length) return true
   const name = doc.file.slice(doc.file.lastIndexOf('/') + 1)
   const haystack = fold([doc.title, name, ...doc.projects.map(projectTitle), ...doc.tags].join('\n'))
-  return words.every((word) => haystack.includes(word))
+  if (words.every((word) => haystack.includes(word))) return true
+  const text = content(doc)
+  return !!text && words.every((word) => haystack.includes(word) || text.includes(word))
 }
 
 export type DocSort = 'added' | 'title'

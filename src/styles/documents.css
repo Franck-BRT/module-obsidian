@@ -53,9 +53,64 @@
 }
 
 .pm-docs-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--size-2-2) var(--size-4-3);
   margin: var(--size-2-2) 0 var(--size-4-2);
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
+}
+
+/* How far the reading of the contents has got, and the scans left for a model. */
+.pm-docs-text-status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 var(--size-4-2);
+}
+
+.pm-docs-reading {
+  color: var(--text-accent);
+}
+
+.pm-docs-scans {
+  color: var(--text-accent);
+}
+
+/* Where the words searched for are in what the document says. */
+.pm-docs-snippet {
+  display: -webkit-box;
+  margin-top: var(--size-2-3);
+  padding: var(--size-2-2) var(--size-4-2);
+  overflow: hidden;
+  border-left: 2px solid var(--background-modifier-border-hover);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: var(--line-height-normal);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.pm-docs-snippet mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: rgb(from var(--text-highlight-bg, var(--color-yellow)) r g b / 35%);
+  color: var(--text-normal);
+}
+
+.pm-docs-badge {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+a.pm-docs-badge.is-scan {
+  color: var(--color-orange);
+  font-style: normal;
+  text-decoration: none;
+}
+
+a.pm-docs-badge.is-scan:hover {
+  text-decoration: underline;
 }
 
 .pm-docs-none {

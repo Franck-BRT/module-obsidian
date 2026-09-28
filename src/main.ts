@@ -87,6 +87,11 @@ import {
   type ProjectOption
 } from './views/documents/ProjectChooser'
 import { DocLibrary, type PourItem } from './store/library/DocLibrary'
+import { DocTextIndex, folderShelf } from './store/library/DocTextIndex'
+import type { LibraryDoc } from './store/library/libraryDoc'
+import { keptTranscript, scanPages, transcribeScan } from './views/chat/scanReader'
+import { LlmClient } from './store/llm/client'
+import { chatModel } from './store/chat/chatModels'
 import { noteExportLabel, registerReqEditorMenu } from './views/requirements/reqEditorMenu'
 import { exportNoteDocx } from './views/requirements/exportDocx'
 import { reqBlockRanges } from './store/requirements/reqFence'
@@ -112,6 +117,8 @@ export default class PMPlugin extends Plugin {
   documents!: DocumentStore
   /** Every document poured into the library, whatever project it belongs to. */
   library!: DocLibrary
+  /** What the library's documents say, read once and kept, for searching. */
+  libraryText!: DocTextIndex
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver
@@ -170,6 +177,19 @@ export default class PMPlugin extends Plugin {
       () => this.settings.libraryFolder.trim() || 'Library',
       () => ({ filesFolder: '_files', notesHeading: t('library.notesHeading') }),
       (path) => this.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, '')
+    )
+    this.libraryText = new DocTextIndex(
+      this.app,
+      folderShelf(this.app, () => `${this.library.root}/.text`),
+      {
+        words: () => ({
+          from: t('email.from'),
+          to: t('email.to'),
+          date: t('email.date'),
+          attachments: t('library.mailAttachments')
+        }),
+        kept: (file) => keptTranscript(this.app, file)
+      }
     )
     this.requirements = new RequirementStore(
       this.app,
@@ -799,6 +819,40 @@ export default class PMPlugin extends Plugin {
     }
     new Notice(parts.join('\n'), report.failed.length ? 0 : 6000)
     await this.openDocuments(answer.projects.length === 1 ? answer.projects[0] : '')
+    // Read what they say, for searching; the library shows how far it has got.
+    void this.libraryText.refresh(this.library.docs())
+  }
+
+  /**
+   * Scans read by the model that sees, one after another, so the library's search finds
+   * what they say; false when no model is set up to read them.
+   */
+  async readLibraryScans(docs: LibraryDoc[]): Promise<boolean> {
+    const llm = this.settings.llm
+    const model = llm.modelOcr.trim() || chatModel(this.settings.chat.model, llm.modelText)
+    if (!llm.enabled || !llm.baseUrl.trim() || !model) {
+      new Notice(t('library.scanNoModel'), 10000)
+      return false
+    }
+    const client = new LlmClient({ settings: llm })
+    for (const doc of docs) {
+      try {
+        await this.libraryText.readScan(doc, async (file, bytes) => {
+          const source = await scanPages(file, bytes)
+          try {
+            return (await transcribeScan(this.app, client, model, file, source)).text
+          } finally {
+            source.close()
+          }
+        })
+      } catch (error) {
+        new Notice(
+          t('library.scanFailed', { title: doc.title, reason: error instanceof Error ? error.message : String(error) }),
+          10000
+        )
+      }
+    }
+    return true
   }
 
   /** Files and folders of the vault, poured in: a folder brings every file it holds. */

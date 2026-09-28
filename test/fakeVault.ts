@@ -68,6 +68,7 @@ export class FakeVault {
     const entry = this.files.get(file.path)
     if (!entry) throw new Error(`modify: ${file.path} does not exist`)
     entry.content = content
+    entry.binary = undefined
     bump(this.modifyCount, file.path)
     this.emit('modify', file)
   }
@@ -77,6 +78,7 @@ export class FakeVault {
     if (!entry) throw new Error(`process: ${file.path} does not exist`)
     const next = fn(entry.content)
     entry.content = next
+    entry.binary = undefined
     bump(this.modifyCount, file.path)
     this.emit('modify', file)
     return next

@@ -44,22 +44,14 @@ import {
   fileText,
   filesContext,
   FileReadError,
-  imageDataUrl,
   isImage,
   isReadable,
   readPdfText,
   type ContextFile,
   type FileProblem
 } from '../../store/chat/chatFile'
-import {
-  needsOcr,
-  readTranscript,
-  transcribe,
-  transcriptNote,
-  transcriptPath,
-  type OcrSource
-} from '../../store/chat/ocr'
-import { pdfPages } from './pdfPages'
+import { needsOcr, transcriptPath } from '../../store/chat/ocr'
+import { scanPages, transcribeScan } from './scanReader'
 import { keepDroppedFile } from '../../store/chat/keepFile'
 import { chatModel, chatModels } from '../../store/chat/chatModels'
 import { availablePrompts, parsePrompts, type ChatPrompt } from '../../store/chat/chatPrompts'
@@ -595,66 +587,25 @@ export class ChatView extends ItemView {
    */
   private async readAttached(file: TFile): Promise<string> {
     const bytes = new Uint8Array(await this.app.vault.readBinary(file))
-    if (isImage(file.extension)) {
-      return this.transcribed(file, { pages: 1, render: () => Promise.resolve(imageDataUrl(file.extension, bytes)) })
+    if (!isImage(file.extension)) {
+      if (file.extension.toLowerCase() !== 'pdf') return fileText(file.extension, bytes)
+      let text = ''
+      let pages = 1
+      try {
+        ;({ text, pages } = await readPdfText(bytes))
+      } catch {
+        // A PDF this plugin cannot take apart may still be one the viewer can draw.
+      }
+      if (!this.ocrForced.has(file.path) && !needsOcr(text, pages)) return text
     }
-    if (file.extension.toLowerCase() !== 'pdf') return fileText(file.extension, bytes)
-    let text = ''
-    let pages = 1
+    const source = await scanPages(file, bytes)
     try {
-      ;({ text, pages } = await readPdfText(bytes))
-    } catch {
-      // A PDF this plugin cannot take apart may still be one the viewer can draw.
-    }
-    if (!this.ocrForced.has(file.path) && !needsOcr(text, pages)) return text
-    const source = await pdfPages(bytes)
-    try {
-      return await this.transcribed(file, source)
+      const model = this.plugin.settings.llm.modelOcr.trim() || this.model
+      const read = await transcribeScan(this.app, this.llm, model, file, source)
+      if (read.fresh) this.renderContext()
+      return read.text
     } finally {
       source.close()
-    }
-  }
-
-  /**
-   * A document read by a model that sees, page by page, its transcription kept in a note
-   * beside it — and that note read instead, as long as the document has not changed: a
-   * scan is slow and not free to read, and the reader may have corrected what the model
-   * made of a blurred date.
-   */
-  private async transcribed(file: TFile, source: OcrSource): Promise<string> {
-    const path = normalizePath(transcriptPath(file.path, t('chat.ocrSuffix')))
-    const existing = this.app.vault.getAbstractFileByPath(path)
-    if (existing instanceof TFile) {
-      const kept = readTranscript(await this.app.vault.cachedRead(existing))
-      if (kept && kept.sourceMtime === file.stat.mtime && kept.text) return kept.text
-    }
-    const model = this.plugin.settings.llm.modelOcr.trim() || this.model
-    const notice = new Notice(t('chat.ocrReading', { name: file.name, page: 1, total: source.pages }), 0)
-    try {
-      const result = await transcribe(
-        source,
-        (image, page, total) => this.llm.readImage({ model, prompt: t('chat.ocrPrompt', { page, total }), image }),
-        {
-          page: (page, total) => t('chat.ocrPage', { page, total }),
-          failed: (page, reason) => t('chat.ocrPageFailed', { page, reason }),
-          skipped: (count) => t('chat.ocrSkipped', { count })
-        },
-        (page, total) => notice.setMessage(t('chat.ocrReading', { name: file.name, page, total }))
-      )
-      // Nothing read at all is a model that does not see, most likely: said as such.
-      if (!result.read) throw new Error(t('chat.ocrNothing', { model }))
-      const note = transcriptNote(
-        { source: file.path, sourceMtime: file.stat.mtime, model, at: new Date().toISOString(), pages: source.pages },
-        result.text,
-        t('chat.ocrHeading', { model })
-      )
-      if (existing instanceof TFile) await this.app.vault.modify(existing, note)
-      else await this.app.vault.create(path, note)
-      new Notice(t('chat.ocrDone', { name: file.name, path }), 8000)
-      this.renderContext()
-      return result.text
-    } finally {
-      notice.hide()
     }
   }
 

@@ -1701,5 +1701,26 @@ export const fr: Catalog = {
   'library.projectsNoMatch': 'Aucun projet ne correspond.',
   'library.moveIn': 'Ranger les fichiers dans la bibliothèque',
   'library.moveInDesc':
-    'Les fichiers du coffre sont déplacés dans le dossier de la bibliothèque. Sinon, ils restent où ils sont et la bibliothèque les référence. Ceux d’un projet (_docs) ne sont jamais déplacés.'
+    'Les fichiers du coffre sont déplacés dans le dossier de la bibliothèque. Sinon, ils restent où ils sont et la bibliothèque les référence. Ceux d’un projet (_docs) ne sont jamais déplacés.',
+  'library.mailAttachments': 'Pièces jointes :',
+  'library.textReading': 'Lecture des contenus… {done} sur {total}',
+  'library.textRead': 'Contenu lu pour {count} sur {total}',
+  'library.scansWaiting': { one: '{count} scan à lire', other: '{count} scans à lire' },
+  'library.readScansHint':
+    'Faire lire les documents scannés par le modèle qui voit, pour les retrouver par leur contenu',
+  'library.readScansTitle': { one: 'Lire {count} scan avec le modèle ?', other: 'Lire {count} scans avec le modèle ?' },
+  'library.readScansText':
+    'Chaque page est envoyée au modèle de vision configuré (ou au modèle du chat) : cela prend un moment par page et consomme des requêtes. La transcription est gardée à côté du document, le chat s’en servira aussi, et vous pourrez la corriger.',
+  'library.readScans': 'Lire les scans',
+  'library.scanBadge': 'scan non lu',
+  'library.scanBadgeHint': 'Document scanné, sans texte : cliquez pour le faire lire par le modèle',
+  'library.noText': 'contenu non lu',
+  'library.noText.unsupported': 'Ce format n’a pas de lecteur : le document se retrouve par son titre et ses projets.',
+  'library.noText.unreadable': 'Le fichier n’a pas pu être lu (abîmé ou protégé).',
+  'library.noText.empty': 'Le fichier ne contient pas de texte.',
+  'library.readScan': 'Lire le scan avec le modèle',
+  'library.reread': 'Relire le contenu',
+  'library.scanNoModel':
+    'Aucun modèle n’est configuré pour lire les scans : renseigne le modèle de vision (OCR) ou le modèle de texte dans les paramètres du plugin.',
+  'library.scanFailed': '« {title} » n’a pas pu être lu : {reason}'
 }

@@ -1722,5 +1722,25 @@ export const en = {
   'library.projectsNoMatch': 'No project matches.',
   'library.moveIn': 'Move the files into the library',
   'library.moveInDesc':
-    'Files in the vault are moved into the library’s folder. Otherwise they stay where they are and the library refers to them. A project’s own files (_docs) are never moved.'
+    'Files in the vault are moved into the library’s folder. Otherwise they stay where they are and the library refers to them. A project’s own files (_docs) are never moved.',
+  'library.mailAttachments': 'Attachments:',
+  'library.textReading': 'Reading contents… {done} of {total}',
+  'library.textRead': 'Contents read for {count} of {total}',
+  'library.scansWaiting': { one: '{count} scan to read', other: '{count} scans to read' },
+  'library.readScansHint': 'Have the scanned documents read by the model that sees, to find them by what they say',
+  'library.readScansTitle': { one: 'Read {count} scan with the model?', other: 'Read {count} scans with the model?' },
+  'library.readScansText':
+    'Each page is sent to the configured vision model (or the chat’s model): it takes a moment a page and uses requests. The transcription is kept beside the document, the chat uses it too, and you can correct it.',
+  'library.readScans': 'Read the scans',
+  'library.scanBadge': 'scan not read',
+  'library.scanBadgeHint': 'Scanned document with no text: click to have the model read it',
+  'library.noText': 'contents not read',
+  'library.noText.unsupported': 'No reader for this format: the document is found by its title and projects.',
+  'library.noText.unreadable': 'The file could not be read (damaged or protected).',
+  'library.noText.empty': 'The file holds no text.',
+  'library.readScan': 'Read the scan with the model',
+  'library.reread': 'Read the contents again',
+  'library.scanNoModel':
+    'No model is set up to read scans: set the vision (OCR) model or the text model in the plugin settings.',
+  'library.scanFailed': '“{title}” could not be read: {reason}'
 } as const

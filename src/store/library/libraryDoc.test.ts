@@ -85,6 +85,15 @@ describe('libraryDoc', () => {
     expect(matchesDoc(planning, query('   '), title)).toBe(true)
   })
 
+  it('finds a document by what it says too, some words in its name and others in its text', () => {
+    const cr = doc({ title: 'CR réunion 12' })
+    const said = (): string => 'le radier est decale au 19/10'
+    expect(matchesDoc(cr, query('radier'), title, said)).toBe(true)
+    expect(matchesDoc(cr, query('reunion radier'), title, said)).toBe(true)
+    expect(matchesDoc(cr, query('reunion tunnel'), title, said)).toBe(false)
+    expect(matchesDoc(cr, query('radier'), title)).toBe(false)
+  })
+
   it('does not find a word in the folders a file sits in', () => {
     expect(matchesDoc(doc({ file: 'Bibliothèque/Fichiers/x.pdf' }), query('fichiers'), title)).toBe(false)
   })
