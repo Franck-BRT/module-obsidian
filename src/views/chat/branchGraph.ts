@@ -3,7 +3,7 @@ import type PMPlugin from '../../main'
 import { branchCount, conversationTree, type ConversationTree } from '../../store/chat/chatBranches'
 import { BRANCHES_LANGUAGE, localStamp, readChatNote } from '../../store/chat/chatNote'
 import { t } from '../../i18n'
-import { safeAsync } from '../../utils'
+import { safeAsync, svgEl } from '../../utils'
 
 /**
  * A conversation's branches, drawn the way a history of versions is: a dot a question,
@@ -51,40 +51,6 @@ export function renderBranchGraph(parent: HTMLElement, tree: ConversationTree, o
   const x = (lane: number): number => PAD + lane * LANE
   const y = (row: number): number => row * ROW + ROW / 2
 
-  const svg = graph.createSvg('svg', {
-    cls: 'pm-branches-lines',
-    attr: { width, height: rows * ROW, viewBox: `0 0 ${width} ${rows * ROW}`, 'aria-hidden': 'true' }
-  })
-  for (const exchange of tree.exchanges) {
-    if (exchange.parent === null) continue
-    const from = tree.exchanges[exchange.parent]
-    const x1 = x(from.lane)
-    const y1 = y(from.index)
-    const x2 = x(exchange.lane)
-    const y2 = y(exchange.index)
-    // Along its lane when it carries on; off to the right in a curve when it branches.
-    const d =
-      x1 === x2
-        ? `M ${x1} ${y1} L ${x2} ${y2}`
-        : `M ${x1} ${y1} C ${x1} ${y1 + ROW * 0.6}, ${x2} ${y1 + ROW * 0.4}, ${x2} ${y1 + ROW} L ${x2} ${y2}`
-    svg.createSvg('path', {
-      cls: `pm-branches-edge${exchange.current ? ' is-current' : ''}`,
-      attr: { d, stroke: laneColor(exchange.lane), fill: 'none' }
-    })
-  }
-  for (const exchange of tree.exchanges) {
-    svg.createSvg('circle', {
-      cls: `pm-branches-dot${exchange.current ? ' is-current' : ''}`,
-      attr: {
-        cx: x(exchange.lane),
-        cy: y(exchange.index),
-        r: exchange.current ? 5 : 4,
-        stroke: laneColor(exchange.lane),
-        fill: exchange.current ? laneColor(exchange.lane) : 'var(--background-primary)'
-      }
-    })
-  }
-
   const list = graph.createDiv('pm-branches-rows')
   for (const exchange of tree.exchanges) {
     const row = list.createDiv(`pm-branches-row${exchange.current ? ' is-current' : ''}`)
@@ -106,6 +72,50 @@ export function renderBranchGraph(parent: HTMLElement, tree: ConversationTree, o
         if (event.key === 'Enter') pick(exchange.index)
       })
     }
+  }
+
+  // Drawn once the questions are written, behind them: were a line not to draw, the
+  // questions would still be there to pick.
+  const svg = svgEl('svg', {
+    class: 'pm-branches-lines',
+    width,
+    height: rows * ROW,
+    viewBox: `0 0 ${width} ${rows * ROW}`,
+    'aria-hidden': 'true'
+  })
+  graph.prepend(svg)
+  for (const exchange of tree.exchanges) {
+    if (exchange.parent === null) continue
+    const from = tree.exchanges[exchange.parent]
+    const x1 = x(from.lane)
+    const y1 = y(from.index)
+    const x2 = x(exchange.lane)
+    const y2 = y(exchange.index)
+    // Along its lane when it carries on; off to the right in a curve when it branches.
+    const d =
+      x1 === x2
+        ? `M ${x1} ${y1} L ${x2} ${y2}`
+        : `M ${x1} ${y1} C ${x1} ${y1 + ROW * 0.6}, ${x2} ${y1 + ROW * 0.4}, ${x2} ${y1 + ROW} L ${x2} ${y2}`
+    svg.appendChild(
+      svgEl('path', {
+        class: `pm-branches-edge${exchange.current ? ' is-current' : ''}`,
+        d,
+        stroke: laneColor(exchange.lane),
+        fill: 'none'
+      })
+    )
+  }
+  for (const exchange of tree.exchanges) {
+    svg.appendChild(
+      svgEl('circle', {
+        class: `pm-branches-dot${exchange.current ? ' is-current' : ''}`,
+        cx: x(exchange.lane),
+        cy: y(exchange.index),
+        r: exchange.current ? 5 : 4,
+        stroke: laneColor(exchange.lane),
+        fill: exchange.current ? laneColor(exchange.lane) : 'var(--background-primary)'
+      })
+    )
   }
 }
 
