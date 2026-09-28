@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PRIORITIES, DEFAULT_STATUSES, makeDocument, makeProject, makeTask, type Task } from '../../types'
 import {
+  collectionParts,
+  currentCollections,
   currentProjects,
   projectContext,
   projectShare,
@@ -277,5 +279,32 @@ describe('projectParts', () => {
     programme.tasks = [task('Z-1')]
     const alpha = makeProject('Alpha', 'Alpha.md')
     expect(projectParts(programme, [alpha, programme]).map((part) => part.title)).toEqual(['Zénith', 'Alpha'])
+  })
+})
+
+describe('collectionParts', () => {
+  it('writes a collection’s tickets under the projects that hold them, without the archive', () => {
+    const alpha = makeProject('Alpha', 'Alpha.md')
+    const late = task('A-1', { subtasks: [task('A-2'), task('A-3', { archived: true })] })
+    alpha.tasks = [late, task('A-4')]
+    const beta = makeProject('Beta', 'Beta.md')
+    beta.tasks = [task('B-1', { subtasks: [task('B-2')] })]
+    const gamma = makeProject('Gamma', 'Gamma.md')
+    gamma.tasks = [task('G-1')]
+    // The roots the collection gathers: a ticket in Alpha, a subtask in Beta, an archived one.
+    const parts = collectionParts(
+      [late, beta.tasks[0].subtasks[0], task('X', { archived: true })],
+      [alpha, beta, gamma]
+    )
+    expect(parts.map((part) => [part.title, part.tasks.map((one) => one.id)])).toEqual([
+      ['Alpha', ['A-1']],
+      ['Beta', ['B-2']]
+    ])
+    expect(parts[0].tasks[0].subtasks.map((one) => one.id)).toEqual(['A-2'])
+  })
+
+  it('is what the latest question was asked about', () => {
+    expect(currentCollections([{ role: 'user', collections: ['c.md'] }, { role: 'assistant' }])).toEqual(['c.md'])
+    expect(currentCollections([{ role: 'user', collections: ['c.md'] }, { role: 'user' }])).toEqual([])
   })
 })

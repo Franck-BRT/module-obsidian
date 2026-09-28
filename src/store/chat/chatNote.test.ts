@@ -254,3 +254,18 @@ describe('the model a reply was written by', () => {
     expect(read.model).toBeUndefined()
   })
 })
+
+describe('the collections a question was asked about', () => {
+  // Beside the projects, each behind its own mark, and never taken for one another.
+  it('are named after their mark, and read back apart from the projects', () => {
+    const question = {
+      ...turn('user', 'Qu’est-ce qui est en retard ?', 3),
+      projects: ['Work/Génie civil.md'],
+      collections: ['Collections/En retard.md', 'Collections/Équipe Anne.md']
+    }
+    expect(turnMarkdown(question, WORDS).split('\n')[0]).toBe(
+      `> [!question] Vous · ${localStamp(at(3))} · 📁 [[Work/Génie civil|Génie civil]] · 🗂 [[Collections/En retard|En retard]], [[Collections/Équipe Anne|Équipe Anne]]`
+    )
+    expect(readChatNote(chatNoteContent(META, [question], WORDS)).turns).toEqual([question])
+  })
+})

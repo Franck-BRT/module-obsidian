@@ -482,3 +482,20 @@ a.pm-change-target {
   width: 14px;
   height: 14px;
 }
+
+/* A project or a collection in the picker: which it is, by its icon. */
+.pm-chat-pick-line {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.pm-chat-pick-icon {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.pm-chat-pick-icon svg {
+  width: 14px;
+  height: 14px;
+}

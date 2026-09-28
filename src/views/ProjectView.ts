@@ -550,6 +550,13 @@ export class ProjectView extends ItemView {
         .setTooltip(t('chat.projectAbout'))
         .onClick(safeAsync(() => this.plugin.chatAboutProject(primary.filePath)))
     }
+    const spec = this.spec
+    if (spec?.kind === 'collection') {
+      new ExtraButtonComponent(right)
+        .setIcon('messages-square')
+        .setTooltip(t('chat.collectionAbout'))
+        .onClick(safeAsync(() => this.plugin.chatAboutCollection(spec.path)))
+    }
 
     if (!scope.isMulti) {
       new ExtraButtonComponent(right)

@@ -38,8 +38,10 @@ const REQUIREMENTS_MARK = '📋'
 const PROJECT_MARK = '📁'
 /** What marks the files a question was asked with. */
 const FILES_MARK = '📎'
+/** What marks the collections a question was asked about. */
+const COLLECTION_MARK = '🗂'
 /** The marks after which a link is not the note the question was about. */
-const MARKS = [REQUIREMENTS_MARK, PROJECT_MARK, FILES_MARK]
+const MARKS = [REQUIREMENTS_MARK, PROJECT_MARK, FILES_MARK, COLLECTION_MARK]
 
 export interface ChatNote extends ChatNoteMeta {
   turns: ChatTurn[]
@@ -123,9 +125,9 @@ function namedFiles(title: string): string[] {
   return [...segment.matchAll(/\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/g)].map((found) => found[1].trim())
 }
 
-/** The projects a callout's title names after their mark, as the paths of their notes. */
-function namedProjects(title: string): string[] {
-  const segment = title.split(' · ').find((part) => part.trim().startsWith(PROJECT_MARK))
+/** The notes a callout's title names after a mark — projects, collections — as paths. */
+function namedNotes(title: string, mark: string): string[] {
+  const segment = title.split(' · ').find((part) => part.trim().startsWith(mark))
   if (!segment) return []
   return segment
     .split(/\]\]\s*,/)
@@ -141,6 +143,7 @@ export function turnMarkdown(turn: ChatTurn, words: ChatNoteWords): string {
   const about =
     (turn.context ? ` · ${noteLink(turn.context)}` : '') +
     (turn.projects?.length ? ` · ${PROJECT_MARK} ${turn.projects.map(noteLink).join(', ')}` : '') +
+    (turn.collections?.length ? ` · ${COLLECTION_MARK} ${turn.collections.map(noteLink).join(', ')}` : '') +
     (turn.files?.length ? ` · ${FILES_MARK} ${turn.files.map(noteLink).join(', ')}` : '') +
     (turn.requirements?.length ? ` · ${REQUIREMENTS_MARK} ${turn.requirements.map(link).join(', ')}` : '')
   // A reply says which model wrote it: a conversation may change model on the way, and
@@ -223,7 +226,8 @@ export function readChatNote(content: string): ChatNote {
       close()
       const context = role === 'user' ? linkedPath(start[2]) : undefined
       const requirements = role === 'user' ? namedRequirements(start[2]) : []
-      const projects = role === 'user' ? namedProjects(start[2]) : []
+      const projects = role === 'user' ? namedNotes(start[2], PROJECT_MARK) : []
+      const collections = role === 'user' ? namedNotes(start[2], COLLECTION_MARK) : []
       const files = role === 'user' ? namedFiles(start[2]) : []
       const model = role === 'assistant' ? writtenBy(start[2]) : undefined
       current = {
@@ -233,6 +237,7 @@ export function readChatNote(content: string): ChatNote {
           at: fromStamp(start[2]) ?? created,
           ...(context ? { context } : {}),
           ...(projects.length ? { projects } : {}),
+          ...(collections.length ? { collections } : {}),
           ...(files.length ? { files } : {}),
           ...(model ? { model } : {}),
           ...(requirements.length ? { requirements } : {})

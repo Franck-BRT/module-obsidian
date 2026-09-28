@@ -27,6 +27,8 @@ import { chatTitle, isChatNote, localStamp, type ChatNoteWords } from '../../sto
 import { ChatNotes } from '../../store/chat/ChatNotes'
 import { currentRequirements, requirementsContext, type RequirementWords } from '../../store/chat/chatRequirements'
 import {
+  collectionParts,
+  currentCollections,
   currentProjects,
   projectContext,
   projectParts,
@@ -65,6 +67,7 @@ import { builtinPrompts, scopeIcon } from './chatPresets'
 import { requirementOptions } from './changeCard'
 import type { Requirement } from '../../store/requirements/Requirement'
 import { ProjectScope, resolveScopePaths, type ScopeSpec } from '../../store/ProjectScope'
+import { collectionMemberIds } from '../../store/Collection'
 import type { ProjectRef } from '../../store/VaultIndex'
 import { docStateConfigOf, typeConfigOf } from '../../store/TicketPalette'
 import { TASK_TYPES, type DocState, type TaskType } from '../../types'
@@ -110,6 +113,8 @@ export class ChatView extends ItemView {
   private attached: string[] = []
   /** The projects talked about, by the paths of their notes: sent with every question until taken off. */
   private projects: string[] = []
+  /** The collections talked about, by the paths of their notes: sent like the projects. */
+  private collections: string[] = []
   private contextEl: HTMLElement | null = null
   /** The ready questions offered while the conversation is empty. */
   private presetsEl: HTMLElement | null = null
@@ -164,6 +169,10 @@ export class ChatView extends ItemView {
         if (oldPath === this.notePath) this.notePath = file.path
         if (this.projects.includes(oldPath)) {
           this.projects = this.projects.map((path) => (path === oldPath ? file.path : path))
+          this.renderContext()
+        }
+        if (this.collections.includes(oldPath)) {
+          this.collections = this.collections.map((path) => (path === oldPath ? file.path : path))
           this.renderContext()
         }
         if (this.files.includes(oldPath)) {
@@ -300,42 +309,63 @@ export class ChatView extends ItemView {
   }
 
   /**
-   * The project rows: one a project attached, each with the way to take it off, and on the
-   * last the way to add another — or, with none, the way to choose one.
+   * The project and collection rows: one each attached, each with the way to take it off,
+   * and on the last the way to add another — or, with none, the way to choose one.
    */
   private renderProjectRows(el: HTMLElement): void {
-    const refs = this.projects
-      .map((path) => this.plugin.index.projectRef(path))
-      .filter((ref): ref is ProjectRef => ref !== null)
+    const rows: { path: string; title: string; icon: string; open: () => Promise<void>; off: () => void }[] = []
+    for (const path of this.projects) {
+      const ref = this.plugin.index.projectRef(path)
+      if (!ref) continue
+      rows.push({
+        path,
+        title: ref.program ? `${ref.title} (${t('chat.projectProgram')})` : ref.title,
+        icon: 'folder-kanban',
+        open: () => this.plugin.router.openProjectLink(ref.path),
+        off: () => {
+          this.projects = this.projects.filter((each) => each !== path)
+        }
+      })
+    }
+    for (const path of this.collections) {
+      const ref = this.plugin.index.collectionRef(path)
+      if (!ref) continue
+      rows.push({
+        path,
+        title: ref.title,
+        icon: 'library',
+        open: () => this.plugin.router.openScope({ kind: 'collection', path }),
+        off: () => {
+          this.collections = this.collections.filter((each) => each !== path)
+        }
+      })
+    }
     const add = (row: HTMLElement, label: string): void => {
       const pick = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': label } })
       setIcon(pick, 'plus')
       pick.addEventListener('click', () => this.pickProject())
     }
-    if (!refs.length) {
+    if (!rows.length) {
       const row = el.createDiv('pm-chat-context-row pm-chat-context--empty')
       setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'folder-kanban')
       row.createSpan({ cls: 'pm-chat-context-name', text: t('chat.noProject') })
       add(row, t('chat.pickProject'))
       return
     }
-    refs.forEach((ref, at) => {
+    rows.forEach((entry, at) => {
       const row = el.createDiv('pm-chat-context-row')
-      setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'folder-kanban')
+      setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), entry.icon)
       const name = row.createEl('a', {
         cls: 'pm-chat-context-name',
-        text: ref.program ? `${ref.title} (${t('chat.projectProgram')})` : ref.title,
+        text: entry.title,
         attr: { title: t('chat.projectOpen') }
       })
-      name.addEventListener(
-        'click',
-        safeAsync(() => this.plugin.router.openProjectLink(ref.path))
-      )
-      if (at === refs.length - 1) add(row, t('chat.pickAnotherProject'))
+      name.addEventListener('click', safeAsync(entry.open))
+      if (at === rows.length - 1) add(row, t('chat.pickAnotherProject'))
       const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.projectOff') } })
       setIcon(off, 'x')
       off.addEventListener('click', () => {
-        this.projects = this.projects.filter((path) => path !== ref.path)
+        entry.off()
         this.renderContext()
       })
     })
@@ -618,9 +648,39 @@ export class ChatView extends ItemView {
     })
   }
 
+  /** The projects and collections not attached yet, the projects first. */
   private pickProject(): void {
-    const refs = this.plugin.index.projectRefs().filter((ref) => !this.projects.includes(ref.path))
-    new ProjectPicker(this.app, refs, (ref) => this.attachProject(ref.path)).open()
+    const index = this.plugin.index
+    const scopes: ScopeChoice[] = [
+      ...index
+        .projectRefs()
+        .filter((ref) => !this.projects.includes(ref.path))
+        .map((ref) => ({
+          kind: 'project' as const,
+          path: ref.path,
+          title: ref.title,
+          detail: ref.program ? `${t('chat.projectProgram')} · ${ref.path}` : ref.path
+        })),
+      ...index
+        .collectionRefs()
+        .filter((ref) => !this.collections.includes(ref.path))
+        .map((ref) => ({
+          kind: 'collection' as const,
+          path: ref.path,
+          title: ref.title,
+          detail: `${t('chat.collection')} · ${ref.path}`
+        }))
+    ]
+    new ScopePicker(this.app, scopes, (choice) =>
+      choice.kind === 'project' ? this.attachProject(choice.path) : this.attachCollection(choice.path)
+    ).open()
+  }
+
+  /** A collection to talk about, beside anything already attached, like a project. */
+  attachCollection(path: string): void {
+    if (!this.collections.includes(path)) this.collections = [...this.collections, path]
+    this.renderContext()
+    window.setTimeout(() => this.inputEl?.focus(), 0)
   }
 
   /**
@@ -640,17 +700,23 @@ export class ChatView extends ItemView {
    * is written once, with it. Several share the room the one would have had, more or less.
    */
   private async projectsBlock(
-    paths: string[]
+    paths: string[],
+    collections: string[] = []
   ): Promise<{ text: string; statuses: string[]; priorities: string[] } | null> {
     const index = this.plugin.index
     const alive = paths.filter((path) => index.projectRef(path) !== null)
     const unique = withoutNested(alive, (path) => index.ancestorRefs(path).map((ref) => ref.path))
-    const budget = projectShare(unique.length)
+    const gathered = collections.filter((path) => index.collectionRef(path) !== null)
+    const budget = projectShare(unique.length + gathered.length)
     const texts: string[] = []
     const statuses = new Set<string>()
     const priorities = new Set<string>()
-    for (const path of unique) {
-      const one = await this.projectBlock(path, budget)
+    const blocks = [
+      ...unique.map((path) => () => this.projectBlock(path, budget)),
+      ...gathered.map((path) => () => this.collectionBlock(path, budget))
+    ]
+    for (const block of blocks) {
+      const one = await block()
       if (!one) continue
       texts.push(one.text)
       for (const label of one.statuses) statuses.add(label)
@@ -658,6 +724,48 @@ export class ChatView extends ItemView {
     }
     if (!texts.length) return null
     return { text: texts.join('\n\n'), statuses: [...statuses], priorities: [...priorities] }
+  }
+
+  /**
+   * A collection, written out as it stands now: the tickets it gathers, under the projects
+   * that hold them — what its view shows, by the same rule and the same hand-picked
+   * additions and removals. Null when it is gone or gathers nothing.
+   */
+  private async collectionBlock(
+    path: string,
+    budget: number
+  ): Promise<{ text: string; statuses: string[]; priorities: string[] } | null> {
+    const ref = this.plugin.index.collectionRef(path)
+    if (!ref) return null
+    const spec: ScopeSpec = { kind: 'collection', path }
+    const statuses = this.plugin.settings.statuses
+    const projects = await this.plugin.store.loadProjects(resolveScopePaths(spec, this.plugin.index, statuses))
+    if (!projects.length) return null
+    const memberIds = collectionMemberIds(ref, this.plugin.index.allTaskRefs(), statuses)
+    const scope = new ProjectScope(spec, projects, this.plugin.store, { title: ref.title, memberIds })
+    const config = scope.config
+    const text = projectContext(
+      {
+        title: ref.title,
+        path: ref.path,
+        program: false,
+        description: '',
+        team: [],
+        zones: [],
+        parts: collectionParts(scope.tasks(), projects),
+        statuses: config.statuses,
+        priorities: config.priorities,
+        today: today().toString(),
+        titleOf: (id) => this.plugin.index.task(id)?.title
+      },
+      { ...this.projectWords, heading: (title, where) => t('chat.collectionHeading', { title, path: where }) },
+      budget
+    )
+    return {
+      text,
+      statuses: config.statuses.map((status) => status.label),
+      priorities: config.priorities.map((priority) => priority.label)
+    }
   }
 
   /**
@@ -1056,6 +1164,15 @@ export class ChatView extends ItemView {
       about.createSpan({ text: names.join(', ') })
       about.setAttr('title', turn.projects.join('\n'))
     }
+    if (turn.collections?.length) {
+      const names = turn.collections.map(
+        (path) => this.plugin.index.collectionRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/i, '')
+      )
+      const about = this.listEl.createDiv('pm-chat-about')
+      setIcon(about.createSpan(), 'library')
+      about.createSpan({ text: names.join(', ') })
+      about.setAttr('title', turn.collections.join('\n'))
+    }
     if (turn.files?.length) {
       const names = turn.files.map((path) => path.slice(path.lastIndexOf('/') + 1))
       const about = this.listEl.createDiv('pm-chat-about')
@@ -1262,7 +1379,10 @@ export class ChatView extends ItemView {
     const all = [...parsePrompts(settings.prompts), ...(settings.builtinPrompts ? builtinPrompts() : [])]
     return availablePrompts(all, {
       note: this.useNote && this.contextFile !== null,
-      project: this.projects.some((path) => this.plugin.index.projectRef(path) !== null),
+      // A collection is asked about the way a project is: where its tickets stand.
+      project:
+        this.projects.some((path) => this.plugin.index.projectRef(path) !== null) ||
+        this.collections.some((path) => this.plugin.index.collectionRef(path) !== null),
       requirements: this.attached.length > 0,
       file: this.files.length > 0
     })
@@ -1330,6 +1450,7 @@ export class ChatView extends ItemView {
         at: new Date().toISOString(),
         ...(context ? { context } : {}),
         ...(this.projects.length ? { projects: [...this.projects] } : {}),
+        ...(this.collections.length ? { collections: [...this.collections] } : {}),
         ...(this.files.length ? { files: [...this.files] } : {}),
         ...(this.attached.length ? { requirements: [...this.attached] } : {})
       }
@@ -1389,7 +1510,7 @@ export class ChatView extends ItemView {
         .filter((found): found is Requirement => found !== undefined && found !== null)
       const block = requirementsContext(requirements, this.requirementWords)
       // The project as it stands at the moment of asking, like the note.
-      const project = await this.projectsBlock(currentProjects(this.turns))
+      const project = await this.projectsBlock(currentProjects(this.turns), currentCollections(this.turns))
       // The files as they are now: a planning replaced by its next issue is read again.
       const paths = currentFiles(this.turns)
       const files = await this.filesBlock(paths)
@@ -1554,31 +1675,40 @@ function fileProblemText(problem: FileProblem): string {
 }
 
 /** The projects of the vault, by name, a programme said to be one. */
-class ProjectPicker extends SuggestModal<ProjectRef> {
+/** A project or a collection, as the picker offers them. */
+interface ScopeChoice {
+  kind: 'project' | 'collection'
+  path: string
+  title: string
+  detail: string
+}
+
+class ScopePicker extends SuggestModal<ScopeChoice> {
   constructor(
     app: App,
-    private refs: ProjectRef[],
-    private onChoose: (ref: ProjectRef) => void
+    private choices: ScopeChoice[],
+    private onChoose: (choice: ScopeChoice) => void
   ) {
     super(app)
     this.setPlaceholder(t('chat.projectPick'))
   }
 
-  getSuggestions(query: string): ProjectRef[] {
+  getSuggestions(query: string): ScopeChoice[] {
     const q = query.toLowerCase()
-    return this.refs.filter((ref) => ref.title.toLowerCase().includes(q) || ref.path.toLowerCase().includes(q))
+    return this.choices.filter(
+      (choice) => choice.title.toLowerCase().includes(q) || choice.path.toLowerCase().includes(q)
+    )
   }
 
-  renderSuggestion(ref: ProjectRef, el: HTMLElement): void {
-    el.createDiv({ text: ref.title })
-    el.createEl('small', {
-      cls: 'pm-chat-pick-when',
-      text: ref.program ? `${t('chat.projectProgram')} · ${ref.path}` : ref.path
-    })
+  renderSuggestion(choice: ScopeChoice, el: HTMLElement): void {
+    const line = el.createDiv({ cls: 'pm-chat-pick-line' })
+    setIcon(line.createSpan({ cls: 'pm-chat-pick-icon' }), choice.kind === 'project' ? 'folder-kanban' : 'library')
+    line.createSpan({ text: choice.title })
+    el.createEl('small', { cls: 'pm-chat-pick-when', text: choice.detail })
   }
 
-  onChooseSuggestion(ref: ProjectRef): void {
-    this.onChoose(ref)
+  onChooseSuggestion(choice: ScopeChoice): void {
+    this.onChoose(choice)
   }
 }
 

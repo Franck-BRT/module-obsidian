@@ -23,6 +23,8 @@ export interface ChatTurn {
   requirements?: string[]
   /** The projects a question was asked about, by the paths of their notes. */
   projects?: string[]
+  /** The collections a question was asked about, by the paths of their notes. */
+  collections?: string[]
   /** The files a question was asked with — a planning, a report — by path. */
   files?: string[]
   /** The model a reply was written by, where it is known. */

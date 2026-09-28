@@ -272,6 +272,32 @@ export function projectParts(primary: Project, projects: Project[]): ProjectPart
     .map((project) => ({ title: project.title, path: project.filePath, tasks: current(project.tasks) }))
 }
 
+/**
+ * A collection's tickets, as the parts a project is written in: each project that holds
+ * some, with the ones it holds — each with what sits under it, as the collection view
+ * shows them — in the order the collection lists the projects. Archived tickets are left
+ * out, and a project holding none of them is not written at all.
+ */
+export function collectionParts(roots: Task[], projects: Project[]): ProjectPart[] {
+  const current = (tasks: Task[]): Task[] =>
+    tasks.filter((task) => !task.archived).map((task) => ({ ...task, subtasks: current(task.subtasks) }))
+  const parts: ProjectPart[] = []
+  for (const project of projects) {
+    const held = new Set(flat(project.tasks).map((task) => task.id))
+    const mine = current(roots.filter((root) => held.has(root.id)))
+    if (mine.length) parts.push({ title: project.title, path: project.filePath, tasks: mine })
+  }
+  return parts
+}
+
+/** The collections the conversation's latest question was asked about, by path. */
+export function currentCollections(turns: { role: string; collections?: string[] }[]): string[] {
+  for (let at = turns.length - 1; at >= 0; at--) {
+    if (turns[at].role === 'user') return turns[at].collections ?? []
+  }
+  return []
+}
+
 /** The projects the conversation's latest question was asked about, by path. */
 export function currentProjects(turns: { role: string; projects?: string[] }[]): string[] {
   for (let at = turns.length - 1; at >= 0; at--) {
