@@ -207,3 +207,130 @@
 .pm-chat-pick-when {
   color: var(--text-muted);
 }
+
+/* ---- A proposed change ---------------------------------------------------- */
+
+/* A card rather than a code block: drawn in the panel and in the conversation's note alike. */
+.pm-change {
+  margin: var(--size-4-2) 0;
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-left: 3px solid var(--interactive-accent);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  font-size: var(--font-ui-small);
+}
+
+.pm-change--done {
+  border-left-color: var(--color-green);
+}
+
+.pm-change--problem {
+  border-left-color: var(--color-orange);
+}
+
+.pm-change-head {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  min-width: 0;
+}
+
+.pm-change-icon,
+.pm-change-state-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--text-muted);
+}
+
+.pm-change-icon svg,
+.pm-change-state-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pm-change-kind {
+  flex: none;
+  font-weight: var(--font-semibold);
+}
+
+.pm-change-target {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+a.pm-change-target {
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.pm-change-field {
+  margin-top: var(--size-4-1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pm-change-diff {
+  margin-top: 2px;
+}
+
+.pm-change-arrow {
+  color: var(--text-faint);
+}
+
+.pm-change-why {
+  margin-top: var(--size-4-1);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.pm-change-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  margin-top: var(--size-4-2);
+}
+
+.pm-change--done .pm-change-state-icon,
+.pm-change--done .pm-change-state {
+  color: var(--color-green);
+}
+
+.pm-change--problem .pm-change-state-icon,
+.pm-change-problem {
+  color: var(--color-orange);
+}
+
+.pm-change-problem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-1);
+  margin-top: var(--size-4-1);
+}
+
+.pm-change-foot .pm-change-problem {
+  margin-top: 0;
+}
+
+.pm-change-source {
+  margin: var(--size-4-1) 0 0;
+  max-height: 8em;
+  overflow: auto;
+  font-size: var(--font-ui-smaller);
+  white-space: pre-wrap;
+  color: var(--text-muted);
+}
+
+/* A reason can run to several lines: its icon stays by the first. */
+.pm-change--problem .pm-change-foot {
+  align-items: flex-start;
+}
+
+.pm-change--problem .pm-change-foot .pm-change-state-icon {
+  margin-top: 2px;
+}

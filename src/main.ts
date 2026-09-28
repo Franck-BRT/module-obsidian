@@ -75,6 +75,7 @@ import { ReqPorter } from './store/requirements/ReqPorter'
 import { ReqEmbeddingIndex } from './store/requirements/ReqEmbeddings'
 import { cleanBlockFields } from './store/requirements/reqBlockFields'
 import { registerReqBlock } from './views/requirements/reqBlockRenderer'
+import { registerChangeBlock } from './views/chat/changeCard'
 import { noteExportLabel, registerReqEditorMenu } from './views/requirements/reqEditorMenu'
 import { exportNoteDocx } from './views/requirements/exportDocx'
 import { reqBlockRanges } from './store/requirements/reqFence'
@@ -180,6 +181,7 @@ export default class PMPlugin extends Plugin {
     this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
     registerReqBlock(this)
+    registerChangeBlock(this)
     registerReqEditorMenu(this)
     if (__STYLEGUIDE__) registerStyleguide(this)
 

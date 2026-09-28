@@ -25,6 +25,8 @@ import { chatTitle, isChatNote, localStamp, type ChatNoteWords } from '../../sto
 import { ChatNotes } from '../../store/chat/ChatNotes'
 import { currentRequirements, requirementsContext, type RequirementWords } from '../../store/chat/chatRequirements'
 import { currentProject, projectContext, projectParts, type ProjectWords } from '../../store/chat/chatProject'
+import { withoutOpenChange } from '../../store/chat/chatChange'
+import { requirementOptions } from './changeCard'
 import type { Requirement } from '../../store/requirements/Requirement'
 import { ProjectScope, resolveScopePaths, type ScopeSpec } from '../../store/ProjectScope'
 import type { ProjectRef } from '../../store/VaultIndex'
@@ -74,6 +76,12 @@ export class ChatView extends ItemView {
   private liveEl: HTMLElement | null = null
   private liveText = ''
   private liveTimer: number | null = null
+  /**
+   * What the replies' Markdown hangs off, replaced at every redraw: a proposal card
+   * watches the vault for as long as it lives, and one left behind by each redraw would
+   * go on watching for a card no longer on screen.
+   */
+  private turnsComponent: Component | null = null
   /** What the live reply's Markdown hangs off, replaced at every redraw. */
   private liveComponent: Component | null = null
   /** Stops the reply being written. */
@@ -269,9 +277,11 @@ export class ChatView extends ItemView {
    * The project a question was asked about, written out as it stands now; '' when it is
    * gone. The projects under it come with it, each with its own tickets.
    */
-  private async projectBlock(path: string | undefined): Promise<string> {
+  private async projectBlock(
+    path: string | undefined
+  ): Promise<{ text: string; statuses: string[]; priorities: string[] } | null> {
     const ref = path ? this.plugin.index.projectRef(path) : null
-    if (!ref) return ''
+    if (!ref) return null
     // With what is under it: a programme is the projects it groups, and a project's own
     // sub-projects are part of what someone asking about it means.
     const spec: ScopeSpec = { kind: 'subtree', path: ref.path }
@@ -280,10 +290,10 @@ export class ChatView extends ItemView {
     )
     const scope = new ProjectScope(spec, projects, this.plugin.store)
     const primary = scope.primary
-    if (!primary) return ''
+    if (!primary) return null
     await this.plugin.store.loadProjectBody(primary)
     const config = scope.config
-    return projectContext(
+    const text = projectContext(
       {
         title: primary.title,
         path: primary.filePath,
@@ -300,6 +310,43 @@ export class ChatView extends ItemView {
       },
       this.projectWords
     )
+    return {
+      text,
+      statuses: config.statuses.map((status) => status.label),
+      priorities: config.priorities.map((priority) => priority.label)
+    }
+  }
+
+  /**
+   * How to propose a change the reader can apply with a click, told to the model only when
+   * there is something to change: requirements or a project attached. The lists are the
+   * reader's own, so a proposed status is one the card can take.
+   */
+  private changeInstructions(
+    requirements: boolean,
+    project: { statuses: string[]; priorities: string[] } | null
+  ): string {
+    if (!requirements && !project) return ''
+    const lines = [t('chat.changeHow')]
+    if (requirements) {
+      const options = requirementOptions(this.plugin)
+      const labels = (list: { label: string }[]): string => list.map((option) => option.label).join(', ')
+      lines.push(
+        t('chat.changeRequirement', {
+          languages: options.languages.join(', '),
+          statuses: labels(options.statuses),
+          types: labels(options.types),
+          criticalities: labels(options.criticalities),
+          verifications: labels(options.verifications)
+        })
+      )
+    }
+    if (project) {
+      lines.push(
+        t('chat.changeTicket', { statuses: project.statuses.join(', '), priorities: project.priorities.join(', ') })
+      )
+    }
+    return lines.join('\n')
   }
 
   private get projectWords(): ProjectWords {
@@ -436,6 +483,8 @@ export class ChatView extends ItemView {
       this.render()
     })
 
+    if (this.turnsComponent) this.removeChild(this.turnsComponent)
+    this.turnsComponent = this.addChild(new Component())
     this.listEl = root.createDiv('pm-chat-list')
     const missing = this.missing()
     if (missing) this.renderSetup(missing)
@@ -532,7 +581,7 @@ export class ChatView extends ItemView {
     }
     if (turn.role === 'assistant' && !turn.failed) {
       // A reply is written in Markdown more often than not: lists, code, tables.
-      void MarkdownRenderer.render(this.app, turn.content, body, '', this)
+      void MarkdownRenderer.render(this.app, turn.content, body, '', this.turnsComponent ?? this)
     } else body.setText(turn.content)
 
     const actions = el.createDiv('pm-chat-actions')
@@ -600,7 +649,13 @@ export class ChatView extends ItemView {
     el.removeClass('pm-chat-typing')
     if (this.liveComponent) this.removeChild(this.liveComponent)
     this.liveComponent = this.addChild(new Component())
-    void MarkdownRenderer.render(this.app, this.liveText, el.createDiv('pm-chat-body'), '', this.liveComponent)
+    void MarkdownRenderer.render(
+      this.app,
+      withoutOpenChange(this.liveText, t('chat.change.pending')),
+      el.createDiv('pm-chat-body'),
+      '',
+      this.liveComponent
+    )
     if (following) list.scrollTop = list.scrollHeight
   }
 
@@ -624,9 +679,10 @@ export class ChatView extends ItemView {
       const block = requirementsContext(requirements, this.requirementWords)
       // The project as it stands at the moment of asking, like the note.
       const project = await this.projectBlock(currentProject(this.turns))
+      const how = this.changeInstructions(requirements.length > 0, project)
       const request = {
         model: settings.modelText,
-        messages: chatMessages(this.turns, [system, project, block].filter(Boolean).join('\n\n'))
+        messages: chatMessages(this.turns, [system, project?.text, block, how].filter(Boolean).join('\n\n'))
       }
       let reply: string
       let stopped = false
