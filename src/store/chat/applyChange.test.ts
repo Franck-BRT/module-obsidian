@@ -7,7 +7,7 @@ import { RequirementStore } from '../requirements/RequirementStore'
 import { addLink, setText } from '../requirements/Requirement'
 import { findTaskById } from '../TaskIndex'
 import { VaultIndex } from '../VaultIndex'
-import { applyToRequirement, applyToTicket } from './applyChange'
+import { applyCreate, applyToRequirement, applyToTicket } from './applyChange'
 import { parseChange, verificationOptions, type ChangeSpec, type ReqOptions } from './chatChange'
 
 /**
@@ -213,5 +213,68 @@ describe('applying a change to a ticket', () => {
         spec('ticket', { ticket: 'Déblais', project: 'Équipements', field: 'progress', value: 10 })
       )
     ).toMatchObject({ ok: true, changed: true })
+  })
+})
+
+describe('creating a ticket from the chat', () => {
+  let index: VaultIndex
+  let store: ProjectStore
+
+  beforeEach(() => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    index = new VaultIndex(app, () => DEFAULT_SETTINGS)
+    store = new ProjectStore(app, () => DEFAULT_SETTINGS, index)
+  })
+
+  const label = (type: string): string => ({ milestone: 'Jalon', phase: 'Lot', document: 'Document' })[type] ?? type
+
+  it('writes it into its lot, after what it follows, once', async () => {
+    const project = await store.createProject('Génie civil', 'Work')
+    const lot = makeTask({ title: 'Terrassements', type: 'phase', start: '' })
+    const soutenement = makeTask({ title: 'Soutènement', start: '2026-09-14', due: '2026-10-09' })
+    await store.insertTask(project, lot)
+    await store.insertTask(project, soutenement, lot.id)
+    index.build()
+    const change = spec('create', {
+      create: 'Radier',
+      project: 'Génie civil',
+      parent: 'Terrassements',
+      // Asked to start before what it follows ends: the project's scheduling moves it, as
+      // a link drawn in the Gantt would.
+      changes: { start: '2026-10-01', due: '2026-11-13', assignees: ['Chloé'], after: ['Soutènement'] }
+    })
+    expect(await applyCreate(index, store, change, label)).toEqual({ ok: true, name: 'Radier', changed: true })
+    const reloaded = await store.loadProjectByPath(project.filePath)
+    const radier = reloaded?.tasks[0].subtasks.find((task) => task.title === 'Radier')
+    expect(radier).toMatchObject({
+      type: 'task',
+      assignees: ['Chloé'],
+      dependencies: [soutenement.id]
+    })
+    expect(radier?.start && radier.start > '2026-10-09').toBe(true)
+    // A second click finds it there, and makes no twin.
+    index.build()
+    expect(await applyCreate(index, store, change, label)).toEqual({ ok: true, name: 'Radier', changed: false })
+    expect((await store.loadProjectByPath(project.filePath))?.tasks[0].subtasks).toHaveLength(2)
+  })
+
+  it('gives a document its register entry, and refuses a programme as its project', async () => {
+    const project = await store.createProject('Génie civil', 'Work')
+    await store.createProject('Ligne 6', 'Work', { program: true })
+    index.build()
+    await applyCreate(
+      index,
+      store,
+      spec('create', { create: 'Plan de coffrage', project: 'Génie civil', changes: { type: 'Document' } }),
+      label
+    )
+    const made = (await store.loadProjectByPath(project.filePath))?.tasks[0]
+    expect(made).toMatchObject({ type: 'document', document: { state: 'expected', reference: 'Plan de coffrage' } })
+    expect(await applyCreate(index, store, spec('create', { create: 'X', project: 'Ligne 6' }), label)).toEqual({
+      ok: false,
+      problem: 'project',
+      allowed: ['Ligne 6']
+    })
   })
 })

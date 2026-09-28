@@ -2,8 +2,11 @@ import { MarkdownRenderChild, Notice, setIcon } from 'obsidian'
 import type PMPlugin from '../../main'
 import {
   CHANGE_LANGUAGE,
+  createChange,
   parseChange,
   requirementChange,
+  type CreateContext,
+  type CreateRow,
   ticketChange,
   verificationOptions,
   type ChangeSpec,
@@ -16,12 +19,16 @@ import {
 import { diffWords } from '../../store/requirements/reqDiff'
 import type { Requirement } from '../../store/requirements/Requirement'
 import {
+  applyCreate,
   applyToRequirement,
   applyToTicket,
+  createTarget,
   ticketTarget,
   type Applied,
   type TicketTarget
 } from '../../store/chat/applyChange'
+import { typeConfigOf } from '../../store/TicketPalette'
+import type { Project, TaskType } from '../../types'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { openRequirementModal } from '../requirements/RequirementModal'
@@ -116,7 +123,31 @@ function problemText(problem: ValueProblem, allowed: string[] | undefined): stri
       return t('chat.change.progress')
     case 'lang':
       return t('chat.change.lang', { list })
+    case 'project':
+      return t('chat.change.noProject', { name: list })
+    case 'parent':
+      return t('chat.change.noParent', { title: list })
+    case 'after':
+      return t('chat.change.noAfter', { title: list })
   }
+}
+
+function createFieldLabel(field: CreateRow['field']): string {
+  switch (field) {
+    case 'type':
+      return t('chat.change.field.type')
+    case 'parent':
+      return t('chat.change.field.parent')
+    case 'after':
+      return t('chat.change.field.after')
+    default:
+      return ticketFieldLabel(field)
+  }
+}
+
+/** The ticket types in the reader's words, from the type palette. */
+function typeLabel(type: string): string {
+  return typeConfigOf(type as TaskType).label
 }
 
 /** Where a card stands: its change to be made or already made, or why it cannot be. */
@@ -168,9 +199,50 @@ class ChangeCard extends MarkdownRenderChild {
       this.paint((card) => this.renderRequirement(card, spec, requirement))
       return
     }
+    if (spec.kind === 'create') {
+      const target = await createTarget(this.plugin.index, this.plugin.store, spec, typeLabel)
+      if (generation !== this.generation) return
+      this.paint((card) => this.renderCreate(card, spec, target))
+      return
+    }
     const target = await ticketTarget(this.plugin.index, this.plugin.store, spec)
     if (generation !== this.generation) return
     this.paint((card) => this.renderTicket(card, spec, target))
+  }
+
+  /** A ticket to create: where it goes, what it will say, and a button that makes it. */
+  private renderCreate(
+    card: HTMLElement,
+    spec: Extract<ChangeSpec, { kind: 'create' }>,
+    target: { project: Project; context: CreateContext } | null
+  ): void {
+    card.addClass('pm-change--create')
+    if (!target) {
+      this.head(card, 'square-plus', spec.title, null, t('chat.change.newTitle'))
+      this.problem(card, problemText('project', [spec.project]))
+      return
+    }
+    const { project } = target
+    this.head(
+      card,
+      'square-plus',
+      `${spec.title} · ${project.title}`,
+      safeAsync(() => this.plugin.router.openProjectLink(project.filePath)),
+      t('chat.change.newTitle')
+    )
+    const resolved = createChange(spec, target.context)
+    if (resolved.ok) {
+      // Everything is new: a field and its value a line, rather than a before and an after.
+      const grid = card.createDiv('pm-change-grid')
+      for (const row of resolved.rows) {
+        this.body(grid, createFieldLabel(row.field), { before: '', after: row.after }, false)
+      }
+    }
+    this.why(card, spec.why)
+    this.footer(card, resolved, () => this.applyCreate(spec), {
+      apply: t('chat.change.create'),
+      done: t('chat.change.created')
+    })
   }
 
   private paint(fill: (card: HTMLElement) => void): void {
@@ -178,10 +250,16 @@ class ChangeCard extends MarkdownRenderChild {
     fill(this.containerEl.createDiv('pm-change'))
   }
 
-  private head(card: HTMLElement, icon: string, name: string, open: (() => void) | null): void {
+  private head(
+    card: HTMLElement,
+    icon: string,
+    name: string,
+    open: (() => void) | null,
+    kind = t('chat.change.title')
+  ): void {
     const head = card.createDiv('pm-change-head')
     setIcon(head.createSpan({ cls: 'pm-change-icon' }), icon)
-    head.createSpan({ cls: 'pm-change-kind', text: t('chat.change.title') })
+    head.createSpan({ cls: 'pm-change-kind', text: kind })
     if (open) {
       const link = head.createEl('a', { cls: 'pm-change-target', text: name })
       link.addEventListener('click', open)
@@ -302,7 +380,12 @@ class ChangeCard extends MarkdownRenderChild {
     if (why) card.createDiv({ cls: 'pm-change-why', text: why })
   }
 
-  private footer(card: HTMLElement, resolved: CardState, apply: () => Promise<void>): void {
+  private footer(
+    card: HTMLElement,
+    resolved: CardState,
+    apply: () => Promise<void>,
+    words = { apply: t('chat.change.apply'), done: t('chat.change.done') }
+  ): void {
     const foot = card.createDiv('pm-change-foot')
     if (!resolved.ok) {
       card.addClass('pm-change--problem')
@@ -313,10 +396,10 @@ class ChangeCard extends MarkdownRenderChild {
     if (resolved.applied) {
       card.addClass('pm-change--done')
       setIcon(foot.createSpan({ cls: 'pm-change-state-icon' }), 'check')
-      foot.createSpan({ cls: 'pm-change-state', text: t('chat.change.done') })
+      foot.createSpan({ cls: 'pm-change-state', text: words.done })
       return
     }
-    const button = foot.createEl('button', { cls: 'mod-cta', text: t('chat.change.apply') })
+    const button = foot.createEl('button', { cls: 'mod-cta', text: words.apply })
     button.addEventListener(
       'click',
       safeAsync(async () => {
@@ -345,6 +428,10 @@ class ChangeCard extends MarkdownRenderChild {
       author(this.plugin)
     )
     this.report(done, spec.target)
+  }
+
+  private async applyCreate(spec: Extract<ChangeSpec, { kind: 'create' }>): Promise<void> {
+    this.report(await applyCreate(this.plugin.index, this.plugin.store, spec, typeLabel), spec.title)
   }
 
   private async applyTicket(spec: Extract<ChangeSpec, { kind: 'ticket' }>): Promise<void> {

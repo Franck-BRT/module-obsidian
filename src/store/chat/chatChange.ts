@@ -35,6 +35,25 @@ export type TicketChangeField = (typeof TICKET_CHANGE_FIELDS)[number]
 export type ChangeSpec =
   | { kind: 'requirement'; target: string; field: ReqChangeField; lang: string; value: unknown; why: string }
   | { kind: 'ticket'; target: string; project: string; changes: TicketFieldChange[]; why: string }
+  | {
+      kind: 'create'
+      /** The new ticket's title. */
+      title: string
+      project: string
+      /** The ticket or lot it goes under, by title; '' for the top of the project. */
+      parent: string
+      fields: CreateFieldChange[]
+      why: string
+    }
+
+/** What a new ticket can be given besides its title and where it goes. */
+export const CREATE_FIELDS = ['type', 'status', 'priority', 'start', 'due', 'progress', 'assignees', 'after'] as const
+export type CreateField = (typeof CREATE_FIELDS)[number]
+
+export interface CreateFieldChange {
+  field: CreateField
+  value: unknown
+}
 
 /** One field of a ticket and what it is to become. */
 export interface TicketFieldChange {
@@ -65,7 +84,11 @@ const FIELD_ALIASES: Record<string, string> = {
   echeance: 'due',
   avancement: 'progress',
   assignes: 'assignees',
-  personnes: 'assignees'
+  personnes: 'assignees',
+  apres: 'after',
+  dependencies: 'after',
+  dependances: 'after',
+  predecessors: 'after'
 }
 
 /** Lower case, without accents or spacing around: how two spellings of one word are compared. */
@@ -101,6 +124,29 @@ export function parseChange(source: string): { spec: ChangeSpec } | { problem: C
   const why = text(record.why)
   const requirement = text(record.requirement ?? record.exigence)
   const ticket = text(record.ticket)
+  const created = text(record.create ?? record.creer ?? record['créer'])
+  if (created) {
+    if (requirement || ticket) return { problem: 'target' }
+    const many = record.changes ?? record.fields ?? record.champs
+    const pairs = many && typeof many === 'object' && !Array.isArray(many) ? Object.entries(many) : []
+    const fields: CreateFieldChange[] = []
+    for (const [name, value] of pairs) {
+      const folded = fold(name)
+      const known = FIELD_ALIASES[folded] ?? folded
+      if (!(CREATE_FIELDS as readonly string[]).includes(known)) return { problem: 'field' }
+      fields.push({ field: known as CreateField, value })
+    }
+    return {
+      spec: {
+        kind: 'create',
+        title: created,
+        project: text(record.project ?? record.projet),
+        parent: text(record.parent ?? record.under ?? record.sous),
+        fields,
+        why
+      }
+    }
+  }
   if (requirement && !ticket) {
     if (!(REQ_CHANGE_FIELDS as readonly string[]).includes(field)) return { problem: 'field' }
     return {
@@ -157,8 +203,11 @@ function labelOf(options: Option[], id: string): string {
   return options.find((option) => option.id === id)?.label ?? id
 }
 
-/** Why a proposed value is refused; `allowed` lists what would have been taken. */
-export type ValueProblem = 'empty' | 'unknown' | 'date' | 'order' | 'progress' | 'lang'
+/**
+ * Why a proposed value is refused; `allowed` lists what would have been taken — or, for a
+ * ticket named that cannot be found, the name that was looked for.
+ */
+export type ValueProblem = 'empty' | 'unknown' | 'date' | 'order' | 'progress' | 'lang' | 'project' | 'parent' | 'after'
 
 export type Resolution<T> =
   | {
@@ -438,4 +487,146 @@ export function changeBlocks(text: string): string[] {
     open.lines.push(line)
   }
   return blocks
+}
+
+/** A project a ticket can go into, as the index knows it. */
+export interface ProjectCandidate {
+  path: string
+  title: string
+}
+
+/** The project a model named, by title or by path; null when it is not one, or not only one. */
+export function findProject(candidates: ProjectCandidate[], name: string): ProjectCandidate | null {
+  const wanted = fold(name.replace(/\.md$/i, ''))
+  if (!wanted) return candidates.length === 1 ? candidates[0] : null
+  const matches = candidates.filter(
+    (candidate) => fold(candidate.title) === wanted || fold(candidate.path.replace(/\.md$/i, '')) === wanted
+  )
+  return matches.length === 1 ? matches[0] : null
+}
+
+/** What a new ticket is checked against: the project it goes into, as it is now. */
+export interface CreateContext {
+  project: ProjectCandidate
+  /** Every ticket of the project, lots included, archived ones left out. */
+  tickets: { id: string; title: string; type: string }[]
+  statuses: Option[]
+  priorities: Option[]
+  types: Option[]
+  /** What a new ticket starts as, the way the editor starts one. */
+  defaultStatus: string
+  defaultPriority: string
+  /** Every ticket anywhere, for what the new one waits on. */
+  candidates: TicketCandidate[]
+}
+
+/** One line of the card: a field of the new ticket and what it will say. */
+export interface CreateRow {
+  field: CreateField | 'parent'
+  after: string
+}
+
+export interface CreateEdit {
+  /** The new ticket, less what `makeTask` fills in. */
+  task: Partial<Task> & { title: string }
+  parentId: string | null
+  /** It waits on something: the project's scheduling may move it after that. */
+  reschedule: boolean
+}
+
+export type CreateResolution =
+  | { ok: true; rows: CreateRow[]; applied: boolean; change: CreateEdit }
+  | { ok: false; problem: ValueProblem; allowed?: string[] }
+
+/**
+ * A new ticket, checked against the project it would go into.
+ *
+ * It is "applied" once the project holds a ticket of that title: the card then says so,
+ * and a second click cannot make a twin. The lot or ticket it goes under and the tickets
+ * it waits on are found by title, as everything the model was shown is named, and refused
+ * when they cannot be found or are not the only one of their name. What is not said is
+ * what the editor would give a new ticket: the project's first status, its middle
+ * priority, and "subtask" under a ticket that is not a lot.
+ */
+export function createChange(spec: Extract<ChangeSpec, { kind: 'create' }>, context: CreateContext): CreateResolution {
+  const title = spec.title.trim()
+  if (!title) return { ok: false, problem: 'empty' }
+  const rows: CreateRow[] = []
+  const task: Partial<Task> & { title: string } = { title, start: '' }
+  const same = (a: string, b: string): boolean => fold(a) === fold(b)
+
+  let parentId: string | null = null
+  let parentIsLot = false
+  if (spec.parent) {
+    const parents = context.tickets.filter((ticket) => same(ticket.title, spec.parent))
+    if (parents.length !== 1) return { ok: false, problem: 'parent', allowed: [spec.parent] }
+    parentId = parents[0].id
+    parentIsLot = parents[0].type === 'phase'
+    rows.push({ field: 'parent', after: parents[0].title })
+  }
+
+  let typed = false
+  const dependencies: string[] = []
+  for (const { field, value: raw } of spec.fields) {
+    const value = text(raw)
+    switch (field) {
+      case 'type':
+      case 'status':
+      case 'priority': {
+        const list = field === 'type' ? context.types : field === 'status' ? context.statuses : context.priorities
+        const picked = pickOption(list, value)
+        if (!picked) return { ok: false, problem: 'unknown', allowed: list.map((option) => option.label) }
+        if (field === 'type') {
+          task.type = picked.id as Task['type']
+          typed = true
+        } else task[field] = picked.id
+        rows.push({ field, after: picked.label })
+        break
+      }
+      case 'start':
+      case 'due':
+        if (!isDate(value)) return { ok: false, problem: 'date' }
+        task[field] = value
+        rows.push({ field, after: value })
+        break
+      case 'progress': {
+        const number = Number(value.replace(/\s*%$/, '').replace(',', '.'))
+        if (!value || !Number.isFinite(number) || number < 0 || number > 100) return { ok: false, problem: 'progress' }
+        task.progress = Math.round(number)
+        rows.push({ field, after: `${task.progress} %` })
+        break
+      }
+      case 'assignees': {
+        const names = people(raw)
+        task.assignees = names
+        rows.push({ field, after: names.join(', ') })
+        break
+      }
+      case 'after': {
+        const titles = Array.isArray(raw) ? raw.map(text) : value.split(/[,;]/).map((one) => one.trim())
+        const named: string[] = []
+        for (const one of titles.filter(Boolean)) {
+          const found = findTicket(context.candidates, one, context.project.title)
+          if (!('found' in found)) return { ok: false, problem: 'after', allowed: [one] }
+          if (!dependencies.includes(found.found.id)) dependencies.push(found.found.id)
+          named.push(found.found.title)
+        }
+        if (named.length) rows.push({ field, after: named.join(', ') })
+        break
+      }
+    }
+  }
+  if (!typed) task.type = parentId && !parentIsLot ? 'subtask' : 'task'
+  task.status ??= context.defaultStatus
+  task.priority ??= context.defaultPriority
+  // A milestone is a day: given only one of its dates, it is on that day.
+  if (task.type === 'milestone') {
+    task.start = task.start || task.due || ''
+    task.due = task.due || task.start
+  }
+  if (task.start && task.due && task.start > task.due) return { ok: false, problem: 'order' }
+  if (dependencies.length) task.dependencies = dependencies
+
+  const applied = context.tickets.some((ticket) => same(ticket.title, title))
+  return { ok: true, rows, applied, change: { task, parentId, reschedule: dependencies.length > 0 } }
 }

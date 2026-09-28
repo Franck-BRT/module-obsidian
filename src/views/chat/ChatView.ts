@@ -28,7 +28,7 @@ import { ChatNotes } from '../../store/chat/ChatNotes'
 import { currentRequirements, requirementsContext, type RequirementWords } from '../../store/chat/chatRequirements'
 import { currentProject, projectContext, projectParts, type ProjectWords } from '../../store/chat/chatProject'
 import { changeBlocks, parseChange, withoutOpenChange } from '../../store/chat/chatChange'
-import { applyToRequirement, applyToTicket, type Applied } from '../../store/chat/applyChange'
+import { applyCreate, applyToRequirement, applyToTicket, type Applied } from '../../store/chat/applyChange'
 import {
   currentFiles,
   fileText,
@@ -46,7 +46,7 @@ import type { Requirement } from '../../store/requirements/Requirement'
 import { ProjectScope, resolveScopePaths, type ScopeSpec } from '../../store/ProjectScope'
 import type { ProjectRef } from '../../store/VaultIndex'
 import { docStateConfigOf, typeConfigOf } from '../../store/TicketPalette'
-import type { DocState, TaskType } from '../../types'
+import { TASK_TYPES, type DocState, type TaskType } from '../../types'
 import { today } from '../../dates'
 import {
   reqCriticalityGlyph,
@@ -522,6 +522,13 @@ export class ChatView extends ItemView {
       lines.push(
         t('chat.changeTicket', { statuses: project.statuses.join(', '), priorities: project.priorities.join(', ') })
       )
+      lines.push(
+        t('chat.changeCreate', {
+          types: TASK_TYPES.filter((type) => type !== 'subtask')
+            .map((type) => typeConfigOf(type).label)
+            .join(', ')
+        })
+      )
       // A planning received, read against the plan: what the whole feature is for.
       if (files) lines.push(t('chat.changePlanning'))
     }
@@ -845,6 +852,13 @@ export class ChatView extends ItemView {
         done = path
           ? await applyToRequirement(this.plugin.requirements, path, spec, requirementOptions(this.plugin), by)
           : { ok: false, problem: 'none' }
+      } else if (spec.kind === 'create') {
+        done = await applyCreate(
+          this.plugin.index,
+          this.plugin.store,
+          spec,
+          (type) => typeConfigOf(type as TaskType).label
+        )
       } else done = await applyToTicket(this.plugin.index, this.plugin.store, spec)
       if (!done.ok) refused++
       else if (done.changed) applied++

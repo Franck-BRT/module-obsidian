@@ -1324,17 +1324,29 @@ export const en = {
   'chat.filesFolder': 'Files',
   'chat.dropNote': 'Dropped in the chat',
   'chat.changePlanning':
-    'If an attached file is a planning, compare its tasks with the project’s tickets (same title or same meaning), and propose for each ticket that changes a single block with all its changed fields. Dates as YYYY-MM-DD, whatever their format in the file. List separately, without blocks, the planning’s tasks that have no ticket and the tickets missing from the planning.',
+    'If an attached file is a planning, compare its tasks with the project’s tickets (same title or same meaning), and propose for each ticket that changes a single block with all its changed fields. Dates as YYYY-MM-DD, whatever their format in the file. For the planning’s tasks that have no ticket, propose to create them, under their lot where it exists, with their dates, owners and what they follow. List separately, without blocks, the tickets missing from the planning.',
   'chat.change.applyAll': 'Apply all ({count})',
   'chat.change.allDone': 'Proposals: {applied} applied, {already} already in place, {refused} refused.',
   'chat.presetScope.file': 'file',
   'chat.presetScope.planning': 'planning',
   'chat.preset.planning': 'Update the project',
   'chat.preset.planningQ':
-    'Compare this planning with the project’s tickets and propose the updates to dates, progress and owners. List separately the planning’s tasks that have no ticket, and the tickets missing from the planning.',
+    'Compare this planning with the project’s tickets and propose the updates to dates, progress and owners. Propose to create the planning’s tasks that have no ticket, and list separately the tickets missing from the planning.',
   'chat.preset.document': 'Summarise the document',
   'chat.preset.documentQ':
     'Summarise this document: what it is about, who issued it and when, what it changes or asks for, and the dates and figures to remember.',
+  'chat.changeCreate':
+    'To create a ticket that does not exist yet: {"create": "title of the new ticket", "project": "title of the project to create it in", "parent": "title of the lot or ticket to place it under (optional)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["title of the ticket it follows"]}, "why": "…"}. Types: {types}. Every field of "changes" is optional; status, priority and progress may be added as for an existing ticket. Never propose to create a ticket whose title already exists in the project.',
+  'chat.change.newTitle': 'New ticket',
+  'chat.change.create': 'Create',
+  'chat.change.created': 'Created',
+  'chat.change.noProject':
+    'No project “{name}” to create this ticket in (a programme takes none: one of its projects must be named).',
+  'chat.change.noParent': 'No single ticket or lot “{title}” to place it under.',
+  'chat.change.noAfter': 'No single ticket “{title}” for it to follow.',
+  'chat.change.field.type': 'Type',
+  'chat.change.field.parent': 'Under',
+  'chat.change.field.after': 'After',
   'chat.title': 'Chat',
   'chat.new': 'New conversation',
   'chat.empty': 'Ask the language model configured in the settings.',

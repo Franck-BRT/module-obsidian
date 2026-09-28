@@ -1304,17 +1304,29 @@ export const fr: Catalog = {
   'chat.filesFolder': 'Fichiers',
   'chat.dropNote': 'Déposé dans le chat',
   'chat.changePlanning':
-    'Si un fichier joint est un planning, compare ses tâches aux tickets du projet (même titre ou même sens), et propose pour chaque ticket qui change un seul bloc avec tous ses champs modifiés. Dates au format AAAA-MM-JJ, quel que soit leur format dans le fichier. Liste à part, sans bloc, les tâches du planning qui n’ont pas de ticket et les tickets absents du planning.',
+    'Si un fichier joint est un planning, compare ses tâches aux tickets du projet (même titre ou même sens), et propose pour chaque ticket qui change un seul bloc avec tous ses champs modifiés. Dates au format AAAA-MM-JJ, quel que soit leur format dans le fichier. Pour les tâches du planning qui n’ont pas de ticket, propose leur création, sous leur lot quand il existe, avec leurs dates, leurs responsables et ce qu’elles suivent. Liste à part, sans bloc, les tickets absents du planning.',
   'chat.change.applyAll': 'Tout appliquer ({count})',
   'chat.change.allDone': 'Propositions : {applied} appliquée(s), {already} déjà en place, {refused} refusée(s).',
   'chat.presetScope.file': 'fichier',
   'chat.presetScope.planning': 'planning',
   'chat.preset.planning': 'Mettre le projet à jour',
   'chat.preset.planningQ':
-    'Compare ce planning avec les tickets du projet et propose les mises à jour de dates, d’avancement et de responsables. Liste à part les tâches du planning qui n’ont pas de ticket, et les tickets absents du planning.',
+    'Compare ce planning avec les tickets du projet et propose les mises à jour de dates, d’avancement et de responsables. Propose la création des tâches du planning qui n’ont pas de ticket, et liste à part les tickets absents du planning.',
   'chat.preset.document': 'Résumer le document',
   'chat.preset.documentQ':
     'Résume ce document : de quoi il s’agit, qui l’a émis et quand, ce qu’il change ou demande, et les dates et chiffres à retenir.',
+  'chat.changeCreate':
+    'Pour créer un ticket qui n’existe pas encore : {"create": "titre du nouveau ticket", "project": "titre du projet où le créer", "parent": "titre du lot ou du ticket sous lequel le placer (facultatif)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["titre du ticket qu’il suit"]}, "why": "…"}. Types : {types}. Les champs de "changes" sont tous facultatifs ; status, priority et progress s’y ajoutent comme pour un ticket existant. Ne propose jamais de créer un ticket dont le titre existe déjà dans le projet.',
+  'chat.change.newTitle': 'Nouveau ticket',
+  'chat.change.create': 'Créer',
+  'chat.change.created': 'Créé',
+  'chat.change.noProject':
+    'Aucun projet « {name} » où créer ce ticket (un programme n’en reçoit pas : il faut nommer un de ses projets).',
+  'chat.change.noParent': 'Pas de ticket ou de lot unique « {title} » sous lequel le placer.',
+  'chat.change.noAfter': 'Pas de ticket unique « {title} » à faire précéder.',
+  'chat.change.field.type': 'Type',
+  'chat.change.field.parent': 'Sous',
+  'chat.change.field.after': 'Après',
   'chat.title': 'Chat',
   'chat.new': 'Nouvelle conversation',
   'chat.empty': 'Pose une question au modèle de langage configuré dans les paramètres.',

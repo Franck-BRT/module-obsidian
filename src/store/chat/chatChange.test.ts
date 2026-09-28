@@ -10,6 +10,9 @@ import {
   verificationOptions,
   withoutOpenChange,
   changeBlocks,
+  createChange,
+  findProject,
+  type CreateContext,
   type ChangeSpec,
   type ReqOptions
 } from './chatChange'
@@ -388,5 +391,191 @@ describe('changeBlocks', () => {
       '{"ticket": "A", "field": "due", "value": "2026-10-10"}',
       '{"ticket": "B", "field": "progress", "value": 50}'
     ])
+  })
+})
+
+describe('creating a ticket', () => {
+  const createSpec = (source: object): Extract<ChangeSpec, { kind: 'create' }> => {
+    const read = spec(source)
+    if (read.kind !== 'create') throw new Error('not a creation')
+    return read
+  }
+  const context: CreateContext = {
+    project: { path: 'Work/Génie civil.md', title: 'Génie civil' },
+    tickets: [
+      { id: 'lot1', title: 'Terrassements', type: 'phase' },
+      { id: 'sout', title: 'Soutènement', type: 'task' }
+    ],
+    statuses: [
+      { id: 'todo', label: 'À faire' },
+      { id: 'doing', label: 'En cours' }
+    ],
+    priorities: [
+      { id: 'high', label: 'Haute' },
+      { id: 'medium', label: 'Moyenne' }
+    ],
+    types: [
+      { id: 'task', label: 'Tâche' },
+      { id: 'milestone', label: 'Jalon' },
+      { id: 'phase', label: 'Lot' },
+      { id: 'document', label: 'Document' }
+    ],
+    defaultStatus: 'todo',
+    defaultPriority: 'medium',
+    candidates: [
+      { id: 'sout', title: 'Soutènement', projectPath: 'Work/Génie civil.md', projectTitle: 'Génie civil' },
+      { id: 'pomp', title: 'Livraison des pompes', projectPath: 'Work/Équipements.md', projectTitle: 'Équipements' },
+      { id: 'r1', title: 'Réception', projectPath: 'Work/Génie civil.md', projectTitle: 'Génie civil' },
+      { id: 'r2', title: 'Réception', projectPath: 'Work/Équipements.md', projectTitle: 'Équipements' }
+    ]
+  }
+
+  it('reads a creation, its place and its fields', () => {
+    expect(
+      createSpec({
+        create: 'Radier',
+        project: 'Génie civil',
+        parent: 'Terrassements',
+        changes: { début: '2026-10-19', due: '2026-11-13', personnes: ['Chloé'], après: ['Soutènement'] },
+        why: 'Au planning, pas de ticket.'
+      })
+    ).toEqual({
+      kind: 'create',
+      title: 'Radier',
+      project: 'Génie civil',
+      parent: 'Terrassements',
+      fields: [
+        { field: 'start', value: '2026-10-19' },
+        { field: 'due', value: '2026-11-13' },
+        { field: 'assignees', value: ['Chloé'] },
+        { field: 'after', value: ['Soutènement'] }
+      ],
+      why: 'Au planning, pas de ticket.'
+    })
+    expect(parseChange('{"create": "X", "changes": {"description": "…"}}')).toEqual({ problem: 'field' })
+    expect(parseChange('{"create": "X", "ticket": "Y"}')).toEqual({ problem: 'target' })
+  })
+
+  it('makes a task in its lot, waiting on what it follows, as the editor would start one', () => {
+    const made = createChange(
+      createSpec({
+        create: 'Radier',
+        project: 'Génie civil',
+        parent: 'terrassements',
+        changes: { start: '2026-10-19', due: '2026-11-13', assignees: 'Chloé', after: 'Soutènement' }
+      }),
+      context
+    )
+    expect(made).toEqual({
+      ok: true,
+      rows: [
+        { field: 'parent', after: 'Terrassements' },
+        { field: 'start', after: '2026-10-19' },
+        { field: 'due', after: '2026-11-13' },
+        { field: 'assignees', after: 'Chloé' },
+        { field: 'after', after: 'Soutènement' }
+      ],
+      applied: false,
+      change: {
+        task: {
+          title: 'Radier',
+          start: '2026-10-19',
+          due: '2026-11-13',
+          assignees: ['Chloé'],
+          type: 'task',
+          status: 'todo',
+          priority: 'medium',
+          dependencies: ['sout']
+        },
+        parentId: 'lot1',
+        reschedule: true
+      }
+    })
+  })
+
+  // Under a ticket that is not a lot, a new one is its subtask — as the editor makes it.
+  it('makes a subtask under a ticket, and a milestone on its one day', () => {
+    const under = createChange(
+      createSpec({ create: 'Blindage', project: 'Génie civil', parent: 'Soutènement' }),
+      context
+    )
+    expect(under).toMatchObject({ ok: true, change: { task: { type: 'subtask', start: '' }, parentId: 'sout' } })
+    const milestone = createChange(
+      createSpec({ create: 'Réception radier', project: 'Génie civil', changes: { type: 'jalon', due: '2026-11-13' } }),
+      context
+    )
+    expect(milestone).toMatchObject({
+      ok: true,
+      change: { task: { type: 'milestone', start: '2026-11-13', due: '2026-11-13' }, parentId: null, reschedule: false }
+    })
+  })
+
+  it('knows it is made once the project holds a ticket of that title', () => {
+    expect(createChange(createSpec({ create: 'soutenement', project: 'Génie civil' }), context)).toMatchObject({
+      ok: true,
+      applied: true
+    })
+  })
+
+  // What it goes under and what it waits on are found by title, and never guessed.
+  it('refuses a parent or a predecessor it cannot find, or that is not the only one', () => {
+    expect(createChange(createSpec({ create: 'X', project: 'Génie civil', parent: 'Fondations' }), context)).toEqual({
+      ok: false,
+      problem: 'parent',
+      allowed: ['Fondations']
+    })
+    const twice = { ...context, tickets: [...context.tickets, { id: 'lot2', title: 'Terrassements', type: 'phase' }] }
+    expect(createChange(createSpec({ create: 'X', project: 'Génie civil', parent: 'Terrassements' }), twice)).toEqual({
+      ok: false,
+      problem: 'parent',
+      allowed: ['Terrassements']
+    })
+    expect(
+      createChange(createSpec({ create: 'X', project: 'Génie civil', changes: { after: ['Inconnu'] } }), context)
+    ).toEqual({ ok: false, problem: 'after', allowed: ['Inconnu'] })
+    // Two "Réception": the one in this project is taken, as a model naming it would mean.
+    expect(
+      createChange(createSpec({ create: 'X', project: 'Génie civil', changes: { after: ['Réception'] } }), context)
+    ).toMatchObject({ ok: true, change: { task: { dependencies: ['r1'] } } })
+    // And one in another project can be waited on too.
+    expect(
+      createChange(
+        createSpec({ create: 'X', project: 'Génie civil', changes: { after: 'Livraison des pompes' } }),
+        context
+      )
+    ).toMatchObject({ ok: true, change: { task: { dependencies: ['pomp'] } } })
+  })
+
+  it('refuses an unknown type, a date that is not one, and an end before the start', () => {
+    expect(createChange(createSpec({ create: 'X', project: 'P', changes: { type: 'Épopée' } }), context)).toEqual({
+      ok: false,
+      problem: 'unknown',
+      allowed: ['Tâche', 'Jalon', 'Lot', 'Document']
+    })
+    expect(createChange(createSpec({ create: 'X', project: 'P', changes: { due: '13/11/2026' } }), context)).toEqual({
+      ok: false,
+      problem: 'date'
+    })
+    expect(
+      createChange(
+        createSpec({ create: 'X', project: 'P', changes: { start: '2026-11-13', due: '2026-10-19' } }),
+        context
+      )
+    ).toEqual({ ok: false, problem: 'order' })
+  })
+})
+
+describe('findProject', () => {
+  const projects = [
+    { path: 'Work/Génie civil.md', title: 'Génie civil' },
+    { path: 'Work/Équipements.md', title: 'Équipements' }
+  ]
+
+  it('finds a project by its title or its path, and only one', () => {
+    expect(findProject(projects, 'genie civil')).toEqual(projects[0])
+    expect(findProject(projects, 'Work/Équipements')).toEqual(projects[1])
+    expect(findProject(projects, 'Autre')).toBeNull()
+    expect(findProject(projects, '')).toBeNull()
+    expect(findProject([projects[0]], '')).toEqual(projects[0])
   })
 })
