@@ -204,4 +204,24 @@ describe('NoteLibrary', () => {
     expect(paths).toEqual(['Notes/2026/Bilan.md', 'Notes/Appel-1.md', 'Notes/Appel.md'])
     expect(vault.getAbstractFileByPath('Notes/schéma.png')).toBeInstanceOf(TFile)
   })
+
+  it('lists every note of a large folder in order, one it cannot read by its name', async () => {
+    for (let i = 0; i < 120; i++) await library.create(`Note ${String(i).padStart(3, '0')}`, `# Titre ${i}`)
+    const read = vault.cachedRead.bind(vault)
+    vault.cachedRead = async (file: TFile): Promise<string> => {
+      if (file.path === 'Notes/Note 007.md') throw new Error('unreadable')
+      return read(file)
+    }
+    const errors = console.error
+    console.error = () => undefined
+    try {
+      const entries = await library.entries()
+      expect(entries).toHaveLength(120)
+      expect(entries.map((entry) => entry.path)).toEqual(library.files().map((file) => file.path))
+      expect(entries.find((entry) => entry.path === 'Notes/Note 007.md')?.title).toBe('Note 007')
+      expect(entries.find((entry) => entry.path === 'Notes/Note 008.md')?.title).toBe('Titre 8')
+    } finally {
+      console.error = errors
+    }
+  })
 })

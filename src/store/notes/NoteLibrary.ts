@@ -113,6 +113,9 @@ export function sortNotes(entries: NoteEntry[], by: NoteSort): NoteEntry[] {
   )
 }
 
+/** Notes read at the same time. */
+const READ_AT_ONCE = 50
+
 export class NoteLibrary {
   /** What was read of each note, kept while it has not changed. */
   private read = new Map<string, { mtime: number; title: string; excerpt: string; body: string; folded: string }>()
@@ -140,38 +143,52 @@ export class NoteLibrary {
     })
   }
 
-  /** Every note of the library, read once and again only when it changes. */
+  /**
+   * Every note of the library, read once and again only when it changes — many at a time,
+   * so a folder of thousands opens in a moment. A note that cannot be read is listed by
+   * its name rather than keeping the others from being listed.
+   */
   async entries(): Promise<NoteEntry[]> {
+    const files = this.files()
     const entries: NoteEntry[] = []
-    for (const file of this.files()) {
-      let seen = this.read.get(file.path)
-      if (!seen || seen.mtime !== file.stat.mtime) {
-        const content = await this.app.vault.cachedRead(file)
-        seen = {
-          mtime: file.stat.mtime,
-          title: noteTitle(file.basename, content),
-          excerpt: noteExcerpt(content),
-          body: noteBody(content),
-          folded: fold(noteBody(content))
-        }
-        this.read.set(file.path, seen)
-      }
-      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter ?? {}
-      const projects = [...stringList(fm.projects), ...stringList(fm.project ?? fm.projet)]
-        .map((raw) => this.resolve(raw, file.path))
-        .filter((path): path is string => !!path)
-      const slash = file.path.lastIndexOf('/')
-      entries.push({
-        path: file.path,
-        title: seen.title,
-        excerpt: seen.excerpt,
-        mtime: file.stat.mtime,
-        tags: cleanTags(stringList(fm.tags)),
-        projects: [...new Set(projects)],
-        subfolder: file.path.slice(this.root.length + 1, Math.max(this.root.length + 1, slash))
-      })
+    for (let at = 0; at < files.length; at += READ_AT_ONCE) {
+      entries.push(...(await Promise.all(files.slice(at, at + READ_AT_ONCE).map((file) => this.entry(file)))))
     }
     return entries
+  }
+
+  private async entry(file: TFile): Promise<NoteEntry> {
+    let seen = this.read.get(file.path)
+    if (!seen || seen.mtime !== file.stat.mtime) {
+      let content = ''
+      try {
+        content = await this.app.vault.cachedRead(file)
+      } catch (error) {
+        console.error(`[PM] Could not read the note "${file.path}":`, error)
+      }
+      seen = {
+        mtime: file.stat.mtime,
+        title: noteTitle(file.basename, content),
+        excerpt: noteExcerpt(content),
+        body: noteBody(content),
+        folded: fold(noteBody(content))
+      }
+      this.read.set(file.path, seen)
+    }
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter ?? {}
+    const projects = [...stringList(fm.projects), ...stringList(fm.project ?? fm.projet)]
+      .map((raw) => this.resolve(raw, file.path))
+      .filter((path): path is string => !!path)
+    const slash = file.path.lastIndexOf('/')
+    return {
+      path: file.path,
+      title: seen.title,
+      excerpt: seen.excerpt,
+      mtime: file.stat.mtime,
+      tags: cleanTags(stringList(fm.tags)),
+      projects: [...new Set(projects)],
+      subfolder: file.path.slice(this.root.length + 1, Math.max(this.root.length + 1, slash))
+    }
   }
 
   /** A note's text, without its properties, as last read. */

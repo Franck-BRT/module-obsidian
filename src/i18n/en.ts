@@ -1957,6 +1957,8 @@ export const en = {
   'settings.notesFolder.name': 'Notes library folder',
   'settings.notesFolder.desc':
     'The folder for notes of no project yet, which is also the inbox: the plugin’s new notes and those the chat writes are created there. For Obsidian to create its new notes there too, choose this folder in Settings → Files and links → Default location for new notes.',
+  'notes.loading': 'Reading the notes…',
+  'notes.loadFailed': 'The notes library could not be shown: {reason}',
   'notes.title': 'Notes library',
   'notes.ofProject': 'This project’s notes in the notes library',
   'notes.count': { one: '{count} note', other: '{count} notes' },

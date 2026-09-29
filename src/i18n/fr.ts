@@ -1940,6 +1940,8 @@ export const fr: Catalog = {
   'settings.notesFolder.name': 'Dossier de la bibliothèque de notes',
   'settings.notesFolder.desc':
     'Le dossier des notes « tout venant », qui sert aussi de boîte de réception : les nouvelles notes du plugin et celles écrites par le chat y sont créées. Pour qu’Obsidian y crée aussi ses nouvelles notes, choisis ce dossier dans Réglages → Fichiers et liens → Emplacement par défaut des nouvelles notes.',
+  'notes.loading': 'Lecture des notes…',
+  'notes.loadFailed': 'La bibliothèque de notes n’a pas pu être affichée : {reason}',
   'notes.title': 'Bibliothèque de notes',
   'notes.ofProject': 'Notes du projet dans la bibliothèque de notes',
   'notes.count': { one: '{count} note', other: '{count} notes' },

@@ -100,15 +100,33 @@ export class NotesView extends ItemView {
     this.bodyEl = root.createDiv('pm-content pm-docs-body')
     // A note written, changed, moved or thrown away redraws the list.
     const later = (): void => this.reloadSoon()
-    this.registerEvent(this.app.metadataCache.on('changed', later))
-    this.registerEvent(this.app.vault.on('delete', later))
-    this.registerEvent(this.app.vault.on('rename', later))
+    // Only what happens in the library's folder: the vault indexed at start-up, or a note
+    // written elsewhere, does not read the whole library again each time.
+    const inside = (path: string): boolean => path.startsWith(`${this.plugin.notes.root}/`)
+    this.registerEvent(
+      this.app.metadataCache.on('changed', (file) => {
+        if (inside(file.path)) later()
+      })
+    )
+    this.registerEvent(
+      this.app.vault.on('delete', (file) => {
+        if (inside(file.path)) later()
+      })
+    )
+    this.registerEvent(
+      this.app.vault.on('rename', (file, oldPath) => {
+        if (inside(file.path) || inside(oldPath)) later()
+      })
+    )
     this.registerEvent(
       this.app.vault.on('create', (file) => {
         if (file instanceof TFolder && file.path.startsWith(`${this.plugin.notes.root}/`)) later()
       })
     )
     this.register(this.plugin.index.onChange(later))
+    // Something at once — the notes are read after —, never a blank page.
+    this.renderToolbar()
+    this.bodyEl.createDiv({ cls: 'pm-docs-none', text: t('notes.loading') })
     void this.reload()
     return Promise.resolve()
   }
@@ -126,11 +144,24 @@ export class NotesView extends ItemView {
     }, 300)
   }
 
+  private loaded = false
+
   private async reload(): Promise<void> {
-    this.entries = await this.plugin.notes.entries()
-    this.renderToolbar()
-    this.renderFilters()
-    this.renderBody()
+    try {
+      this.entries = await this.plugin.notes.entries()
+      this.loaded = true
+      this.renderToolbar()
+      this.renderFilters()
+      this.renderBody()
+    } catch (error) {
+      // Said where it is looked for, rather than a blank page.
+      console.error('[PM] Could not draw the notes library:', error)
+      this.bodyEl.empty()
+      this.bodyEl.createDiv({
+        cls: 'pm-docs-none pm-docs-error',
+        text: t('notes.loadFailed', { reason: error instanceof Error ? error.message : String(error) })
+      })
+    }
   }
 
   private projectTitle(path: string): string {
@@ -142,12 +173,17 @@ export class NotesView extends ItemView {
     const left = this.toolbarEl.createDiv('pm-toolbar-left')
     left.createEl('h2', { cls: 'pm-toolbar-title', text: t('notes.title') })
     const toSort = this.entries.filter((entry) => !entry.projects.length).length
-    left.createSpan({
-      cls: 'pm-docs-count',
-      text: [t('notes.count', { count: this.entries.length }), toSort ? t('notes.toSortCount', { count: toSort }) : '']
-        .filter(Boolean)
-        .join(' · ')
-    })
+    if (this.loaded) {
+      left.createSpan({
+        cls: 'pm-docs-count',
+        text: [
+          t('notes.count', { count: this.entries.length }),
+          toSort ? t('notes.toSortCount', { count: toSort }) : ''
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      })
+    }
     const right = this.toolbarEl.createDiv('pm-toolbar-right')
     new ButtonComponent(right)
       .setButtonText(t('folders.newFolder'))
