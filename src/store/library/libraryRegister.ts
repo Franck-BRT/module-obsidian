@@ -1,4 +1,4 @@
-import type { Project, Task } from '../../types'
+import type { DocumentMeta, Project, Task } from '../../types'
 import { documentOf, isDocument } from '../Document'
 import { flattenTasks } from '../TaskTreeOps'
 import { fold } from './libraryDoc'
@@ -288,4 +288,21 @@ export function missingRegisterFiles(projects: Project[], exists: (path: string)
     }
   }
   return missing
+}
+
+/**
+ * A register document made to follow its files where the library moved them: its current
+ * file and its earlier versions, by their paths — however their accents were written.
+ * Null when none of its files moved.
+ */
+export function repointedDocument(meta: DocumentMeta, moves: Map<string, string>): DocumentMeta | null {
+  const moved = new Map([...moves].map(([from, to]) => [from.normalize('NFC'), to]))
+  const to = (path: string): string | undefined => (path ? moved.get(path.normalize('NFC')) : undefined)
+  const file = to(meta.file)
+  const versions = meta.versions.map((version) => {
+    const where = to(version.file)
+    return where ? { ...version, file: where } : version
+  })
+  if (!file && versions.every((version, at) => version === meta.versions[at])) return null
+  return { ...meta, file: file ?? meta.file, versions }
 }

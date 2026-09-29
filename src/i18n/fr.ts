@@ -1682,17 +1682,19 @@ export const fr: Catalog = {
     one: 'Verser {count} document dans « {folder} »',
     other: 'Verser {count} documents dans « {folder} »'
   },
+  'library.registersFollowed': {
+    one: '{count} fiche de registre suit son fichier à sa nouvelle place.',
+    other: '{count} fiches de registre suivent leur fichier à sa nouvelle place.'
+  },
+  'library.moreFilters': 'Filtres',
+  'library.moreFiltersSet': { one: 'Filtres · {count}', other: 'Filtres · {count}' },
+  'library.clearFilters': 'Retirer ces filtres',
   'library.rootFolder': 'Racine de la bibliothèque',
   'library.newFolderTitle': 'Nouveau dossier dans la bibliothèque de documents',
   'library.folderChip': 'Voir le dossier « {folder} »',
   'library.movedTo': {
     one: '{count} document déplacé dans {folder}.',
     other: '{count} documents déplacés dans {folder}.'
-  },
-  'library.filesKept': {
-    one: '{count} fichier suivi dans un registre de projet reste où il est : seule sa fiche a changé de dossier.',
-    other:
-      '{count} fichiers suivis dans un registre de projet restent où ils sont : seules leurs fiches ont changé de dossier.'
   },
   'library.unreadable': 'Non lu (un dossier ne se verse pas depuis l’ordinateur, seulement ses fichiers) : {list}',
   'library.notesHeading': 'Notes',
@@ -1955,5 +1957,17 @@ export const fr: Catalog = {
   'notes.rootFolder': 'Racine (boîte de réception)',
   'folders.moveTo': 'Déplacer vers un dossier…',
   'folders.moveToPlaceholder': 'Choisis un dossier, ou tape le nom d’un nouveau…',
+  'folders.root': 'Racine',
+  'folders.rename': 'Renommer le dossier « {folder} »',
+  'folders.renameTitle': 'Renommer le dossier « {folder} »',
+  'folders.renamePlaceholder': 'Nouveau nom du dossier',
+  'folders.renamed': 'Dossier renommé : {folder}',
+  'folders.nameTaken':
+    'Le dossier n’a pas été renommé : le nom est vide, ou un dossier « {name} » existe déjà à cet endroit.',
+  'folders.delete': 'Supprimer le dossier « {folder} »',
+  'folders.deleteConfirm':
+    'Supprimer le dossier « {folder} » ? Ce qu’il contient, sous-dossiers compris, remonte dans « {parent} » : rien n’est effacé, seul le dossier disparaît.',
+  'folders.deleteAction': 'Supprimer le dossier',
+  'folders.deleted': 'Dossier « {folder} » supprimé ; son contenu est maintenant dans « {parent} ».',
   'notes.movedTo': { one: '{count} note déplacée dans {folder}.', other: '{count} notes déplacées dans {folder}.' }
 }

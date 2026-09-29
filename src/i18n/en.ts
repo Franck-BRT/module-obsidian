@@ -1703,16 +1703,19 @@ export const en = {
     one: 'Pour {count} document into “{folder}”',
     other: 'Pour {count} documents into “{folder}”'
   },
+  'library.registersFollowed': {
+    one: '{count} register ticket follows its file to its new place.',
+    other: '{count} register tickets follow their files to their new place.'
+  },
+  'library.moreFilters': 'Filters',
+  'library.moreFiltersSet': { one: 'Filters · {count}', other: 'Filters · {count}' },
+  'library.clearFilters': 'Clear these filters',
   'library.rootFolder': 'Library root',
   'library.newFolderTitle': 'New folder in the document library',
   'library.folderChip': 'Show the folder “{folder}”',
   'library.movedTo': {
     one: '{count} document moved into {folder}.',
     other: '{count} documents moved into {folder}.'
-  },
-  'library.filesKept': {
-    one: '{count} file followed in a project register stays where it is: only its record changed folder.',
-    other: '{count} files followed in a project register stay where they are: only their records changed folder.'
   },
   'library.unreadable': 'Not read (a folder cannot be poured from the computer, only its files): {list}',
   'library.notesHeading': 'Notes',
@@ -1971,5 +1974,16 @@ export const en = {
   'notes.rootFolder': 'Root (inbox)',
   'folders.moveTo': 'Move to a folder…',
   'folders.moveToPlaceholder': 'Choose a folder, or type the name of a new one…',
+  'folders.root': 'Root',
+  'folders.rename': 'Rename the folder “{folder}”',
+  'folders.renameTitle': 'Rename the folder “{folder}”',
+  'folders.renamePlaceholder': 'New name of the folder',
+  'folders.renamed': 'Folder renamed: {folder}',
+  'folders.nameTaken': 'The folder was not renamed: the name is empty, or a folder “{name}” already exists there.',
+  'folders.delete': 'Delete the folder “{folder}”',
+  'folders.deleteConfirm':
+    'Delete the folder “{folder}”? What it holds, its folders included, goes up into “{parent}”: nothing is erased, only the folder goes.',
+  'folders.deleteAction': 'Delete the folder',
+  'folders.deleted': 'Folder “{folder}” deleted; what it held is now in “{parent}”.',
   'notes.movedTo': { one: '{count} note moved into {folder}.', other: '{count} notes moved into {folder}.' }
 } as const

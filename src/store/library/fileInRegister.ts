@@ -1,6 +1,8 @@
 import type { TFile } from 'obsidian'
 import { makeDocument, makeTask, type DocumentMeta, type Project, type Task } from '../../types'
-import { documentOf, statusForState } from '../Document'
+import { documentOf, isDocument, statusForState } from '../Document'
+import { flattenTasks } from '../TaskTreeOps'
+import { repointedDocument } from './libraryRegister'
 import type { DocumentStore } from '../DocumentStore'
 import type { TaskSource } from '../TaskSource'
 
@@ -57,4 +59,27 @@ export async function fileAsNew(
   const task: Task = { ...draft, document: meta, ...(status ? { status } : {}) }
   await deps.store.insertTask(project, task)
   return task
+}
+
+/**
+ * The registers told where the library moved the files they follow, since a register
+ * finds its files by their path. Returns how many tickets were told.
+ */
+export async function followMoves(
+  store: Pick<TaskSource, 'updateTask'>,
+  projects: Project[],
+  moves: Map<string, string>
+): Promise<number> {
+  if (!moves.size) return 0
+  let told = 0
+  for (const project of projects) {
+    for (const { task } of flattenTasks(project.tasks)) {
+      if (!isDocument(task)) continue
+      const meta = repointedDocument(documentOf(task), moves)
+      if (!meta) continue
+      await store.updateTask(project, task.id, { document: meta })
+      told++
+    }
+  }
+  return told
 }

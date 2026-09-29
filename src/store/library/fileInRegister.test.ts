@@ -7,7 +7,7 @@ import { DocumentStore } from '../DocumentStore'
 import { ProjectStore } from '../ProjectStore'
 import { VaultIndex } from '../VaultIndex'
 import { DocLibrary } from './DocLibrary'
-import { fileAsNew, fileAsVersion, type RegisterDeps } from './fileInRegister'
+import { fileAsNew, fileAsVersion, followMoves, type RegisterDeps } from './fileInRegister'
 import { proposeMatches, registerCandidates, registerEntries } from './libraryRegister'
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
@@ -163,5 +163,45 @@ describe('a library document followed in a register', () => {
     await fileAsVersion(deps, match.project, match.task, fileAt(proposal.subject.file), DEPOSIT)
     const ticket = (await reload()).tasks.find((task) => task.title === 'Plan de coffrage radier')
     expect(documentOf(ticket ?? makeTask())).toMatchObject({ state: 'received', file: proposal.subject.file })
+  })
+
+  it('follows the files the library moves, current and earlier versions, in the register', async () => {
+    await library.pour(
+      [
+        { kind: 'bytes', name: 'Plan indice A.pdf', bytes: bytes('A') },
+        { kind: 'bytes', name: 'Plan indice B.pdf', bytes: bytes('B') }
+      ],
+      { projects: [project.filePath], move: false, today: '2026-09-28' }
+    )
+    const [a, b] = ['Library/_files/Plan indice A.pdf', 'Library/_files/Plan indice B.pdf']
+    const created = await fileAsNew(deps, await reload(), 'Plan de coffrage', fileAt(a), DEPOSIT)
+    const ticket = (await reload()).tasks.find((task) => task.id === created.id)
+    if (!ticket) throw new Error('ticket not written')
+    await fileAsVersion(deps, await reload(), ticket, fileAt(b), DEPOSIT)
+    // Its first issue moved first, then its folder renamed with its current one in it.
+    const first = library.docs().find((doc) => doc.file === a)
+    if (!first) throw new Error('no document')
+    const moved = await library.moveTo(first, 'Plans')
+    expect(await followMoves(store, [await reload()], moved)).toBe(1)
+    for (const doc of library.docs().filter((each) => each.file === b)) {
+      expect(await followMoves(store, [await reload()], await library.moveTo(doc, 'Plans'))).toBe(1)
+    }
+    const renamed = await library.renameFolder('Plans', 'Coffrage')
+    const shown = await reload()
+    expect(await followMoves(store, [shown], renamed?.moves ?? new Map<string, string>())).toBe(1)
+    // The project as the caller holds it says so at once, before it is read again.
+    const held = shown.tasks.find((task) => task.id === created.id)
+    expect(documentOf(held ?? makeTask()).file).toBe('Library/Coffrage/_files/Plan indice B.pdf')
+
+    const after = documentOf((await reload()).tasks.find((task) => task.id === created.id) ?? makeTask())
+    expect(after.file).toBe('Library/Coffrage/_files/Plan indice B.pdf')
+    expect(after.versions.map((version) => version.file)).toEqual([
+      'Library/Coffrage/_files/Plan indice A.pdf',
+      'Library/Coffrage/_files/Plan indice B.pdf'
+    ])
+    expect(registerEntries([await reload()]).get('Library/Coffrage/_files/Plan indice B.pdf')).toHaveLength(1)
+    // Nothing moved, nothing told.
+    expect(await followMoves(store, [await reload()], new Map())).toBe(0)
+    expect(await followMoves(store, [await reload()], new Map([['Elsewhere.pdf', 'Else.pdf']]))).toBe(0)
   })
 })

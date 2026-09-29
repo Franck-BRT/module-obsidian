@@ -8,6 +8,7 @@ import {
   Setting,
   setIcon,
   TFile,
+  TFolder,
   type ViewStateResult,
   type WorkspaceLeaf
 } from 'obsidian'
@@ -24,8 +25,16 @@ import {
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
-import { promptText } from '../../ui/ModalFactory'
-import { filteredFolder, FolderPicker, folderOptions, type FolderChoice } from '../folderPicker'
+import { confirmDialog, promptText } from '../../ui/ModalFactory'
+import {
+  dragRows,
+  filteredFolder,
+  FolderPicker,
+  folderOptions,
+  renderFolderStrip,
+  type FolderChoice
+} from '../folderUi'
+import { AT_ROOT } from '../../store/folderFilter'
 
 export const PM_NOTES_VIEW_TYPE = 'pm-notes'
 
@@ -94,6 +103,11 @@ export class NotesView extends ItemView {
     this.registerEvent(this.app.metadataCache.on('changed', later))
     this.registerEvent(this.app.vault.on('delete', later))
     this.registerEvent(this.app.vault.on('rename', later))
+    this.registerEvent(
+      this.app.vault.on('create', (file) => {
+        if (file instanceof TFolder && file.path.startsWith(`${this.plugin.notes.root}/`)) later()
+      })
+    )
     this.register(this.plugin.index.onChange(later))
     void this.reload()
     return Promise.resolve()
@@ -147,6 +161,10 @@ export class NotesView extends ItemView {
   }
 
   private renderFilters(): void {
+    // Drawn again while a search is being typed — a note changed elsewhere —: the typing goes on.
+    const typing = this.filtersEl.querySelector<HTMLInputElement>('.pm-docs-search')
+    const focused = !!typing && typing.ownerDocument.activeElement === typing
+    const caret = typing?.selectionStart ?? null
     this.filtersEl.empty()
     this.filtersEl.toggleClass('is-hidden', !this.entries.length)
     const search = this.filtersEl.createEl('input', {
@@ -154,6 +172,10 @@ export class NotesView extends ItemView {
       attr: { type: 'search', placeholder: t('notes.search') }
     })
     search.value = this.query.text
+    if (focused) {
+      search.focus()
+      if (caret !== null) search.setSelectionRange(caret, caret)
+    }
     search.addEventListener('input', () => {
       this.query = { ...this.query, text: search.value }
       this.shown = PAGE
@@ -230,6 +252,23 @@ export class NotesView extends ItemView {
     }
     const paths = new Set(all.map((entry) => entry.path))
     for (const path of this.picked) if (!paths.has(path)) this.picked.delete(path)
+    renderFolderStrip(this.bodyEl, {
+      folders: this.plugin.notes.folders(),
+      current: this.query.folder ?? '',
+      open: (folder) => this.openFolder(folder),
+      drop: (dropped, folder) => {
+        void this.moveNotes(
+          all.filter((entry) => dropped.includes(entry.path)),
+          folder
+        )
+      },
+      rename: (folder) => {
+        void this.renameFolder(folder)
+      },
+      remove: (folder) => {
+        void this.deleteFolder(folder)
+      }
+    })
     const found = sortNotes(
       all.filter((entry) =>
         matchesNote(
@@ -302,6 +341,8 @@ export class NotesView extends ItemView {
 
   private renderRow(list: HTMLElement, entry: NoteEntry): void {
     const row = list.createDiv('pm-docs-row')
+    // Dragged onto a folder: itself, or all that is ticked when it is.
+    dragRows(row, () => (this.picked.has(entry.path) ? [...this.picked] : [entry.path]))
     const tick = row.createEl('input', {
       cls: 'pm-docs-tick',
       attr: { type: 'checkbox', 'aria-label': t('library.pickOne', { title: entry.title }) }
@@ -489,14 +530,63 @@ export class NotesView extends ItemView {
       safeAsync(async (target: FolderChoice) => {
         const folder = target.kind === 'new' ? await this.plugin.notes.createFolder(target.name) : target.path
         if (target.kind === 'new' && !folder) return
-        for (const entry of entries) {
-          const file = this.fileOf(entry)
-          if (file) await this.plugin.notes.moveTo(file, this.plugin.notes.pathOf(folder))
-        }
-        this.picked.clear()
-        new Notice(t('notes.movedTo', { count: entries.length, folder: folder || t('notes.rootFolder') }))
+        await this.moveNotes(entries, folder)
       })
     ).open()
+  }
+
+  /** Notes moved into a folder of the library — '' for its root. */
+  private async moveNotes(entries: NoteEntry[], folder: string): Promise<void> {
+    if (!entries.length) return
+    for (const entry of entries) {
+      const file = this.fileOf(entry)
+      if (file) await this.plugin.notes.moveTo(file, this.plugin.notes.pathOf(folder))
+    }
+    this.picked.clear()
+    new Notice(t('notes.movedTo', { count: entries.length, folder: folder || t('notes.rootFolder') }))
+  }
+
+  /** Shows a folder — '' for every folder, `AT_ROOT` for the root alone. */
+  private openFolder(folder: string): void {
+    this.query = { ...this.query, folder }
+    this.shown = PAGE
+    this.renderFilters()
+    this.renderBody()
+  }
+
+  /** A folder renamed where it is; the notes' links follow, as Obsidian renames them. */
+  private async renameFolder(folder: string): Promise<void> {
+    const name = await promptText(
+      this.app,
+      t('folders.renameTitle', { folder }),
+      t('folders.renamePlaceholder'),
+      folder.slice(folder.lastIndexOf('/') + 1)
+    )
+    if (name === null) return
+    const renamed = await this.plugin.notes.renameFolder(folder, name)
+    if (renamed === null) {
+      new Notice(t('folders.nameTaken', { name: name.trim() }))
+      return
+    }
+    new Notice(t('folders.renamed', { folder: renamed }))
+    this.query = { ...this.query, folder: renamed }
+    await this.reload()
+  }
+
+  /** A folder taken out, what it holds going up into the one it is in, after a yes. */
+  private async deleteFolder(folder: string): Promise<void> {
+    const parent = folder.slice(0, Math.max(0, folder.lastIndexOf('/')))
+    const parentName = parent || t('notes.rootFolder')
+    const yes = await confirmDialog(
+      this.app,
+      t('folders.deleteConfirm', { folder, parent: parentName }),
+      t('folders.deleteAction')
+    )
+    if (!yes) return
+    await this.plugin.notes.deleteFolder(folder)
+    new Notice(t('folders.deleted', { folder, parent: parentName }))
+    this.query = { ...this.query, folder: parent || AT_ROOT }
+    await this.reload()
   }
 
   /** A note moved beside its first project — into its folder — where it now belongs. */

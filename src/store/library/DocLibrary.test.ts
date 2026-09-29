@@ -392,8 +392,12 @@ describe('DocLibrary', () => {
 
     it('moves a document with the file it keeps, and back to the root', async () => {
       await library.pour([outside('x.pdf', 'x')], { projects: [], move: false, today: TODAY })
-      const record = await library.moveTo(library.docs()[0], 'Marchés/Lot 2')
-      expect(record).toBe('Bibliothèque/Marchés/Lot 2/x.md')
+      const moves = await library.moveTo(library.docs()[0], 'Marchés/Lot 2')
+      const record = 'Bibliothèque/Marchés/Lot 2/x.md'
+      expect([...moves]).toEqual([
+        ['Bibliothèque/x.md', record],
+        ['Bibliothèque/Fichiers/x.pdf', 'Bibliothèque/Marchés/Lot 2/Fichiers/x.pdf']
+      ])
       expect(library.docs()[0]).toMatchObject({
         record,
         folder: 'Marchés/Lot 2',
@@ -423,29 +427,18 @@ describe('DocLibrary', () => {
       expect(files.every((file) => file.startsWith('Bibliothèque/A/Fichiers/'))).toBe(true)
     })
 
-    it('leaves a file a register follows, or one only recorded, where it is: only its record moves', async () => {
-      await library.pour([outside('x.pdf', 'x')], { projects: [], move: false, today: TODAY })
+    it('leaves a file only recorded where it lives there: only its record moves', async () => {
       const inVault = await vault.createBinary('Work/Tunnel/_docs/Plan.pdf', bytes('plan').buffer as ArrayBuffer)
       await library.pour([{ kind: 'vault', file: inVault }], { projects: [], move: false, today: TODAY })
-      const [kept, recorded] = ['x', 'Plan'].map((title) => library.docs().find((doc) => doc.title === title))
-      if (!kept || !recorded) throw new Error('missing document')
-      await library.moveTo(kept, 'A', true)
-      await library.moveTo(recorded, 'A')
-      expect(
-        library
-          .docs()
-          .map((doc) => [doc.record, doc.file])
-          .sort()
-      ).toEqual([
-        ['Bibliothèque/A/Plan.md', 'Work/Tunnel/_docs/Plan.pdf'],
-        ['Bibliothèque/A/x.md', 'Bibliothèque/Fichiers/x.pdf']
-      ])
+      const moves = await library.moveTo(library.docs()[0], 'A')
+      expect([...moves]).toEqual([['Bibliothèque/Plan.md', 'Bibliothèque/A/Plan.md']])
+      expect(library.docs()[0]).toMatchObject({ record: 'Bibliothèque/A/Plan.md', file: 'Work/Tunnel/_docs/Plan.pdf' })
     })
 
     it('leaves a document already in the folder as it is', async () => {
       await library.pour([outside('x.pdf', 'x')], { projects: [], move: false, today: TODAY, folder: 'A' })
       const before = vault.contentAt('Bibliothèque/A/x.md')
-      expect(await library.moveTo(library.docs()[0], 'A')).toBe('Bibliothèque/A/x.md')
+      expect((await library.moveTo(library.docs()[0], 'A')).size).toBe(0)
       expect(vault.contentAt('Bibliothèque/A/x.md')).toBe(before)
       expect(library.docs()[0].file).toBe('Bibliothèque/A/Fichiers/x.pdf')
     })
@@ -472,6 +465,64 @@ describe('DocLibrary', () => {
       expect(library.holdsFile(doc)).toBe(false)
       await library.remove(doc)
       expect(vault.getAbstractFileByPath('Archives du chantier/Fichiers/Devis.pdf')).toBeInstanceOf(TFile)
+    })
+
+    it('renames a folder where it is, its documents still finding their files', async () => {
+      await library.pour([outside('x.pdf', 'x')], { projects: [], move: false, today: TODAY, folder: 'Marchés/Lot 2' })
+      await library.createFolder('Autre')
+      const renamed = await library.renameFolder('Marchés/Lot 2', 'Lot 2 bis')
+      expect(renamed?.folder).toBe('Marchés/Lot 2 bis')
+      expect([...(renamed?.moves ?? [])].sort()).toEqual([
+        ['Bibliothèque/Marchés/Lot 2/Fichiers/x.pdf', 'Bibliothèque/Marchés/Lot 2 bis/Fichiers/x.pdf'],
+        ['Bibliothèque/Marchés/Lot 2/x.md', 'Bibliothèque/Marchés/Lot 2 bis/x.md']
+      ])
+      expect(library.docs()[0]).toMatchObject({
+        folder: 'Marchés/Lot 2 bis',
+        file: 'Bibliothèque/Marchés/Lot 2 bis/Fichiers/x.pdf'
+      })
+      expect(library.folders()).toEqual(['Autre', 'Marchés', 'Marchés/Lot 2 bis'])
+    })
+
+    it('renames a folder by a name only, never onto another folder nor to nothing', async () => {
+      await library.createFolder('A')
+      await library.createFolder('B')
+      expect(await library.renameFolder('A', 'B')).toBeNull()
+      expect(await library.renameFolder('A', ' / ')).toBeNull()
+      expect(await library.renameFolder('', 'C')).toBeNull()
+      expect(await library.renameFolder('Nowhere', 'C')).toBeNull()
+      expect((await library.renameFolder('A', 'x/y'))?.folder).toBe('x y')
+      expect((await library.renameFolder('B', 'B'))?.moves.size).toBe(0)
+      expect(library.folders()).toEqual(['B', 'x y'])
+    })
+
+    it('takes a folder out: its documents go up, the files it keeps into the parent’s files, its folders whole', async () => {
+      await library.pour([outside('x.pdf', 'one')], { projects: [], move: false, today: TODAY, folder: 'M' })
+      await library.pour([outside('x.pdf', 'two')], { projects: [], move: false, today: TODAY, folder: 'M/Lot' })
+      await library.pour([outside('x.pdf', 'three')], { projects: [], move: false, today: TODAY })
+      const moves = await library.deleteFolder('M')
+      expect(vault.getAbstractFileByPath('Bibliothèque/M')).toBeNull()
+      expect(library.folders()).toEqual(['Lot'])
+      const docs = library
+        .docs()
+        .map((doc) => [doc.folder, doc.record, doc.file])
+        .sort()
+      expect(docs).toEqual([
+        ['', 'Bibliothèque/x-1.md', 'Bibliothèque/Fichiers/x-1.pdf'],
+        ['', 'Bibliothèque/x.md', 'Bibliothèque/Fichiers/x.pdf'],
+        ['Lot', 'Bibliothèque/Lot/x.md', 'Bibliothèque/Lot/Fichiers/x.pdf']
+      ])
+      expect(moves.get('Bibliothèque/M/Fichiers/x.pdf')).toBe('Bibliothèque/Fichiers/x-1.pdf')
+      expect(moves.get('Bibliothèque/M/Lot/Fichiers/x.pdf')).toBe('Bibliothèque/Lot/Fichiers/x.pdf')
+      expect(vault.contentAt('Bibliothèque/x-1.md')).toContain('file: "[[Bibliothèque/Fichiers/x-1.pdf]]"')
+    })
+
+    it('takes a folder at no depth out into the root, and nothing when there is no such folder', async () => {
+      expect((await library.deleteFolder('')).size).toBe(0)
+      expect((await library.deleteFolder('Nowhere')).size).toBe(0)
+      await library.pour([outside('x.pdf', 'x')], { projects: [], move: false, today: TODAY, folder: 'A/B' })
+      await library.deleteFolder('A/B')
+      expect(library.docs()[0]).toMatchObject({ folder: 'A', file: 'Bibliothèque/A/Fichiers/x.pdf' })
+      expect(library.folders()).toEqual(['A'])
     })
   })
 })

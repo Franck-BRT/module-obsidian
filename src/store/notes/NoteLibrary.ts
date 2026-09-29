@@ -6,7 +6,7 @@ import { fold, linkPath, stringList } from '../library/libraryDoc'
 import { refLink } from '../refs'
 import { ensureFolder } from '../vaultFs'
 import { AT_ROOT, inFolder } from '../folderFilter'
-import { folderPath, makeSubfolder, subfolders } from '../libraryFolders'
+import { dissolveSubfolder, folderPath, makeSubfolder, renameSubfolder, subfolders } from '../libraryFolders'
 
 /**
  * The notes library: a folder for whatever does not belong anywhere yet — a thought, a
@@ -220,6 +220,19 @@ export class NoteLibrary {
    */
   createFolder(name: string, under = ''): Promise<string> {
     return makeSubfolder(this.app, this.root, name, under)
+  }
+
+  /**
+   * Renames one of the library's folders, where it is; returns its new path under the
+   * library's, or null when the name holds nothing or another folder has it.
+   */
+  async renameFolder(subfolder: string, name: string): Promise<string | null> {
+    return (await renameSubfolder(this.app, this.root, subfolder, name))?.folder ?? null
+  }
+
+  /** Takes a folder out: its notes and folders go up into the one it is in; returns how many files moved. */
+  async deleteFolder(subfolder: string): Promise<number> {
+    return (await dissolveSubfolder(this.app, this.root, subfolder)).size
   }
 
   /** Says which projects a note belongs to, replacing what it said; the single `project` of a kept reply included. */

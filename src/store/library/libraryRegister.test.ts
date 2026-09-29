@@ -7,7 +7,8 @@ import {
   registerCandidates,
   missingRegisterFiles,
   registerEntries,
-  registerFilesOutside
+  registerFilesOutside,
+  repointedDocument
 } from './libraryRegister'
 
 const ticket = (title: string, document: Partial<DocumentMeta>, subtasks: Task[] = []): Task =>
@@ -246,5 +247,37 @@ describe('missingRegisterFiles', () => {
     expect(missing.map((entry) => [entry.project.title, entry.task, entry.file])).toEqual([
       ['Génie civil', gone, 'GC/_docs/Ancien.pdf']
     ])
+  })
+})
+
+describe('repointedDocument', () => {
+  it('follows a moved current file and earlier versions, however their accents were written, and nothing else', () => {
+    const meta = makeDocument({
+      file: 'L/_files/Réception.pdf'.normalize('NFD'),
+      versions: [version(1, 'L/_files/old.pdf'), version(2, 'L/_files/Réception.pdf'), version(3, 'X/keep.pdf')]
+    })
+    const moves = new Map([
+      ['L/_files/Réception.pdf'.normalize('NFC'), 'L/A/_files/Réception.pdf'],
+      ['L/_files/old.pdf', 'L/A/_files/old.pdf']
+    ])
+    const moved = repointedDocument(meta, moves)
+    expect(moved?.file).toBe('L/A/_files/Réception.pdf')
+    expect(moved?.versions.map((each) => each.file)).toEqual([
+      'L/A/_files/old.pdf',
+      'L/A/_files/Réception.pdf',
+      'X/keep.pdf'
+    ])
+    expect(meta.file).toBe('L/_files/Réception.pdf'.normalize('NFD'))
+    expect(repointedDocument(meta, new Map([['Z.pdf', 'Y.pdf']]))).toBeNull()
+    // An earlier version moved alone is followed too.
+    const earlier = repointedDocument(meta, new Map([['L/_files/old.pdf', 'L/B/old.pdf']]))
+    expect(earlier?.file).toBe(meta.file)
+    expect(earlier?.versions[0].file).toBe('L/B/old.pdf')
+    // Moved as the disk wrote it, with its accents apart.
+    const composed = makeDocument({ file: 'L/Réception.pdf'.normalize('NFC') })
+    const decomposed = new Map([['L/Réception.pdf'.normalize('NFD'), 'L/A/Réception.pdf']])
+    expect(repointedDocument(composed, decomposed)?.file).toBe('L/A/Réception.pdf')
+    // An expected document, with no file, has nothing to follow.
+    expect(repointedDocument(makeDocument(), new Map([['', 'x']]))).toBeNull()
   })
 })

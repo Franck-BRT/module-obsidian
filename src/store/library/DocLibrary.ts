@@ -3,7 +3,14 @@ import { sanitizeFileName } from '../../utils'
 import { DOCS_FOLDER_NAME, freePath } from '../DocumentStore'
 import { refLink } from '../refs'
 import { ensureFolder } from '../vaultFs'
-import { folderPath, makeSubfolder, subfolders } from '../libraryFolders'
+import {
+  dissolveSubfolder,
+  folderPath,
+  makeSubfolder,
+  renameSubfolder,
+  subfolders,
+  type Moves
+} from '../libraryFolders'
 import { cleanTags, guessCategory, mergeClassification, type Category, type Classification } from './libraryClass'
 import {
   baseNameOf,
@@ -399,28 +406,74 @@ export class DocLibrary {
   /**
    * Moves a document into a folder of the library — '' for its root —: its record, never
    * over another, and the file with it when the library keeps it, into the folder's files.
-   * `keepFile` leaves the file where it is: a register finds its files by their path.
-   * Returns where the record now is.
+   * A file only recorded where it lives stays there. Returns the files moved, by the path
+   * they had, for the registers that follow them to be told.
    */
-  async moveTo(doc: LibraryDoc, subfolder: string, keepFile = false): Promise<string> {
+  async moveTo(doc: LibraryDoc, subfolder: string): Promise<Moves> {
+    const moves: Moves = new Map()
     const record = this.app.vault.getAbstractFileByPath(doc.record)
-    if (!(record instanceof TFile)) return doc.record
+    if (!(record instanceof TFile)) return moves
     const target = this.pathOf(subfolder)
     if (record.parent?.path !== target) {
       await ensureFolder(this.app, target)
+      const from = record.path
       await this.app.fileManager.renameFile(record, await freePath(this.app, target, record.basename, 'md'))
+      moves.set(from, record.path)
     }
     const file = doc.file ? this.app.vault.getAbstractFileByPath(doc.file) : null
     const files = this.filesOf(subfolder)
-    if (!keepFile && file instanceof TFile && this.holdsFile(doc) && file.parent?.path !== files) {
+    if (file instanceof TFile && this.holdsFile(doc) && file.parent?.path !== files) {
       await ensureFolder(this.app, files)
+      const from = file.path
       await this.app.fileManager.renameFile(file, await freePath(this.app, files, file.basename, file.extension))
-      // Said again whatever Obsidian's own setting on links: the record must find its file.
-      await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
-        fm.file = `[[${file.path}]]`
-      })
+      moves.set(from, file.path)
+      await this.pointAt(record, file.path)
     }
-    return record.path
+    return moves
+  }
+
+  /**
+   * Renames one of the library's folders, where it is. Returns its new path under the
+   * library's and the files moved with it — or null when the name holds nothing, or
+   * another folder has it.
+   */
+  async renameFolder(subfolder: string, name: string): Promise<{ folder: string; moves: Moves } | null> {
+    const before = this.docs()
+    const renamed = await renameSubfolder(this.app, this.root, subfolder, name)
+    if (renamed) await this.relink(before, renamed.moves)
+    return renamed
+  }
+
+  /**
+   * Takes a folder out of the library: its documents and folders go up into the one it is
+   * in, the files it keeps into that folder's files. Returns the files moved.
+   */
+  async deleteFolder(subfolder: string): Promise<Moves> {
+    const before = this.docs()
+    const files = this.words().filesFolder
+    const moves = await dissolveSubfolder(this.app, this.root, subfolder, (name) => name === files)
+    await this.relink(before, moves)
+    return moves
+  }
+
+  /**
+   * The records whose files were moved made to name them where they now are — whatever
+   * Obsidian's own setting on links: a record must find its file.
+   */
+  private async relink(docs: LibraryDoc[], moves: Moves): Promise<void> {
+    for (const doc of docs) {
+      const file = doc.file ? moves.get(doc.file) : undefined
+      if (!file) continue
+      const record = this.app.vault.getAbstractFileByPath(moves.get(doc.record) ?? doc.record)
+      if (record instanceof TFile) await this.pointAt(record, file)
+    }
+  }
+
+  private async pointAt(record: TFile, file: string): Promise<void> {
+    const link = `[[${file}]]`
+    await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+      if (fm.file !== link) fm.file = link
+    })
   }
 }
 

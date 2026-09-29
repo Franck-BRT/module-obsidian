@@ -95,6 +95,7 @@ import type { LibraryDoc } from './store/library/libraryDoc'
 import { guessCategory, knownValues, parseCategories, type Category } from './store/library/libraryClass'
 import { askClassification, GUESS_CATEGORY, type ClassifyChoices } from './views/documents/classifyFields'
 import { proposeRegisterMatches } from './views/documents/matchRegister'
+import { followMoves } from './store/library/fileInRegister'
 import { pourRegisterFiles } from './views/documents/pourRegisters'
 import { skillNote } from './store/chat/skills'
 import { freePath } from './store/DocumentStore'
@@ -954,6 +955,19 @@ export default class PMPlugin extends Plugin {
     void this.libraryText.refresh(this.library.docs())
     // Those that look like documents a register is waiting for, offered to be filed as them.
     if (report.docs.length) await proposeRegisterMatches(this, report.docs, false)
+  }
+
+  /**
+   * The projects' registers told where the library moved the files they follow; returns
+   * how many tickets were told.
+   */
+  async followLibraryMoves(moves: Map<string, string>): Promise<number> {
+    if (!moves.size) return 0
+    const paths = this.index
+      .projectRefs()
+      .filter((ref) => !ref.template && !ref.program)
+      .map((ref) => ref.path)
+    return followMoves(this.store, await this.store.loadProjects(paths), moves)
   }
 
   /**

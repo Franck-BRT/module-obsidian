@@ -8,6 +8,7 @@ import {
   Setting,
   setIcon,
   TFile,
+  TFolder,
   type ViewStateResult,
   type WorkspaceLeaf
 } from 'obsidian'
@@ -29,6 +30,7 @@ import {
 } from '../../store/library/libraryDoc'
 import type { PourItem } from '../../store/library/DocLibrary'
 import { snippet } from '../../store/library/docText'
+import { AT_ROOT } from '../../store/folderFilter'
 import {
   missingRegisterFiles,
   registerEntries,
@@ -38,7 +40,7 @@ import {
 } from '../../store/library/libraryRegister'
 import { findVaultFile } from '../../store/library/DocLibrary'
 import { documentOf } from '../../store/Document'
-import { openTaskModal, promptText } from '../../ui/ModalFactory'
+import { confirmDialog, openTaskModal, promptText } from '../../ui/ModalFactory'
 import { docStateLabel } from '../library/docStateLabel'
 import { fileInRegister } from './registerActions'
 import { proposeRegisterMatches } from './matchRegister'
@@ -48,7 +50,14 @@ import { knownValues } from '../../store/library/libraryClass'
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
-import { filteredFolder, FolderPicker, folderOptions, type FolderChoice } from '../folderPicker'
+import {
+  dragRows,
+  filteredFolder,
+  FolderPicker,
+  folderOptions,
+  renderFolderStrip,
+  type FolderChoice
+} from '../folderUi'
 
 export const PM_DOCUMENTS_VIEW_TYPE = 'pm-documents'
 
@@ -67,6 +76,8 @@ const PAGE = 200
 export class DocumentsView extends ItemView {
   private query: DocQuery = { text: '', project: '', family: '' }
   private sort: DocSort = 'added'
+  /** Whether the finer filters — kind, category, lot, issuer, tag — are shown. */
+  private moreFilters = false
   private shown = PAGE
   private toolbarEl!: HTMLElement
   private filtersEl!: HTMLElement
@@ -132,6 +143,11 @@ export class DocumentsView extends ItemView {
     this.registerEvent(this.app.metadataCache.on('changed', later))
     this.registerEvent(this.app.vault.on('delete', later))
     this.registerEvent(this.app.vault.on('rename', later))
+    this.registerEvent(
+      this.app.vault.on('create', (file) => {
+        if (file instanceof TFolder && file.path.startsWith(`${this.plugin.library.root}/`)) later()
+      })
+    )
     this.register(this.plugin.index.onChange(later))
     // What the documents say, read in the background: the list follows as it comes in.
     this.register(this.plugin.libraryText.onChange(() => this.textSoon()))
@@ -168,6 +184,8 @@ export class DocumentsView extends ItemView {
     this.redrawTimer = window.setTimeout(() => {
       this.redrawTimer = null
       this.renderToolbar()
+      // A folder made, renamed or thrown away elsewhere is offered, or no longer.
+      this.renderFilters()
       this.renderBody()
       // A document come in, or changed, has its text read.
       void this.plugin.libraryText.refresh(this.plugin.library.docs())
@@ -219,6 +237,10 @@ export class DocumentsView extends ItemView {
   }
 
   private renderFilters(): void {
+    // Drawn again while a search is being typed — a folder made elsewhere —: the typing goes on.
+    const typing = this.filtersEl.querySelector<HTMLInputElement>('.pm-docs-search')
+    const focused = !!typing && typing.ownerDocument.activeElement === typing
+    const caret = typing?.selectionStart ?? null
     this.filtersEl.empty()
     const search = this.filtersEl.createEl('input', {
       cls: 'pm-docs-search',
@@ -230,13 +252,26 @@ export class DocumentsView extends ItemView {
       this.shown = PAGE
       this.renderBody()
     })
+    if (focused) {
+      search.focus()
+      if (caret !== null) search.setSelectionRange(caret, caret)
+    }
 
-    const select = (options: [string, string][], value: string, onChange: (value: string) => void): void => {
-      const el = this.filtersEl.createEl('select', { cls: 'dropdown pm-docs-select' })
+    const select = (
+      parent: HTMLElement,
+      options: [string, string][],
+      value: string,
+      onChange: (value: string) => void,
+      filter = true
+    ): void => {
+      const el = parent.createEl('select', { cls: 'dropdown pm-docs-select' })
       for (const [key, label] of options) el.createEl('option', { value: key, text: label })
       el.value = value
+      // A filter that is on says so; the order the list is in is no filter.
+      if (filter && value) el.addClass('is-set')
       el.addEventListener('change', () => onChange(el.value))
     }
+    const main = this.filtersEl
 
     const projects = this.projectOptions()
     // A project the filter names but the vault no longer has is still offered, so the
@@ -245,6 +280,7 @@ export class DocumentsView extends ItemView {
       projects.unshift([this.query.project, this.projectTitle(this.query.project)])
     }
     select(
+      main,
       [['', t('library.allProjects')], [NO_PROJECT, t('library.noProject')], ...projects],
       this.query.project,
       (project) => {
@@ -260,13 +296,43 @@ export class DocumentsView extends ItemView {
       if (filteredFolder(this.query.folder) && !folders.includes(this.query.folder ?? '')) {
         folders.push(this.query.folder ?? '')
       }
-      select(folderOptions(folders, t('library.rootFolder')), this.query.folder ?? '', (folder) => {
-        this.query = { ...this.query, folder }
-        this.shown = PAGE
-        this.renderBody()
-      })
+      select(main, folderOptions(folders, t('library.rootFolder')), this.query.folder ?? '', (folder) =>
+        this.openFolder(folder)
+      )
     }
     select(
+      main,
+      [
+        ['added', t('library.sortAdded')],
+        ['title', t('library.sortTitle')],
+        ['category', t('library.sortCategory')]
+      ],
+      this.sort,
+      (sort) => {
+        this.sort = sort as DocSort
+        this.renderBody()
+      },
+      false
+    )
+
+    // The finer filters, folded away behind one button that says how many are on.
+    const set = [this.query.family, this.query.category, this.query.lot, this.query.issuer, this.query.tag].filter(
+      Boolean
+    ).length
+    const toggle = main.createEl('button', {
+      cls: `pm-docs-more-filters${this.moreFilters ? ' is-open' : ''}${set ? ' is-set' : ''}`,
+      attr: { 'aria-expanded': String(this.moreFilters) }
+    })
+    setIcon(toggle.createSpan({ cls: 'pm-docs-more-filters-icon' }), 'sliders-horizontal')
+    toggle.createSpan({ text: set ? t('library.moreFiltersSet', { count: set }) : t('library.moreFilters') })
+    toggle.addEventListener('click', () => {
+      this.moreFilters = !this.moreFilters
+      this.renderFilters()
+    })
+    if (!this.moreFilters) return
+    const more = main.createDiv('pm-docs-filters-more')
+    select(
+      more,
       [
         ['', t('library.allKinds')],
         ...DOC_FAMILIES.map((family): [string, string] => [family, t(`library.kind.${family}`)])
@@ -275,6 +341,7 @@ export class DocumentsView extends ItemView {
       (family) => {
         this.query = { ...this.query, family: family as DocFamily | '' }
         this.shown = PAGE
+        this.renderFilters()
         this.renderBody()
       }
     )
@@ -286,11 +353,13 @@ export class DocumentsView extends ItemView {
       if (!values.length && !current) return
       if (current && current !== NO_VALUE && !values.includes(current)) values.unshift(current)
       select(
+        more,
         [['', all], [NO_VALUE, none], ...values.map((value): [string, string] => [value, value])],
         current,
         (chosen) => {
           this.query = { ...this.query, [key]: chosen }
           this.shown = PAGE
+          this.renderFilters()
           this.renderBody()
         }
       )
@@ -303,27 +372,35 @@ export class DocumentsView extends ItemView {
       const current = this.query.tag ?? ''
       if (current && !tags.includes(current)) tags.unshift(current)
       select(
+        more,
         [['', t('library.allTags')], ...tags.map((tag): [string, string] => [tag, `#${tag}`])],
         current,
         (chosen) => {
           this.query = { ...this.query, tag: chosen }
           this.shown = PAGE
+          this.renderFilters()
           this.renderBody()
         }
       )
     }
-    select(
-      [
-        ['added', t('library.sortAdded')],
-        ['title', t('library.sortTitle')],
-        ['category', t('library.sortCategory')]
-      ],
-      this.sort,
-      (sort) => {
-        this.sort = sort as DocSort
+    if (set) {
+      const clear = more.createEl('a', { cls: 'pm-docs-clear-filters', href: '#', text: t('library.clearFilters') })
+      clear.addEventListener('click', (event) => {
+        event.preventDefault()
+        this.query = { ...this.query, family: '', category: '', lot: '', issuer: '', tag: '' }
+        this.shown = PAGE
+        this.renderFilters()
         this.renderBody()
-      }
-    )
+      })
+    }
+  }
+
+  /** Shows a folder — '' for every folder, `AT_ROOT` for the root alone. */
+  private openFolder(folder: string): void {
+    this.query = { ...this.query, folder }
+    this.shown = PAGE
+    this.renderFilters()
+    this.renderBody()
   }
 
   private projectOptions(): [string, string][] {
@@ -341,6 +418,21 @@ export class DocumentsView extends ItemView {
       this.renderEmpty()
       return
     }
+    renderFolderStrip(this.bodyEl, {
+      folders: this.plugin.library.folders(),
+      current: this.query.folder ?? '',
+      open: (folder) => this.openFolder(folder),
+      drop: (records, folder) => {
+        const moved = all.filter((doc) => records.includes(doc.record))
+        void this.moveDocs(moved, folder)
+      },
+      rename: (folder) => {
+        void this.renameFolder(folder)
+      },
+      remove: (folder) => {
+        void this.deleteFolder(folder)
+      }
+    })
     const texts = this.plugin.libraryText
     const found = sortDocs(
       all.filter((doc) =>
@@ -523,6 +615,8 @@ export class DocumentsView extends ItemView {
 
   private renderRow(list: HTMLElement, doc: LibraryDoc): void {
     const row = list.createDiv('pm-docs-row')
+    // Dragged onto a folder: itself, or all that is ticked when it is.
+    dragRows(row, () => (this.picked.has(doc.record) ? [...this.picked] : [doc.record]))
     if (!doc.file) row.addClass('is-missing')
     const tick = row.createEl('input', {
       cls: 'pm-docs-tick',
@@ -849,11 +943,7 @@ export class DocumentsView extends ItemView {
     this.renderBody()
   }
 
-  /**
-   * Documents moved into a folder of the library, picked or named — a new name makes it.
-   * A file a project's register follows stays where it is, since the register finds it by
-   * its path: only its record moves.
-   */
+  /** Documents moved into a folder of the library, picked or named — a new name makes it. */
   private moveToFolder(docs: LibraryDoc[]): void {
     if (!docs.length) return
     new FolderPicker(
@@ -863,20 +953,69 @@ export class DocumentsView extends ItemView {
       safeAsync(async (target: FolderChoice) => {
         const folder = target.kind === 'new' ? await this.plugin.library.createFolder(target.name) : target.path
         if (target.kind === 'new' && !folder) return
-        let kept = 0
-        for (const doc of docs) {
-          const followed = !!doc.file && this.followed.has(doc.file.normalize('NFC'))
-          if (followed && this.plugin.library.holdsFile(doc)) kept++
-          await this.plugin.library.moveTo(doc, folder, followed)
-        }
-        this.picked.clear()
-        const parts = [t('library.movedTo', { count: docs.length, folder: folder || t('library.rootFolder') })]
-        if (kept) parts.push(t('library.filesKept', { count: kept }))
-        new Notice(parts.join('\n'), kept ? 8000 : 4000)
-        this.renderFilters()
-        this.redrawSoon()
+        await this.moveDocs(docs, folder)
       })
     ).open()
+  }
+
+  /**
+   * Documents moved into a folder — '' for the root —, the files the library keeps with
+   * them; the registers following those files are told where they now are.
+   */
+  private async moveDocs(docs: LibraryDoc[], folder: string): Promise<void> {
+    if (!docs.length) return
+    const moves = new Map<string, string>()
+    for (const doc of docs) {
+      for (const [from, to] of await this.plugin.library.moveTo(doc, folder)) moves.set(from, to)
+    }
+    const told = await this.plugin.followLibraryMoves(moves)
+    this.picked.clear()
+    const parts = [t('library.movedTo', { count: docs.length, folder: folder || t('library.rootFolder') })]
+    if (told) parts.push(t('library.registersFollowed', { count: told }))
+    new Notice(parts.join('\n'), told ? 8000 : 4000)
+    this.renderFilters()
+    this.redrawSoon()
+  }
+
+  /** A folder renamed where it is; the registers following its files told. */
+  private async renameFolder(folder: string): Promise<void> {
+    const name = await promptText(
+      this.app,
+      t('folders.renameTitle', { folder }),
+      t('folders.renamePlaceholder'),
+      folder.slice(folder.lastIndexOf('/') + 1)
+    )
+    if (name === null) return
+    const renamed = await this.plugin.library.renameFolder(folder, name)
+    if (!renamed) {
+      new Notice(t('folders.nameTaken', { name: name.trim() }))
+      return
+    }
+    const told = await this.plugin.followLibraryMoves(renamed.moves)
+    const parts = [t('folders.renamed', { folder: renamed.folder })]
+    if (told) parts.push(t('library.registersFollowed', { count: told }))
+    new Notice(parts.join('\n'))
+    this.openFolder(renamed.folder)
+    this.redrawSoon()
+  }
+
+  /** A folder taken out, what it holds going up into the one it is in, after a yes. */
+  private async deleteFolder(folder: string): Promise<void> {
+    const parent = folder.slice(0, Math.max(0, folder.lastIndexOf('/')))
+    const parentName = parent || t('library.rootFolder')
+    const yes = await confirmDialog(
+      this.app,
+      t('folders.deleteConfirm', { folder, parent: parentName }),
+      t('folders.deleteAction')
+    )
+    if (!yes) return
+    const moves = await this.plugin.library.deleteFolder(folder)
+    const told = await this.plugin.followLibraryMoves(moves)
+    const parts = [t('folders.deleted', { folder, parent: parentName })]
+    if (told) parts.push(t('library.registersFollowed', { count: told }))
+    new Notice(parts.join('\n'))
+    this.openFolder(parent || AT_ROOT)
+    this.redrawSoon()
   }
 
   private units(): string[] {

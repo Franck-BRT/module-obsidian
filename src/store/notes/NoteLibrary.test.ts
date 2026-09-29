@@ -183,4 +183,25 @@ describe('NoteLibrary', () => {
     const [note] = await library.entries()
     expect(note.subfolder).toBe('Réunions/2026')
   })
+
+  it('renames a folder where it is, never onto another', async () => {
+    await library.create('Appel', 'x', 'Réunions/2026')
+    await library.createFolder('Idées')
+    expect(await library.renameFolder('Réunions/2026', 'Année 2026')).toBe('Réunions/Année 2026')
+    expect(await library.renameFolder('Réunions', 'Idées')).toBeNull()
+    expect((await library.entries())[0].subfolder).toBe('Réunions/Année 2026')
+  })
+
+  it('takes a folder out, its notes and folders going up into the one it is in', async () => {
+    await library.create('Appel', 'a', 'Réunions')
+    await library.create('Appel', 'b')
+    await library.create('Bilan', 'c', 'Réunions/2026')
+    await vault.createBinary('Notes/Réunions/schéma.png', new ArrayBuffer(1))
+    expect(await library.deleteFolder('Réunions')).toBe(3)
+    expect(vault.getAbstractFileByPath('Notes/Réunions')).toBeNull()
+    expect(library.folders()).toEqual(['2026'])
+    const paths = (await library.entries()).map((entry) => entry.path).sort()
+    expect(paths).toEqual(['Notes/2026/Bilan.md', 'Notes/Appel-1.md', 'Notes/Appel.md'])
+    expect(vault.getAbstractFileByPath('Notes/schéma.png')).toBeInstanceOf(TFile)
+  })
 })

@@ -655,3 +655,121 @@ a.pm-notes-folder:hover,
 a.pm-docs-folder:hover {
   color: var(--text-accent);
 }
+
+/* The folders of a library: where the list is, and the way about them. */
+.pm-folder-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-2) var(--size-4-1);
+  margin-bottom: var(--size-4-2);
+  font-size: var(--font-ui-small);
+}
+
+.pm-folder-strip-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.pm-folder-strip-icon svg,
+.pm-folder-chip-icon svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+a.pm-folder-crumb,
+a.pm-folder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  padding: var(--size-2-1) var(--size-4-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+a.pm-folder-crumb:hover,
+a.pm-folder-chip:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+a.pm-folder-crumb.is-current {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+
+a.pm-folder-chip {
+  border-color: var(--background-modifier-border);
+}
+
+.pm-folder-chip-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.pm-folder-sep {
+  color: var(--text-faint);
+}
+
+.pm-folder-sep.is-gap {
+  width: var(--size-4-2);
+}
+
+.pm-folder-strip .pm-folder-action {
+  padding: var(--size-2-1);
+  color: var(--text-faint);
+}
+
+/* A folder rows are dragged over: dropping moves them into it. */
+.pm-folder-strip .is-drop-target {
+  border-color: var(--interactive-accent);
+  background: hsla(var(--interactive-accent-hsl), 0.15);
+  color: var(--text-normal);
+}
+
+.pm-docs-row[draggable='true'] {
+  cursor: grab;
+}
+
+.pm-docs-row.is-dragged {
+  opacity: 0.5;
+}
+
+/* The finer filters, folded behind one button. */
+button.pm-docs-more-filters:not(.clickable-icon) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-3);
+  font-size: var(--font-ui-small);
+}
+
+button.pm-docs-more-filters.is-set:not(.clickable-icon) {
+  color: var(--text-accent);
+}
+
+.pm-docs-more-filters-icon {
+  display: inline-flex;
+}
+
+.pm-docs-more-filters-icon svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.pm-docs-filters-more {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.pm-docs-select.is-set {
+  color: var(--text-accent);
+}
+
+a.pm-docs-clear-filters {
+  font-size: var(--font-ui-small);
+}
