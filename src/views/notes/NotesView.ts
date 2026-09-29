@@ -86,11 +86,43 @@ export class NotesView extends ItemView {
     const project = (state as { project?: unknown } | null)?.project
     this.query = { ...this.query, project: typeof project === 'string' ? project : '' }
     this.shown = PAGE
-    if (this.filtersEl) await this.reload()
+    // Drawn, it is drawn again for the project asked; not yet, it will be when it opens.
+    if (this.filtersEl?.isConnected) await this.reload()
     await super.setState(state, result)
   }
 
   onOpen(): Promise<void> {
+    try {
+      this.build()
+    } catch (error) {
+      this.showFailure(error)
+    }
+    return Promise.resolve()
+  }
+
+  /**
+   * Why the view could not be drawn, said in it — with the plugin's version, so a report
+   * says which build it came from — and in the console with where it happened.
+   */
+  private showFailure(error: unknown): void {
+    console.error('[PM] Could not draw the notes library:', error)
+    const root = this.contentEl
+    root.empty()
+    root.addClass('pm-root', 'pm-docs', 'pm-notes')
+    const box = root.createDiv('pm-content pm-docs-body')
+    box.createDiv({
+      cls: 'pm-docs-none pm-docs-error',
+      text: t('notes.loadFailed', { reason: error instanceof Error ? error.message : String(error) })
+    })
+    box.createEl('pre', {
+      cls: 'pm-docs-error-detail',
+      text: [`Black Projects ${this.plugin.manifest.version}`, error instanceof Error ? (error.stack ?? '') : '']
+        .filter(Boolean)
+        .join('\n')
+    })
+  }
+
+  private build(): void {
     this.containerEl.addClass('pm-view')
     const root = this.contentEl
     root.empty()
@@ -128,7 +160,6 @@ export class NotesView extends ItemView {
     this.renderToolbar()
     this.bodyEl.createDiv({ cls: 'pm-docs-none', text: t('notes.loading') })
     void this.reload()
-    return Promise.resolve()
   }
 
   onClose(): Promise<void> {
@@ -155,12 +186,7 @@ export class NotesView extends ItemView {
       this.renderBody()
     } catch (error) {
       // Said where it is looked for, rather than a blank page.
-      console.error('[PM] Could not draw the notes library:', error)
-      this.bodyEl.empty()
-      this.bodyEl.createDiv({
-        cls: 'pm-docs-none pm-docs-error',
-        text: t('notes.loadFailed', { reason: error instanceof Error ? error.message : String(error) })
-      })
+      this.showFailure(error)
     }
   }
 
@@ -396,7 +422,7 @@ export class NotesView extends ItemView {
     const title = main.createEl('a', { cls: 'pm-docs-title', text: entry.title, href: '#' })
     title.addEventListener('click', (event) => {
       event.preventDefault()
-      void this.open(entry)
+      void this.openNote(entry)
     })
     const meta = main.createDiv('pm-docs-meta')
     meta.createSpan({
@@ -464,7 +490,7 @@ export class NotesView extends ItemView {
       item
         .setTitle(t('notes.open'))
         .setIcon('file-text')
-        .onClick(safeAsync(() => this.open(entry)))
+        .onClick(safeAsync(() => this.openNote(entry)))
     )
     menu.addItem((item) =>
       item
@@ -508,7 +534,7 @@ export class NotesView extends ItemView {
     return file instanceof TFile ? file : null
   }
 
-  private async open(entry: NoteEntry): Promise<void> {
+  private async openNote(entry: NoteEntry): Promise<void> {
     const file = this.fileOf(entry)
     if (file) await this.app.workspace.getLeaf('tab').openFile(file)
   }
