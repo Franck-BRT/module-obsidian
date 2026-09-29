@@ -1881,6 +1881,24 @@ export const en = {
   'settings.chat.notesFolderPlaceholder': 'Notes library',
   'command.newSkill': 'Create a skill for the chat',
   'command.exampleSkills': 'Add the chat’s example skills',
+  'chat.libraryToggle': 'Search the library (documents and notes)',
+  'chat.libraryOn': 'Library: each question searches it first',
+  'chat.libraryOnDesc':
+    'The passages of the documents and notes that best answer the question are found and sent with it; the reply cites its sources.',
+  'chat.libraryOff': 'Stop searching the library',
+  'chat.libraryIntro':
+    'Passages of the library (documents and notes) found for the last question, the most relevant first. Base your answer on them. Cite each source you use by its link, copied exactly as written here ([[…|…]]), where you use it, and end with the list of sources used. If these passages are not enough to answer, say so plainly rather than filling in from memory.',
+  'chat.libraryNone':
+    'The search of the library (documents and notes) found nothing for the last question. If the answer depended on it, say so rather than inventing.',
+  'chat.librarySource': '[{index}] {title}',
+  'chat.librarySources': {
+    one: '{count} source consulted: {list}',
+    other: '{count} sources consulted: {list}'
+  },
+  'chat.librarySearching': 'Searching the library…',
+  'chat.libraryNothing': 'Nothing found in the library',
+  'chat.libraryDocument': 'Document',
+  'chat.libraryNoteKind': 'Note',
   'chat.skillPick': 'Use a skill',
   'chat.skillPickPlaceholder': 'Choose a skill…',
   'chat.skillOff': 'Stop using this skill',

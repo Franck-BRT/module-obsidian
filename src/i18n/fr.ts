@@ -1862,6 +1862,24 @@ export const fr: Catalog = {
   'settings.chat.notesFolderPlaceholder': 'Bibliothèque de notes',
   'command.newSkill': 'Créer une compétence pour le chat',
   'command.exampleSkills': 'Ajouter les compétences d’exemple du chat',
+  'chat.libraryToggle': 'Chercher dans la bibliothèque (documents et notes)',
+  'chat.libraryOn': 'Bibliothèque : chaque question y cherche d’abord',
+  'chat.libraryOnDesc':
+    'Les passages des documents et des notes qui répondent le mieux à la question sont retrouvés et envoyés avec elle ; la réponse cite ses sources.',
+  'chat.libraryOff': 'Ne plus chercher dans la bibliothèque',
+  'chat.libraryIntro':
+    'Extraits de la bibliothèque (documents et notes) retrouvés pour la dernière question, les plus pertinents d’abord. Réponds en t’appuyant sur eux. Cite chaque source utilisée par son lien, recopié tel qu’il est écrit ici ([[…|…]]), à l’endroit où tu t’en sers, et termine par la liste des sources utilisées. Si ces extraits ne suffisent pas à répondre, dis-le clairement plutôt que de compléter de mémoire.',
+  'chat.libraryNone':
+    'La recherche dans la bibliothèque (documents et notes) n’a rien trouvé pour la dernière question. Si la réponse en dépendait, dis-le plutôt que d’inventer.',
+  'chat.librarySource': '[{index}] {title}',
+  'chat.librarySources': {
+    one: '{count} source consultée : {list}',
+    other: '{count} sources consultées : {list}'
+  },
+  'chat.librarySearching': 'Recherche dans la bibliothèque…',
+  'chat.libraryNothing': 'Rien trouvé dans la bibliothèque',
+  'chat.libraryDocument': 'Document',
+  'chat.libraryNoteKind': 'Note',
   'chat.skillPick': 'Utiliser une compétence',
   'chat.skillPickPlaceholder': 'Choisis une compétence…',
   'chat.skillOff': 'Ne plus utiliser cette compétence',

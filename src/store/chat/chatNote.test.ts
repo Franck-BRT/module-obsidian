@@ -263,6 +263,30 @@ describe('the skills a question was asked with', () => {
   })
 })
 
+describe('the library a question was asked of', () => {
+  it('names the sources its passages came from, documents and notes whole, and reads them back', () => {
+    const question = {
+      ...turn('user', 'Quand coule-t-on le radier ?', 3),
+      files: ['CR.pdf'],
+      library: ['Library/_files/Planning GC.pdf', 'Notes/CR réunion 12.md']
+    }
+    expect(turnMarkdown(question, WORDS).split('\n')[0]).toContain(
+      '· 📚 [[Library/_files/Planning GC.pdf|Planning GC.pdf]], [[Notes/CR réunion 12.md|CR réunion 12]]'
+    )
+    expect(readChatNote(chatNoteContent(META, [question], WORDS)).turns).toEqual([question])
+  })
+
+  it('says a question was asked of it even when nothing was found, and is never the note asked about', () => {
+    const nothing = { ...turn('user', 'Q', 3), library: [] }
+    expect(turnMarkdown(nothing, WORDS).split('\n')[0]).toMatch(/· 📚$/)
+    const read = readChatNote(chatNoteContent(META, [nothing], WORDS)).turns[0]
+    expect(read.library).toEqual([])
+    expect(read.context).toBeUndefined()
+    const plain = readChatNote(chatNoteContent(META, [turn('user', 'Q', 3)], WORDS)).turns[0]
+    expect(plain.library).toBeUndefined()
+  })
+})
+
 describe('the model a reply was written by', () => {
   const reply = { ...turn('assistant', 'Réponse.', 4), model: 'qwen3-32b-instruct' }
 

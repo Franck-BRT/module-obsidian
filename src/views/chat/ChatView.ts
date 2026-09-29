@@ -56,6 +56,13 @@ import { needsOcr, transcriptPath } from '../../store/chat/ocr'
 import { scanPages, transcribeScan } from './scanReader'
 import { notesFallback } from './noteCard'
 import { calledSkills, readSkill, skillBody, skillsContext, type Skill } from '../../store/chat/skills'
+import {
+  documentSource,
+  lookUp,
+  noteSource,
+  retrievalContext,
+  type LibrarySource
+} from '../../store/chat/libraryRetrieval'
 import { LibraryDocPicker } from '../documents/LibraryDocPicker'
 import { sortDocs, type LibraryDoc } from '../../store/library/libraryDoc'
 import { keepDroppedFile } from '../../store/chat/keepFile'
@@ -69,7 +76,7 @@ import { collectionMemberIds } from '../../store/Collection'
 import type { ProjectRef } from '../../store/VaultIndex'
 import { docStateConfigOf, typeConfigOf } from '../../store/TicketPalette'
 import { TASK_TYPES, type DocState, type TaskType } from '../../types'
-import { today } from '../../dates'
+import { formatDate, today } from '../../dates'
 import {
   reqCriticalityGlyph,
   reqLinkKindLabel,
@@ -137,6 +144,9 @@ export class ChatView extends ItemView {
   private files: string[] = []
   /** The skills in use: their instructions go with every question until taken off. */
   private skills: string[] = []
+  /** Whether each question is looked up in the whole library — documents and notes — first. */
+  private searchLibrary = false
+  private libraryButton: HTMLButtonElement | null = null
   /** Files already read, by path and way of reading, with the modification time they were read at. */
   private fileCache = new Map<string, { mtime: number; text: string }>()
   /** PDFs the reader asked to have read as pictures, whatever text they hold. */
@@ -221,6 +231,16 @@ export class ChatView extends ItemView {
         this.renderContext()
       })
     )
+    // A link in a reply — a source it cites — opens what it names, beside the chat.
+    this.registerDomEvent(this.containerEl, 'click', (event) => {
+      const link = (event.target as HTMLElement | null)?.closest?.('.pm-chat-list a.internal-link')
+      if (!(link instanceof HTMLElement)) return
+      const target = link.dataset.href ?? link.getAttribute('href') ?? ''
+      if (!target) return
+      event.preventDefault()
+      event.stopPropagation()
+      void this.app.workspace.openLinkText(target, this.notePath ?? '', 'tab')
+    })
     // A file dropped on the panel is kept in the vault, then attached.
     this.registerDomEvent(this.containerEl, 'dragover', (event) => {
       if (!event.dataTransfer?.types.includes('Files')) return
@@ -313,6 +333,18 @@ export class ChatView extends ItemView {
     this.renderProjectRows(el)
     this.renderFileRows(el)
     this.renderSkillRows(el)
+    if (this.searchLibrary) {
+      const row = el.createDiv('pm-chat-context-row pm-chat-library-row')
+      setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'library-big')
+      row.createSpan({
+        cls: 'pm-chat-context-name',
+        text: t('chat.libraryOn'),
+        attr: { title: t('chat.libraryOnDesc') }
+      })
+      const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.libraryOff') } })
+      setIcon(off, 'x')
+      off.addEventListener('click', () => this.toggleLibrary())
+    }
 
     if (!this.attached.length) return
     const reqRow = el.createDiv('pm-chat-context-row')
@@ -525,6 +557,52 @@ export class ChatView extends ItemView {
       return
     }
     new SkillPicker(this.app, skills, (skill) => this.attachSkill(skill.path)).open()
+  }
+
+  /** Each question looked up in the whole library first, or no longer. */
+  toggleLibrary(on = !this.searchLibrary): void {
+    this.searchLibrary = on
+    this.libraryButton?.toggleClass('is-active', on)
+    this.libraryButton?.setAttr('aria-pressed', String(on))
+    this.renderContext()
+    window.setTimeout(() => this.inputEl?.focus(), 0)
+  }
+
+  /** The library's documents and notes as sources to look through, with what they say. */
+  private async librarySources(): Promise<LibrarySource[]> {
+    const docs = this.plugin.library.docs()
+    // What was read already, at once; what never was is read meanwhile, for the next question.
+    await this.plugin.libraryText.load(docs)
+    void this.plugin.libraryText.refresh(docs)
+    const projectTitle = (path: string): string =>
+      this.plugin.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, '')
+    const words = {
+      document: t('chat.libraryDocument'),
+      note: t('chat.libraryNoteKind'),
+      issuedBy: (issuer: string) => t('library.issuedBy', { issuer }),
+      addedOn: (date: string) => t('library.addedOn', { date: formatDate(date) })
+    }
+    const notes = this.plugin.notes
+    return [
+      ...docs
+        .filter((doc) => doc.file)
+        .map((doc) => documentSource(doc, this.plugin.libraryText.entry(doc)?.text ?? '', projectTitle, words)),
+      ...(await notes.entries()).map((entry) => noteSource(entry, notes.body(entry), projectTitle, words))
+    ]
+  }
+
+  /** The passages of the library that answer a question, looked up now, the sources they came from kept with it. */
+  private async libraryBlock(question: ChatTurn): Promise<string> {
+    const sources = await this.librarySources()
+    const asked = this.turns.filter((turn) => turn.role === 'user' && !turn.failed)
+    const upTo = asked.slice(0, asked.indexOf(question) + 1).map((turn) => turn.content)
+    const found = lookUp(sources, upTo.length ? upTo : [question.content])
+    question.library = found.map((each) => each.source.path)
+    return retrievalContext(found, {
+      intro: t('chat.libraryIntro'),
+      none: t('chat.libraryNone'),
+      heading: (index, title) => t('chat.librarySource', { index, title })
+    })
   }
 
   /** The skills in use, their notes read now — the reader may have just changed one. */
@@ -1331,6 +1409,14 @@ export class ChatView extends ItemView {
     setIcon(skill, 'sparkles')
     skill.disabled = missing !== null || this.pending
     skill.addEventListener('click', () => this.pickSkill())
+    const library = composer.createEl('button', {
+      cls: `clickable-icon pm-chat-ready pm-chat-library${this.searchLibrary ? ' is-active' : ''}`,
+      attr: { 'aria-label': t('chat.libraryToggle'), 'aria-pressed': String(this.searchLibrary) }
+    })
+    setIcon(library, 'library-big')
+    library.disabled = missing !== null || this.pending
+    library.addEventListener('click', () => this.toggleLibrary())
+    this.libraryButton = library
     // While a reply is being written, the same button stops it.
     const stoppable = this.pending && this.stopper !== null
     this.sendEl = composer.createEl('button', {
@@ -1406,6 +1492,24 @@ export class ChatView extends ItemView {
       setIcon(about.createSpan(), 'paperclip')
       about.createSpan({ text: names.join(', ') })
       about.setAttr('title', turn.files.join('\n'))
+    }
+    if (turn.library) {
+      const about = this.listEl.createDiv('pm-chat-about pm-chat-about-library')
+      setIcon(about.createSpan(), 'library-big')
+      const searching =
+        this.pending && !turn.library.length && turn === [...this.turns].reverse().find((each) => each.role === 'user')
+      const titles = new Map(this.plugin.library.docs().map((doc) => [doc.file, doc.title]))
+      const names = turn.library.map(
+        (path) => titles.get(path) ?? path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/i, '')
+      )
+      about.createSpan({
+        text: turn.library.length
+          ? t('chat.librarySources', { count: names.length, list: names.join(', ') })
+          : searching
+            ? t('chat.librarySearching')
+            : t('chat.libraryNothing')
+      })
+      about.setAttr('title', turn.library.join('\n'))
     }
     if (turn.requirements?.length) {
       const about = this.listEl.createDiv('pm-chat-about')
@@ -1799,6 +1903,7 @@ export class ChatView extends ItemView {
         ...(this.collections.length ? { collections: [...this.collections] } : {}),
         ...(this.files.length ? { files: [...this.files] } : {}),
         ...(this.skills.length ? { skills: [...this.skills] } : {}),
+        ...(this.searchLibrary ? { library: [] } : {}),
         ...(this.attached.length ? { requirements: [...this.attached] } : {}),
         ...(follows ? { follows } : {})
       }
@@ -1865,6 +1970,9 @@ export class ChatView extends ItemView {
       const files = await this.filesBlock(paths, asked)
       const lastQuestion = [...this.turns].reverse().find((turn) => turn.role === 'user')
       const skills = await this.skillsBlock(lastQuestion?.skills ?? [])
+      const library = lastQuestion?.library ? await this.libraryBlock(lastQuestion) : ''
+      // The question now says what it was answered from.
+      if (library) this.render()
       const how = [this.changeInstructions(requirements.length > 0, project, paths.length > 0), this.noteInstructions()]
         .filter(Boolean)
         .join('\n\n')
@@ -1872,7 +1980,7 @@ export class ChatView extends ItemView {
         model,
         messages: chatMessages(
           this.turns,
-          [system, project?.text, block, files, skills, how].filter(Boolean).join('\n\n')
+          [system, project?.text, block, files, library, skills, how].filter(Boolean).join('\n\n')
         ),
         // The chat's own limit, none by default: a reply proposing thirty changes is long,
         // and one cut at the reviews' thousand tokens stops after seven.
@@ -1971,6 +2079,8 @@ export class ChatView extends ItemView {
       this.follows = null
       this.branched = note.all.some(branches)
       this.turns = note.turns
+      // A conversation that looked things up in the library goes on looking them up.
+      this.searchLibrary = !![...note.turns].reverse().find((turn) => turn.role === 'user')?.library
       this.saved = new WeakSet(note.all)
       if (this.branched) await this.notes.ensureBranchBlock(file)
       this.notePath = file.path

@@ -101,6 +101,19 @@ export class DocTextIndex {
   }
 
   /**
+   * The texts kept for these documents brought into memory, none read anew: what a search
+   * needs at once, before the reading of new ones has had its turn.
+   */
+  async load(docs: LibraryDoc[]): Promise<void> {
+    for (const doc of docs) {
+      if (!doc.hash || this.entries.has(doc.hash)) continue
+      const raw = await this.shelf.read(doc.hash)
+      const decoded = raw === null ? null : decodeText(raw)
+      if (decoded) this.set(doc.hash, decoded)
+    }
+  }
+
+  /**
    * Brings the texts up to date with the documents: what was kept is loaded, what was
    * never read, or has changed since, is read. The promise settles once all of it is.
    */

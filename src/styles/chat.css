@@ -717,3 +717,13 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
 .pm-note-toggle.is-hidden {
   display: none;
 }
+
+/* The library looked up with each question: the button stays lit while it is. */
+.pm-chat-ready.pm-chat-library.is-active {
+  background: hsla(var(--interactive-accent-hsl), 0.15);
+  color: var(--text-accent);
+}
+
+.pm-chat-about-library {
+  color: var(--text-accent);
+}

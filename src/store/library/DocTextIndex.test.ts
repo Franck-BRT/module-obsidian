@@ -75,6 +75,20 @@ describe('DocTextIndex', () => {
     expect(index.counts(docs)).toEqual({ read: 1, scans: 1, unread: 0, pending: 0 })
   })
 
+  it('loads what was kept at once, without reading a document never read nor one changed since', async () => {
+    const file = await vault.createBinary('L/_files/cr.txt', bytes('Nouveau texte'))
+    await vault.createBinary('L/_files/new.txt', bytes('Jamais lu'))
+    shelf.kept.set('a', encodeText({ state: 'ok', text: 'Texte gardé', mtime: file.stat.mtime - 1 }))
+    const docs = [docOf('a', 'L/_files/cr.txt'), docOf('b', 'L/_files/new.txt'), docOf('', 'L/_files/new.txt')]
+    await index.load(docs)
+    expect(index.entry(docs[0])?.text).toBe('Texte gardé')
+    expect(index.entry(docs[1])).toBeUndefined()
+    // Loaded once: what is in memory is not read from the shelf again.
+    shelf.kept.set('a', encodeText({ state: 'ok', text: 'Autre', mtime: 0 }))
+    await index.load(docs)
+    expect(index.entry(docs[0])?.text).toBe('Texte gardé')
+  })
+
   it('takes what was kept instead of reading again, and reads again a file changed since', async () => {
     const file = await vault.createBinary('L/_files/cr.txt', bytes('Nouveau texte'))
     shelf.kept.set('a', encodeText({ state: 'ok', text: 'Texte gardé', mtime: file.stat.mtime }))
