@@ -107,6 +107,30 @@ describe('talking to the gateway', () => {
   })
 })
 
+describe('reranking with the gateway', () => {
+  it('asks the reranking model for the texts in order, and reads their scores back in the order sent', async () => {
+    const { transport, seen } = fake({
+      body: {
+        results: [
+          { index: 1, relevance_score: 0.9 },
+          { index: 0, relevance_score: 0.2 }
+        ]
+      }
+    })
+    const client = new LlmClient({ settings: settings({ modelRerank: 'sidonie/reranker-cnes-latest' }), transport })
+    expect(await client.rerank('radier', ['budget', 'coulage du radier'])).toEqual([0.2, 0.9])
+    expect(seen[0].url).toBe('http://sidoniedev.cloud.cnes.fr:8081/v1/rerank')
+    expect(JSON.parse(seen[0].body ?? '{}')).toEqual({
+      model: 'sidonie/reranker-cnes-latest',
+      query: 'radier',
+      documents: ['budget', 'coulage du radier'],
+      top_n: 2
+    })
+    expect(await client.rerank('radier', [])).toEqual([])
+    expect(seen).toHaveLength(1)
+  })
+})
+
 describe('when it goes wrong', () => {
   const ask = (client: LlmClient) => client.chat({ model: 'm', messages: [{ role: 'user', content: 'x' }] })
 

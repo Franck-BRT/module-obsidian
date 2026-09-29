@@ -464,6 +464,8 @@ export interface LlmSettings {
   modelText: string
   modelTranslate: string
   modelEmbed: string
+  /** The model that puts passages in order of relevance to a question, for the vault search. */
+  modelRerank: string
   modelOcr: string
   /** Zero by default: a check that answers differently twice is not a check. */
   temperature: number
@@ -478,11 +480,24 @@ export const DEFAULT_LLM_SETTINGS: LlmSettings = {
   modelText: '',
   modelTranslate: '',
   modelEmbed: '',
+  modelRerank: '',
   modelOcr: '',
   temperature: 0,
   maxTokens: 1024,
   timeoutSeconds: 60
 }
+
+/** The search of the whole vault the chat can ask: its passages placed by the gateway's embedding model. */
+export interface RagSettings {
+  /** Off until the reader turns it on: turned on, the vault's text goes to the gateway to be embedded. */
+  enabled: boolean
+  /** Folders left out, one a line. */
+  exclude: string
+  /** A follow-up made a question that stands alone, by the chat model, before it is looked up. */
+  rewrite: boolean
+}
+
+export const DEFAULT_RAG_SETTINGS: RagSettings = { enabled: false, exclude: '', rewrite: true }
 
 export interface ChatSettings {
   /** Where a new conversation is written. Found again anywhere, by what it says it is. */
@@ -677,6 +692,7 @@ export interface PMSettings {
   /** Where the plugin can ask a language model something, and with which models. */
   llm: LlmSettings
   chat: ChatSettings
+  rag: RagSettings
   /** The requirements library: where it lives, in which languages, under which ids. */
   requirements: RequirementSettings
   /** Which tickets say their kind on their own row: none, the ones that are not plain tasks, or all. */
@@ -975,6 +991,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   zones: [],
   llm: DEFAULT_LLM_SETTINGS,
   chat: DEFAULT_CHAT_SETTINGS,
+  rag: DEFAULT_RAG_SETTINGS,
   requirements: DEFAULT_REQUIREMENT_SETTINGS,
   typeBadges: 'distinct',
   priorities: DEFAULT_PRIORITIES,

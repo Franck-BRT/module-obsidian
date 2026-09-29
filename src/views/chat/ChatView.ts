@@ -56,6 +56,7 @@ import { needsOcr, transcriptPath } from '../../store/chat/ocr'
 import { scanPages, transcribeScan } from './scanReader'
 import { notesFallback } from './noteCard'
 import { calledSkills, readSkill, skillBody, skillsContext, type Skill } from '../../store/chat/skills'
+import { lookUpVault, SEARCH_DEFAULTS, vaultContext } from '../../store/rag/ragSearch'
 import {
   documentSource,
   lookUp,
@@ -146,6 +147,8 @@ export class ChatView extends ItemView {
   private skills: string[] = []
   /** Whether each question is looked up in the whole library — documents and notes — first. */
   private searchLibrary = false
+  /** What each question was looked up as, when a follow-up was made to stand alone. */
+  private lookedUp = new WeakMap<ChatTurn, string>()
   private libraryButton: HTMLButtonElement | null = null
   /** Files already read, by path and way of reading, with the modification time they were read at. */
   private fileCache = new Map<string, { mtime: number; text: string }>()
@@ -338,8 +341,8 @@ export class ChatView extends ItemView {
       setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'library-big')
       row.createSpan({
         cls: 'pm-chat-context-name',
-        text: t('chat.libraryOn'),
-        attr: { title: t('chat.libraryOnDesc') }
+        text: this.plugin.ragIndexer.ready ? t('chat.vaultOn') : t('chat.libraryOn'),
+        attr: { title: this.plugin.ragIndexer.ready ? t('chat.vaultOnDesc') : t('chat.libraryOnDesc') }
       })
       const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.libraryOff') } })
       setIcon(off, 'x')
@@ -591,8 +594,16 @@ export class ChatView extends ItemView {
     ]
   }
 
-  /** The passages of the library that answer a question, looked up now, the sources they came from kept with it. */
+  /**
+   * The passages that answer a question, looked up now, the sources they came from kept
+   * with it: in the whole vault when its index is on and holds something, in the two
+   * libraries by their words otherwise.
+   */
   private async libraryBlock(question: ChatTurn): Promise<string> {
+    if (this.plugin.ragIndexer.ready) {
+      await this.plugin.ragIndex.load(this.plugin.settings.llm.modelEmbed.trim())
+      if (this.plugin.ragIndex.passageCount) return this.vaultBlock(question)
+    }
     const sources = await this.librarySources()
     const asked = this.turns.filter((turn) => turn.role === 'user' && !turn.failed)
     const upTo = asked.slice(0, asked.indexOf(question) + 1).map((turn) => turn.content)
@@ -602,6 +613,45 @@ export class ChatView extends ItemView {
       intro: t('chat.libraryIntro'),
       none: t('chat.libraryNone'),
       heading: (index, title) => t('chat.librarySource', { index, title })
+    })
+  }
+
+  /**
+   * The question looked up in the whole vault: a follow-up made one that stands alone by
+   * the chat model, then searched by its words and its meaning, the best passages put in
+   * order by the reranking model.
+   */
+  private async vaultBlock(question: ChatTurn): Promise<string> {
+    const llm = this.plugin.settings.llm
+    const client = this.llm
+    const at = this.turns.indexOf(question)
+    const history = this.turns
+      .slice(0, at < 0 ? this.turns.length : at)
+      .filter((turn) => !turn.failed)
+      .map((turn) => ({ role: turn.role, content: turn.content }))
+    const { query, report } = await lookUpVault(
+      this.plugin.ragIndex,
+      {
+        question: question.content,
+        history,
+        rewrite: this.plugin.settings.rag.rewrite
+          ? (messages) => client.chat({ model: this.model, messages, maxTokens: 120, temperature: 0 })
+          : undefined,
+        instruction: t('chat.vaultRewrite')
+      },
+      {
+        embed: async (text) => (await client.embed([text], llm.modelEmbed))[0],
+        rerank: llm.modelRerank.trim() ? (asked, texts) => client.rerank(asked, texts, llm.modelRerank) : undefined
+      },
+      { ...SEARCH_DEFAULTS, projects: currentProjects(this.turns) }
+    )
+    question.library = report.found.map((each) => each.entry.path)
+    this.lookedUp.set(question, query)
+    return vaultContext(report.found, {
+      intro: t('chat.vaultIntro'),
+      none: t('chat.vaultNone'),
+      heading: (index, title) => t('chat.librarySource', { index, title }),
+      kind: (kind) => t(`rag.kind.${kind}`)
     })
   }
 
@@ -1411,7 +1461,10 @@ export class ChatView extends ItemView {
     skill.addEventListener('click', () => this.pickSkill())
     const library = composer.createEl('button', {
       cls: `clickable-icon pm-chat-ready pm-chat-library${this.searchLibrary ? ' is-active' : ''}`,
-      attr: { 'aria-label': t('chat.libraryToggle'), 'aria-pressed': String(this.searchLibrary) }
+      attr: {
+        'aria-label': this.plugin.ragIndexer.ready ? t('chat.vaultToggle') : t('chat.libraryToggle'),
+        'aria-pressed': String(this.searchLibrary)
+      }
     })
     setIcon(library, 'library-big')
     library.disabled = missing !== null || this.pending
@@ -1509,7 +1562,13 @@ export class ChatView extends ItemView {
             ? t('chat.librarySearching')
             : t('chat.libraryNothing')
       })
-      about.setAttr('title', turn.library.join('\n'))
+      const query = this.lookedUp.get(turn)
+      about.setAttr(
+        'title',
+        [query && query !== turn.content ? t('chat.vaultLookedUp', { query }) : '', ...turn.library]
+          .filter(Boolean)
+          .join('\n')
+      )
     }
     if (turn.requirements?.length) {
       const about = this.listEl.createDiv('pm-chat-about')

@@ -727,3 +727,8 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
 .pm-chat-about-library {
   color: var(--text-accent);
 }
+
+/* The vault index at work, in the status bar: said while it works or when it stopped. */
+.pm-rag-status.is-hidden {
+  display: none;
+}

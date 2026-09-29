@@ -1187,6 +1187,7 @@ export class PMSettingTab extends PluginSettingTab {
           control: { type: 'toggle', key: 'chat.stream' }
         },
         this.chatPromptsPage(),
+        this.ragPage(),
         {
           name: t('settings.chat.maxTokens'),
           desc: t('settings.chat.maxTokensDesc'),
@@ -1218,6 +1219,168 @@ export class PMSettingTab extends PluginSettingTab {
   }
 
   /**
+   * The search of the whole vault: on or off, what it leaves out, and the index as it
+   * stands — how much it holds, what it is doing, why it stopped —, with the way to bring
+   * it up to date, to make it again, and to check the gateway's two models answer.
+   */
+  private ragPage(): SettingDefinitionPage {
+    const rag = this.plugin.settings.rag
+    const indexer = this.plugin.ragIndexer
+    return {
+      type: 'page',
+      name: t('settings.rag.name'),
+      desc: t('settings.rag.desc'),
+      displayValue: () => (rag.enabled ? t('settings.llm.on') : t('settings.llm.off')),
+      items: [
+        {
+          name: t('settings.rag.enabled'),
+          desc: t('settings.rag.enabledDesc'),
+          render: (setting: Setting) => {
+            setting.addToggle((toggle) =>
+              toggle.setValue(rag.enabled).onChange((value) => {
+                rag.enabled = value
+                this.persist()
+                if (value) indexer.schedule(500)
+                else indexer.stop()
+                this.update()
+              })
+            )
+          }
+        },
+        {
+          name: t('settings.rag.status'),
+          render: (setting: Setting) => this.renderRagStatus(setting)
+        },
+        {
+          name: t('settings.rag.check'),
+          desc: t('settings.rag.checkDesc'),
+          render: (setting: Setting) => this.renderRagCheck(setting)
+        },
+        {
+          name: t('settings.rag.rewrite'),
+          desc: t('settings.rag.rewriteDesc'),
+          control: { type: 'toggle', key: 'rag.rewrite' }
+        },
+        {
+          name: t('settings.rag.exclude'),
+          desc: t('settings.rag.excludeDesc'),
+          render: (setting: Setting) => {
+            setting.addTextArea((area) => {
+              area.inputEl.rows = 4
+              area
+                .setPlaceholder(t('settings.rag.excludePlaceholder'))
+                .setValue(rag.exclude)
+                .onChange((value) => {
+                  rag.exclude = value
+                  this.persist()
+                  indexer.schedule(8000)
+                })
+            })
+          }
+        }
+      ]
+    }
+  }
+
+  /** What the index holds and is doing, kept up to date while it is on screen. */
+  private renderRagStatus(setting: Setting): void {
+    const indexer = this.plugin.ragIndexer
+    const index = this.plugin.ragIndex
+    const line = setting.descEl.createDiv({ cls: 'pm-prop-hint' })
+    const show = (): void => {
+      const state = indexer.state
+      line.removeClass('pm-prop-hint--warn')
+      if (!indexer.ready) line.setText(t('settings.rag.notReady'))
+      else if (state.running) {
+        line.setText(
+          state.progress?.total
+            ? t('settings.rag.running', { done: state.progress.done, total: state.progress.total })
+            : t('rag.statusStarting')
+        )
+      } else if (state.error) {
+        line.addClass('pm-prop-hint--warn')
+        line.setText(t('settings.rag.failed', { reason: state.error }))
+      } else {
+        line.setText(
+          t('settings.rag.holds', {
+            sources: index.sourceCount,
+            passages: index.passageCount,
+            model: index.modelName || this.plugin.settings.llm.modelEmbed
+          })
+        )
+      }
+    }
+    // Followed while the page is open; forgotten once it is not.
+    const off = indexer.onChange(() => {
+      if (!line.isConnected) off()
+      else show()
+    })
+    if (indexer.ready) void index.load(this.plugin.settings.llm.modelEmbed.trim()).then(show)
+    show()
+    setting
+      .addButton((button) =>
+        button
+          .setButtonText(t('settings.rag.update'))
+          .setDisabled(!indexer.ready)
+          .onClick(safeAsync(() => indexer.run()))
+      )
+      .addButton((button) => button.setButtonText(t('settings.rag.stop')).onClick(() => indexer.stop()))
+      .addButton((button) =>
+        button
+          .setButtonText(t('settings.rag.rebuild'))
+          .setDestructive()
+          .setDisabled(!indexer.ready)
+          .onClick(safeAsync(() => indexer.rebuild()))
+      )
+  }
+
+  /** One embedding and one ranking asked of the gateway, and what came back said. */
+  private renderRagCheck(setting: Setting): void {
+    const line = setting.descEl.createDiv({ cls: 'pm-prop-hint' })
+    setting.addButton((button) =>
+      button.setButtonText(t('settings.rag.checkButton')).onClick(
+        safeAsync(async () => {
+          const llm = this.plugin.settings.llm
+          const client = new LlmClient({ settings: llm })
+          line.removeClass('pm-prop-hint--warn')
+          line.setText(t('settings.llm.testing'))
+          const parts: string[] = []
+          let failed = false
+          try {
+            const [vector] = await client.embed([t('settings.rag.checkText')], llm.modelEmbed)
+            parts.push(t('settings.rag.embedOk', { model: llm.modelEmbed, dims: vector.length }))
+          } catch (error) {
+            failed = true
+            parts.push(
+              t('settings.rag.embedFailed', { reason: error instanceof Error ? error.message : String(error) })
+            )
+          }
+          if (llm.modelRerank.trim()) {
+            try {
+              const scores = await client.rerank(t('settings.rag.checkQuery'), [
+                t('settings.rag.checkText'),
+                t('settings.rag.checkOther')
+              ])
+              parts.push(
+                scores[0] > scores[1]
+                  ? t('settings.rag.rerankOk', { model: llm.modelRerank })
+                  : t('settings.rag.rerankOdd', { model: llm.modelRerank })
+              )
+            } catch (error) {
+              failed = true
+              parts.push(
+                t('settings.rag.rerankFailed', { reason: error instanceof Error ? error.message : String(error) })
+              )
+            }
+          } else parts.push(t('settings.rag.rerankNone'))
+          line.toggleClass('pm-prop-hint--warn', failed)
+          line.setText(parts.join(' '))
+        })
+      )
+    )
+  }
+
+  /**
    * One row per use, each offering whatever the gateway said it has.
    *
    * The names are fetched rather than typed: a model name copied by hand from a wiki page
@@ -1233,6 +1396,7 @@ export class PMSettingTab extends PluginSettingTab {
         desc: t('settings.llm.modelTranslateDesc')
       },
       { key: 'modelEmbed' as const, name: t('settings.llm.modelEmbed'), desc: t('settings.llm.modelEmbedDesc') },
+      { key: 'modelRerank' as const, name: t('settings.llm.modelRerank'), desc: t('settings.llm.modelRerankDesc') },
       { key: 'modelOcr' as const, name: t('settings.llm.modelOcr'), desc: t('settings.llm.modelOcrDesc') }
     ]
     return uses.map((use) => ({

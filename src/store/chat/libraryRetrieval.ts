@@ -61,7 +61,7 @@ function stem(word: string): string {
 }
 
 /** A text's words as they are compared: folded, stemmed, those of one letter left out. */
-function tokens(text: string): string[] {
+export function tokens(text: string): string[] {
   return fold(text)
     .split(/[^\p{L}\p{N}]+/u)
     .filter((word) => word.length >= 2)

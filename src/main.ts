@@ -12,6 +12,8 @@ import {
   seedReqStatuses,
   seedReqTypes,
   DEFAULT_CHAT_SETTINGS,
+  DEFAULT_LLM_SETTINGS,
+  DEFAULT_RAG_SETTINGS,
   DEFAULT_REQUIREMENT_SETTINGS,
   seedTypes,
   withMissingTypes,
@@ -96,6 +98,9 @@ import { guessCategory, knownValues, parseCategories, type Category } from './st
 import { askClassification, GUESS_CATEGORY, type ClassifyChoices } from './views/documents/classifyFields'
 import { proposeRegisterMatches } from './views/documents/matchRegister'
 import { followMoves } from './store/library/fileInRegister'
+import { adapterStorage, RagIndex } from './store/rag/RagIndex'
+import { RagIndexer } from './store/rag/RagIndexer'
+import { excludedFolders, vaultSources } from './store/rag/ragSources'
 import { pourRegisterFiles } from './views/documents/pourRegisters'
 import { skillNote } from './store/chat/skills'
 import { freePath } from './store/DocumentStore'
@@ -132,6 +137,10 @@ export default class PMPlugin extends Plugin {
   libraryText!: DocTextIndex
   /** The notes of no project yet, and the inbox new notes land in. */
   notes!: NoteLibrary
+  /** The vault's passages and their embeddings, for the chat's search of the whole vault. */
+  ragIndex!: RagIndex
+  /** Keeps the vault index following the vault. */
+  ragIndexer!: RagIndexer
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver
@@ -209,6 +218,36 @@ export default class PMPlugin extends Plugin {
         kept: (file) => keptTranscript(this.app, file)
       }
     )
+    this.ragIndex = new RagIndex(adapterStorage(this.app, '.pm-rag'))
+    this.ragIndexer = new RagIndexer(this.ragIndex, {
+      sources: () =>
+        vaultSources({
+          app: this.app,
+          library: this.library,
+          texts: this.libraryText,
+          excluded: excludedFolders(this.settings.rag.exclude),
+          words: {
+            category: t('rag.category'),
+            lot: t('rag.lot'),
+            issuer: t('rag.issuer'),
+            tags: t('rag.tags')
+          }
+        }),
+      embed: (texts) => new LlmClient({ settings: this.settings.llm }).embed(texts, this.settings.llm.modelEmbed),
+      model: () =>
+        this.settings.llm.enabled && this.settings.llm.baseUrl.trim() ? this.settings.llm.modelEmbed.trim() : '',
+      enabled: () => this.settings.rag.enabled,
+      prepare: async () => {
+        // What the documents say, as far as it has been read; what never was is read
+        // meanwhile, and indexed once it is — asked only then, since a reading done says
+        // so, and that would start the indexing again for nothing.
+        const docs = this.library.docs()
+        await this.libraryText.load(docs)
+        if (docs.some((doc) => doc.file && doc.hash && !this.libraryText.entry(doc))) {
+          void this.libraryText.refresh(docs)
+        }
+      }
+    })
     this.requirements = new RequirementStore(
       this.app,
       () => this.settings.requirements,
@@ -250,6 +289,7 @@ export default class PMPlugin extends Plugin {
       safeAsync(async () => {
         this.index.build()
         await this.startupSweep()
+        this.watchVaultIndex()
       })
     )
 
@@ -610,7 +650,43 @@ export default class PMPlugin extends Plugin {
     this.idRepair.start()
   }
 
+  /**
+   * The vault index kept up with the vault: brought up to date a moment after start-up,
+   * then after each change settles; how far it has got said in the status bar while it
+   * works, and why it stopped when it could not go on.
+   */
+  private watchVaultIndex(): void {
+    const later = (): void => this.ragIndexer.schedule(8000)
+    this.registerEvent(this.app.vault.on('modify', later))
+    this.registerEvent(this.app.vault.on('create', later))
+    this.registerEvent(this.app.vault.on('delete', later))
+    this.registerEvent(this.app.vault.on('rename', later))
+    this.register(this.libraryText.onChange(later))
+    const status = this.addStatusBarItem()
+    status.addClass('pm-rag-status')
+    const show = (): void => {
+      const state = this.ragIndexer.state
+      status.empty()
+      status.toggleClass('is-hidden', !state.running && !state.error)
+      if (state.running) {
+        status.setText(
+          state.progress && state.progress.total
+            ? t('rag.statusRunning', { done: state.progress.done, total: state.progress.total })
+            : t('rag.statusStarting')
+        )
+        status.setAttr('aria-label', t('rag.statusRunningDesc'))
+      } else if (state.error) {
+        status.setText(t('rag.statusError'))
+        status.setAttr('aria-label', state.error)
+      }
+    }
+    this.register(this.ragIndexer.onChange(show))
+    show()
+    this.ragIndexer.schedule(15000)
+  }
+
   onunload(): void {
+    this.ragIndexer?.dispose()
     setImpactLookup(null)
     this.notifier.stop()
   }
@@ -674,6 +750,8 @@ export default class PMPlugin extends Plugin {
     // without it and with no default behind it.
     this.settings.requirements = { ...DEFAULT_REQUIREMENT_SETTINGS, ...saved?.requirements }
     this.settings.chat = { ...DEFAULT_CHAT_SETTINGS, ...saved?.chat }
+    this.settings.llm = { ...DEFAULT_LLM_SETTINGS, ...saved?.llm }
+    this.settings.rag = { ...DEFAULT_RAG_SETTINGS, ...saved?.rag }
     if (!saved?.requirements?.types?.length) this.settings.requirements.types = seedReqTypes()
     if (!saved?.requirements?.statuses?.length) this.settings.requirements.statuses = seedReqStatuses()
     if (!this.settings.requirements.counters) this.settings.requirements.counters = {}

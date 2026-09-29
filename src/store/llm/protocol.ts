@@ -130,6 +130,37 @@ export function buildEmbeddingBody(model: string, input: string[]): Record<strin
   return { model, input }
 }
 
+/**
+ * The body of a reranking request, in the shape Cohere set and Jina, vLLM and the gateways
+ * in front of them follow: a query, the texts to put in order, how many to keep.
+ */
+export function buildRerankBody(model: string, query: string, documents: string[]): Record<string, unknown> {
+  return { model, query, documents, top_n: documents.length }
+}
+
+/**
+ * How relevant each text is to the query, in the order the texts were sent. The reply
+ * lists them best first, each by its index: `results` with `relevance_score` as Cohere
+ * and vLLM write it, `data` with `score` as some gateways do. A text the reply leaves
+ * out scores nothing.
+ */
+export function readRerank(payload: unknown, count: number): number[] {
+  const body = payload as { results?: unknown; data?: unknown } | null
+  const rows = Array.isArray(body?.results) ? body.results : Array.isArray(body?.data) ? body.data : null
+  if (!rows) throw new LlmError('shape', 'The reply carried no ranking.')
+  const scores = new Array<number>(count).fill(Number.NEGATIVE_INFINITY)
+  for (const row of rows as { index?: unknown; relevance_score?: unknown; score?: unknown }[]) {
+    const index = row?.index
+    const score = typeof row?.relevance_score === 'number' ? row.relevance_score : row?.score
+    if (typeof index !== 'number' || typeof score !== 'number' || index < 0 || index >= count) continue
+    scores[index] = score
+  }
+  if (scores.every((score) => score === Number.NEGATIVE_INFINITY)) {
+    throw new LlmError('shape', 'The ranking named none of the texts sent.')
+  }
+  return scores
+}
+
 /** `base` + `path`, whichever way the reader typed the trailing slash. */
 export function joinUrl(base: string, path: string): string {
   return `${base.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`

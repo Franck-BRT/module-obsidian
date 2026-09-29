@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   buildChatBody,
   buildEmbeddingBody,
+  buildRerankBody,
+  readRerank,
   cosine,
   joinUrl,
   LlmError,
@@ -134,5 +136,38 @@ describe('how alike two texts are', () => {
     expect(cosine([], [])).toBe(0)
     expect(cosine([0, 0], [1, 1])).toBe(0)
     expect(cosine([1, 2], [1, 2, 3])).toBe(0)
+  })
+})
+
+describe('reading a ranking', () => {
+  it('reads Cohere’s and vLLM’s shape and the gateways’ other one, in the order the texts were sent', () => {
+    expect(
+      readRerank(
+        {
+          results: [
+            { index: 2, relevance_score: 0.8 },
+            { index: 0, relevance_score: 0.1 }
+          ]
+        },
+        3
+      )
+    ).toEqual([0.1, Number.NEGATIVE_INFINITY, 0.8])
+    expect(
+      readRerank(
+        {
+          data: [
+            { index: 0, score: 3.5 },
+            { index: 1, score: -1 }
+          ]
+        },
+        2
+      )
+    ).toEqual([3.5, -1])
+    expect(buildRerankBody('m', 'q', ['a'])).toEqual({ model: 'm', query: 'q', documents: ['a'], top_n: 1 })
+  })
+
+  it('refuses a reply that ranks nothing it was sent', () => {
+    expect(() => readRerank({}, 2)).toThrow(LlmError)
+    expect(() => readRerank({ results: [{ index: 5, relevance_score: 1 }, { index: 0 }] }, 2)).toThrow(LlmError)
   })
 })

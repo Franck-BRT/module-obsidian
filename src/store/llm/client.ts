@@ -3,12 +3,14 @@ import type { LlmSettings } from '../../types'
 import {
   buildChatBody,
   buildEmbeddingBody,
+  buildRerankBody,
   joinUrl,
   LlmError,
   parseJsonContent,
   readChatContent,
   readDelta,
   readEmbeddings,
+  readRerank,
   readFinish,
   readModels,
   readSseEvents,
@@ -343,6 +345,16 @@ export class LlmClient {
   async embed(input: string[], model = this.settings.modelEmbed): Promise<number[][]> {
     if (!input.length) return []
     return readEmbeddings(await this.send('embeddings', 'POST', buildEmbeddingBody(model, input)))
+  }
+
+  /**
+   * How relevant each text is to a query, by a reranking model reading the two together
+   * — finer than comparing embeddings, which read them apart. In the order the texts
+   * were given.
+   */
+  async rerank(query: string, documents: string[], model = this.settings.modelRerank): Promise<number[]> {
+    if (!documents.length) return []
+    return readRerank(await this.send('rerank', 'POST', buildRerankBody(model, query, documents)), documents.length)
   }
 
   /**
