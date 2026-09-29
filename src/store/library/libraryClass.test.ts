@@ -25,6 +25,7 @@ const doc = (over: Partial<LibraryDoc>): LibraryDoc => ({
   lot: '',
   issuer: '',
   tags: [],
+  folder: '',
   ...over
 })
 

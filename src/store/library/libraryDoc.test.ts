@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { AT_ROOT } from '../folderFilter'
 import {
   familyOf,
   fingerprint,
@@ -26,6 +27,7 @@ const doc = (over: Partial<LibraryDoc>): LibraryDoc => ({
   lot: '',
   issuer: '',
   tags: [],
+  folder: '',
   ...over
 })
 const TITLES: Record<string, string> = { 'P/Génie civil.md': 'Génie civil', 'P/Tunnel.md': 'Tunnel' }
@@ -160,5 +162,23 @@ describe('libraryDoc', () => {
     expect(await fingerprint(new TextEncoder().encode('abc'))).toBe(
       'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
     )
+  })
+
+  it('filters by folder: the root alone, or a folder with those it holds', () => {
+    const root = doc({ title: 'a' })
+    const plans = doc({ title: 'b', folder: 'Plans' })
+    const lot = doc({ title: 'c', folder: 'Plans/Lot 2' })
+    const other = doc({ title: 'd', folder: 'Plans bis' })
+    const all = [root, plans, lot, other]
+    const inFolder = (folder: string): string[] =>
+      all
+        .filter((each) => matchesDoc(each, { text: '', project: '', family: '', folder }, title))
+        .map((each) => each.title)
+    expect(inFolder('')).toEqual(['a', 'b', 'c', 'd'])
+    expect(inFolder(AT_ROOT)).toEqual(['a'])
+    expect(inFolder('Plans')).toEqual(['b', 'c'])
+    expect(inFolder('Plans/Lot 2')).toEqual(['c'])
+    // A folder's name is found by a search too.
+    expect(matchesDoc(lot, { text: 'lot 2', project: '', family: '' }, title)).toBe(true)
   })
 })

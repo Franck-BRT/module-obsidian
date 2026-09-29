@@ -3,6 +3,7 @@ import { sanitizeFileName } from '../../utils'
 import { DOCS_FOLDER_NAME, freePath } from '../DocumentStore'
 import { refLink } from '../refs'
 import { ensureFolder } from '../vaultFs'
+import { folderPath, makeSubfolder, subfolders } from '../libraryFolders'
 import { cleanTags, guessCategory, mergeClassification, type Category, type Classification } from './libraryClass'
 import {
   baseNameOf,
@@ -57,6 +58,8 @@ export interface PourOptions {
   classification?: Partial<Classification>
   /** The categories a name is recognised against. */
   categories?: Category[]
+  /** The library's folder the new documents go in, by its path under the library's; '' or none for its root. */
+  folder?: string
 }
 
 export interface PourReport {
@@ -82,7 +85,44 @@ export class DocLibrary {
   }
 
   get filesFolder(): string {
-    return normalizePath(`${this.root}/${this.words().filesFolder}`)
+    return this.filesOf('')
+  }
+
+  /** A folder of the library, as a vault path: '' is the library's root. */
+  pathOf(subfolder: string): string {
+    return folderPath(this.root, subfolder)
+  }
+
+  /** Where the files a folder's documents were brought with are kept: beside their records. */
+  filesOf(subfolder: string): string {
+    return normalizePath(`${this.pathOf(subfolder)}/${this.words().filesFolder}`)
+  }
+
+  /** The library's folders, however deep, by their paths under its own — its files folders left out. */
+  folders(): string[] {
+    const files = this.words().filesFolder
+    return subfolders(this.app, this.root, (name) => name.startsWith('.') || name === files)
+  }
+
+  /**
+   * Makes a folder in the library — under another of its folders, or at its root —; returns
+   * its path under the library's, or '' when the name holds nothing to make.
+   */
+  createFolder(name: string, under = ''): Promise<string> {
+    return makeSubfolder(this.app, this.root, name, under)
+  }
+
+  /**
+   * Whether the library keeps a document's file itself — brought in, or moved in, into one
+   * of its files folders —, rather than only recording it where it lives.
+   */
+  holdsFile(doc: LibraryDoc): boolean {
+    if (!doc.file.startsWith(`${this.root}/`)) return false
+    return doc.file
+      .slice(this.root.length + 1)
+      .split('/')
+      .slice(0, -1)
+      .includes(this.words().filesFolder)
   }
 
   /** Every document in the library, wherever its record has been moved to. */
@@ -116,8 +156,10 @@ export class DocLibrary {
     const projects = stringList(fm.projects)
       .map((raw) => this.resolve(raw, record.path)?.path)
       .filter((path): path is string => !!path)
+    const dir = record.path.slice(0, Math.max(0, record.path.lastIndexOf('/')))
     return {
       record: record.path,
+      folder: dir.startsWith(`${this.root}/`) ? dir.slice(this.root.length + 1) : '',
       title: typeof fm.title === 'string' && fm.title.trim() ? fm.title.trim() : record.basename,
       file: file?.path ?? '',
       projects: [...new Set(projects)],
@@ -190,21 +232,24 @@ export class DocLibrary {
     const clean = sanitizeFileName(baseNameOf(name)).trim() || 'document'
     const ext = extensionOf(name)
 
+    const folder = options.folder ?? ''
+    const filesFolder = this.filesOf(folder)
     let file: TFile
     if (item.kind === 'bytes') {
-      await ensureFolder(this.app, this.filesFolder)
+      await ensureFolder(this.app, filesFolder)
       const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
-      file = await this.app.vault.createBinary(await freePath(this.app, this.filesFolder, clean, ext), data)
+      file = await this.app.vault.createBinary(await freePath(this.app, filesFolder, clean, ext), data)
     } else {
       file = item.file
       if (options.move && this.movable(file)) {
-        await ensureFolder(this.app, this.filesFolder)
-        await this.app.fileManager.renameFile(file, await freePath(this.app, this.filesFolder, clean, ext))
+        await ensureFolder(this.app, filesFolder)
+        await this.app.fileManager.renameFile(file, await freePath(this.app, filesFolder, clean, ext))
       }
     }
 
-    await ensureFolder(this.app, this.root)
-    const recordPath = await freePath(this.app, this.root, clean, 'md')
+    const recordFolder = this.pathOf(folder)
+    await ensureFolder(this.app, recordFolder)
+    const recordPath = await freePath(this.app, recordFolder, clean, 'md')
     const title = item.title?.trim() || titleFromName(name)
     const projects = [...new Set([...options.projects, ...(item.projects ?? [])])]
     const filed = mergeClassification(
@@ -228,6 +273,7 @@ export class DocLibrary {
     )
     return {
       record: record.path,
+      folder: recordFolder === this.root ? '' : recordFolder.slice(this.root.length + 1),
       title,
       file: file.path,
       projects,
@@ -347,9 +393,34 @@ export class DocLibrary {
     const record = this.app.vault.getAbstractFileByPath(doc.record)
     if (record instanceof TFile) await this.app.fileManager.trashFile(record)
     const file = doc.file ? this.app.vault.getAbstractFileByPath(doc.file) : null
-    if (file instanceof TFile && file.path.startsWith(`${this.filesFolder}/`)) {
-      await this.app.fileManager.trashFile(file)
+    if (file instanceof TFile && this.holdsFile(doc)) await this.app.fileManager.trashFile(file)
+  }
+
+  /**
+   * Moves a document into a folder of the library — '' for its root —: its record, never
+   * over another, and the file with it when the library keeps it, into the folder's files.
+   * `keepFile` leaves the file where it is: a register finds its files by their path.
+   * Returns where the record now is.
+   */
+  async moveTo(doc: LibraryDoc, subfolder: string, keepFile = false): Promise<string> {
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return doc.record
+    const target = this.pathOf(subfolder)
+    if (record.parent?.path !== target) {
+      await ensureFolder(this.app, target)
+      await this.app.fileManager.renameFile(record, await freePath(this.app, target, record.basename, 'md'))
     }
+    const file = doc.file ? this.app.vault.getAbstractFileByPath(doc.file) : null
+    const files = this.filesOf(subfolder)
+    if (!keepFile && file instanceof TFile && this.holdsFile(doc) && file.parent?.path !== files) {
+      await ensureFolder(this.app, files)
+      await this.app.fileManager.renameFile(file, await freePath(this.app, files, file.basename, file.extension))
+      // Said again whatever Obsidian's own setting on links: the record must find its file.
+      await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+        fm.file = `[[${file.path}]]`
+      })
+    }
+    return record.path
   }
 }
 

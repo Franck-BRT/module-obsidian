@@ -33,7 +33,8 @@ const docOf = (hash: string, file: string): LibraryDoc => ({
   category: '',
   lot: '',
   issuer: '',
-  tags: []
+  tags: [],
+  folder: ''
 })
 
 describe('DocTextIndex', () => {

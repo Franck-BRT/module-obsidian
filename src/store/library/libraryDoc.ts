@@ -1,4 +1,5 @@
 import { stringifyYaml } from 'obsidian'
+import { inFolder } from '../folderFilter'
 
 /**
  * A document poured into the library, as the note that stands for it.
@@ -41,6 +42,8 @@ export interface LibraryDoc {
   /** Who issued it: a firm, a person. */
   issuer: string
   tags: string[]
+  /** The library's folder its record is in, by its path under the library's; '' at its root, or outside it. */
+  folder: string
 }
 
 export type DocFamily = 'pdf' | 'word' | 'sheet' | 'slides' | 'image' | 'mail' | 'note' | 'other'
@@ -185,6 +188,8 @@ export interface DocQuery {
   issuer?: string
   /** '' for any tag. */
   tag?: string
+  /** '' for every folder, `AT_ROOT`, or a folder of the library — its own folders included. */
+  folder?: string
 }
 
 /** Stands for the documents a field was left empty on, in a filter. */
@@ -216,11 +221,21 @@ export function matchesDoc(
     return false
   }
   if (query.tag && !doc.tags.some((tag) => fold(tag) === fold(query.tag ?? ''))) return false
+  if (!inFolder(doc.folder, query.folder)) return false
   const words = fold(query.text).split(/\s+/).filter(Boolean)
   if (!words.length) return true
   const name = doc.file.slice(doc.file.lastIndexOf('/') + 1)
   const haystack = fold(
-    [doc.title, name, doc.category, doc.lot, doc.issuer, ...doc.projects.map(projectTitle), ...doc.tags].join('\n')
+    [
+      doc.title,
+      name,
+      doc.category,
+      doc.lot,
+      doc.issuer,
+      doc.folder,
+      ...doc.projects.map(projectTitle),
+      ...doc.tags
+    ].join('\n')
   )
   if (words.every((word) => haystack.includes(word))) return true
   const text = content(doc)

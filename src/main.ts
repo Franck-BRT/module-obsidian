@@ -911,11 +911,13 @@ export default class PMPlugin extends Plugin {
    * Pours documents into the library once the reader has said which projects they belong
    * to, telling how far it has got on a long pour and what came of it at the end.
    */
-  async pourIntoLibrary(items: PourItem[], preset: string[] = []): Promise<void> {
+  async pourIntoLibrary(items: PourItem[], preset: string[] = [], folder = ''): Promise<void> {
     if (!items.length) return
     const inVault = items.some((item) => item.kind === 'vault' && this.library.movable(item.file))
     const answer = await this.askLibraryProjects({
-      heading: t('library.pourTitle', { count: items.length }),
+      heading: folder
+        ? t('library.pourTitleIn', { count: items.length, folder })
+        : t('library.pourTitle', { count: items.length }),
       names: items.map((item) => (item.kind === 'vault' ? item.file.path : item.name)),
       chosen: preset,
       offerMove: inVault,
@@ -931,7 +933,8 @@ export default class PMPlugin extends Plugin {
         move: answer.move,
         today: today().toString(),
         classification: answer.classification,
-        categories: this.libraryCategories()
+        categories: this.libraryCategories(),
+        folder
       },
       (done, total) => progress?.setMessage(t('library.pouring', { done, total }))
     )

@@ -639,16 +639,19 @@ a.pm-docs-missing-row {
   text-decoration: none;
 }
 
-a.pm-notes-folder {
+a.pm-notes-folder,
+a.pm-docs-folder {
   color: var(--text-muted);
   text-decoration: none;
 }
 
-a.pm-notes-folder::before {
+a.pm-notes-folder::before,
+a.pm-docs-folder::before {
   content: '▸ ';
   color: var(--text-faint);
 }
 
-a.pm-notes-folder:hover {
+a.pm-notes-folder:hover,
+a.pm-docs-folder:hover {
   color: var(--text-accent);
 }

@@ -38,7 +38,7 @@ import {
 } from '../../store/library/libraryRegister'
 import { findVaultFile } from '../../store/library/DocLibrary'
 import { documentOf } from '../../store/Document'
-import { openTaskModal } from '../../ui/ModalFactory'
+import { openTaskModal, promptText } from '../../ui/ModalFactory'
 import { docStateLabel } from '../library/docStateLabel'
 import { fileInRegister } from './registerActions'
 import { proposeRegisterMatches } from './matchRegister'
@@ -48,6 +48,7 @@ import { knownValues } from '../../store/library/libraryClass'
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
+import { filteredFolder, FolderPicker, folderOptions, type FolderChoice } from '../folderPicker'
 
 export const PM_DOCUMENTS_VIEW_TYPE = 'pm-documents'
 
@@ -207,6 +208,10 @@ export class DocumentsView extends ItemView {
     this.filtersEl.toggleClass('is-hidden', !count)
     const right = this.toolbarEl.createDiv('pm-toolbar-right')
     new ButtonComponent(right)
+      .setButtonText(t('folders.newFolder'))
+      .setIcon('folder-plus')
+      .onClick(safeAsync(() => this.newFolder()))
+    new ButtonComponent(right)
       .setButtonText(t('library.pour'))
       .setIcon('upload')
       .setCta()
@@ -249,6 +254,18 @@ export class DocumentsView extends ItemView {
         this.renderBody()
       }
     )
+    // The folders, each under the one it is in; new documents go into the one shown.
+    const folders = this.plugin.library.folders()
+    if (folders.length || this.query.folder) {
+      if (filteredFolder(this.query.folder) && !folders.includes(this.query.folder ?? '')) {
+        folders.push(this.query.folder ?? '')
+      }
+      select(folderOptions(folders, t('library.rootFolder')), this.query.folder ?? '', (folder) => {
+        this.query = { ...this.query, folder }
+        this.shown = PAGE
+        this.renderBody()
+      })
+    }
     select(
       [
         ['', t('library.allKinds')],
@@ -432,6 +449,10 @@ export class DocumentsView extends ItemView {
       .setIcon('tags')
       .onClick(safeAsync(() => this.plugin.classifyDocuments(all.filter((doc) => this.picked.has(doc.record)))))
     new ButtonComponent(bar)
+      .setButtonText(t('folders.moveTo'))
+      .setIcon('folder-input')
+      .onClick(() => this.moveToFolder(all.filter((doc) => this.picked.has(doc.record))))
+    new ButtonComponent(bar)
       .setButtonText(t('library.matchPicked'))
       .setIcon('clipboard-list')
       .onClick(
@@ -525,6 +546,22 @@ export class DocumentsView extends ItemView {
       void this.openDoc(doc)
     })
     const meta = main.createDiv('pm-docs-meta')
+    // Its folder, when the list shows more than that folder: a click shows only it.
+    if (doc.folder && this.query.folder !== doc.folder) {
+      const folder = meta.createEl('a', {
+        cls: 'pm-docs-folder',
+        href: '#',
+        text: doc.folder,
+        attr: { title: t('library.folderChip', { folder: doc.folder }) }
+      })
+      folder.addEventListener('click', (event) => {
+        event.preventDefault()
+        this.query = { ...this.query, folder: doc.folder }
+        this.shown = PAGE
+        this.renderFilters()
+        this.renderBody()
+      })
+    }
     if (doc.category) meta.createSpan({ cls: 'pm-docs-category', text: doc.category })
     if (doc.file) {
       meta.createSpan({ cls: 'pm-docs-name', text: doc.file.slice(doc.file.lastIndexOf('/') + 1) })
@@ -692,6 +729,12 @@ export class DocumentsView extends ItemView {
         .setIcon('tags')
         .onClick(safeAsync(() => this.plugin.classifyDocuments([doc])))
     )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('folders.moveTo'))
+        .setIcon('folder-input')
+        .onClick(() => this.moveToFolder([doc]))
+    )
     const family = familyOf(doc.file || doc.title)
     if (doc.file && (family === 'pdf' || family === 'image')) {
       menu.addItem((item) =>
@@ -749,7 +792,7 @@ export class DocumentsView extends ItemView {
   }
 
   private confirmRemove(doc: LibraryDoc): void {
-    const keptInLibrary = !!doc.file && doc.file.startsWith(`${this.plugin.library.filesFolder}/`)
+    const keptInLibrary = this.plugin.library.holdsFile(doc)
     new ConfirmModal(
       this.plugin,
       t('library.removeTitle', { title: doc.title }),
@@ -784,7 +827,56 @@ export class DocumentsView extends ItemView {
     if (unread.length) new Notice(t('library.unreadable', { list: unread.join(', ') }))
     if (!items.length) return
     const preset = this.query.project && this.query.project !== NO_PROJECT ? [this.query.project] : []
-    await this.plugin.pourIntoLibrary(items, preset)
+    await this.plugin.pourIntoLibrary(items, preset, filteredFolder(this.query.folder))
+  }
+
+  /** A folder made in the one on screen — or at the root —, then shown. */
+  private async newFolder(): Promise<void> {
+    const under = filteredFolder(this.query.folder)
+    const name = await promptText(
+      this.app,
+      under ? t('folders.newFolderIn', { folder: under }) : t('library.newFolderTitle'),
+      t('folders.newFolderPlaceholder')
+    )
+    if (!name) return
+    const made = await this.plugin.library.createFolder(name, under)
+    if (!made) return
+    this.query = { ...this.query, folder: made }
+    this.shown = PAGE
+    new Notice(t('folders.folderMade', { folder: made }))
+    this.renderToolbar()
+    this.renderFilters()
+    this.renderBody()
+  }
+
+  /**
+   * Documents moved into a folder of the library, picked or named — a new name makes it.
+   * A file a project's register follows stays where it is, since the register finds it by
+   * its path: only its record moves.
+   */
+  private moveToFolder(docs: LibraryDoc[]): void {
+    if (!docs.length) return
+    new FolderPicker(
+      this.app,
+      this.plugin.library.folders(),
+      t('library.rootFolder'),
+      safeAsync(async (target: FolderChoice) => {
+        const folder = target.kind === 'new' ? await this.plugin.library.createFolder(target.name) : target.path
+        if (target.kind === 'new' && !folder) return
+        let kept = 0
+        for (const doc of docs) {
+          const followed = !!doc.file && this.followed.has(doc.file.normalize('NFC'))
+          if (followed && this.plugin.library.holdsFile(doc)) kept++
+          await this.plugin.library.moveTo(doc, folder, followed)
+        }
+        this.picked.clear()
+        const parts = [t('library.movedTo', { count: docs.length, folder: folder || t('library.rootFolder') })]
+        if (kept) parts.push(t('library.filesKept', { count: kept }))
+        new Notice(parts.join('\n'), kept ? 8000 : 4000)
+        this.renderFilters()
+        this.redrawSoon()
+      })
+    ).open()
   }
 
   private units(): string[] {

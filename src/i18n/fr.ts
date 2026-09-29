@@ -1678,6 +1678,22 @@ export const fr: Catalog = {
   'library.removeTitle': 'Retirer « {title} » de la bibliothèque ?',
   'library.removeWithFile': 'Sa fiche et le fichier que la bibliothèque conserve iront à la corbeille.',
   'library.removeRecordOnly': 'Sa fiche ira à la corbeille ; le fichier reste où il est dans le coffre.',
+  'library.pourTitleIn': {
+    one: 'Verser {count} document dans « {folder} »',
+    other: 'Verser {count} documents dans « {folder} »'
+  },
+  'library.rootFolder': 'Racine de la bibliothèque',
+  'library.newFolderTitle': 'Nouveau dossier dans la bibliothèque de documents',
+  'library.folderChip': 'Voir le dossier « {folder} »',
+  'library.movedTo': {
+    one: '{count} document déplacé dans {folder}.',
+    other: '{count} documents déplacés dans {folder}.'
+  },
+  'library.filesKept': {
+    one: '{count} fichier suivi dans un registre de projet reste où il est : seule sa fiche a changé de dossier.',
+    other:
+      '{count} fichiers suivis dans un registre de projet restent où ils sont : seules leurs fiches ont changé de dossier.'
+  },
   'library.unreadable': 'Non lu (un dossier ne se verse pas depuis l’ordinateur, seulement ses fichiers) : {list}',
   'library.notesHeading': 'Notes',
   'library.pourTitle': { one: 'Verser {count} document', other: 'Verser {count} documents' },
@@ -1929,15 +1945,15 @@ export const fr: Catalog = {
   'notes.delete': 'Mettre à la corbeille',
   'notes.deleteTitle': 'Mettre « {title} » à la corbeille ?',
   'notes.deleteText': 'La note ira dans la corbeille du coffre, d’où elle peut être restaurée.',
-  'notes.newFolder': 'Nouveau dossier',
+  'folders.newFolder': 'Nouveau dossier',
   'notes.newFolderTitle': 'Nouveau dossier dans la bibliothèque de notes',
-  'notes.newFolderIn': 'Nouveau dossier dans « {folder} »',
-  'notes.newFolderPlaceholder': 'Nom du dossier (ex. Réunions, ou Réunions/2026)',
-  'notes.newFolderNamed': 'Créer le dossier « {name} »',
-  'notes.folderMade': 'Dossier créé : {folder}',
-  'notes.allFolders': 'Tous les dossiers',
+  'folders.newFolderIn': 'Nouveau dossier dans « {folder} »',
+  'folders.newFolderPlaceholder': 'Nom du dossier (ex. Réunions, ou Réunions/2026)',
+  'folders.newFolderNamed': 'Créer le dossier « {name} »',
+  'folders.folderMade': 'Dossier créé : {folder}',
+  'folders.allFolders': 'Tous les dossiers',
   'notes.rootFolder': 'Racine (boîte de réception)',
-  'notes.moveTo': 'Déplacer vers un dossier…',
-  'notes.moveToPlaceholder': 'Choisis un dossier, ou tape le nom d’un nouveau…',
+  'folders.moveTo': 'Déplacer vers un dossier…',
+  'folders.moveToPlaceholder': 'Choisis un dossier, ou tape le nom d’un nouveau…',
   'notes.movedTo': { one: '{count} note déplacée dans {folder}.', other: '{count} notes déplacées dans {folder}.' }
 }

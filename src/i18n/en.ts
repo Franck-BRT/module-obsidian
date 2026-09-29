@@ -1699,6 +1699,21 @@ export const en = {
   'library.removeTitle': 'Remove “{title}” from the library?',
   'library.removeWithFile': 'Its record and the file the library keeps will go to the trash.',
   'library.removeRecordOnly': 'Its record will go to the trash; the file stays where it is in the vault.',
+  'library.pourTitleIn': {
+    one: 'Pour {count} document into “{folder}”',
+    other: 'Pour {count} documents into “{folder}”'
+  },
+  'library.rootFolder': 'Library root',
+  'library.newFolderTitle': 'New folder in the document library',
+  'library.folderChip': 'Show the folder “{folder}”',
+  'library.movedTo': {
+    one: '{count} document moved into {folder}.',
+    other: '{count} documents moved into {folder}.'
+  },
+  'library.filesKept': {
+    one: '{count} file followed in a project register stays where it is: only its record changed folder.',
+    other: '{count} files followed in a project register stay where they are: only their records changed folder.'
+  },
   'library.unreadable': 'Not read (a folder cannot be poured from the computer, only its files): {list}',
   'library.notesHeading': 'Notes',
   'library.pourTitle': { one: 'Pour in {count} document', other: 'Pour in {count} documents' },
@@ -1946,15 +1961,15 @@ export const en = {
   'notes.delete': 'Move to the trash',
   'notes.deleteTitle': 'Move “{title}” to the trash?',
   'notes.deleteText': 'The note will go to the vault’s trash, where it can be restored from.',
-  'notes.newFolder': 'New folder',
+  'folders.newFolder': 'New folder',
   'notes.newFolderTitle': 'New folder in the notes library',
-  'notes.newFolderIn': 'New folder in “{folder}”',
-  'notes.newFolderPlaceholder': 'Folder name (e.g. Meetings, or Meetings/2026)',
-  'notes.newFolderNamed': 'Create the folder “{name}”',
-  'notes.folderMade': 'Folder created: {folder}',
-  'notes.allFolders': 'All folders',
+  'folders.newFolderIn': 'New folder in “{folder}”',
+  'folders.newFolderPlaceholder': 'Folder name (e.g. Meetings, or Meetings/2026)',
+  'folders.newFolderNamed': 'Create the folder “{name}”',
+  'folders.folderMade': 'Folder created: {folder}',
+  'folders.allFolders': 'All folders',
   'notes.rootFolder': 'Root (inbox)',
-  'notes.moveTo': 'Move to a folder…',
-  'notes.moveToPlaceholder': 'Choose a folder, or type the name of a new one…',
+  'folders.moveTo': 'Move to a folder…',
+  'folders.moveToPlaceholder': 'Choose a folder, or type the name of a new one…',
   'notes.movedTo': { one: '{count} note moved into {folder}.', other: '{count} notes moved into {folder}.' }
 } as const
