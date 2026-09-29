@@ -126,8 +126,10 @@ export function readFinish(payload: unknown): string {
 
 export function buildEmbeddingBody(model: string, input: string[]): Record<string, unknown> {
   // One call for many texts: the endpoint takes an array, and a library of requirements
-  // embedded one request at a time would be a thousand round trips.
-  return { model, input }
+  // embedded one request at a time would be a thousand round trips. The format said
+  // outright: OpenAI takes floats when it is left out, but a LiteLLM gateway passes the
+  // missing field on as null, and the model behind it refuses the request (422).
+  return { model, input, encoding_format: 'float' }
 }
 
 /**
@@ -190,11 +192,15 @@ export function readChatContent(payload: unknown): string {
 }
 
 export function readEmbeddings(payload: unknown): number[][] {
-  const data = (payload as { data?: { embedding?: unknown }[] } | null)?.data
+  const data = (payload as { data?: { embedding?: unknown; index?: unknown }[] } | null)?.data
   if (!Array.isArray(data) || data.length === 0) {
     throw new LlmError('shape', 'The reply carried no embeddings.')
   }
-  return data.map((row) => {
+  // In the order the texts were sent, by the index each carries, when all of them do.
+  const ordered = data.every((row) => typeof row?.index === 'number')
+    ? [...data].sort((a, b) => (a.index as number) - (b.index as number))
+    : data
+  return ordered.map((row) => {
     const vector = row?.embedding
     if (!Array.isArray(vector) || vector.some((value) => typeof value !== 'number')) {
       throw new LlmError('shape', 'An embedding was not a vector of numbers.')

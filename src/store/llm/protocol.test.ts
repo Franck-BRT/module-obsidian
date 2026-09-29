@@ -56,7 +56,9 @@ describe('the body a chat request sends', () => {
   it('embeds many texts in one call', () => {
     expect(buildEmbeddingBody('sidonie/embeddings-cnes-latest', ['a', 'b'])).toEqual({
       model: 'sidonie/embeddings-cnes-latest',
-      input: ['a', 'b']
+      input: ['a', 'b'],
+      // Said outright: a LiteLLM gateway otherwise sends it on as null, and is refused.
+      encoding_format: 'float'
     })
   })
 })
@@ -169,5 +171,19 @@ describe('reading a ranking', () => {
   it('refuses a reply that ranks nothing it was sent', () => {
     expect(() => readRerank({}, 2)).toThrow(LlmError)
     expect(() => readRerank({ results: [{ index: 5, relevance_score: 1 }, { index: 0 }] }, 2)).toThrow(LlmError)
+  })
+})
+
+describe('reading embeddings', () => {
+  it('puts them in the order the texts were sent, by the index each carries', () => {
+    expect(
+      readEmbeddings({
+        data: [
+          { index: 1, embedding: [2] },
+          { index: 0, embedding: [1] }
+        ]
+      })
+    ).toEqual([[1], [2]])
+    expect(readEmbeddings({ data: [{ embedding: [5] }, { embedding: [6] }] })).toEqual([[5], [6]])
   })
 })
