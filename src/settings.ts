@@ -1257,6 +1257,19 @@ export class PMSettingTab extends PluginSettingTab {
           render: (setting: Setting) => this.renderRagCheck(setting)
         },
         {
+          name: t('settings.rag.files'),
+          desc: t('settings.rag.filesDesc'),
+          render: (setting: Setting) => {
+            setting.addToggle((toggle) =>
+              toggle.setValue(rag.files).onChange((value) => {
+                rag.files = value
+                this.persist()
+                indexer.schedule(2000)
+              })
+            )
+          }
+        },
+        {
           name: t('settings.rag.rewrite'),
           desc: t('settings.rag.rewriteDesc'),
           control: { type: 'toggle', key: 'rag.rewrite' }

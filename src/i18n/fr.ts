@@ -1924,6 +1924,9 @@ export const fr: Catalog = {
   'settings.rag.rerankOdd': 'Reranking : {model} répond, mais a mal classé l’exemple.',
   'settings.rag.rerankFailed': 'Reranking : échec — {reason}',
   'settings.rag.rerankNone': 'Reranking : aucun modèle choisi.',
+  'settings.rag.files': 'Documents du coffre hors bibliothèque',
+  'settings.rag.filesDesc':
+    'Lit aussi les PDF, Word, Excel, PowerPoint et mails rangés ailleurs dans le coffre (dossiers _docs des projets, pièces jointes…), sans les verser dans la bibliothèque. Un scan y est trouvé par son nom ; les fichiers de plus de 40 Mo sont laissés de côté.',
   'settings.rag.rewrite': 'Reformuler les questions de suite',
   'settings.rag.rewriteDesc':
     'Une question comme « et pour le lot 3 ? » est d’abord réécrite par le modèle de chat en question complète, d’après la conversation, avant d’être cherchée.',

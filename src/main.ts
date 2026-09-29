@@ -231,7 +231,19 @@ export default class PMPlugin extends Plugin {
             lot: t('rag.lot'),
             issuer: t('rag.issuer'),
             tags: t('rag.tags')
-          }
+          },
+          ...(this.settings.rag.files
+            ? {
+                files: {
+                  mail: {
+                    from: t('email.from'),
+                    to: t('email.to'),
+                    date: t('email.date'),
+                    attachments: t('library.mailAttachments')
+                  }
+                }
+              }
+            : {})
         }),
       embed: (texts) => new LlmClient({ settings: this.settings.llm }).embed(texts, this.settings.llm.modelEmbed),
       model: () =>

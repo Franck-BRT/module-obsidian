@@ -1,8 +1,9 @@
-import { normalizePath, type App } from 'obsidian'
+import { normalizePath, type App, type TFile } from 'obsidian'
 import { isChatNote } from '../chat/chatNote'
 import type { DocLibrary } from '../library/DocLibrary'
 import type { DocTextIndex } from '../library/DocTextIndex'
-import { isLibraryDoc, linkPath, stringList } from '../library/libraryDoc'
+import { extractText, type MailWords } from '../library/docText'
+import { isLibraryDoc, linkPath, stringList, titleFromName } from '../library/libraryDoc'
 import { noteBody } from '../notes/NoteLibrary'
 import { FRONTMATTER_KEY, TASK_FRONTMATTER_KEY } from '../YamlParser'
 import { propertyLines } from './ragChunk'
@@ -22,7 +23,22 @@ export interface SourceDeps {
   excluded: string[]
   /** How a document's filing is said to the model. */
   words: { category: string; lot: string; issuer: string; tags: string }
+  /**
+   * The documents of the vault the library does not hold — PDF, Word, Excel, PowerPoint,
+   * mails — read too; without, they are left out.
+   */
+  files?: {
+    mail: MailWords
+    /** What a file says; the library's own reading by default. */
+    read?: (file: TFile) => Promise<string>
+  }
 }
+
+/** The kinds of document read outside the library: those the library knows how to read. */
+export const DOCUMENT_EXTENSIONS = new Set(['pdf', 'docx', 'xlsx', 'pptx', 'msg', 'eml'])
+
+/** Larger than this, a file is left out: reading it would hold the whole indexing up. */
+export const MAX_DOCUMENT_BYTES = 40 * 1024 * 1024
 
 /** Folders left out, one a line, as vault paths. */
 export function excludedFolders(raw: string): string[] {
@@ -70,8 +86,38 @@ export function vaultSources(deps: SourceDeps): RagSourceSpec[] {
       // What it says, and how it is filed: either changed, it is read again.
       key: [doc.hash, entry?.state ?? 'none', entry?.mtime ?? 0, doc.title, filing].join('|'),
       projects: doc.projects,
-      read: async () => [filing, entry?.text ?? ''].filter(Boolean).join('\n\n')
+      // Nothing read nor filed yet: known by its title, at least.
+      read: async () => [filing, entry?.text ?? ''].filter(Boolean).join('\n\n') || doc.title
     })
+  }
+
+  if (deps.files) {
+    const { mail } = deps.files
+    const read =
+      deps.files.read ??
+      (async (file: TFile): Promise<string> =>
+        (await extractText(file.name, new Uint8Array(await app.vault.readBinary(file)), mail)).text)
+    for (const file of app.vault.getFiles()) {
+      if (!DOCUMENT_EXTENSIONS.has(file.extension.toLowerCase())) continue
+      if (docFiles.has(file.path) || leftOut(file.path, excluded) || file.stat.size > MAX_DOCUMENT_BYTES) continue
+      sources.push({
+        path: file.path,
+        title: titleFromName(file.name),
+        kind: 'document',
+        key: `${file.stat.mtime}|${file.stat.size}`,
+        projects: [],
+        read: async () => {
+          // A document that cannot be read, or holds no text — a scan —, is known by its
+          // name, rather than stopping the rest or being found by nothing.
+          try {
+            return (await read(file)).trim() || titleFromName(file.name)
+          } catch (error) {
+            console.error(`[PM] Could not read "${file.path}" for the vault search:`, error)
+            return titleFromName(file.name)
+          }
+        }
+      })
+    }
   }
 
   for (const file of app.vault.getMarkdownFiles()) {

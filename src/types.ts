@@ -495,9 +495,11 @@ export interface RagSettings {
   exclude: string
   /** A follow-up made a question that stands alone, by the chat model, before it is looked up. */
   rewrite: boolean
+  /** The vault's documents the library does not hold — PDF, Word, Excel, PowerPoint, mails — read too. */
+  files: boolean
 }
 
-export const DEFAULT_RAG_SETTINGS: RagSettings = { enabled: false, exclude: '', rewrite: true }
+export const DEFAULT_RAG_SETTINGS: RagSettings = { enabled: false, exclude: '', rewrite: true, files: true }
 
 export interface ChatSettings {
   /** Where a new conversation is written. Found again anywhere, by what it says it is. */

@@ -1942,6 +1942,9 @@ export const en = {
   'settings.rag.rerankOdd': 'Reranking: {model} answers, but ranked the example wrongly.',
   'settings.rag.rerankFailed': 'Reranking: failed — {reason}',
   'settings.rag.rerankNone': 'Reranking: no model chosen.',
+  'settings.rag.files': 'Vault documents outside the library',
+  'settings.rag.filesDesc':
+    'Also reads the PDF, Word, Excel, PowerPoint and mail files kept elsewhere in the vault (projects’ _docs folders, attachments…), without pouring them into the library. A scan is found by its name; files over 40 MB are left out.',
   'settings.rag.rewrite': 'Rewrite follow-up questions',
   'settings.rag.rewriteDesc':
     'A question such as “and for package 3?” is first rewritten by the chat model into a complete question, from the conversation, before it is looked up.',
