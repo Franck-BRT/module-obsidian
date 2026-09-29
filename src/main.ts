@@ -838,9 +838,9 @@ export default class PMPlugin extends Plugin {
     await this.app.workspace.revealLeaf(leaf)
   }
 
-  /** A new note in the inbox — the notes library's folder —, opened to be written. */
-  async newInboxNote(): Promise<void> {
-    const file = await this.notes.create(t('notes.untitled'))
+  /** A new note in the inbox — the notes library's folder, or one of its folders —, opened to be written. */
+  async newInboxNote(subfolder = ''): Promise<void> {
+    const file = await this.notes.create(t('notes.untitled'), '', subfolder)
     await this.app.workspace.getLeaf('tab').openFile(file)
   }
 

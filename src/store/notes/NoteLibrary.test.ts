@@ -9,6 +9,7 @@ import {
   noteTitle,
   sortNotes,
   TO_SORT,
+  AT_ROOT,
   type NoteEntry
 } from './NoteLibrary'
 
@@ -78,6 +79,20 @@ describe('finding a note', () => {
     expect(matchesNote(call, q('reunions appel'), title)).toBe(true)
     expect(matchesNote(call, q('radier'), title)).toBe(false)
     expect(matchesNote(call, q('setec radier'), title, () => 'le radier est decale')).toBe(true)
+  })
+
+  it('filters by folder — its own folders included — or the library’s root alone', () => {
+    const root = entry({ subfolder: '' })
+    const meetings = entry({ subfolder: 'Réunions' })
+    const inner = entry({ subfolder: 'Réunions/2026' })
+    const other = entry({ subfolder: 'Réunions bis' })
+    const q = (folder: string) => ({ text: '', project: '', tag: '', folder })
+    expect([root, meetings, inner, other].filter((e) => matchesNote(e, q('Réunions'), title))).toEqual([
+      meetings,
+      inner
+    ])
+    expect([root, meetings, inner, other].filter((e) => matchesNote(e, q(AT_ROOT), title))).toEqual([root])
+    expect([root, meetings].filter((e) => matchesNote(e, q(''), title))).toEqual([root, meetings])
   })
 
   it('sorts the latest changed first, or by title with numbers as numbers', () => {
@@ -150,5 +165,22 @@ describe('NoteLibrary', () => {
     const moved = await library.moveTo(fileAt('Notes/Appel.md'), 'Work/Génie civil')
     expect(moved.path).toBe('Work/Génie civil/Appel-1.md')
     expect((await library.moveTo(moved, 'Work/Génie civil')).path).toBe('Work/Génie civil/Appel-1.md')
+  })
+
+  it('makes folders, nested ones too, each name made one a file system takes, and lists them', async () => {
+    expect(await library.createFolder('Réunions')).toBe('Réunions')
+    expect(await library.createFolder('2026/Q3', 'Réunions')).toBe('Réunions/2026/Q3')
+    expect(await library.createFolder('Idées: vrac')).toBe('Idées- vrac')
+    expect(await library.createFolder('../..')).toBe('')
+    // A name of nothing makes nothing, even under a folder that exists.
+    expect(await library.createFolder('..', 'Réunions')).toBe('')
+    expect(library.folders()).toEqual(['Idées- vrac', 'Réunions', 'Réunions/2026', 'Réunions/2026/Q3'])
+  })
+
+  it('creates a note in one of its folders', async () => {
+    const file = await library.create('Appel', 'x', 'Réunions/2026')
+    expect(file.path).toBe('Notes/Réunions/2026/Appel.md')
+    const [note] = await library.entries()
+    expect(note.subfolder).toBe('Réunions/2026')
   })
 })

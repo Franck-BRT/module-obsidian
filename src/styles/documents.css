@@ -638,3 +638,17 @@ a.pm-docs-missing-row {
   color: var(--text-normal);
   text-decoration: none;
 }
+
+a.pm-notes-folder {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+a.pm-notes-folder::before {
+  content: '▸ ';
+  color: var(--text-faint);
+}
+
+a.pm-notes-folder:hover {
+  color: var(--text-accent);
+}

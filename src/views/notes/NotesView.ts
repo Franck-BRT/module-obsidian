@@ -7,13 +7,16 @@ import {
   Notice,
   Setting,
   setIcon,
+  SuggestModal,
   TFile,
+  type App,
   type ViewStateResult,
   type WorkspaceLeaf
 } from 'obsidian'
 import type PMPlugin from '../../main'
 import { snippet } from '../../store/library/docText'
 import {
+  AT_ROOT,
   matchesNote,
   sortNotes,
   TO_SORT,
@@ -24,6 +27,7 @@ import {
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
+import { promptText } from '../../ui/ModalFactory'
 
 export const PM_NOTES_VIEW_TYPE = 'pm-notes'
 
@@ -38,7 +42,7 @@ const PAGE = 200
  * in the chat — one at a time, or ticked together.
  */
 export class NotesView extends ItemView {
-  private query: NoteQuery = { text: '', project: '', tag: '' }
+  private query: NoteQuery = { text: '', project: '', tag: '', folder: '' }
   private sort: NoteSort = 'modified'
   private shown = PAGE
   private picked = new Set<string>()
@@ -134,10 +138,14 @@ export class NotesView extends ItemView {
     })
     const right = this.toolbarEl.createDiv('pm-toolbar-right')
     new ButtonComponent(right)
+      .setButtonText(t('notes.newFolder'))
+      .setIcon('folder-plus')
+      .onClick(safeAsync(() => this.newFolder()))
+    new ButtonComponent(right)
       .setButtonText(t('notes.new'))
       .setIcon('file-plus')
       .setCta()
-      .onClick(safeAsync(() => this.plugin.newInboxNote()))
+      .onClick(safeAsync(() => this.plugin.newInboxNote(this.currentFolder())))
   }
 
   private renderFilters(): void {
@@ -173,6 +181,26 @@ export class NotesView extends ItemView {
       this.app.workspace.requestSaveLayout()
       this.renderBody()
     })
+    // The folders, each under the one it is in.
+    const folders = this.plugin.notes.folders()
+    if (folders.length || this.query.folder) {
+      select(
+        [
+          ['', t('notes.allFolders')],
+          [AT_ROOT, t('notes.rootFolder')],
+          ...folders.map((folder): [string, string] => {
+            const depth = folder.split('/').length - 1
+            return [folder, `${'\u2003'.repeat(depth)}${folder.slice(folder.lastIndexOf('/') + 1)}`]
+          })
+        ],
+        this.query.folder ?? '',
+        (folder) => {
+          this.query = { ...this.query, folder }
+          this.shown = PAGE
+          this.renderBody()
+        }
+      )
+    }
     const tags = [...new Set(this.entries.flatMap((entry) => entry.tags))].sort((a, b) => a.localeCompare(b))
     if (tags.length || this.query.tag) {
       select(
@@ -275,6 +303,10 @@ export class NotesView extends ItemView {
       .setButtonText(t('notes.fileTo'))
       .setIcon('folder-kanban')
       .onClick(safeAsync(() => this.fileTo(picked)))
+    new ButtonComponent(bar)
+      .setButtonText(t('notes.moveTo'))
+      .setIcon('folder-input')
+      .onClick(() => this.moveToFolder(picked))
     new ButtonComponent(bar).setButtonText(t('library.unpick')).onClick(() => {
       this.picked.clear()
       this.renderBody()
@@ -306,7 +338,15 @@ export class NotesView extends ItemView {
     meta.createSpan({
       text: t('notes.modifiedOn', { date: formatDate(new Date(entry.mtime).toISOString().slice(0, 10)) })
     })
-    if (entry.subfolder) meta.createSpan({ text: entry.subfolder })
+    if (entry.subfolder) {
+      const folder = meta.createEl('a', { cls: 'pm-notes-folder', href: '#', text: entry.subfolder })
+      folder.addEventListener('click', (event) => {
+        event.preventDefault()
+        this.query = { ...this.query, folder: entry.subfolder }
+        this.renderFilters()
+        this.renderBody()
+      })
+    }
 
     // The words searched for where they are in the text; otherwise its first lines.
     const words = this.query.text.split(/\s+/).filter(Boolean)
@@ -368,6 +408,12 @@ export class NotesView extends ItemView {
         .setIcon('folder-kanban')
         .onClick(safeAsync(() => this.fileTo([entry])))
     )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('notes.moveTo'))
+        .setIcon('folder-input')
+        .onClick(() => this.moveToFolder([entry]))
+    )
     if (entry.projects.length) {
       menu.addItem((item) =>
         item
@@ -425,6 +471,47 @@ export class NotesView extends ItemView {
     this.picked.clear()
   }
 
+  /** The folder on screen, where a new note or folder goes: '' at the root, or when all are shown. */
+  private currentFolder(): string {
+    const folder = this.query.folder ?? ''
+    return folder === AT_ROOT ? '' : folder
+  }
+
+  /** A folder made in the one on screen — or at the root —, then shown. */
+  private async newFolder(): Promise<void> {
+    const under = this.currentFolder()
+    const name = await promptText(
+      this.app,
+      under ? t('notes.newFolderIn', { folder: under }) : t('notes.newFolderTitle'),
+      t('notes.newFolderPlaceholder')
+    )
+    if (!name) return
+    const made = await this.plugin.notes.createFolder(name, under)
+    if (!made) return
+    this.query = { ...this.query, folder: made }
+    new Notice(t('notes.folderMade', { folder: made }))
+    await this.reload()
+  }
+
+  /** Notes moved into a folder of the library, picked or named — a new name makes it. */
+  private moveToFolder(entries: NoteEntry[]): void {
+    if (!entries.length) return
+    new FolderPicker(
+      this.app,
+      this.plugin.notes.folders(),
+      safeAsync(async (target: FolderChoice) => {
+        const folder = target.kind === 'new' ? await this.plugin.notes.createFolder(target.name) : target.path
+        if (target.kind === 'new' && !folder) return
+        for (const entry of entries) {
+          const file = this.fileOf(entry)
+          if (file) await this.plugin.notes.moveTo(file, this.plugin.notes.pathOf(folder))
+        }
+        this.picked.clear()
+        new Notice(t('notes.movedTo', { count: entries.length, folder: folder || t('notes.rootFolder') }))
+      })
+    ).open()
+  }
+
   /** A note moved beside its first project — into its folder — where it now belongs. */
   private async moveBeside(entry: NoteEntry): Promise<void> {
     const file = this.fileOf(entry)
@@ -466,5 +553,42 @@ class DeleteModal extends Modal {
 
   onClose(): void {
     this.contentEl.empty()
+  }
+}
+
+type FolderChoice = { kind: 'folder'; path: string } | { kind: 'new'; name: string }
+
+/** A folder of the notes library to move notes into: its root, one of its folders, or a new one named. */
+class FolderPicker extends SuggestModal<FolderChoice> {
+  constructor(
+    app: App,
+    private folders: string[],
+    private onChoose: (choice: FolderChoice) => void
+  ) {
+    super(app)
+    this.setPlaceholder(t('notes.moveToPlaceholder'))
+  }
+
+  getSuggestions(query: string): FolderChoice[] {
+    const q = query.trim().toLowerCase()
+    const found = ['', ...this.folders]
+      .filter((path) => (path || t('notes.rootFolder')).toLowerCase().includes(q))
+      .map((path): FolderChoice => ({ kind: 'folder', path }))
+    // A name no folder has: offered to be made.
+    if (q && !this.folders.some((path) => path.toLowerCase() === q)) found.push({ kind: 'new', name: query.trim() })
+    return found
+  }
+
+  renderSuggestion(choice: FolderChoice, el: HTMLElement): void {
+    const line = el.createDiv({ cls: 'pm-chat-pick-line' })
+    setIcon(line.createSpan({ cls: 'pm-chat-pick-icon' }), choice.kind === 'new' ? 'folder-plus' : 'folder')
+    line.createSpan({
+      text:
+        choice.kind === 'new' ? t('notes.newFolderNamed', { name: choice.name }) : choice.path || t('notes.rootFolder')
+    })
+  }
+
+  onChooseSuggestion(choice: FolderChoice): void {
+    this.onChoose(choice)
   }
 }

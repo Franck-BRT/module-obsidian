@@ -1,10 +1,11 @@
-import { normalizePath, TFile, type App } from 'obsidian'
+import { normalizePath, TFile, TFolder, type App } from 'obsidian'
 import { sanitizeFileName } from '../../utils'
 import { freePath } from '../DocumentStore'
 import { cleanTags } from '../library/libraryClass'
 import { fold, linkPath, stringList } from '../library/libraryDoc'
 import { refLink } from '../refs'
 import { ensureFolder } from '../vaultFs'
+import { safeFolder } from '../chat/noteProposal'
 
 /**
  * The notes library: a folder for whatever does not belong anywhere yet — a thought, a
@@ -66,12 +67,17 @@ export function noteExcerpt(content: string, length = 180): string {
 /** Stands for the notes still to sort — belonging to no project — in a filter. */
 export const TO_SORT = ':to-sort'
 
+/** Stands for the notes at the library's root — the inbox itself — in a folder filter. */
+export const AT_ROOT = ':root'
+
 export interface NoteQuery {
   text: string
   /** '' for every note, `TO_SORT`, or a project's path. */
   project: string
   /** '' for any tag. */
   tag: string
+  /** '' for every folder, `AT_ROOT`, or a folder under the library's — its own folders included. */
+  folder?: string
 }
 
 /** Whether a note answers a search: every word in its title, tags, projects or text. */
@@ -85,6 +91,11 @@ export function matchesNote(
     if (entry.projects.length) return false
   } else if (query.project && !entry.projects.includes(query.project)) return false
   if (query.tag && !entry.tags.some((tag) => fold(tag) === fold(query.tag))) return false
+  if (query.folder === AT_ROOT) {
+    if (entry.subfolder) return false
+  } else if (query.folder && entry.subfolder !== query.folder && !entry.subfolder.startsWith(`${query.folder}/`)) {
+    return false
+  }
   const words = fold(query.text).split(/\s+/).filter(Boolean)
   if (!words.length) return true
   const haystack = fold([entry.title, entry.subfolder, ...entry.tags, ...entry.projects.map(projectTitle)].join('\n'))
@@ -185,11 +196,49 @@ export class NoteLibrary {
     return direct instanceof TFile ? direct.path : null
   }
 
-  /** A new note in the inbox — the library's root —, named, or untitled, never over another. */
-  async create(title: string, body = ''): Promise<TFile> {
-    await ensureFolder(this.app, this.root)
-    const path = await freePath(this.app, this.root, sanitizeFileName(title).trim() || 'Note', 'md')
+  /**
+   * A new note, named or untitled, never over another: in the inbox — the library's root —
+   * or in one of its folders.
+   */
+  async create(title: string, body = '', subfolder = ''): Promise<TFile> {
+    const folder = this.pathOf(subfolder)
+    await ensureFolder(this.app, folder)
+    const path = await freePath(this.app, folder, sanitizeFileName(title).trim() || 'Note', 'md')
     return this.app.vault.create(path, body)
+  }
+
+  /** A folder of the library, by its path under the library's: '' is the library's root. */
+  pathOf(subfolder: string): string {
+    const safe = safeFolder(subfolder)
+    return normalizePath(safe ? `${this.root}/${safe}` : this.root)
+  }
+
+  /** The library's folders, however deep, by their paths under its own, in order. */
+  folders(): string[] {
+    const root = this.app.vault.getAbstractFileByPath(this.root)
+    if (!(root instanceof TFolder)) return []
+    const found: string[] = []
+    const walk = (folder: TFolder): void => {
+      for (const child of folder.children) {
+        if (!(child instanceof TFolder) || child.name.startsWith('.')) continue
+        found.push(child.path.slice(this.root.length + 1))
+        walk(child)
+      }
+    }
+    walk(root)
+    return found.sort((a, b) => collator.compare(a, b))
+  }
+
+  /**
+   * Makes a folder in the library — under another of its folders, or at its root —, each
+   * part of the name made one a file system takes; « Réunions/2026 » makes both. Returns its
+   * path under the library's, or '' when the name holds nothing to make.
+   */
+  async createFolder(name: string, under = ''): Promise<string> {
+    const relative = safeFolder([safeFolder(under), safeFolder(name)].filter(Boolean).join('/'))
+    if (!safeFolder(name)) return ''
+    await ensureFolder(this.app, this.pathOf(relative))
+    return relative
   }
 
   /** Says which projects a note belongs to, replacing what it said; the single `project` of a kept reply included. */

@@ -1928,5 +1928,16 @@ export const fr: Catalog = {
   'notes.open': 'Ouvrir la note',
   'notes.delete': 'Mettre à la corbeille',
   'notes.deleteTitle': 'Mettre « {title} » à la corbeille ?',
-  'notes.deleteText': 'La note ira dans la corbeille du coffre, d’où elle peut être restaurée.'
+  'notes.deleteText': 'La note ira dans la corbeille du coffre, d’où elle peut être restaurée.',
+  'notes.newFolder': 'Nouveau dossier',
+  'notes.newFolderTitle': 'Nouveau dossier dans la bibliothèque de notes',
+  'notes.newFolderIn': 'Nouveau dossier dans « {folder} »',
+  'notes.newFolderPlaceholder': 'Nom du dossier (ex. Réunions, ou Réunions/2026)',
+  'notes.newFolderNamed': 'Créer le dossier « {name} »',
+  'notes.folderMade': 'Dossier créé : {folder}',
+  'notes.allFolders': 'Tous les dossiers',
+  'notes.rootFolder': 'Racine (boîte de réception)',
+  'notes.moveTo': 'Déplacer vers un dossier…',
+  'notes.moveToPlaceholder': 'Choisis un dossier, ou tape le nom d’un nouveau…',
+  'notes.movedTo': { one: '{count} note déplacée dans {folder}.', other: '{count} notes déplacées dans {folder}.' }
 }

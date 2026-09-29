@@ -1945,5 +1945,16 @@ export const en = {
   'notes.open': 'Open the note',
   'notes.delete': 'Move to the trash',
   'notes.deleteTitle': 'Move “{title}” to the trash?',
-  'notes.deleteText': 'The note will go to the vault’s trash, where it can be restored from.'
+  'notes.deleteText': 'The note will go to the vault’s trash, where it can be restored from.',
+  'notes.newFolder': 'New folder',
+  'notes.newFolderTitle': 'New folder in the notes library',
+  'notes.newFolderIn': 'New folder in “{folder}”',
+  'notes.newFolderPlaceholder': 'Folder name (e.g. Meetings, or Meetings/2026)',
+  'notes.newFolderNamed': 'Create the folder “{name}”',
+  'notes.folderMade': 'Folder created: {folder}',
+  'notes.allFolders': 'All folders',
+  'notes.rootFolder': 'Root (inbox)',
+  'notes.moveTo': 'Move to a folder…',
+  'notes.moveToPlaceholder': 'Choose a folder, or type the name of a new one…',
+  'notes.movedTo': { one: '{count} note moved into {folder}.', other: '{count} notes moved into {folder}.' }
 } as const
