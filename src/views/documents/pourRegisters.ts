@@ -1,6 +1,6 @@
-import { Modal, Notice, Setting, TFile, type App } from 'obsidian'
+import { Modal, Notice, Setting, type App } from 'obsidian'
 import type PMPlugin from '../../main'
-import type { PourItem } from '../../store/library/DocLibrary'
+import { findVaultFile, type PourItem } from '../../store/library/DocLibrary'
 import { registerFilesOutside, type RegisterFile } from '../../store/library/libraryRegister'
 import type { Project } from '../../types'
 import { today } from '../../dates'
@@ -31,12 +31,11 @@ export async function registerFilesToPour(
   withVersions: boolean,
   only?: string
 ): Promise<RegisterFile[]> {
-  const inLibrary = new Set(plugin.library.docs().map((doc) => doc.file))
+  const inLibrary = new Set(plugin.library.docs().map((doc) => doc.file.normalize('NFC')))
   return registerFilesOutside(await registerProjects(plugin, only), inLibrary, withVersions).filter(
-    (entry) => plugin.app.vault.getAbstractFileByPath(entry.file) instanceof TFile
+    (entry) => findVaultFile(plugin.app, entry.file) !== null
   )
 }
-
 /** Asks which register files to pour — one project's, or every project's — and pours them. */
 export async function pourRegisterFiles(plugin: PMPlugin, only?: string): Promise<void> {
   const current = await registerFilesToPour(plugin, false, only)
@@ -58,8 +57,8 @@ export async function pourRegisterFiles(plugin: PMPlugin, only?: string): Promis
 
   const items: PourItem[] = []
   for (const entry of chosen) {
-    const file = plugin.app.vault.getAbstractFileByPath(entry.file)
-    if (!(file instanceof TFile)) continue
+    const file = findVaultFile(plugin.app, entry.file)
+    if (!file) continue
     items.push({
       kind: 'vault',
       file,

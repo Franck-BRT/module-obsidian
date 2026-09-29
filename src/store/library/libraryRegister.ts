@@ -21,13 +21,15 @@ export interface RegisterEntry {
   version: number
 }
 
-/** Every register entry of these projects, by the file it stands for. */
+/** Every register entry of these projects, by the file it stands for — its path in NFC form. */
 export function registerEntries(projects: Project[]): Map<string, RegisterEntry[]> {
   const entries = new Map<string, RegisterEntry[]>()
+  // By the path as one form of it: a Mac may have written its accents the other way.
   const add = (path: string, entry: RegisterEntry): void => {
-    const list = entries.get(path)
+    const key = path.normalize('NFC')
+    const list = entries.get(key)
     if (list) list.push(entry)
-    else entries.set(path, [entry])
+    else entries.set(key, [entry])
   }
   for (const project of projects) {
     for (const { task } of flattenTasks(project.tasks)) {
@@ -221,7 +223,7 @@ export interface RegisterFile {
 
 /**
  * The files the projects' registers hold and the library does not: their current files,
- * and their earlier versions when asked. A file two registers hold is one, belonging to
+ * and their earlier versions when asked. `inLibrary` holds the library's paths in NFC form. A file two registers hold is one, belonging to
  * both; one the library already has is left out.
  */
 export function registerFilesOutside(
@@ -231,7 +233,7 @@ export function registerFilesOutside(
 ): RegisterFile[] {
   const found = new Map<string, RegisterFile>()
   const add = (entry: RegisterFile): void => {
-    if (inLibrary.has(entry.file)) return
+    if (inLibrary.has(entry.file) || inLibrary.has(entry.file.normalize('NFC'))) return
     const known = found.get(entry.file)
     if (!known) found.set(entry.file, entry)
     else {
@@ -263,4 +265,27 @@ export function registerFilesOutside(
     }
   }
   return [...found.values()]
+}
+
+/** A register document whose file is not where the register says it is. */
+export interface MissingRegisterFile {
+  project: Project
+  task: Task
+  file: string
+}
+
+/**
+ * The register documents whose current file cannot be found: moved, renamed or deleted
+ * behind the register's back. `exists` says whether a path holds a file.
+ */
+export function missingRegisterFiles(projects: Project[], exists: (path: string) => boolean): MissingRegisterFile[] {
+  const missing: MissingRegisterFile[] = []
+  for (const project of projects) {
+    for (const { task } of flattenTasks(project.tasks)) {
+      if (!isDocument(task)) continue
+      const file = documentOf(task).file
+      if (file && !exists(file)) missing.push({ project, task, file })
+    }
+  }
+  return missing
 }

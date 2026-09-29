@@ -1,7 +1,7 @@
 import { TFile, type App } from 'obsidian'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { makeFakeApp, type FakeVault } from '../../../test/fakeVault'
-import { DocLibrary, type PourItem } from './DocLibrary'
+import { DocLibrary, findVaultFile, type PourItem } from './DocLibrary'
 import { parseCategories } from './libraryClass'
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
@@ -333,5 +333,14 @@ describe('DocLibrary', () => {
     expect(library.docs().map((doc) => doc.record)).toEqual(['Ailleurs/x.md'])
     expect(library.isRecord(record)).toBe(true)
     expect(library.isRecord(fileAt(GC))).toBe(false)
+  })
+
+  it('finds a file however its accents were written', async () => {
+    const composed = 'Work/Génie civil/_docs/Réception.pdf'.normalize('NFC')
+    await vault.createBinary(composed, bytes('x').buffer as ArrayBuffer)
+    const app = { vault } as unknown as App
+    expect(findVaultFile(app, composed.normalize('NFD'))?.path).toBe(composed)
+    expect(findVaultFile(app, composed)?.path).toBe(composed)
+    expect(findVaultFile(app, 'Work/Ailleurs.pdf')).toBeNull()
   })
 })

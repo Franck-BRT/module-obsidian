@@ -5,6 +5,7 @@ import {
   matchScore,
   proposeMatches,
   registerCandidates,
+  missingRegisterFiles,
   registerEntries,
   registerFilesOutside
 } from './libraryRegister'
@@ -233,5 +234,17 @@ describe('registerFilesOutside', () => {
       (f) => f.file === 'GC/_docs/_versions/Plan-v1.pdf'
     )
     expect(file).toMatchObject({ title: 'Nouveau plan', issuer: '', current: true, projects: ['GC.md', 'L.md'] })
+  })
+})
+
+describe('missingRegisterFiles', () => {
+  it('names the register documents whose current file is not where the register says', () => {
+    const gc = makeProject('Génie civil', 'GC.md')
+    const gone = ticket('Plan déplacé', { file: 'GC/_docs/Ancien.pdf' })
+    gc.tasks = [gone, ticket('Plan là', { file: 'GC/_docs/Plan.pdf' }), ticket('Attendu', { state: 'expected' })]
+    const missing = missingRegisterFiles([gc], (path) => path === 'GC/_docs/Plan.pdf')
+    expect(missing.map((entry) => [entry.project.title, entry.task, entry.file])).toEqual([
+      ['Génie civil', gone, 'GC/_docs/Ancien.pdf']
+    ])
   })
 })

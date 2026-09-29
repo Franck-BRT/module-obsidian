@@ -29,7 +29,14 @@ import {
 } from '../../store/library/libraryDoc'
 import type { PourItem } from '../../store/library/DocLibrary'
 import { snippet } from '../../store/library/docText'
-import { registerEntries, registerFilesOutside, type RegisterEntry } from '../../store/library/libraryRegister'
+import {
+  missingRegisterFiles,
+  registerEntries,
+  registerFilesOutside,
+  type MissingRegisterFile,
+  type RegisterEntry
+} from '../../store/library/libraryRegister'
+import { findVaultFile } from '../../store/library/DocLibrary'
 import { documentOf } from '../../store/Document'
 import { openTaskModal } from '../../ui/ModalFactory'
 import { docStateLabel } from '../library/docStateLabel'
@@ -377,18 +384,33 @@ export class DocumentsView extends ItemView {
     }
   }
 
-  /** The registers' documents the library does not have yet, and the way to pour them in. */
+  /**
+   * The registers' documents the library does not have yet — those whose file is there to
+   * pour — and, apart, those whose file cannot be found, which no pour can bring in.
+   */
   private renderRegistersOutside(all: LibraryDoc[]): void {
-    const inLibrary = new Set(all.map((doc) => doc.file))
-    const outside = registerFilesOutside(this.registers, inLibrary, false).length
-    if (!outside) return
-    const line = this.bodyEl.createDiv('pm-docs-outside')
-    line.createSpan({ text: t('library.registersOutside', { count: outside }) })
-    const link = line.createEl('a', { href: '#', text: t('library.registersPourLink') })
-    link.addEventListener('click', (event) => {
-      event.preventDefault()
-      void pourRegisterFiles(this.plugin).then(() => this.loadRegister())
-    })
+    const inLibrary = new Set(all.map((doc) => doc.file.normalize('NFC')))
+    const exists = (path: string): boolean => findVaultFile(this.app, path) !== null
+    const outside = registerFilesOutside(this.registers, inLibrary, false).filter((entry) => exists(entry.file)).length
+    if (outside) {
+      const line = this.bodyEl.createDiv('pm-docs-outside')
+      line.createSpan({ text: t('library.registersOutside', { count: outside }) })
+      const link = line.createEl('a', { href: '#', text: t('library.registersPourLink') })
+      link.addEventListener('click', (event) => {
+        event.preventDefault()
+        void pourRegisterFiles(this.plugin).then(() => this.loadRegister())
+      })
+    }
+    const missing = missingRegisterFiles(this.registers, exists)
+    if (missing.length) {
+      const line = this.bodyEl.createDiv('pm-docs-outside is-missing')
+      line.createSpan({ text: t('library.registersMissing', { count: missing.length }) })
+      const link = line.createEl('a', { href: '#', text: t('library.registersMissingLink') })
+      link.addEventListener('click', (event) => {
+        event.preventDefault()
+        new MissingFilesModal(this.plugin, missing, () => this.loadRegister()).open()
+      })
+    }
   }
 
   /** What is ticked, and what can be done with it: asked about in the chat, or let go. */
@@ -575,7 +597,7 @@ export class DocumentsView extends ItemView {
    * state — or that it is an earlier version there. A click opens the register's ticket.
    */
   private renderRegister(main: HTMLElement, doc: LibraryDoc): void {
-    const entries = doc.file ? this.followed.get(doc.file) : undefined
+    const entries = doc.file ? this.followed.get(doc.file.normalize('NFC')) : undefined
     if (!entries?.length) return
     const line = main.createDiv('pm-docs-register')
     for (const entry of entries) {
@@ -796,6 +818,38 @@ class ConfirmModal extends Modal {
           })
         )
       )
+  }
+
+  onClose(): void {
+    this.contentEl.empty()
+  }
+}
+
+/** The register documents whose file cannot be found, each opening its register ticket. */
+class MissingFilesModal extends Modal {
+  constructor(
+    private plugin: PMPlugin,
+    private missing: MissingRegisterFile[],
+    private onSave: () => Promise<void>
+  ) {
+    super(plugin.app)
+  }
+
+  onOpen(): void {
+    this.setTitle(t('library.missingTitle', { count: this.missing.length }))
+    this.modalEl.addClass('pm-docs-chooser')
+    this.contentEl.createEl('p', { cls: 'pm-docs-classify-note', text: t('library.missingIntro') })
+    const list = this.contentEl.createDiv('pm-docs-chooser-list pm-docs-registers-list')
+    for (const entry of this.missing) {
+      const row = list.createEl('a', { cls: 'pm-docs-chooser-row pm-docs-missing-row', href: '#' })
+      row.createSpan({ cls: 'pm-docs-chooser-title', text: entry.task.title })
+      row.createSpan({ cls: 'pm-docs-chooser-detail', text: `${entry.project.title} · ${entry.file}` })
+      row.addEventListener('click', (event) => {
+        event.preventDefault()
+        this.close()
+        openTaskModal(this.plugin, entry.project, { task: entry.task, onSave: () => this.onSave() })
+      })
+    }
   }
 
   onClose(): void {

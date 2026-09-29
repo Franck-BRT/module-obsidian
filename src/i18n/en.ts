@@ -1663,7 +1663,7 @@ export const en = {
   'library.title': 'Document library',
   'library.ofProject': 'This project’s documents in the library',
   'library.count': { one: '{count} document', other: '{count} documents' },
-  'library.found': '{count} of {total}',
+  'library.found': { one: '{count} document shown of {total}', other: '{count} documents shown of {total}' },
   'library.pour': 'Pour in documents',
   'library.pourMenu': 'Pour into the library',
   'library.search': 'Search a title, a file name, a project…',
@@ -1725,7 +1725,7 @@ export const en = {
     'Files in the vault are moved into the library’s folder. Otherwise they stay where they are and the library refers to them. A project’s own files (_docs) are never moved.',
   'library.mailAttachments': 'Attachments:',
   'library.textReading': 'Reading contents… {done} of {total}',
-  'library.textRead': 'Contents read for {count} of {total}',
+  'library.textRead': 'Text read, for searching: {count} of {total}',
   'library.scansWaiting': { one: '{count} scan to read', other: '{count} scans to read' },
   'library.readScansHint': 'Have the scanned documents read by the model that sees, to find them by what they say',
   'library.readScansTitle': { one: 'Read {count} scan with the model?', other: 'Read {count} scans with the model?' },
@@ -1907,5 +1907,13 @@ export const en = {
     one: '{count} example skill added in {folder}.',
     other: '{count} example skills added in {folder}.'
   },
-  'skill.examplesThere': 'The example skills are already in {folder}.'
+  'skill.examplesThere': 'The example skills are already in {folder}.',
+  'library.registersMissing': {
+    one: '{count} register document points to a file that cannot be found (moved, renamed or deleted).',
+    other: '{count} register documents point to a file that cannot be found (moved, renamed or deleted).'
+  },
+  'library.registersMissingLink': 'See which…',
+  'library.missingTitle': { one: '{count} file not found', other: '{count} files not found' },
+  'library.missingIntro':
+    'The register of these documents names a file that is no longer at that place in the vault. Open a document to deposit its file again, or take it out of the register.'
 } as const

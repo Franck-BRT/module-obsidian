@@ -1642,7 +1642,7 @@ export const fr: Catalog = {
   'library.title': 'Bibliothèque de documents',
   'library.ofProject': 'Documents du projet dans la bibliothèque',
   'library.count': { one: '{count} document', other: '{count} documents' },
-  'library.found': '{count} sur {total}',
+  'library.found': { one: '{count} document affiché sur {total}', other: '{count} documents affichés sur {total}' },
   'library.pour': 'Verser des documents',
   'library.pourMenu': 'Verser dans la bibliothèque',
   'library.search': 'Chercher un titre, un nom de fichier, un projet…',
@@ -1704,7 +1704,7 @@ export const fr: Catalog = {
     'Les fichiers du coffre sont déplacés dans le dossier de la bibliothèque. Sinon, ils restent où ils sont et la bibliothèque les référence. Ceux d’un projet (_docs) ne sont jamais déplacés.',
   'library.mailAttachments': 'Pièces jointes :',
   'library.textReading': 'Lecture des contenus… {done} sur {total}',
-  'library.textRead': 'Contenu lu pour {count} sur {total}',
+  'library.textRead': 'Texte lu, pour la recherche : {count} sur {total}',
   'library.scansWaiting': { one: '{count} scan à lire', other: '{count} scans à lire' },
   'library.readScansHint':
     'Faire lire les documents scannés par le modèle qui voit, pour les retrouver par leur contenu',
@@ -1890,5 +1890,13 @@ export const fr: Catalog = {
     one: '{count} compétence d’exemple ajoutée dans {folder}.',
     other: '{count} compétences d’exemple ajoutées dans {folder}.'
   },
-  'skill.examplesThere': 'Les compétences d’exemple sont déjà dans {folder}.'
+  'skill.examplesThere': 'Les compétences d’exemple sont déjà dans {folder}.',
+  'library.registersMissing': {
+    one: '{count} document des registres pointe vers un fichier introuvable (déplacé, renommé ou supprimé).',
+    other: '{count} documents des registres pointent vers un fichier introuvable (déplacé, renommé ou supprimé).'
+  },
+  'library.registersMissingLink': 'Voir lesquels…',
+  'library.missingTitle': { one: '{count} fichier introuvable', other: '{count} fichiers introuvables' },
+  'library.missingIntro':
+    'Le registre de ces documents indique un fichier qui n’est plus à cet endroit du coffre. Ouvre un document pour déposer de nouveau son fichier, ou le retirer du registre.'
 }

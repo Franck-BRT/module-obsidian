@@ -359,3 +359,16 @@ function text(raw: unknown): string {
   if (typeof raw === 'number') return String(raw)
   return ''
 }
+
+/**
+ * A file of the vault by its path, however its accented letters were written: a Mac writes
+ * « é » as « e » and an accent where the path was written with one letter, and the other
+ * way round — two paths that read the same and differ.
+ */
+export function findVaultFile(app: App, path: string): TFile | null {
+  for (const candidate of new Set([path, path.normalize('NFC'), path.normalize('NFD')])) {
+    const found = app.vault.getAbstractFileByPath(normalizePath(candidate))
+    if (found instanceof TFile) return found
+  }
+  return null
+}

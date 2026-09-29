@@ -629,3 +629,12 @@ button.pm-docs-tag:not(.clickable-icon) {
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold);
 }
+
+.pm-docs-outside.is-missing {
+  border-left: 3px solid var(--color-orange);
+}
+
+a.pm-docs-missing-row {
+  color: var(--text-normal);
+  text-decoration: none;
+}
