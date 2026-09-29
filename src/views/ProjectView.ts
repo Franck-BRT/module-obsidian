@@ -553,6 +553,10 @@ export class ProjectView extends ItemView {
         .setIcon('library-big')
         .setTooltip(t('library.ofProject'))
         .onClick(safeAsync(() => this.plugin.openDocuments(primary.filePath)))
+      new ExtraButtonComponent(right)
+        .setIcon('notebook-pen')
+        .setTooltip(t('notes.ofProject'))
+        .onClick(safeAsync(() => this.plugin.openNotes(primary.filePath)))
     }
     const spec = this.spec
     if (spec?.kind === 'collection') {

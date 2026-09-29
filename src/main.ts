@@ -81,6 +81,8 @@ import { registerChangeBlock } from './views/chat/changeCard'
 import { registerBranchBlock } from './views/chat/branchGraph'
 import { registerNoteBlock } from './views/chat/noteCard'
 import { DocumentsView, PM_DOCUMENTS_VIEW_TYPE } from './views/documents/DocumentsView'
+import { NotesView, PM_NOTES_VIEW_TYPE } from './views/notes/NotesView'
+import { NoteLibrary } from './store/notes/NoteLibrary'
 import {
   chooseProjects,
   type ChooserAnswer,
@@ -127,6 +129,8 @@ export default class PMPlugin extends Plugin {
   library!: DocLibrary
   /** What the library's documents say, read once and kept, for searching. */
   libraryText!: DocTextIndex
+  /** The notes of no project yet, and the inbox new notes land in. */
+  notes!: NoteLibrary
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver
@@ -186,6 +190,11 @@ export default class PMPlugin extends Plugin {
       () => ({ filesFolder: '_files', notesHeading: t('library.notesHeading') }),
       (path) => this.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, '')
     )
+    this.notes = new NoteLibrary(
+      this.app,
+      () => this.settings.notesFolder.trim() || 'Notes',
+      (path) => this.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, '')
+    )
     this.libraryText = new DocTextIndex(
       this.app,
       folderShelf(this.app, () => `${this.library.root}/.text`),
@@ -225,6 +234,7 @@ export default class PMPlugin extends Plugin {
     this.registerView(PM_REQUIREMENTS_VIEW_TYPE, (leaf) => new RequirementsView(leaf, this))
     this.registerView(PM_CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, this))
     this.registerView(PM_DOCUMENTS_VIEW_TYPE, (leaf) => new DocumentsView(leaf, this))
+    this.registerView(PM_NOTES_VIEW_TYPE, (leaf) => new NotesView(leaf, this))
     // Claiming the extension is what stops a click handing the message back to Outlook.
     this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
@@ -451,6 +461,21 @@ export default class PMPlugin extends Plugin {
       name: t('command.openDocuments'),
       callback: () => {
         void this.openDocuments()
+      }
+    })
+
+    this.addCommand({
+      id: 'open-notes',
+      name: t('command.openNotes'),
+      callback: () => {
+        void this.openNotes()
+      }
+    })
+    this.addCommand({
+      id: 'new-inbox-note',
+      name: t('command.newInboxNote'),
+      callback: () => {
+        void this.newInboxNote()
       }
     })
 
@@ -803,6 +828,20 @@ export default class PMPlugin extends Plugin {
     const leaf = existing ?? this.app.workspace.getLeaf('tab')
     await leaf.setViewState({ type: PM_DOCUMENTS_VIEW_TYPE, state: { project }, active: true })
     await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /** The notes library, in a tab of its own, narrowed to one project when opened from it. */
+  async openNotes(project = ''): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(PM_NOTES_VIEW_TYPE)[0]
+    const leaf = existing ?? this.app.workspace.getLeaf('tab')
+    await leaf.setViewState({ type: PM_NOTES_VIEW_TYPE, state: { project }, active: true })
+    await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /** A new note in the inbox — the notes library's folder —, opened to be written. */
+  async newInboxNote(): Promise<void> {
+    const file = await this.notes.create(t('notes.untitled'))
+    await this.app.workspace.getLeaf('tab').openFile(file)
   }
 
   /** The projects a document can belong to: programmes too, templates not. By title. */

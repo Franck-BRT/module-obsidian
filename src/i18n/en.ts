@@ -1859,8 +1859,8 @@ export const en = {
   'chat.note.noTarget': 'The note “{name}” cannot be found in the vault.',
   'settings.chat.notesFolder': 'Folder for notes the chat writes',
   'settings.chat.notesFolderDesc':
-    'Where a note the chat proposes goes when it names no folder. Empty: the location for new notes set in Obsidian.',
-  'settings.chat.notesFolderPlaceholder': 'Obsidian’s location for new notes',
+    'Where a note the chat proposes goes when it names no folder. Empty: the notes library (the inbox).',
+  'settings.chat.notesFolderPlaceholder': 'Notes library',
   'command.newSkill': 'Create a skill for the chat',
   'command.exampleSkills': 'Add the chat’s example skills',
   'chat.skillPick': 'Use a skill',
@@ -1915,5 +1915,35 @@ export const en = {
   'library.registersMissingLink': 'See which…',
   'library.missingTitle': { one: '{count} file not found', other: '{count} files not found' },
   'library.missingIntro':
-    'The register of these documents names a file that is no longer at that place in the vault. Open a document to deposit its file again, or take it out of the register.'
+    'The register of these documents names a file that is no longer at that place in the vault. Open a document to deposit its file again, or take it out of the register.',
+  'command.openNotes': 'Open the notes library',
+  'command.newInboxNote': 'New note (inbox)',
+  'settings.notesFolder.name': 'Notes library folder',
+  'settings.notesFolder.desc':
+    'The folder for notes of no project yet, which is also the inbox: the plugin’s new notes and those the chat writes are created there. For Obsidian to create its new notes there too, choose this folder in Settings → Files and links → Default location for new notes.',
+  'notes.title': 'Notes library',
+  'notes.ofProject': 'This project’s notes in the notes library',
+  'notes.count': { one: '{count} note', other: '{count} notes' },
+  'notes.toSortCount': { one: '{count} to sort', other: '{count} to sort' },
+  'notes.found': { one: '{count} note shown of {total}', other: '{count} notes shown of {total}' },
+  'notes.new': 'New note',
+  'notes.untitled': 'Untitled',
+  'notes.search': 'Search the notes’ titles and text…',
+  'notes.allNotes': 'All notes',
+  'notes.toSort': 'To sort (no project)',
+  'notes.sortModified': 'Recently changed',
+  'notes.nothingFound': 'No note matches.',
+  'notes.emptyTitle': 'The notes library is empty',
+  'notes.emptyText':
+    'Notes of no project yet live in the folder {folder}: create one here, or let the chat write its own there. You will file them to their projects later.',
+  'notes.modifiedOn': 'changed on {date}',
+  'notes.picked': { one: '{count} note ticked', other: '{count} notes ticked' },
+  'notes.fileTo': 'File to projects…',
+  'notes.fileSeveral': { one: 'File {count} note', other: 'File {count} notes' },
+  'notes.moveBeside': 'Move into the folder of {project}',
+  'notes.moved': 'Note moved: {path}',
+  'notes.open': 'Open the note',
+  'notes.delete': 'Move to the trash',
+  'notes.deleteTitle': 'Move “{title}” to the trash?',
+  'notes.deleteText': 'The note will go to the vault’s trash, where it can be restored from.'
 } as const

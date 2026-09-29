@@ -1840,8 +1840,8 @@ export const fr: Catalog = {
   'chat.note.noTarget': 'La note « {name} » est introuvable dans le coffre.',
   'settings.chat.notesFolder': 'Dossier des notes écrites par le chat',
   'settings.chat.notesFolderDesc':
-    'Où va une note proposée par le chat qui ne précise pas de dossier. Vide : l’emplacement des nouvelles notes réglé dans Obsidian.',
-  'settings.chat.notesFolderPlaceholder': 'Emplacement des nouvelles notes d’Obsidian',
+    'Où va une note proposée par le chat qui ne précise pas de dossier. Vide : la bibliothèque de notes (la boîte de réception).',
+  'settings.chat.notesFolderPlaceholder': 'Bibliothèque de notes',
   'command.newSkill': 'Créer une compétence pour le chat',
   'command.exampleSkills': 'Ajouter les compétences d’exemple du chat',
   'chat.skillPick': 'Utiliser une compétence',
@@ -1898,5 +1898,35 @@ export const fr: Catalog = {
   'library.registersMissingLink': 'Voir lesquels…',
   'library.missingTitle': { one: '{count} fichier introuvable', other: '{count} fichiers introuvables' },
   'library.missingIntro':
-    'Le registre de ces documents indique un fichier qui n’est plus à cet endroit du coffre. Ouvre un document pour déposer de nouveau son fichier, ou le retirer du registre.'
+    'Le registre de ces documents indique un fichier qui n’est plus à cet endroit du coffre. Ouvre un document pour déposer de nouveau son fichier, ou le retirer du registre.',
+  'command.openNotes': 'Ouvrir la bibliothèque de notes',
+  'command.newInboxNote': 'Nouvelle note (boîte de réception)',
+  'settings.notesFolder.name': 'Dossier de la bibliothèque de notes',
+  'settings.notesFolder.desc':
+    'Le dossier des notes « tout venant », qui sert aussi de boîte de réception : les nouvelles notes du plugin et celles écrites par le chat y sont créées. Pour qu’Obsidian y crée aussi ses nouvelles notes, choisis ce dossier dans Réglages → Fichiers et liens → Emplacement par défaut des nouvelles notes.',
+  'notes.title': 'Bibliothèque de notes',
+  'notes.ofProject': 'Notes du projet dans la bibliothèque de notes',
+  'notes.count': { one: '{count} note', other: '{count} notes' },
+  'notes.toSortCount': { one: '{count} à trier', other: '{count} à trier' },
+  'notes.found': { one: '{count} note affichée sur {total}', other: '{count} notes affichées sur {total}' },
+  'notes.new': 'Nouvelle note',
+  'notes.untitled': 'Sans titre',
+  'notes.search': 'Chercher dans les titres et le texte des notes…',
+  'notes.allNotes': 'Toutes les notes',
+  'notes.toSort': 'À trier (sans projet)',
+  'notes.sortModified': 'Modifiées récemment',
+  'notes.nothingFound': 'Aucune note ne correspond.',
+  'notes.emptyTitle': 'La bibliothèque de notes est vide',
+  'notes.emptyText':
+    'Les notes « tout venant » vivent dans le dossier {folder} : crée-en une ici, ou laisse le chat y écrire les siennes. Tu les rattacheras ensuite à leurs projets.',
+  'notes.modifiedOn': 'modifiée le {date}',
+  'notes.picked': { one: '{count} note cochée', other: '{count} notes cochées' },
+  'notes.fileTo': 'Rattacher à des projets…',
+  'notes.fileSeveral': { one: 'Rattacher {count} note', other: 'Rattacher {count} notes' },
+  'notes.moveBeside': 'Ranger dans le dossier de {project}',
+  'notes.moved': 'Note rangée : {path}',
+  'notes.open': 'Ouvrir la note',
+  'notes.delete': 'Mettre à la corbeille',
+  'notes.deleteTitle': 'Mettre « {title} » à la corbeille ?',
+  'notes.deleteText': 'La note ira dans la corbeille du coffre, d’où elle peut être restaurée.'
 }

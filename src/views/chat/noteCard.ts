@@ -26,12 +26,9 @@ export function registerNoteBlock(plugin: PMPlugin): void {
   })
 }
 
-/** Where a note naming no folder is written: the chat's own setting, or Obsidian's for new notes. */
-export function notesFallback(plugin: PMPlugin, sourcePath: string): string {
-  const own = plugin.settings.chat.notesFolder.trim()
-  if (own) return own
-  const parent = plugin.app.fileManager.getNewFileParent(sourcePath)
-  return parent.path === '/' ? '' : parent.path
+/** Where a note naming no folder is written: the chat's own setting, or the notes library — the inbox. */
+export function notesFallback(plugin: PMPlugin, _sourcePath: string): string {
+  return plugin.settings.chat.notesFolder.trim() || plugin.notes.root
 }
 
 class NoteCard extends MarkdownRenderChild {

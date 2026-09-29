@@ -653,6 +653,8 @@ export interface PMSettings {
   libraryFolder: string
   /** The library's categories, one a line with the words that recognise them; empty is the shipped list. */
   libraryCategories: string
+  /** The notes library: notes of no project yet, and the inbox new notes land in. */
+  notesFolder: string
   peopleFolder: string
   /** Folders discovery skips, for templates and archives holding pm-project notes. */
   excludedFolders: string[]
@@ -960,6 +962,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   projectsFolder: 'Projects',
   libraryFolder: 'Library',
   libraryCategories: '',
+  notesFolder: 'Notes',
   peopleFolder: 'People',
   excludedFolders: [],
   defaultView: 'table',

@@ -54,6 +54,14 @@ export function renderProjectListToolbar(ctx: ProjectListContext): void {
       void ctx.plugin.openDocuments()
     })
 
+  // Notes of no project yet, and the inbox new ones land in.
+  new ExtraButtonComponent(ctx.toolbarEl)
+    .setIcon('notebook-pen')
+    .setTooltip(t('notes.title'))
+    .onClick(() => {
+      void ctx.plugin.openNotes()
+    })
+
   // The library is a place rather than something this page makes, so it gets a button
   // of its own instead of a line in the menu below.
   new ExtraButtonComponent(ctx.toolbarEl)

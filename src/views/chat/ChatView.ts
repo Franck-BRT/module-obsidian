@@ -1576,7 +1576,8 @@ export class ChatView extends ItemView {
     const question = this.questionOf(turn)
     // The first project the question was about: a report on two projects goes with the first.
     const ref = this.plugin.index.projectRef(question?.projects?.[0] ?? this.projects[0] ?? '')
-    const folder = ref ? ref.path.slice(0, Math.max(0, ref.path.lastIndexOf('/'))) : this.plugin.settings.chat.folder
+    // About no project, it goes to the inbox: the notes library.
+    const folder = ref ? ref.path.slice(0, Math.max(0, ref.path.lastIndexOf('/'))) : this.plugin.notes.root
     const title = replyTitle(body, chatTitle(question?.content ?? '', t('chat.untitled')))
     try {
       if (folder) await ensureFolder(this.app, normalizePath(folder))

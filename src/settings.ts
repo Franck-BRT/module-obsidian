@@ -108,6 +108,16 @@ export class PMSettingTab extends PluginSettingTab {
             }
           },
           {
+            name: t('settings.notesFolder.name'),
+            desc: t('settings.notesFolder.desc'),
+            control: {
+              type: 'folder',
+              key: 'notesFolder',
+              defaultValue: 'Notes',
+              placeholder: 'Notes'
+            }
+          },
+          {
             name: t('settings.libraryCategories.name'),
             desc: t('settings.libraryCategories.desc'),
             render: (setting: Setting) => {
