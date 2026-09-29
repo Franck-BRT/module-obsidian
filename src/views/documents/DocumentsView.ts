@@ -29,12 +29,14 @@ import {
 } from '../../store/library/libraryDoc'
 import type { PourItem } from '../../store/library/DocLibrary'
 import { snippet } from '../../store/library/docText'
-import { registerEntries, type RegisterEntry } from '../../store/library/libraryRegister'
+import { registerEntries, registerFilesOutside, type RegisterEntry } from '../../store/library/libraryRegister'
 import { documentOf } from '../../store/Document'
 import { openTaskModal } from '../../ui/ModalFactory'
 import { docStateLabel } from '../library/docStateLabel'
 import { fileInRegister } from './registerActions'
 import { proposeRegisterMatches } from './matchRegister'
+import { pourRegisterFiles } from './pourRegisters'
+import type { Project } from '../../types'
 import { knownValues } from '../../store/library/libraryClass'
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
@@ -67,6 +69,8 @@ export class DocumentsView extends ItemView {
   private picked = new Set<string>()
   /** Where each file is followed in the projects' registers, once they have been read. */
   private followed = new Map<string, RegisterEntry[]>()
+  /** The projects whose registers were read, to tell what they hold that the library lacks. */
+  private registers: Project[] = []
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -169,7 +173,8 @@ export class DocumentsView extends ItemView {
       .projectRefs()
       .filter((ref) => !ref.template && !ref.program)
       .map((ref) => ref.path)
-    this.followed = registerEntries(await this.plugin.store.loadProjects(paths))
+    this.registers = await this.plugin.store.loadProjects(paths)
+    this.followed = registerEntries(this.registers)
     this.renderBody()
   }
 
@@ -354,6 +359,7 @@ export class DocumentsView extends ItemView {
           : t('library.found', { count: found.length, total: all.length })
     })
     this.renderTextStatus(summary, all)
+    this.renderRegistersOutside(all)
     if (this.picked.size) this.renderPickedBar(all)
     if (!found.length) {
       this.bodyEl.createDiv({ cls: 'pm-docs-none', text: t('library.nothingFound') })
@@ -369,6 +375,20 @@ export class DocumentsView extends ItemView {
           this.renderBody()
         })
     }
+  }
+
+  /** The registers' documents the library does not have yet, and the way to pour them in. */
+  private renderRegistersOutside(all: LibraryDoc[]): void {
+    const inLibrary = new Set(all.map((doc) => doc.file))
+    const outside = registerFilesOutside(this.registers, inLibrary, false).length
+    if (!outside) return
+    const line = this.bodyEl.createDiv('pm-docs-outside')
+    line.createSpan({ text: t('library.registersOutside', { count: outside }) })
+    const link = line.createEl('a', { href: '#', text: t('library.registersPourLink') })
+    link.addEventListener('click', (event) => {
+      event.preventDefault()
+      void pourRegisterFiles(this.plugin).then(() => this.loadRegister())
+    })
   }
 
   /** What is ticked, and what can be done with it: asked about in the chat, or let go. */

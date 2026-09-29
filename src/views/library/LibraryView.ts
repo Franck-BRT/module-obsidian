@@ -25,6 +25,7 @@ import { renderSortControl } from '../SortControl'
 import { writeBordereau } from './bordereau'
 import { LibraryDocPicker } from '../documents/LibraryDocPicker'
 import { fileInRegister } from '../documents/registerActions'
+import { pourRegisterFiles } from '../documents/pourRegisters'
 import { sortDocs } from '../../store/library/libraryDoc'
 
 /**
@@ -243,6 +244,11 @@ export class LibraryView implements SubView {
         .setLabel(t('library.fromLibrary'))
         .setShape('pill')
         .onClick(() => this.pickFromLibrary(primary.filePath))
+      // The other way: this register's documents, poured into the library where they are.
+      new ChipButton(right)
+        .setLabel(t('library.toLibrary'))
+        .setShape('pill')
+        .onClick(safeAsync(() => pourRegisterFiles(this.plugin, primary.filePath)))
     }
     new ChipButton(right)
       .setLabel(t('view.bordereau'))

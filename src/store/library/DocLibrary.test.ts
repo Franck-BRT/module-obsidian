@@ -288,6 +288,44 @@ describe('DocLibrary', () => {
     expect(library.docs()[0]).toMatchObject({ lot: '2', category: '', issuer: '', tags: ['chantier'] })
   })
 
+  it('pours a file under its own title, projects and issuer, its category guessed from the title too', async () => {
+    const plan = await vault.createBinary('Work/Tunnel/_docs/PL-001.pdf', bytes('plan').buffer as ArrayBuffer)
+    const categories = parseCategories('Plan : plan, coupe')
+    await library.pour(
+      [
+        {
+          kind: 'vault',
+          file: plan,
+          title: 'Plan de coffrage',
+          projects: [TUNNEL],
+          classification: { issuer: 'Setec' }
+        }
+      ],
+      { projects: [GC], move: true, today: TODAY, categories }
+    )
+    expect(library.docs()[0]).toMatchObject({
+      title: 'Plan de coffrage',
+      file: 'Work/Tunnel/_docs/PL-001.pdf',
+      projects: [GC, TUNNEL],
+      issuer: 'Setec',
+      category: 'Plan'
+    })
+    // Poured again under another register, the same file only gains that project.
+    await library.pour([{ kind: 'vault', file: plan, projects: ['Work/Autre/Autre.md'] }], {
+      projects: [],
+      move: false,
+      today: TODAY
+    })
+    expect(library.docs()).toHaveLength(1)
+  })
+
+  it('gives a document already there the projects of the register it is poured from again', async () => {
+    const plan = await vault.createBinary('Work/Tunnel/_docs/Plan.pdf', bytes('plan').buffer as ArrayBuffer)
+    await library.pour([{ kind: 'vault', file: plan }], { projects: [GC], move: false, today: TODAY })
+    await library.pour([{ kind: 'vault', file: plan, projects: [TUNNEL] }], { projects: [], move: false, today: TODAY })
+    expect(library.docs()[0].projects).toEqual([GC, TUNNEL])
+  })
+
   it('finds a record wherever it has been moved, and tells records from other notes', async () => {
     await library.pour([outside('x.pdf', 'x')], { projects: [], move: false, today: TODAY })
     const record = fileAt('Bibliothèque/x.md')

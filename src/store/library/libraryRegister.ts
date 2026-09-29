@@ -206,3 +206,61 @@ export function proposeMatches(subjects: MatchSubject[], projects: Project[]): M
   }
   return proposals
 }
+
+/** A file a register holds that the library does not have yet. */
+export interface RegisterFile {
+  file: string
+  /** The register document's title — with its version when it is an earlier one. */
+  title: string
+  issuer: string
+  /** Every project whose register holds it. */
+  projects: string[]
+  /** The register document's current file, rather than an earlier version. */
+  current: boolean
+}
+
+/**
+ * The files the projects' registers hold and the library does not: their current files,
+ * and their earlier versions when asked. A file two registers hold is one, belonging to
+ * both; one the library already has is left out.
+ */
+export function registerFilesOutside(
+  projects: Project[],
+  inLibrary: Set<string>,
+  withVersions: boolean
+): RegisterFile[] {
+  const found = new Map<string, RegisterFile>()
+  const add = (entry: RegisterFile): void => {
+    if (inLibrary.has(entry.file)) return
+    const known = found.get(entry.file)
+    if (!known) found.set(entry.file, entry)
+    else {
+      for (const path of entry.projects) if (!known.projects.includes(path)) known.projects.push(path)
+      // Current somewhere is current: its own title rather than a version's.
+      if (entry.current && !known.current) {
+        Object.assign(known, { title: entry.title, issuer: entry.issuer, current: true })
+      }
+    }
+  }
+  for (const project of projects) {
+    for (const { task } of flattenTasks(project.tasks)) {
+      if (!isDocument(task)) continue
+      const meta = documentOf(task)
+      if (meta.file) {
+        add({ file: meta.file, title: task.title, issuer: meta.issuer, projects: [project.filePath], current: true })
+      }
+      if (!withVersions) continue
+      for (const version of meta.versions) {
+        if (!version.file || version.file === meta.file) continue
+        add({
+          file: version.file,
+          title: `${task.title} (v${version.version})`,
+          issuer: meta.issuer,
+          projects: [project.filePath],
+          current: false
+        })
+      }
+    }
+  }
+  return [...found.values()]
+}

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { makeDocument, makeProject, makeTask, type DocumentMeta, type Task } from '../../types'
-import { likeness, matchScore, proposeMatches, registerCandidates, registerEntries } from './libraryRegister'
+import {
+  likeness,
+  matchScore,
+  proposeMatches,
+  registerCandidates,
+  registerEntries,
+  registerFilesOutside
+} from './libraryRegister'
 
 const ticket = (title: string, document: Partial<DocumentMeta>, subtasks: Task[] = []): Task =>
   makeTask({ title, type: 'document', document: makeDocument(document), subtasks })
@@ -172,5 +179,59 @@ describe('proposeMatches', () => {
     expect(proposals.map((p) => p.subject.key)).toEqual(['a', 'b'])
     expect(proposals.filter((p) => p.chosen).map((p) => p.subject.key)).toEqual(['a'])
     expect(proposals[1].candidates.map((c) => c.task)).toEqual([only])
+  })
+})
+
+describe('registerFilesOutside', () => {
+  const gc = makeProject('Génie civil', 'GC.md')
+  gc.tasks = [
+    ticket('Plan de coffrage', {
+      file: 'GC/_docs/Plan.pdf',
+      issuer: 'Setec',
+      versions: [version(1, 'GC/_docs/_versions/Plan-v1.pdf'), version(2, 'GC/_docs/Plan.pdf')]
+    }),
+    ticket('Note de calcul', { file: 'Library/_files/NDC.pdf', versions: [version(1, 'Library/_files/NDC.pdf')] }),
+    ticket('Planning', { state: 'expected' }),
+    makeTask({ title: 'Tâche', document: makeDocument({ file: 'GC/autre.pdf' }) })
+  ]
+  const tunnel = makeProject('Tunnel', 'T.md')
+  tunnel.tasks = [
+    ticket('Plan de coffrage partagé', { file: 'GC/_docs/Plan.pdf', versions: [] }),
+    ticket('Ancien plan', { file: 'T/_docs/Nouveau.pdf', versions: [version(1, 'GC/_docs/_versions/Plan-v1.pdf')] })
+  ]
+  const inLibrary = new Set(['Library/_files/NDC.pdf'])
+
+  it('lists the current files the library lacks, one a file, belonging to every register holding it', () => {
+    expect(registerFilesOutside([gc, tunnel], inLibrary, false)).toEqual([
+      {
+        file: 'GC/_docs/Plan.pdf',
+        title: 'Plan de coffrage',
+        issuer: 'Setec',
+        projects: ['GC.md', 'T.md'],
+        current: true
+      },
+      { file: 'T/_docs/Nouveau.pdf', title: 'Ancien plan', issuer: '', projects: ['T.md'], current: true }
+    ])
+  })
+
+  it('adds the earlier versions when asked, titled with their number', () => {
+    const files = registerFilesOutside([gc, tunnel], inLibrary, true)
+    expect(files.find((f) => f.file === 'GC/_docs/_versions/Plan-v1.pdf')).toEqual({
+      file: 'GC/_docs/_versions/Plan-v1.pdf',
+      title: 'Plan de coffrage (v1)',
+      issuer: 'Setec',
+      projects: ['GC.md', 'T.md'],
+      current: false
+    })
+    expect(files).toHaveLength(3)
+  })
+
+  it('takes a file’s title from the register it is current in', () => {
+    const later = makeProject('Later', 'L.md')
+    later.tasks = [ticket('Nouveau plan', { file: 'GC/_docs/_versions/Plan-v1.pdf', versions: [] })]
+    const file = registerFilesOutside([gc, later], inLibrary, true).find(
+      (f) => f.file === 'GC/_docs/_versions/Plan-v1.pdf'
+    )
+    expect(file).toMatchObject({ title: 'Nouveau plan', issuer: '', current: true, projects: ['GC.md', 'L.md'] })
   })
 })

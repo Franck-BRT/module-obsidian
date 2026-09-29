@@ -1804,5 +1804,19 @@ export const fr: Catalog = {
     other: '{count} documents rapprochés du registre.'
   },
   'library.matchNone': 'Aucun document attendu des registres ne ressemble à ces documents.',
-  'library.matchPicked': 'Rapprocher du registre'
+  'library.matchPicked': 'Rapprocher du registre',
+  'command.pourRegisters': 'Verser les documents des registres dans la bibliothèque',
+  'library.registersAllIn': 'Tous les documents des registres sont déjà dans la bibliothèque.',
+  'library.registersTitle': 'Verser les documents des registres',
+  'library.registersIntro':
+    'Ces documents sont déposés dans les registres des projets mais pas encore dans la bibliothèque. Ils y seront référencés là où ils sont, sans être déplacés, sous le titre du registre, avec leur projet et leur émetteur ; leur catégorie est devinée.',
+  'library.registersVersions': 'Inclure les anciennes versions',
+  'library.registersVersionsDesc': { one: '{count} ancienne version', other: '{count} anciennes versions' },
+  'library.registersPour': { one: 'Verser {count} document', other: 'Verser {count} documents' },
+  'library.registersOutside': {
+    one: '{count} document des registres n’est pas dans la bibliothèque.',
+    other: '{count} documents des registres ne sont pas dans la bibliothèque.'
+  },
+  'library.registersPourLink': 'Les verser…',
+  'library.toLibrary': 'Verser dans la bibliothèque'
 }

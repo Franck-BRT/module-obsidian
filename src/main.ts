@@ -92,6 +92,7 @@ import type { LibraryDoc } from './store/library/libraryDoc'
 import { guessCategory, knownValues, parseCategories, type Category } from './store/library/libraryClass'
 import { askClassification, GUESS_CATEGORY, type ClassifyChoices } from './views/documents/classifyFields'
 import { proposeRegisterMatches } from './views/documents/matchRegister'
+import { pourRegisterFiles } from './views/documents/pourRegisters'
 import { keptTranscript, scanPages, transcribeScan } from './views/chat/scanReader'
 import { LlmClient } from './store/llm/client'
 import { chatModel } from './store/chat/chatModels'
@@ -445,6 +446,14 @@ export default class PMPlugin extends Plugin {
       name: t('command.openDocuments'),
       callback: () => {
         void this.openDocuments()
+      }
+    })
+
+    this.addCommand({
+      id: 'pour-registers',
+      name: t('command.pourRegisters'),
+      callback: () => {
+        void pourRegisterFiles(this)
       }
     })
 

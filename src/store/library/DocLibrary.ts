@@ -37,7 +37,14 @@ export interface LibraryWords {
 }
 
 /** One thing to pour: a file already in the vault, or bytes brought from outside. */
-export type PourItem = { kind: 'vault'; file: TFile } | { kind: 'bytes'; name: string; bytes: Uint8Array }
+export type PourItem = ({ kind: 'vault'; file: TFile } | { kind: 'bytes'; name: string; bytes: Uint8Array }) & {
+  /** Its own title, rather than its file's name: a register document poured in keeps the register's. */
+  title?: string
+  /** Projects of its own, on top of those the whole pour is given. */
+  projects?: string[]
+  /** How it is filed, on top of what the whole pour is given. */
+  classification?: Partial<Classification>
+}
 
 export interface PourOptions {
   /** The projects every poured document belongs to, by their notes' paths. */
@@ -156,9 +163,9 @@ export class DocLibrary {
         const hash = await fingerprint(bytes)
         known ??= byHash.get(hash)
         if (known) {
-          const projects = await this.addProjects(known, options.projects)
+          const projects = await this.addProjects(known, [...options.projects, ...(item.projects ?? [])])
           // Poured again, it keeps how it was filed; only what it lacked is given.
-          const filed = await this.fillClassification(known, this.classificationFor(name, options))
+          const filed = await this.fillClassification(known, this.classificationFor(item, name, options))
           const updated = { ...known, ...filed, projects }
           byHash.set(hash, updated)
           if (known.file) byFile.set(known.file, updated)
@@ -198,11 +205,11 @@ export class DocLibrary {
 
     await ensureFolder(this.app, this.root)
     const recordPath = await freePath(this.app, this.root, clean, 'md')
-    const title = titleFromName(name)
-    const projects = [...new Set(options.projects)]
+    const title = item.title?.trim() || titleFromName(name)
+    const projects = [...new Set([...options.projects, ...(item.projects ?? [])])]
     const filed = mergeClassification(
       { category: '', lot: '', issuer: '', tags: [] },
-      this.classificationFor(name, options)
+      this.classificationFor(item, name, options)
     )
     const record = await this.app.vault.create(
       recordPath,
@@ -232,10 +239,20 @@ export class DocLibrary {
   }
 
   /** What a poured file is filed as: what was given, its category guessed from its name when none was. */
-  private classificationFor(name: string, options: PourOptions): Partial<Classification> {
+  private classificationFor(item: PourItem, name: string, options: PourOptions): Partial<Classification> {
     const given = options.classification ?? {}
-    const category = given.category?.trim() || guessCategory(name, options.categories ?? [])
-    return { ...given, category }
+    const own = item.classification ?? {}
+    // Its title says what it is as well as its file's name does, often better.
+    const category =
+      given.category?.trim() ||
+      own.category?.trim() ||
+      guessCategory(`${item.title ?? ''} ${name}`, options.categories ?? [])
+    return {
+      category,
+      lot: given.lot?.trim() || own.lot,
+      issuer: given.issuer?.trim() || own.issuer,
+      tags: [...(given.tags ?? []), ...(own.tags ?? [])]
+    }
   }
 
   /** Gives a document the fields it had left empty, and the tags it lacked; returns how it is filed. */

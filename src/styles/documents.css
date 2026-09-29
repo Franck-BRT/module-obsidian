@@ -602,3 +602,30 @@ button.pm-docs-tag:not(.clickable-icon) {
   flex-direction: row;
   justify-content: flex-end;
 }
+
+/* The registers' documents the library lacks, and the way to pour them in. */
+.pm-docs-outside {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-docs-registers-list {
+  max-height: 360px;
+}
+
+.pm-docs-registers-project {
+  position: sticky;
+  top: 0;
+  padding: var(--size-4-1) var(--size-4-3);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+}

@@ -1823,5 +1823,19 @@ export const en = {
     other: '{count} documents matched with the register.'
   },
   'library.matchNone': 'No document awaited by the registers looks like these documents.',
-  'library.matchPicked': 'Match with the register'
+  'library.matchPicked': 'Match with the register',
+  'command.pourRegisters': 'Pour the registers’ documents into the library',
+  'library.registersAllIn': 'Every document of the registers is already in the library.',
+  'library.registersTitle': 'Pour in the registers’ documents',
+  'library.registersIntro':
+    'These documents are deposited in the projects’ registers but not yet in the library. They will be referred to where they are, never moved, under the register’s title, with their project and issuer; their category is guessed.',
+  'library.registersVersions': 'Include earlier versions',
+  'library.registersVersionsDesc': { one: '{count} earlier version', other: '{count} earlier versions' },
+  'library.registersPour': { one: 'Pour in {count} document', other: 'Pour in {count} documents' },
+  'library.registersOutside': {
+    one: '{count} document of the registers is not in the library.',
+    other: '{count} documents of the registers are not in the library.'
+  },
+  'library.registersPourLink': 'Pour them in…',
+  'library.toLibrary': 'Pour into the library'
 } as const
