@@ -1837,5 +1837,75 @@ export const en = {
     other: '{count} documents of the registers are not in the library.'
   },
   'library.registersPourLink': 'Pour them in…',
-  'library.toLibrary': 'Pour into the library'
+  'library.toLibrary': 'Pour into the library',
+  'chat.noteHow':
+    'When the person asks you to write, create or draft a note (minutes, summary, sheet, decision…), or to add to an existing note, propose it in a block fenced by four backticks: ````pm-note then, one a line, “title: …”, “folder: …” (optional; with no folder the note goes to {folder}), “tags: a, b” (optional), a “---” line, then the note’s whole content in Markdown, and ```` to close it. To add to an existing note, put “append to: [[Note name]]” instead of the title: the content will be added at its end. The person will see the note and create it in one click; nothing is written without them. Only write this block when a note is asked for.',
+  'chat.noteProjectFolders': 'Folders of the attached projects, for a note about them: {list}.',
+  'chat.note.newKind': 'New note',
+  'chat.note.appendKind': 'Addition to the note',
+  'chat.note.unreadable': 'Unreadable note proposal: its title or its content is missing.',
+  'chat.note.in': 'in {folder}',
+  'chat.note.atRoot': 'at the vault’s root',
+  'chat.note.more': 'Show the whole note',
+  'chat.note.less': 'Fold',
+  'chat.note.create': 'Create the note',
+  'chat.note.append': 'Add to the note',
+  'chat.note.created': 'Note created',
+  'chat.note.appended': 'Added to the note',
+  'chat.note.createdAt': 'Note created: {path}',
+  'chat.note.open': 'Open',
+  'chat.note.copy': 'Copy the text',
+  'chat.note.copied': 'Note text copied.',
+  'chat.note.noTarget': 'The note “{name}” cannot be found in the vault.',
+  'settings.chat.notesFolder': 'Folder for notes the chat writes',
+  'settings.chat.notesFolderDesc':
+    'Where a note the chat proposes goes when it names no folder. Empty: the location for new notes set in Obsidian.',
+  'settings.chat.notesFolderPlaceholder': 'Obsidian’s location for new notes',
+  'command.newSkill': 'Create a skill for the chat',
+  'command.exampleSkills': 'Add the chat’s example skills',
+  'chat.skillPick': 'Use a skill',
+  'chat.skillPickPlaceholder': 'Choose a skill…',
+  'chat.skillOff': 'Stop using this skill',
+  'chat.skillNone':
+    'No skill in the vault. Command “Add the chat’s example skills” for four to adapt, or “Create a skill for the chat”.',
+  'chat.skillCalled': 'Skill “{name}” used for this question.',
+  'chat.skillIntro':
+    'The person uses the following skills: they are their instructions for this kind of request. Follow them when the question is about it, and prefer them to your habits.',
+  'chat.skillHeading': 'Skill “{name}”:',
+  'chat.skillFolder': 'This skill’s notes go in the folder “{folder}”.',
+  'settings.chat.skillsFolder': 'Skills folder',
+  'settings.chat.skillsFolderDesc':
+    'Where the chat’s new skills are written (they are found wherever they are). A skill is a note of instructions the chat follows for a kind of request.',
+  'settings.chat.skillsExamples': 'Add the examples',
+  'skill.newName': 'New skill',
+  'skill.newDescription': 'What this skill does, in one sentence.',
+  'skill.newBody':
+    '# Instructions\n\nWrite here what the chat is to do when this skill is used: the kind of note to produce, its sections, the tone, what must not be forgotten.\n\nProperties:\n- **description**: what the skill does, shown when choosing it;\n- **triggers**: the words that call it by themselves when a question holds them (e.g. “minutes”);\n- **folder**: the folder the notes it produces go to (optional).\n\n## Model\n\n# Title\n\n## Section 1\n\n## Section 2',
+  'skill.example.minutes.name': 'Meeting minutes',
+  'skill.example.minutes.description': 'Writes a meeting’s minutes from notes, a message or a transcript.',
+  'skill.example.minutes.triggers': 'minutes, meeting notes, mom',
+  'skill.example.minutes.body':
+    '# Instructions\n\nWrite a meeting’s minutes from what the person gives (notes, message, attached file). Invent no attendee, decision or date: what is missing is marked “to be confirmed”.\n\nPropose them as a note (pm-note block), titled “Minutes – subject – YYYY-MM-DD”, tagged minutes and with the project’s name if there is one.\n\n## Model\n\n# Minutes – Subject – YYYY-MM-DD\n\n**Date:** … · **Place:** … · **Written by:** …\n\n## Attendees\n- Name (company, role)\n\n## Points discussed\n1. Point: what was said, in a few lines.\n\n## Decisions\n- Decision, and who took it.\n\n## Actions\n| Action | Owner | Due |\n|---|---|---|\n| … | … | YYYY-MM-DD |\n\n## Next meeting\nDate, place, agenda.',
+  'skill.example.summary.name': 'Document summary',
+  'skill.example.summary.description':
+    'Summarises an attached document in a short note: the gist, the figures, what to watch.',
+  'skill.example.summary.triggers': 'summary, summarise, summarize',
+  'skill.example.summary.body':
+    '# Instructions\n\nSummarise the attached document (or the text given) for someone who will not read it all. Quote figures and dates as written; add nothing of your own.\n\nPropose it as a note (pm-note block), titled “Summary – document title”, tagged summary.\n\n## Model\n\n# Summary – Document title\n\n**Source:** file name · **Document date:** …\n\n## In short\nThree lines at most.\n\n## Key points\n- …\n\n## Figures and dates\n| Item | Value |\n|---|---|\n\n## Watch out\n- Risks, contradictions, gaps.\n\n## Open questions\n- …',
+  'skill.example.decision.name': 'Decision sheet',
+  'skill.example.decision.description':
+    'Puts a decision to take (or taken) in shape: context, options compared, decision, consequences.',
+  'skill.example.decision.triggers': 'decision, arbitration, decide',
+  'skill.example.decision.body':
+    '# Instructions\n\nPut a decision in shape: the one the person took, or the one they must take (then leave Decision “to be decided”). Compare the options fairly, with what each costs in time and money where known.\n\nPropose it as a note (pm-note block), titled “Decision – subject”, tagged decision.\n\n## Model\n\n# Decision – Subject\n\n**Date:** … · **Decided by:** … · **Status:** to be decided / decided\n\n## Context\nWhy a decision is needed.\n\n## Options\n| Option | For | Against | Time | Cost |\n|---|---|---|---|---|\n\n## Decision\nThe option chosen and why.\n\n## Consequences\n- On the schedule, the budget, the other lots.\n\n## Follow-up\n- Who does what, by when.',
+  'skill.example.log.name': 'Site diary',
+  'skill.example.log.description': 'Adds the day’s entry to the note “Site diary” rather than creating a note.',
+  'skill.example.log.triggers': 'diary, site diary, log',
+  'skill.example.log.body':
+    '# Instructions\n\nAdd the day’s entry to the note [[Site diary]]: do not create a new note, add to this one (pm-note block with “append to: [[Site diary]]”). One entry a day, factual, without judgement.\n\n## Entry model\n\n## YYYY-MM-DD\n- **Weather:** …\n- **Workforce:** company, headcount.\n- **Work done:** …\n- **Deliveries:** …\n- **Incidents / snags:** …\n- **Visits:** …',
+  'skill.examplesWritten': {
+    one: '{count} example skill added in {folder}.',
+    other: '{count} example skills added in {folder}.'
+  },
+  'skill.examplesThere': 'The example skills are already in {folder}.'
 } as const

@@ -1818,5 +1818,77 @@ export const fr: Catalog = {
     other: '{count} documents des registres ne sont pas dans la bibliothèque.'
   },
   'library.registersPourLink': 'Les verser…',
-  'library.toLibrary': 'Verser dans la bibliothèque'
+  'library.toLibrary': 'Verser dans la bibliothèque',
+  'chat.noteHow':
+    'Quand la personne te demande d’écrire, de créer ou de rédiger une note (compte rendu, synthèse, fiche, décision…), ou de compléter une note existante, propose-la dans un bloc délimité par quatre accents graves : ````pm-note puis, une par ligne, « titre: … », « dossier: … » (facultatif ; sans dossier, la note va dans {folder}), « tags: a, b » (facultatif), une ligne « --- », puis le contenu complet de la note en Markdown, et enfin ```` pour fermer. Pour compléter une note existante, remplace « titre » par « ajouter à: [[Nom de la note]] » : le contenu sera ajouté à sa fin. La personne verra la note et la créera d’un clic ; rien n’est écrit sans elle. N’écris ce bloc que si on te demande une note.',
+  'chat.noteProjectFolders': 'Dossiers des projets joints, pour une note qui les concerne : {list}.',
+  'chat.note.newKind': 'Nouvelle note',
+  'chat.note.appendKind': 'Ajout à la note',
+  'chat.note.unreadable': 'Note proposée illisible : il manque son titre ou son contenu.',
+  'chat.note.in': 'dans {folder}',
+  'chat.note.atRoot': 'à la racine du coffre',
+  'chat.note.more': 'Voir toute la note',
+  'chat.note.less': 'Réduire',
+  'chat.note.create': 'Créer la note',
+  'chat.note.append': 'Ajouter à la note',
+  'chat.note.created': 'Note créée',
+  'chat.note.appended': 'Ajoutée à la note',
+  'chat.note.createdAt': 'Note créée : {path}',
+  'chat.note.open': 'Ouvrir',
+  'chat.note.copy': 'Copier le texte',
+  'chat.note.copied': 'Texte de la note copié.',
+  'chat.note.noTarget': 'La note « {name} » est introuvable dans le coffre.',
+  'settings.chat.notesFolder': 'Dossier des notes écrites par le chat',
+  'settings.chat.notesFolderDesc':
+    'Où va une note proposée par le chat qui ne précise pas de dossier. Vide : l’emplacement des nouvelles notes réglé dans Obsidian.',
+  'settings.chat.notesFolderPlaceholder': 'Emplacement des nouvelles notes d’Obsidian',
+  'command.newSkill': 'Créer une compétence pour le chat',
+  'command.exampleSkills': 'Ajouter les compétences d’exemple du chat',
+  'chat.skillPick': 'Utiliser une compétence',
+  'chat.skillPickPlaceholder': 'Choisis une compétence…',
+  'chat.skillOff': 'Ne plus utiliser cette compétence',
+  'chat.skillNone':
+    'Aucune compétence dans le coffre. Commande « Ajouter les compétences d’exemple du chat » pour en avoir quatre à adapter, ou « Créer une compétence pour le chat ».',
+  'chat.skillCalled': 'Compétence « {name} » utilisée pour cette question.',
+  'chat.skillIntro':
+    'La personne utilise les compétences suivantes : ce sont ses consignes pour ce genre de demande. Suis-les quand la question s’y rapporte, et préfère-les à tes habitudes.',
+  'chat.skillHeading': 'Compétence « {name} » :',
+  'chat.skillFolder': 'Les notes de cette compétence vont dans le dossier « {folder} ».',
+  'settings.chat.skillsFolder': 'Dossier des compétences',
+  'settings.chat.skillsFolderDesc':
+    'Où les nouvelles compétences du chat sont écrites (elles sont retrouvées partout où elles sont). Une compétence est une note de consignes que le chat suit pour un genre de demande.',
+  'settings.chat.skillsExamples': 'Ajouter les exemples',
+  'skill.newName': 'Nouvelle compétence',
+  'skill.newDescription': 'Ce que fait cette compétence, en une phrase.',
+  'skill.newBody':
+    '# Consignes\n\nÉcris ici ce que le chat doit faire quand cette compétence est utilisée : le genre de note à produire, ses rubriques, le ton, ce qu’il ne faut pas oublier.\n\nPropriétés :\n- **description** : ce que fait la compétence, affiché quand on la choisit ;\n- **triggers** : les mots qui l’activent d’eux-mêmes quand une question les contient (ex. « compte rendu », « cr ») ;\n- **folder** : le dossier où vont les notes qu’elle produit (facultatif).\n\n## Modèle\n\n# Titre\n\n## Rubrique 1\n\n## Rubrique 2',
+  'skill.example.minutes.name': 'Compte rendu de réunion',
+  'skill.example.minutes.description':
+    'Rédige le compte rendu d’une réunion à partir de notes, d’un message ou d’un enregistrement transcrit.',
+  'skill.example.minutes.triggers': 'compte rendu, compte-rendu, cr, pv, procès-verbal',
+  'skill.example.minutes.body':
+    '# Consignes\n\nRédige un compte rendu de réunion à partir de ce que la personne fournit (notes, message, fichier joint). N’invente ni participant, ni décision, ni date : ce qui manque est signalé « à préciser ».\n\nPropose-le comme une note (bloc pm-note), titrée « CR – objet – JJ/MM/AAAA », avec les tags cr et le nom du projet s’il y en a un.\n\n## Modèle\n\n# CR – Objet – JJ/MM/AAAA\n\n**Date :** … · **Lieu :** … · **Rédacteur :** …\n\n## Participants\n- Nom (société, rôle)\n\n## Points abordés\n1. Point : ce qui a été dit, en quelques lignes.\n\n## Décisions\n- Décision, et qui l’a prise.\n\n## Actions\n| Action | Responsable | Échéance |\n|---|---|---|\n| … | … | JJ/MM/AAAA |\n\n## Prochaine réunion\nDate, lieu, ordre du jour.',
+  'skill.example.summary.name': 'Synthèse de document',
+  'skill.example.summary.description':
+    'Résume un document joint en une note courte : l’essentiel, les chiffres, les points d’attention.',
+  'skill.example.summary.triggers': 'synthèse, synthétise, résume, résumé',
+  'skill.example.summary.body':
+    '# Consignes\n\nFais la synthèse du document joint (ou du texte fourni) pour quelqu’un qui ne le lira pas en entier. Cite les chiffres et les dates tels qu’ils sont écrits ; ne complète rien de ta propre initiative.\n\nPropose-la comme une note (bloc pm-note), titrée « Synthèse – titre du document », avec le tag synthese.\n\n## Modèle\n\n# Synthèse – Titre du document\n\n**Source :** nom du fichier · **Date du document :** …\n\n## En bref\nTrois lignes au plus.\n\n## Points clés\n- …\n\n## Chiffres et dates\n| Élément | Valeur |\n|---|---|\n\n## Points d’attention\n- Risques, contradictions, manques.\n\n## Questions ouvertes\n- …',
+  'skill.example.decision.name': 'Fiche de décision',
+  'skill.example.decision.description':
+    'Met une décision à prendre (ou prise) en forme : contexte, options comparées, décision, conséquences.',
+  'skill.example.decision.triggers': 'décision, arbitrage, trancher',
+  'skill.example.decision.body':
+    '# Consignes\n\nMets en forme une décision : celle que la personne a prise, ou celle qu’elle doit prendre (laisse alors la rubrique Décision « à arbitrer »). Compare les options honnêtement, avec ce que chacune coûte en délai et en argent quand c’est connu.\n\nPropose-la comme une note (bloc pm-note), titrée « Décision – sujet », avec le tag decision.\n\n## Modèle\n\n# Décision – Sujet\n\n**Date :** … · **Décideur :** … · **Statut :** à arbitrer / décidée\n\n## Contexte\nPourquoi une décision est nécessaire.\n\n## Options\n| Option | Avantages | Inconvénients | Délai | Coût |\n|---|---|---|---|---|\n\n## Décision\nL’option retenue et pourquoi.\n\n## Conséquences\n- Sur le planning, le budget, les autres lots.\n\n## Suivi\n- Qui fait quoi, pour quand.',
+  'skill.example.log.name': 'Journal de chantier',
+  'skill.example.log.description':
+    'Ajoute l’entrée du jour à la note « Journal de chantier » plutôt que de créer une note.',
+  'skill.example.log.triggers': 'journal, journal de chantier, main courante',
+  'skill.example.log.body':
+    '# Consignes\n\nAjoute l’entrée du jour à la note [[Journal de chantier]] : ne crée pas de nouvelle note, complète celle-ci (bloc pm-note avec « ajouter à: [[Journal de chantier]] »). Une entrée par jour, factuelle, sans jugement.\n\n## Modèle d’entrée\n\n## JJ/MM/AAAA\n- **Météo :** …\n- **Effectifs :** entreprise, nombre.\n- **Travaux réalisés :** …\n- **Livraisons :** …\n- **Incidents / réserves :** …\n- **Visites :** …',
+  'skill.examplesWritten': {
+    one: '{count} compétence d’exemple ajoutée dans {folder}.',
+    other: '{count} compétences d’exemple ajoutées dans {folder}.'
+  },
+  'skill.examplesThere': 'Les compétences d’exemple sont déjà dans {folder}.'
 }

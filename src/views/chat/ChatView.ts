@@ -54,6 +54,8 @@ import {
 } from '../../store/chat/chatFile'
 import { needsOcr, transcriptPath } from '../../store/chat/ocr'
 import { scanPages, transcribeScan } from './scanReader'
+import { notesFallback } from './noteCard'
+import { calledSkills, readSkill, skillBody, skillsContext, type Skill } from '../../store/chat/skills'
 import { LibraryDocPicker } from '../documents/LibraryDocPicker'
 import { sortDocs, type LibraryDoc } from '../../store/library/libraryDoc'
 import { keepDroppedFile } from '../../store/chat/keepFile'
@@ -133,6 +135,8 @@ export class ChatView extends ItemView {
   private presetsEl: HTMLElement | null = null
   /** Files attached — a planning, a report — by path, sent with every question until taken off. */
   private files: string[] = []
+  /** The skills in use: their instructions go with every question until taken off. */
+  private skills: string[] = []
   /** Files already read, by path and way of reading, with the modification time they were read at. */
   private fileCache = new Map<string, { mtime: number; text: string }>()
   /** PDFs the reader asked to have read as pictures, whatever text they hold. */
@@ -190,6 +194,10 @@ export class ChatView extends ItemView {
         }
         if (this.files.includes(oldPath)) {
           this.files = this.files.map((path) => (path === oldPath ? file.path : path))
+          this.renderContext()
+        }
+        if (this.skills.includes(oldPath)) {
+          this.skills = this.skills.map((path) => (path === oldPath ? file.path : path))
           this.renderContext()
         }
         if (file === this.contextFile) this.renderContext()
@@ -304,6 +312,7 @@ export class ChatView extends ItemView {
     this.renderSelectionRow(el)
     this.renderProjectRows(el)
     this.renderFileRows(el)
+    this.renderSkillRows(el)
 
     if (!this.attached.length) return
     const reqRow = el.createDiv('pm-chat-context-row')
@@ -464,6 +473,75 @@ export class ChatView extends ItemView {
         this.renderContext()
       })
     }
+  }
+
+  /** Every skill in the vault, found by its property wherever its note is. */
+  private allSkills(): Skill[] {
+    const skills: Skill[] = []
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const skill = readSkill(file.path, file.basename, this.app.metadataCache.getFileCache(file)?.frontmatter)
+      if (skill) skills.push(skill)
+    }
+    return skills.sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  /** One row a skill in use, with the way to read it and the way to take it off. */
+  private renderSkillRows(el: HTMLElement): void {
+    const known = new Map(this.allSkills().map((skill) => [skill.path, skill]))
+    for (const path of this.skills) {
+      const skill = known.get(path)
+      const row = el.createDiv('pm-chat-context-row pm-chat-skill-row')
+      setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'sparkles')
+      const name = row.createEl('a', {
+        cls: 'pm-chat-context-name',
+        text: skill?.name ?? path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, ''),
+        attr: { title: skill?.description || path }
+      })
+      name.addEventListener(
+        'click',
+        safeAsync(() => this.app.workspace.openLinkText(path, '', 'tab'))
+      )
+      const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.skillOff') } })
+      setIcon(off, 'x')
+      off.addEventListener('click', () => {
+        this.skills = this.skills.filter((each) => each !== path)
+        this.renderContext()
+      })
+    }
+  }
+
+  /** A skill taken up: its instructions go with every question from here on, until taken off. */
+  attachSkill(path: string): void {
+    if (!this.skills.includes(path)) this.skills = [...this.skills, path]
+    this.renderContext()
+    window.setTimeout(() => this.inputEl?.focus(), 0)
+  }
+
+  /** The skills to take up, by name and what they are for. */
+  private pickSkill(): void {
+    const skills = this.allSkills().filter((skill) => !this.skills.includes(skill.path))
+    if (!skills.length) {
+      new Notice(t('chat.skillNone'), 10000)
+      return
+    }
+    new SkillPicker(this.app, skills, (skill) => this.attachSkill(skill.path)).open()
+  }
+
+  /** The skills in use, their notes read now — the reader may have just changed one. */
+  private async skillsBlock(paths: string[]): Promise<string> {
+    const known = new Map(this.allSkills().map((skill) => [skill.path, skill]))
+    const entries: { skill: Skill; body: string }[] = []
+    for (const path of paths) {
+      const skill = known.get(path)
+      const file = this.app.vault.getAbstractFileByPath(path)
+      if (!skill || !(file instanceof TFile)) continue
+      entries.push({ skill, body: skillBody(await this.app.vault.cachedRead(file)) })
+    }
+    const block = skillsContext(entries, {
+      heading: (name) => t('chat.skillHeading', { name }),
+      folder: (folder) => t('chat.skillFolder', { folder })
+    })
+    return block ? `${t('chat.skillIntro')}\n\n${block}` : ''
   }
 
   /**
@@ -951,6 +1029,23 @@ export class ChatView extends ItemView {
     return lines.join('\n')
   }
 
+  /**
+   * How to propose a note: always said, since a note can be asked for about anything. The
+   * attached projects' folders are named, so a note about one goes beside it.
+   */
+  private noteInstructions(): string {
+    const folders = currentProjects(this.turns)
+      .map((path) => path.slice(0, path.lastIndexOf('/')))
+      .filter(Boolean)
+    const fallback = notesFallback(this.plugin, this.notePath ?? '')
+    return [
+      t('chat.noteHow', { folder: fallback || '/' }),
+      folders.length ? t('chat.noteProjectFolders', { list: [...new Set(folders)].join(', ') }) : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }
+
   private get projectWords(): ProjectWords {
     return {
       heading: (title, path) => t('chat.projectHeading', { title, path }),
@@ -1229,6 +1324,13 @@ export class ChatView extends ItemView {
     setIcon(ready, 'zap')
     ready.disabled = missing !== null || this.pending
     ready.addEventListener('click', (event) => this.presetMenu(event))
+    const skill = composer.createEl('button', {
+      cls: 'clickable-icon pm-chat-ready',
+      attr: { 'aria-label': t('chat.skillPick') }
+    })
+    setIcon(skill, 'sparkles')
+    skill.disabled = missing !== null || this.pending
+    skill.addEventListener('click', () => this.pickSkill())
     // While a reply is being written, the same button stops it.
     const stoppable = this.pending && this.stopper !== null
     this.sendEl = composer.createEl('button', {
@@ -1315,7 +1417,8 @@ export class ChatView extends ItemView {
     // is too when it quotes a passage, which reads as a quote rather than as marks.
     const quoting = turn.role === 'user' && /(^|\n)> /.test(turn.content)
     if ((turn.role === 'assistant' && !turn.failed) || quoting) {
-      void MarkdownRenderer.render(this.app, turn.content, body, '', this.turnsComponent ?? this)
+      // From the conversation's note: its links, and a note it proposes, know where they come from.
+      void MarkdownRenderer.render(this.app, turn.content, body, this.notePath ?? '', this.turnsComponent ?? this)
     } else body.setText(turn.content)
 
     const actions = el.createDiv('pm-chat-actions')
@@ -1674,6 +1777,12 @@ export class ChatView extends ItemView {
       await this.ask()
       return
     }
+    // A skill the question calls by one of its words is taken up, and the reader told.
+    for (const called of calledSkills(this.allSkills(), content)) {
+      if (this.skills.includes(called.path)) continue
+      this.skills = [...this.skills, called.path]
+      new Notice(t('chat.skillCalled', { name: called.name }), 6000)
+    }
     // On an older branch, the question says where it goes on from.
     const follows = this.follows
     this.follows = null
@@ -1688,6 +1797,7 @@ export class ChatView extends ItemView {
         ...(this.projects.length ? { projects: [...this.projects] } : {}),
         ...(this.collections.length ? { collections: [...this.collections] } : {}),
         ...(this.files.length ? { files: [...this.files] } : {}),
+        ...(this.skills.length ? { skills: [...this.skills] } : {}),
         ...(this.attached.length ? { requirements: [...this.attached] } : {}),
         ...(follows ? { follows } : {})
       }
@@ -1752,10 +1862,17 @@ export class ChatView extends ItemView {
       const paths = currentFiles(this.turns)
       const asked = [...this.turns].reverse().find((turn) => turn.role === 'user')?.content ?? ''
       const files = await this.filesBlock(paths, asked)
-      const how = this.changeInstructions(requirements.length > 0, project, paths.length > 0)
+      const lastQuestion = [...this.turns].reverse().find((turn) => turn.role === 'user')
+      const skills = await this.skillsBlock(lastQuestion?.skills ?? [])
+      const how = [this.changeInstructions(requirements.length > 0, project, paths.length > 0), this.noteInstructions()]
+        .filter(Boolean)
+        .join('\n\n')
       const request = {
         model,
-        messages: chatMessages(this.turns, [system, project?.text, block, files, how].filter(Boolean).join('\n\n')),
+        messages: chatMessages(
+          this.turns,
+          [system, project?.text, block, files, skills, how].filter(Boolean).join('\n\n')
+        ),
         // The chat's own limit, none by default: a reply proposing thirty changes is long,
         // and one cut at the reviews' thousand tokens stops after seven.
         maxTokens: Math.max(0, this.plugin.settings.chat.maxTokens)
@@ -2027,5 +2144,35 @@ class ConversationPicker extends SuggestModal<TFile> {
 
   onChooseSuggestion(file: TFile): void {
     this.onChoose(file)
+  }
+}
+
+/** The skills in the vault, by name, with what each is for. */
+class SkillPicker extends SuggestModal<Skill> {
+  constructor(
+    app: App,
+    private skills: Skill[],
+    private onChoose: (skill: Skill) => void
+  ) {
+    super(app)
+    this.setPlaceholder(t('chat.skillPickPlaceholder'))
+  }
+
+  getSuggestions(query: string): Skill[] {
+    const q = query.toLowerCase()
+    return this.skills.filter(
+      (skill) => skill.name.toLowerCase().includes(q) || skill.description.toLowerCase().includes(q)
+    )
+  }
+
+  renderSuggestion(skill: Skill, el: HTMLElement): void {
+    const line = el.createDiv({ cls: 'pm-chat-pick-line' })
+    setIcon(line.createSpan({ cls: 'pm-chat-pick-icon' }), 'sparkles')
+    line.createSpan({ text: skill.name })
+    if (skill.description) el.createEl('small', { cls: 'pm-chat-pick-when', text: skill.description })
+  }
+
+  onChooseSuggestion(skill: Skill): void {
+    this.onChoose(skill)
   }
 }

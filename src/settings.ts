@@ -1142,6 +1142,36 @@ export class PMSettingTab extends PluginSettingTab {
           }
         },
         {
+          name: t('settings.chat.notesFolder'),
+          desc: t('settings.chat.notesFolderDesc'),
+          control: {
+            type: 'folder',
+            key: 'chat.notesFolder',
+            defaultValue: '',
+            placeholder: t('settings.chat.notesFolderPlaceholder')
+          }
+        },
+        {
+          name: t('settings.chat.skillsFolder'),
+          desc: t('settings.chat.skillsFolderDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text
+                .setPlaceholder(DEFAULT_SETTINGS.chat.skillsFolder)
+                .setValue(this.plugin.settings.chat.skillsFolder)
+                .onChange((value) => {
+                  this.plugin.settings.chat.skillsFolder = value
+                  this.persist()
+                })
+            )
+            setting.addButton((button) =>
+              button.setButtonText(t('settings.chat.skillsExamples')).onClick(() => {
+                void this.plugin.createExampleSkills()
+              })
+            )
+          }
+        },
+        {
           name: t('settings.chat.stream'),
           desc: t('settings.chat.streamDesc'),
           control: { type: 'toggle', key: 'chat.stream' }

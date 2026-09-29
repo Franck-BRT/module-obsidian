@@ -43,12 +43,14 @@ const PROJECT_MARK = '📁'
 const FILES_MARK = '📎'
 /** What marks the collections a question was asked about. */
 const COLLECTION_MARK = '🗂'
+/** What marks the skills a question was asked with. */
+const SKILL_MARK = '✨'
 /** What marks a question asked again in place of an earlier one, before that one's time. */
 const RETAKE_MARK = '↻'
 /** What marks a question asked after going back to an earlier branch, before where it goes on from. */
 const FOLLOWS_MARK = '↪'
 /** The marks after which a link is not the note the question was about. */
-const MARKS = [REQUIREMENTS_MARK, PROJECT_MARK, FILES_MARK, COLLECTION_MARK]
+const MARKS = [REQUIREMENTS_MARK, PROJECT_MARK, FILES_MARK, COLLECTION_MARK, SKILL_MARK]
 
 export interface ChatNote extends ChatNoteMeta {
   /** The thread the conversation goes on from. */
@@ -161,6 +163,7 @@ export function turnMarkdown(turn: ChatTurn, words: ChatNoteWords): string {
     (turn.projects?.length ? ` · ${PROJECT_MARK} ${turn.projects.map(noteLink).join(', ')}` : '') +
     (turn.collections?.length ? ` · ${COLLECTION_MARK} ${turn.collections.map(noteLink).join(', ')}` : '') +
     (turn.files?.length ? ` · ${FILES_MARK} ${turn.files.map(noteLink).join(', ')}` : '') +
+    (turn.skills?.length ? ` · ${SKILL_MARK} ${turn.skills.map(noteLink).join(', ')}` : '') +
     (turn.requirements?.length ? ` · ${REQUIREMENTS_MARK} ${turn.requirements.map(link).join(', ')}` : '')
   // A reply says which model wrote it: a conversation may change model on the way, and
   // two answers to one question are compared knowing whose they are.
@@ -253,6 +256,7 @@ export function readChatNote(content: string): ChatNote {
       const projects = role === 'user' ? namedNotes(start[2], PROJECT_MARK) : []
       const collections = role === 'user' ? namedNotes(start[2], COLLECTION_MARK) : []
       const files = role === 'user' ? namedFiles(start[2]) : []
+      const skills = role === 'user' ? namedNotes(start[2], SKILL_MARK) : []
       const model = role === 'assistant' ? writtenBy(start[2]) : undefined
       const retakes = role === 'user' ? marked(start[2], RETAKE_MARK) : undefined
       const follows = role === 'user' && !retakes ? marked(start[2], FOLLOWS_MARK) : undefined
@@ -265,6 +269,7 @@ export function readChatNote(content: string): ChatNote {
           ...(projects.length ? { projects } : {}),
           ...(collections.length ? { collections } : {}),
           ...(files.length ? { files } : {}),
+          ...(skills.length ? { skills } : {}),
           ...(model ? { model } : {}),
           ...(retakes ? { retakes } : {}),
           ...(follows ? { follows } : {}),

@@ -460,7 +460,8 @@ export function withoutOpenChange(text: string, pending: string): string {
   for (const fence of fences) {
     const marker = fence[1]
     if (!open) {
-      open = { at: fence.index, fence: marker, change: fence[2].trim() === CHANGE_LANGUAGE }
+      // A note proposed is set aside as a change is: half a note is a card with a button.
+      open = { at: fence.index, fence: marker, change: [CHANGE_LANGUAGE, 'pm-note'].includes(fence[2].trim()) }
     } else if (marker[0] === open.fence[0] && marker.length >= open.fence.length && !fence[2].trim()) {
       open = null
     }

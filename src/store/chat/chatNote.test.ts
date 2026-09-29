@@ -240,6 +240,29 @@ describe('the files a question was asked with', () => {
   })
 })
 
+describe('the skills a question was asked with', () => {
+  const question = {
+    ...turn('user', 'Fais le CR.', 3),
+    projects: ['Projets/Ligne 6.md'],
+    files: ['CR.pdf'],
+    skills: ['Chats/Skills/Compte rendu.md', 'Chats/Skills/Décision.md']
+  }
+
+  it('are named after their own mark, and read back beside the project and the files', () => {
+    expect(turnMarkdown(question, WORDS).split('\n')[0]).toContain(
+      '· ✨ [[Chats/Skills/Compte rendu|Compte rendu]], [[Chats/Skills/Décision|Décision]]'
+    )
+    expect(readChatNote(chatNoteContent(META, [question], WORDS)).turns).toEqual([question])
+  })
+
+  it('are never taken for the note the question was about', () => {
+    const alone = { ...turn('user', 'Q', 3), skills: ['Chats/Skills/CR.md'] }
+    const read = readChatNote(chatNoteContent(META, [alone], WORDS)).turns[0]
+    expect(read.skills).toEqual(['Chats/Skills/CR.md'])
+    expect(read.context).toBeUndefined()
+  })
+})
+
 describe('the model a reply was written by', () => {
   const reply = { ...turn('assistant', 'Réponse.', 4), model: 'qwen3-32b-instruct' }
 

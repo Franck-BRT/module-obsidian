@@ -348,6 +348,13 @@ describe('withoutOpenChange', () => {
     expect(withoutOpenChange('Je propose :\n\n```pm-change\n{"ticket": "T", "fie', '…')).toBe('Je propose :\n\n*…*')
   })
 
+  it('sets aside a note being written, fenced by four backticks, until it is closed', () => {
+    const open = 'Voici la note :\n\n````pm-note\ntitre: CR\n---\n# CR\n\n```\ncode\n```\n'
+    expect(withoutOpenChange(open, '…')).toBe('Voici la note :\n\n*…*')
+    const closed = open + '\n````\n\nVoilà.'
+    expect(withoutOpenChange(closed, '…')).toBe(closed)
+  })
+
   it('leaves a reply alone once its blocks are closed, or when the open block is not a change', () => {
     const done = `Je propose :\n\n${block}\n\nVoilà.`
     expect(withoutOpenChange(done, '…')).toBe(done)

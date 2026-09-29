@@ -27,6 +27,8 @@ export interface ChatTurn {
   collections?: string[]
   /** The files a question was asked with — a planning, a report — by path. */
   files?: string[]
+  /** The skills a question was asked with, by the paths of their notes. */
+  skills?: string[]
   /** The model a reply was written by, where it is known. */
   model?: string
   /** A reply the length limit cut before the model had finished. Said in the panel only. */

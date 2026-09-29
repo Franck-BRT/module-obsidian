@@ -658,3 +658,62 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* A note the model proposes: where it goes, the note as it will read, folded until opened. */
+.pm-note-where {
+  margin-top: var(--size-2-1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-note-preview {
+  position: relative;
+  max-height: 9em;
+  margin-top: var(--size-4-2);
+  padding: var(--size-4-1) var(--size-4-3);
+  overflow: hidden;
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  font-size: var(--font-ui-small);
+}
+
+.pm-note-preview::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2.5em;
+  background: linear-gradient(transparent, var(--background-secondary));
+}
+
+.pm-note-preview.is-open {
+  max-height: none;
+}
+
+.pm-note-preview.is-open::after {
+  display: none;
+}
+
+.pm-note-preview > :first-child {
+  margin-top: 0;
+}
+
+.pm-note-toggle {
+  display: inline-block;
+  margin-top: var(--size-2-2);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-note .pm-change-foot button + button {
+  margin-left: var(--size-4-2);
+}
+
+.pm-note-open {
+  margin-left: var(--size-4-2);
+}
+
+.pm-note-preview.is-short::after,
+.pm-note-toggle.is-hidden {
+  display: none;
+}

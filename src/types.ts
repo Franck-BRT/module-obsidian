@@ -497,6 +497,10 @@ export interface ChatSettings {
   model: string
   /** The longest reply the chat asks for, in tokens; 0 leaves it to the gateway. */
   maxTokens: number
+  /** Where a note the chat writes goes when it names no folder; empty follows Obsidian's own setting. */
+  notesFolder: string
+  /** Where new skills are written; they are found wherever they are. */
+  skillsFolder: string
 }
 
 export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
@@ -505,7 +509,9 @@ export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   builtinPrompts: true,
   prompts: '',
   model: '',
-  maxTokens: 0
+  maxTokens: 0,
+  notesFolder: '',
+  skillsFolder: 'Chats/Skills'
 }
 
 /** Anything the reader can restyle: an id that never changes, and the look they chose. */

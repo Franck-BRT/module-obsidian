@@ -1,5 +1,5 @@
 import { ZoneRadar } from './store/ZoneRadar'
-import { MarkdownView, Menu, Plugin, Notice, TFile, TFolder } from 'obsidian'
+import { MarkdownView, Menu, normalizePath, Plugin, Notice, TFile, TFolder } from 'obsidian'
 import type { Editor, TAbstractFile } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
@@ -59,7 +59,7 @@ import { Notifier } from './components/Notifier'
 import { AutoArchiver } from './components/AutoArchiver'
 import { IdRepair } from './components/IdRepair'
 import { migrateProjects, migrateProjectLayout } from './migration'
-import { dedupePeople, displayName, safeAsync } from './utils'
+import { dedupePeople, displayName, safeAsync, sanitizeFileName } from './utils'
 import { today } from './dates'
 import { setLocale, t } from './i18n'
 import { setImpactLookup, setTicketAppearance } from './store/TicketPalette'
@@ -79,6 +79,7 @@ import { cleanBlockFields } from './store/requirements/reqBlockFields'
 import { registerReqBlock } from './views/requirements/reqBlockRenderer'
 import { registerChangeBlock } from './views/chat/changeCard'
 import { registerBranchBlock } from './views/chat/branchGraph'
+import { registerNoteBlock } from './views/chat/noteCard'
 import { DocumentsView, PM_DOCUMENTS_VIEW_TYPE } from './views/documents/DocumentsView'
 import {
   chooseProjects,
@@ -93,6 +94,9 @@ import { guessCategory, knownValues, parseCategories, type Category } from './st
 import { askClassification, GUESS_CATEGORY, type ClassifyChoices } from './views/documents/classifyFields'
 import { proposeRegisterMatches } from './views/documents/matchRegister'
 import { pourRegisterFiles } from './views/documents/pourRegisters'
+import { skillNote } from './store/chat/skills'
+import { freePath } from './store/DocumentStore'
+import { ensureFolder } from './store/vaultFs'
 import { keptTranscript, scanPages, transcribeScan } from './views/chat/scanReader'
 import { LlmClient } from './store/llm/client'
 import { chatModel } from './store/chat/chatModels'
@@ -227,6 +231,7 @@ export default class PMPlugin extends Plugin {
     registerReqBlock(this)
     registerChangeBlock(this)
     registerBranchBlock(this)
+    registerNoteBlock(this)
     registerReqEditorMenu(this)
     if (__STYLEGUIDE__) registerStyleguide(this)
 
@@ -446,6 +451,21 @@ export default class PMPlugin extends Plugin {
       name: t('command.openDocuments'),
       callback: () => {
         void this.openDocuments()
+      }
+    })
+
+    this.addCommand({
+      id: 'new-skill',
+      name: t('command.newSkill'),
+      callback: () => {
+        void this.newSkill()
+      }
+    })
+    this.addCommand({
+      id: 'example-skills',
+      name: t('command.exampleSkills'),
+      callback: () => {
+        void this.createExampleSkills()
       }
     })
 
@@ -943,6 +963,56 @@ export default class PMPlugin extends Plugin {
       return
     }
     await this.pourIntoLibrary(unique.map((file) => ({ kind: 'vault', file })))
+  }
+
+  /** Where new skills are written. */
+  private skillsFolder(): string {
+    return normalizePath(this.settings.chat.skillsFolder.trim() || `${this.settings.chat.folder}/Skills`)
+  }
+
+  /** A skill to write: a note with its properties and a model of instructions, opened. */
+  async newSkill(): Promise<void> {
+    const folder = this.skillsFolder()
+    await ensureFolder(this.app, folder)
+    const path = await freePath(this.app, folder, t('skill.newName'), 'md')
+    const file = await this.app.vault.create(
+      path,
+      skillNote({
+        name: t('skill.newName'),
+        description: t('skill.newDescription'),
+        triggers: [],
+        folder: '',
+        body: t('skill.newBody')
+      })
+    )
+    await this.app.workspace.getLeaf('tab').openFile(file)
+  }
+
+  /** The skills the plugin ships as examples, written where they are not yet; says how many. */
+  async createExampleSkills(): Promise<void> {
+    const folder = this.skillsFolder()
+    await ensureFolder(this.app, folder)
+    let written = 0
+    for (const key of ['minutes', 'summary', 'decision', 'log'] as const) {
+      const name = t(`skill.example.${key}.name`)
+      const path = normalizePath(`${folder}/${sanitizeFileName(name)}.md`)
+      if (this.app.vault.getAbstractFileByPath(path)) continue
+      await this.app.vault.create(
+        path,
+        skillNote({
+          name,
+          description: t(`skill.example.${key}.description`),
+          triggers: t(`skill.example.${key}.triggers`)
+            .split(',')
+            .map((word) => word.trim())
+            .filter(Boolean),
+          folder: '',
+          body: t(`skill.example.${key}.body`)
+        })
+      )
+      written++
+    }
+    new Notice(written ? t('skill.examplesWritten', { count: written, folder }) : t('skill.examplesThere', { folder }))
   }
 
   /** The chat, opened on requirements chosen in the library. */
