@@ -57,6 +57,7 @@ import { scanPages, transcribeScan } from './scanReader'
 import { notesFallback } from './noteCard'
 import { calledSkills, readSkill, skillBody, skillsContext, type Skill } from '../../store/chat/skills'
 import { lookUpVault, SEARCH_DEFAULTS, vaultContext } from '../../store/rag/ragSearch'
+import { citedFile } from '../../store/chat/citedLink'
 import {
   documentSource,
   lookUp,
@@ -94,7 +95,7 @@ import { branchEnd, conversationTree, threadTo } from '../../store/chat/chatBran
 import { BranchModal } from './branchGraph'
 import { askParams } from './ParamModal'
 import { replyNoteContent, replyTitle, withoutChangeBlocks } from '../../store/chat/replyNote'
-import { freePath } from '../../store/DocumentStore'
+import { freePath, openDocumentFile } from '../../store/DocumentStore'
 import { ensureFolder } from '../../store/vaultFs'
 import { t } from '../../i18n'
 
@@ -234,16 +235,20 @@ export class ChatView extends ItemView {
         this.renderContext()
       })
     )
-    // A link in a reply — a source it cites — opens what it names, beside the chat.
-    this.registerDomEvent(this.containerEl, 'click', (event) => {
-      const link = (event.target as HTMLElement | null)?.closest?.('.pm-chat-list a.internal-link')
-      if (!(link instanceof HTMLElement)) return
-      const target = link.dataset.href ?? link.getAttribute('href') ?? ''
-      if (!target) return
-      event.preventDefault()
-      event.stopPropagation()
-      void this.app.workspace.openLinkText(target, this.notePath ?? '', 'tab')
-    })
+    // A link in a reply — a source it cites — opens what it names, beside the chat. Taken
+    // before Obsidian sees it: a link it cannot resolve, Obsidian makes a note of.
+    this.registerDomEvent(
+      this.containerEl,
+      'click',
+      (event) => {
+        const link = (event.target as HTMLElement | null)?.closest?.('.pm-chat-list a.internal-link')
+        if (!(link instanceof HTMLElement)) return
+        event.preventDefault()
+        event.stopPropagation()
+        void this.openCited(link.dataset.href ?? link.getAttribute('href') ?? link.textContent ?? '')
+      },
+      { capture: true }
+    )
     // A file dropped on the panel is kept in the vault, then attached.
     this.registerDomEvent(this.containerEl, 'dragover', (event) => {
       if (!event.dataTransfer?.types.includes('Files')) return
@@ -560,6 +565,25 @@ export class ChatView extends ItemView {
       return
     }
     new SkillPicker(this.app, skills, (skill) => this.attachSkill(skill.path)).open()
+  }
+
+  /**
+   * A source a reply cites, opened: found however the model wrote its link, among the
+   * sources the conversation looked through if need be; a document Obsidian cannot show
+   * opened by the system. Found nowhere, it is said so, and no note is made.
+   */
+  private async openCited(raw: string): Promise<void> {
+    const consulted = this.turns.flatMap((turn) => turn.library ?? [])
+    const cited = citedFile(this.app, raw, this.notePath ?? '', consulted)
+    if (!cited) {
+      new Notice(t('chat.sourceMissing', { name: raw.split('|')[0].trim() }))
+      return
+    }
+    if (cited.file.extension === 'md') {
+      await this.app.workspace.openLinkText(`${cited.file.path}${cited.subpath}`, '', 'tab')
+    } else if (!(await openDocumentFile(this.app, cited.file))) {
+      new Notice(t('library.cannotOpen', { name: cited.file.name }))
+    }
   }
 
   /** Each question looked up in the whole library first, or no longer. */

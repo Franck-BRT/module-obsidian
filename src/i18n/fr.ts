@@ -1942,6 +1942,7 @@ export const fr: Catalog = {
   'chat.vaultNone':
     'La recherche dans le coffre n’a rien trouvé pour la dernière question. Si la réponse en dépendait, dis-le plutôt que d’inventer.',
   'chat.vaultLookedUp': 'Cherché comme : {query}',
+  'chat.sourceMissing': 'Source introuvable dans le coffre : {name}. Aucune note n’a été créée.',
   'chat.skillPick': 'Utiliser une compétence',
   'chat.skillPickPlaceholder': 'Choisis une compétence…',
   'chat.skillOff': 'Ne plus utiliser cette compétence',

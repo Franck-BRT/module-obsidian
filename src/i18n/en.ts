@@ -1959,6 +1959,7 @@ export const en = {
   'chat.vaultNone':
     'The search of the vault found nothing for the last question. If the answer depended on it, say so rather than inventing.',
   'chat.vaultLookedUp': 'Looked up as: {query}',
+  'chat.sourceMissing': 'Source not found in the vault: {name}. No note was created.',
   'chat.skillPick': 'Use a skill',
   'chat.skillPickPlaceholder': 'Choose a skill…',
   'chat.skillOff': 'Stop using this skill',
