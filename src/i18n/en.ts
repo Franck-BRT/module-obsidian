@@ -1810,6 +1810,9 @@ export const en = {
   'ocr.furniture': 'Remove headers and footers',
   'ocr.furnitureDesc':
     'Lines repeated from page to page — running title, publisher’s notices, page numbers — are taken out of the transcription.',
+  'ocr.pageMarks': 'Remove page numbers',
+  'ocr.pageMarksDesc':
+    'The « Page 3 of 19 » headings the transcription opens each page with are taken out: the text reads in one piece. The numbers printed on the pages go with the headers and footers.',
   'settings.ocr.name': 'Reading scans (OCR)',
   'settings.ocr.desc':
     'The steps of a reading by the vision model: offered each time one is launched from the library, used as they are by the chat.',

@@ -379,3 +379,16 @@ export function cleanTranscriptIn(content: string): { content: string; removed: 
   const cleaned = stripFurniture(content.slice(bodyAt))
   return { content: `${content.slice(0, bodyAt)}${cleaned.text}`, removed: cleaned.removed }
 }
+
+/**
+ * A transcription without the headings it opens each page with, « Page 3 sur 19 »: one
+ * text, as the document reads, where the pages' breaks do not matter.
+ */
+export function withoutPageMarks(text: string): string {
+  return text
+    .split('\n')
+    .filter((line) => !PAGE_MARK.test(line.trim()))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}

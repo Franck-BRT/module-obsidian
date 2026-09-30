@@ -1793,6 +1793,9 @@ export const fr: Catalog = {
   'ocr.furniture': 'Retirer les en-têtes et pieds de page',
   'ocr.furnitureDesc':
     'Les lignes répétées de page en page — titre courant, mentions de l’éditeur, numéros de page — sont retirées de la transcription.',
+  'ocr.pageMarks': 'Retirer les numéros de page',
+  'ocr.pageMarksDesc':
+    'Les titres « Page 3 sur 19 » que la transcription place en tête de chaque page sont retirés : le texte se lit d’un seul tenant. Les numéros imprimés sur les pages, eux, partent avec les en-têtes et pieds de page.',
   'settings.ocr.name': 'Lecture des scans (OCR)',
   'settings.ocr.desc':
     'Les étapes d’une lecture par le modèle de vision : proposées à chaque lancement depuis la bibliothèque, utilisées telles quelles par le chat.',

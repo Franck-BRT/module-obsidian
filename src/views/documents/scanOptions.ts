@@ -11,7 +11,7 @@ import { t } from '../../i18n'
 
 type Step = keyof OcrSettings
 
-export const OCR_STEPS: Step[] = ['allPages', 'carryOn', 'retry', 'check', 'layerText', 'furniture']
+export const OCR_STEPS: Step[] = ['allPages', 'carryOn', 'retry', 'check', 'layerText', 'furniture', 'pageMarks']
 
 /** The toggles, drawn under `parent`; `changed` is told each change, the choices in hand. */
 export function renderOcrOptions(parent: HTMLElement, chosen: OcrSettings, changed: () => void = () => {}): void {
@@ -48,6 +48,8 @@ export function stepName(step: Step): string {
       return t('ocr.layerText')
     case 'furniture':
       return t('ocr.furniture')
+    case 'pageMarks':
+      return t('ocr.pageMarks')
   }
 }
 
@@ -65,6 +67,8 @@ export function stepDesc(step: Step): string {
       return t('ocr.layerTextDesc')
     case 'furniture':
       return t('ocr.furnitureDesc')
+    case 'pageMarks':
+      return t('ocr.pageMarksDesc')
   }
 }
 

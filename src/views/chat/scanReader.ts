@@ -8,6 +8,7 @@ import {
   transcriptNote,
   transcriptPath,
   withTranscriptSection,
+  withoutPageMarks,
   OCR_FIRST_PAGES,
   OCR_PAGE_LIMIT,
   type OcrSource,
@@ -130,7 +131,9 @@ export async function transcribeScan(
     // Nothing read at all is a model that does not see, most likely: said as such.
     if (!result.read) throw new Error(t('chat.ocrNothing', { model }))
     // What the printed pages repeat — headers, footers, page numbers — is not the document.
-    const text = options.furniture ? stripFurniture(result.text).text : result.text
+    // The furniture first: it is found page by page, by the headings that part them.
+    const clean = options.furniture ? stripFurniture(result.text).text : result.text
+    const text = options.pageMarks ? withoutPageMarks(clean) : clean
     const meta = { sourceMtime: file.stat.mtime, model, at: new Date().toISOString(), pages: source.pages }
     const record = recordOf(app, records, file.path)
     if (record) {

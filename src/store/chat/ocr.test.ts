@@ -9,6 +9,7 @@ import {
   transcribe,
   transcriptNote,
   transcriptPath,
+  withoutPageMarks,
   withTranscriptSection,
   type OcrWords
 } from './ocr'
@@ -370,5 +371,12 @@ describe('a transcription without its pages’ furniture', () => {
     expect(cleanedNote?.content.startsWith('---\npm-transcript:')).toBe(true)
     expect(readTranscript(cleanedNote!.content)?.text).not.toContain('S 7 212')
     expect(cleanTranscriptIn('# Une note\n\nTexte.')).toBeNull()
+  })
+})
+
+describe('a transcription without its page headings', () => {
+  it('reads in one piece, the pages’ own words kept', () => {
+    const text = '## Page 1 sur 2\n\nIntroduction.\n\n## Page 2 sur 2\n\nVoir la page 2.\n\n### Page 3 of 3\n\nFin.'
+    expect(withoutPageMarks(text)).toBe('Introduction.\n\nVoir la page 2.\n\nFin.')
   })
 })

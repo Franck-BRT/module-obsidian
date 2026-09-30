@@ -515,6 +515,8 @@ export interface OcrSettings {
   layerText: boolean
   /** The headers, footers and page numbers repeated from page to page taken out. */
   furniture: boolean
+  /** The « Page 3 of 19 » heading the transcription opens each page with taken out. */
+  pageMarks: boolean
 }
 
 export const DEFAULT_OCR_SETTINGS: OcrSettings = {
@@ -523,7 +525,8 @@ export const DEFAULT_OCR_SETTINGS: OcrSettings = {
   retry: true,
   check: true,
   layerText: true,
-  furniture: true
+  furniture: true,
+  pageMarks: false
 }
 
 export interface ChatSettings {

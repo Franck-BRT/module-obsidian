@@ -4,6 +4,7 @@ import { makeFakeApp } from '../../../test/fakeVault'
 import type { LlmClient } from '../../store/llm/client'
 import type { LibraryDoc } from '../../store/library/libraryDoc'
 import { setLocale } from '../../i18n'
+import { DEFAULT_OCR_SETTINGS } from '../../types'
 import { keptTranscript, transcribeScan, transcriptFile } from './scanReader'
 
 /**
@@ -134,12 +135,39 @@ describe('a scan read by a model', () => {
         retry: false,
         check: true,
         layerText: true,
-        furniture: false
+        furniture: false,
+        pageMarks: false
       })
     }
     expect(page).toBe(30)
     expect(read.text).toContain('Toute reproduction interdite')
     expect(read.text).toContain('## Page 30 sur 40')
     expect(read.text).not.toContain('## Page 31 sur 40')
+  })
+
+  it('takes out the page headings when the reader says so, after the furniture found by them', async () => {
+    const { app, records, file } = await setUp()
+    let page = 0
+    const llm = {
+      readImage: () => {
+        page++
+        return Promise.resolve(`Chapitre ${page}.\n\nToute reproduction interdite © Éditeur`)
+      }
+    } as unknown as LlmClient
+    const source = { pages: 3, render: () => Promise.resolve('data:,') }
+    const read = await transcribeScan(
+      app,
+      llm,
+      'vision',
+      file('Bibliothèque/_files/Planning.pdf'),
+      source,
+      records,
+      false,
+      {
+        ...DEFAULT_OCR_SETTINGS,
+        pageMarks: true
+      }
+    )
+    expect(read.text).toBe('Chapitre 1.\n\nChapitre 2.\n\nChapitre 3.')
   })
 })
