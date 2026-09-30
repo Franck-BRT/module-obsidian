@@ -14,9 +14,11 @@ import {
   DEFAULT_CHAT_SETTINGS,
   DEFAULT_LLM_SETTINGS,
   DEFAULT_RAG_SETTINGS,
+  DEFAULT_OCR_SETTINGS,
   DEFAULT_REQUIREMENT_SETTINGS,
   seedTypes,
   withMissingTypes,
+  type OcrSettings,
   type PMSettings,
   type Project,
   type Task
@@ -104,6 +106,7 @@ import {
   type Category
 } from './store/library/libraryClass'
 import { askClassification, GUESS_CATEGORY, type ClassifyChoices } from './views/documents/classifyFields'
+import { askScanOptions } from './views/documents/scanOptions'
 import { proposeRegisterMatches } from './views/documents/matchRegister'
 import { followMoves } from './store/library/fileInRegister'
 import { adapterStorage, RagIndex } from './store/rag/RagIndex'
@@ -367,7 +370,7 @@ export default class PMPlugin extends Plugin {
         const doc =
           file && this.library.isRecord(file) ? this.library.docs().find((one) => one.record === file.path) : null
         if (!doc?.file) return false
-        if (!checking) void this.readLibraryScans([doc], true)
+        if (!checking) void this.askAndReadScans([doc], true)
         return true
       }
     })
@@ -809,6 +812,7 @@ export default class PMPlugin extends Plugin {
     this.settings.chat = { ...DEFAULT_CHAT_SETTINGS, ...saved?.chat }
     this.settings.llm = { ...DEFAULT_LLM_SETTINGS, ...saved?.llm }
     this.settings.rag = { ...DEFAULT_RAG_SETTINGS, ...saved?.rag }
+    this.settings.ocr = { ...DEFAULT_OCR_SETTINGS, ...saved?.ocr }
     if (!saved?.requirements?.types?.length) this.settings.requirements.types = seedReqTypes()
     if (!saved?.requirements?.statuses?.length) this.settings.requirements.statuses = seedReqStatuses()
     if (!this.settings.requirements.counters) this.settings.requirements.counters = {}
@@ -1145,7 +1149,32 @@ export default class PMPlugin extends Plugin {
    * Scans read by the model that sees, one after another, so the library's search finds
    * what they say; false when no model is set up to read them.
    */
-  async readLibraryScans(docs: LibraryDoc[], again = false): Promise<boolean> {
+  /**
+   * Asks how the documents are to be read — the steps, as last chosen, kept for the next
+   * time and for the chat — then reads them. False when the reader went no further.
+   */
+  async askAndReadScans(docs: LibraryDoc[], again = false): Promise<boolean> {
+    if (!docs.length) return false
+    const chosen = await askScanOptions(
+      this.app,
+      again
+        ? t('library.rereadScanTitle', { title: docs[0].title })
+        : t('library.readScansTitle', { count: docs.length }),
+      t('library.readScansText'),
+      again ? t('library.rereadScan') : t('library.readScans'),
+      this.settings.ocr
+    )
+    if (!chosen) return false
+    this.settings.ocr = chosen
+    await this.saveSettings()
+    return this.readLibraryScans(docs, again, chosen)
+  }
+
+  async readLibraryScans(
+    docs: LibraryDoc[],
+    again = false,
+    options: OcrSettings = this.settings.ocr
+  ): Promise<boolean> {
     const llm = this.settings.llm
     const model = llm.modelOcr.trim() || chatModel(this.settings.chat.model, llm.modelText)
     if (!llm.enabled || !llm.baseUrl.trim() || !model) {
@@ -1158,7 +1187,7 @@ export default class PMPlugin extends Plugin {
         await this.libraryText.readScan(doc, async (file, bytes) => {
           const source = await scanPages(file, bytes)
           try {
-            return (await transcribeScan(this.app, client, model, file, source, this.library, again)).text
+            return (await transcribeScan(this.app, client, model, file, source, this.library, again, options)).text
           } finally {
             source.close()
           }

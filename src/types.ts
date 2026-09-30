@@ -501,6 +501,31 @@ export interface RagSettings {
 
 export const DEFAULT_RAG_SETTINGS: RagSettings = { enabled: false, exclude: '', rewrite: true, files: true }
 
+/** How a document is read by the model that sees: each step the reader may leave out. */
+export interface OcrSettings {
+  /** Every page; off, the first thirty. */
+  allPages: boolean
+  /** A page cut by the length of a reply carried on where it stopped. */
+  carryOn: boolean
+  /** A page that fails asked for again, twice. */
+  retry: boolean
+  /** Each reading checked against the text the PDF holds, and a page read in part read again. */
+  check: boolean
+  /** When a page is still short once read again, the PDF's own text added after it. */
+  layerText: boolean
+  /** The headers, footers and page numbers repeated from page to page taken out. */
+  furniture: boolean
+}
+
+export const DEFAULT_OCR_SETTINGS: OcrSettings = {
+  allPages: true,
+  carryOn: true,
+  retry: true,
+  check: true,
+  layerText: true,
+  furniture: true
+}
+
 export interface ChatSettings {
   /** Where a new conversation is written. Found again anywhere, by what it says it is. */
   folder: string
@@ -701,6 +726,8 @@ export interface PMSettings {
   llm: LlmSettings
   chat: ChatSettings
   rag: RagSettings
+  /** How documents are read by the model that sees. */
+  ocr: OcrSettings
   /** The requirements library: where it lives, in which languages, under which ids. */
   requirements: RequirementSettings
   /** Which tickets say their kind on their own row: none, the ones that are not plain tasks, or all. */
@@ -1000,6 +1027,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   llm: DEFAULT_LLM_SETTINGS,
   chat: DEFAULT_CHAT_SETTINGS,
   rag: DEFAULT_RAG_SETTINGS,
+  ocr: DEFAULT_OCR_SETTINGS,
   requirements: DEFAULT_REQUIREMENT_SETTINGS,
   typeBadges: 'distinct',
   priorities: DEFAULT_PRIORITIES,

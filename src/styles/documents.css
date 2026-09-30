@@ -813,3 +813,15 @@ a.pm-docs-clear-filters {
   gap: var(--size-4-2);
   max-width: 60%;
 }
+
+/* The steps of a reading: adding the PDF's text is greyed while its check is off. */
+.pm-scan-options .setting-item.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.pm-scan-options-text {
+  margin-top: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}

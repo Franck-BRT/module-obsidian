@@ -24,6 +24,9 @@ export const TRANSCRIPT_KEY = 'pm-transcript'
  */
 export const OCR_PAGE_LIMIT = Number.POSITIVE_INFINITY
 
+/** How many pages are read when the reader asks for the first ones only. */
+export const OCR_FIRST_PAGES = 30
+
 /**
  * Whether a PDF's text is too thin to be the document: less than a few lines a page is
  * a title block around a picture, which is what a planning exported as an image is.
@@ -54,6 +57,10 @@ export interface TranscribeOptions {
   attempts?: number
   /** How long to wait before asking again. */
   wait?: (ms: number) => Promise<void>
+  /** Whether each reading is checked against the file's own text, and a short one read again. */
+  check?: boolean
+  /** Whether the file's own text follows a reading still short once read again. */
+  layerText?: boolean
 }
 
 /** The letters of a text: how much of a page it holds, whatever its layout. */
@@ -113,11 +120,13 @@ export async function transcribe(
     try {
       const image = await source.render(page)
       body = await asked(image, page, false)
-      const layer = source.layer ? (await source.layer(page).catch(() => '')).trim() : ''
+      const layer = source.layer && options.check !== false ? (await source.layer(page).catch(() => '')).trim() : ''
       if (layer && !readsWhole(body, layer)) {
         const again = await asked(image, page, true).catch(() => '')
         if (letterCount(again) > letterCount(body)) body = again
-        if (!readsWhole(body, layer) && words.layer) body = `${body}\n\n${words.layer(page)}\n\n${layer}`
+        if (!readsWhole(body, layer) && words.layer && options.layerText !== false) {
+          body = `${body}\n\n${words.layer(page)}\n\n${layer}`
+        }
       }
     } catch (error) {
       failed++

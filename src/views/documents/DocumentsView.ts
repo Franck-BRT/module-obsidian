@@ -589,16 +589,7 @@ export class DocumentsView extends ItemView {
   }
 
   private confirmReadScans(scans: LibraryDoc[]): void {
-    new ConfirmModal(
-      this.plugin,
-      t('library.readScansTitle', { count: scans.length }),
-      t('library.readScansText'),
-      t('library.readScans'),
-      false,
-      async () => {
-        await this.plugin.readLibraryScans(scans)
-      }
-    ).open()
+    void this.plugin.askAndReadScans(scans)
   }
 
   private renderEmpty(): void {
@@ -766,7 +757,7 @@ export class DocumentsView extends ItemView {
       badge.setAttr('title', t('library.scanBadgeHint'))
       badge.addEventListener('click', (event) => {
         event.preventDefault()
-        void this.plugin.readLibraryScans([doc])
+        void this.plugin.askAndReadScans([doc])
       })
       return
     }
@@ -837,7 +828,8 @@ export class DocumentsView extends ItemView {
           .setIcon('scan-text')
           .onClick(
             safeAsync(async () => {
-              await this.plugin.readLibraryScans([doc])
+              // Read already by the model: read again, the transcription replaced.
+              await this.plugin.askAndReadScans([doc], this.plugin.libraryText.entry(doc)?.ocr === true)
             })
           )
       )

@@ -114,4 +114,32 @@ describe('a scan read by a model', () => {
     expect(read.text).not.toContain('S 7 212')
     expect(await app.vault.read(file('Bibliothèque/Planning.md'))).not.toContain('© Éditeur')
   })
+
+  it('keeps what the pages repeat, and reads the first pages only, when the reader says so', async () => {
+    const { app, records, file } = await setUp()
+    let page = 0
+    const llm = {
+      readImage: (request: { more?: string }) => {
+        page++
+        if (request.more) throw new Error('asked to carry on')
+        return Promise.resolve(`Chapitre ${page}.\n\nToute reproduction interdite © Éditeur`)
+      }
+    } as unknown as LlmClient
+    const source = { pages: 40, render: () => Promise.resolve('data:,') }
+    const read = await transcribe(llm, source)
+    async function transcribe(client: LlmClient, pages: typeof source) {
+      return transcribeScan(app, client, 'vision', file('Bibliothèque/_files/Planning.pdf'), pages, records, false, {
+        allPages: false,
+        carryOn: false,
+        retry: false,
+        check: true,
+        layerText: true,
+        furniture: false
+      })
+    }
+    expect(page).toBe(30)
+    expect(read.text).toContain('Toute reproduction interdite')
+    expect(read.text).toContain('## Page 30 sur 40')
+    expect(read.text).not.toContain('## Page 31 sur 40')
+  })
 })

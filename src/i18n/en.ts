@@ -1796,6 +1796,25 @@ export const en = {
   'library.textRead': 'Text read, for searching: {count} of {total}',
   'library.scansWaiting': { one: '{count} scan to read', other: '{count} scans to read' },
   'library.readScansHint': 'Have the scanned documents read by the model that sees, to find them by what they say',
+  'ocr.allPages': 'Read every page',
+  'ocr.allPagesDesc': 'Unticked: the first 30 pages only, for a long document whose start is enough.',
+  'ocr.carryOn': 'Carry on a page cut short',
+  'ocr.carryOnDesc': 'A page too long for one reply of the model is taken up again where it stopped.',
+  'ocr.retry': 'Try a failed page again',
+  'ocr.retryDesc': 'Two more tries, a few seconds later, before the page is marked unread.',
+  'ocr.check': 'Check each page against the PDF’s text',
+  'ocr.checkDesc': 'For a PDF that holds text: a page read in part is read again, told more firmly.',
+  'ocr.layerText': 'Complete with the PDF’s text',
+  'ocr.layerTextDesc':
+    'When reading it again is still incomplete, the PDF’s text for the page is added after it (needs the check).',
+  'ocr.furniture': 'Remove headers and footers',
+  'ocr.furnitureDesc':
+    'Lines repeated from page to page — running title, publisher’s notices, page numbers — are taken out of the transcription.',
+  'settings.ocr.name': 'Reading scans (OCR)',
+  'settings.ocr.desc':
+    'The steps of a reading by the vision model: offered each time one is launched from the library, used as they are by the chat.',
+  'library.rereadScanTitle': 'Read “{title}” again with the model?',
+  'library.rereadScan': 'Read again',
   'library.readScansTitle': { one: 'Read {count} scan with the model?', other: 'Read {count} scans with the model?' },
   'library.readScansText':
     'Each page is sent to the configured vision model (or the chat’s model): it takes a moment a page and uses requests. The transcription is added to the document’s record, under a « Transcription » heading: the chat and the search use it, and you can correct it.',

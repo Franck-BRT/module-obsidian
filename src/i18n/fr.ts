@@ -1778,6 +1778,26 @@ export const fr: Catalog = {
   'library.scansWaiting': { one: '{count} scan à lire', other: '{count} scans à lire' },
   'library.readScansHint':
     'Faire lire les documents scannés par le modèle qui voit, pour les retrouver par leur contenu',
+  'ocr.allPages': 'Lire toutes les pages',
+  'ocr.allPagesDesc': 'Décoché : seulement les 30 premières pages, pour un long document dont le début suffit.',
+  'ocr.carryOn': 'Continuer une page coupée',
+  'ocr.carryOnDesc': 'Une page trop longue pour une seule réponse du modèle est reprise là où elle s’est arrêtée.',
+  'ocr.retry': 'Réessayer une page en échec',
+  'ocr.retryDesc': 'Deux nouveaux essais, quelques secondes plus tard, avant de marquer la page « non lue ».',
+  'ocr.check': 'Vérifier chaque page avec le texte du PDF',
+  'ocr.checkDesc':
+    'Pour un PDF qui contient du texte : une page lue en partie est relue avec une consigne plus insistante.',
+  'ocr.layerText': 'Compléter avec le texte du PDF',
+  'ocr.layerTextDesc':
+    'Si la relecture reste incomplète, le texte du PDF pour cette page est ajouté à la suite (demande la vérification).',
+  'ocr.furniture': 'Retirer les en-têtes et pieds de page',
+  'ocr.furnitureDesc':
+    'Les lignes répétées de page en page — titre courant, mentions de l’éditeur, numéros de page — sont retirées de la transcription.',
+  'settings.ocr.name': 'Lecture des scans (OCR)',
+  'settings.ocr.desc':
+    'Les étapes d’une lecture par le modèle de vision : proposées à chaque lancement depuis la bibliothèque, utilisées telles quelles par le chat.',
+  'library.rereadScanTitle': 'Relire « {title} » avec le modèle ?',
+  'library.rereadScan': 'Relire',
   'library.readScansTitle': { one: 'Lire {count} scan avec le modèle ?', other: 'Lire {count} scans avec le modèle ?' },
   'library.readScansText':
     'Chaque page est envoyée au modèle de vision configuré (ou au modèle du chat) : cela prend un moment par page et consomme des requêtes. La transcription est ajoutée à la fiche du document, dans une section « Transcription » : le chat et la recherche s’en servent, et vous pouvez la corriger.',

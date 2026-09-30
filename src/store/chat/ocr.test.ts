@@ -148,6 +148,40 @@ describe('transcribing a whole document', () => {
     expect(out.text).not.toContain('[Page 1 : texte du PDF]')
   })
 
+  it('leaves out the check, or only the PDF’s text, when the reader says so', async () => {
+    const layer = (page: number) => `Texte complet de la page ${page}. `.repeat(20)
+    let asked = 0
+    const read = (_image: string, page: number) => {
+      asked++
+      return Promise.resolve(`Début de la page ${page}.`)
+    }
+    const unchecked = await transcribe(source(2, layer), read, WORDS, () => {}, undefined, { ...noWait, check: false })
+    expect(asked).toBe(2)
+    expect(unchecked.text).not.toContain('texte du PDF')
+    asked = 0
+    const noLayer = await transcribe(source(2, layer), read, WORDS, () => {}, undefined, {
+      ...noWait,
+      layerText: false
+    })
+    expect(asked).toBe(4)
+    expect(noLayer.text).not.toContain('texte du PDF')
+    // One try only: a failure is said at once.
+    let tries = 0
+    const once = await transcribe(
+      source(1),
+      () => {
+        tries++
+        return Promise.reject(new Error('non'))
+      },
+      WORDS,
+      () => {},
+      undefined,
+      { ...noWait, attempts: 1 }
+    )
+    expect(tries).toBe(1)
+    expect(once.failed).toBe(1)
+  })
+
   it('judges a reading against the file’s own text only when that holds a page’s worth', () => {
     const page = 'Le placement fait partie du problème de découpe. '.repeat(10)
     expect(readsWhole(page, page)).toBe(true)

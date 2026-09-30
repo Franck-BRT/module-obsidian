@@ -960,7 +960,16 @@ export class ChatView extends ItemView {
     const source = await scanPages(file, bytes)
     try {
       const model = this.plugin.settings.llm.modelOcr.trim() || this.model
-      const read = await transcribeScan(this.app, this.llm, model, file, source, this.plugin.library)
+      const read = await transcribeScan(
+        this.app,
+        this.llm,
+        model,
+        file,
+        source,
+        this.plugin.library,
+        false,
+        this.plugin.settings.ocr
+      )
       if (read.fresh) this.renderContext()
       return read.text
     } finally {

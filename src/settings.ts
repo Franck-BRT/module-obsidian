@@ -30,6 +30,7 @@ import { renderCustomFieldFields, renderCustomFieldOptions } from './ui/CustomFi
 import { renderPersonPicker } from './ui/PersonPicker'
 import { LOCALES, searchAliases, t } from './i18n'
 import { invalidHolidays, renderHolidays, renderWorkingWeekdays } from './ui/WorkCalendarEditor'
+import { OCR_STEPS, stepDesc, stepName } from './views/documents/scanOptions'
 
 /** Exhaustive, so a new mode cannot reach the interface without a name. */
 function typeBadgeModeLabel(mode: TypeBadgeMode): string {
@@ -1188,6 +1189,7 @@ export class PMSettingTab extends PluginSettingTab {
         },
         this.chatPromptsPage(),
         this.ragPage(),
+        this.ocrPage(),
         {
           name: t('settings.chat.maxTokens'),
           desc: t('settings.chat.maxTokensDesc'),
@@ -1253,6 +1255,27 @@ export class PMSettingTab extends PluginSettingTab {
    * stands — how much it holds, what it is doing, why it stopped —, with the way to bring
    * it up to date, to make it again, and to check the gateway's two models answer.
    */
+  /** How documents are read by the model that sees: the steps, as the launch window offers them. */
+  private ocrPage(): SettingDefinitionPage {
+    return {
+      type: 'page',
+      name: t('settings.ocr.name'),
+      desc: t('settings.ocr.desc'),
+      items: OCR_STEPS.map((step) => ({
+        name: stepName(step),
+        desc: stepDesc(step),
+        render: (setting: Setting) => {
+          setting.addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.ocr[step]).onChange((value) => {
+              this.plugin.settings.ocr[step] = value
+              this.persist()
+            })
+          )
+        }
+      }))
+    }
+  }
+
   private ragPage(): SettingDefinitionPage {
     const rag = this.plugin.settings.rag
     const indexer = this.plugin.ragIndexer

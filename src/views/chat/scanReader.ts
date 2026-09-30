@@ -8,11 +8,14 @@ import {
   transcriptNote,
   transcriptPath,
   withTranscriptSection,
+  OCR_FIRST_PAGES,
+  OCR_PAGE_LIMIT,
   type OcrSource,
   type TranscriptMeta
 } from '../../store/chat/ocr'
 import type { LibraryDoc } from '../../store/library/libraryDoc'
 import type { LlmClient } from '../../store/llm/client'
+import { DEFAULT_OCR_SETTINGS, type OcrSettings } from '../../types'
 import { t } from '../../i18n'
 import { pdfPages } from './pdfPages'
 
@@ -97,7 +100,9 @@ export async function transcribeScan(
   source: OcrSource,
   records?: Records,
   /** Read again, whatever is kept: a transcription made before it read documents whole. */
-  again = false
+  again = false,
+  /** Which of the steps of a reading to take. */
+  options: OcrSettings = DEFAULT_OCR_SETTINGS
 ): Promise<{ text: string; fresh: boolean }> {
   const kept = again ? null : await keptTranscript(app, file, records)
   if (kept) return { text: kept, fresh: false }
@@ -110,7 +115,7 @@ export async function transcribeScan(
           model,
           prompt: insist ? t('chat.ocrPromptAgain', { page, total }) : t('chat.ocrPrompt', { page, total }),
           image,
-          more: t('chat.ocrMore')
+          ...(options.carryOn ? { more: t('chat.ocrMore') } : {})
         }),
       {
         page: (page, total) => t('chat.ocrPage', { page, total }),
@@ -118,12 +123,14 @@ export async function transcribeScan(
         skipped: (count) => t('chat.ocrSkipped', { count }),
         layer: (page) => t('chat.ocrLayer', { page })
       },
-      (page, total) => notice.setMessage(t('chat.ocrReading', { name: file.name, page, total }))
+      (page, total) => notice.setMessage(t('chat.ocrReading', { name: file.name, page, total })),
+      options.allPages ? OCR_PAGE_LIMIT : OCR_FIRST_PAGES,
+      { attempts: options.retry ? 3 : 1, check: options.check, layerText: options.layerText }
     )
     // Nothing read at all is a model that does not see, most likely: said as such.
     if (!result.read) throw new Error(t('chat.ocrNothing', { model }))
     // What the printed pages repeat — headers, footers, page numbers — is not the document.
-    const text = stripFurniture(result.text).text
+    const text = options.furniture ? stripFurniture(result.text).text : result.text
     const meta = { sourceMtime: file.stat.mtime, model, at: new Date().toISOString(), pages: source.pages }
     const record = recordOf(app, records, file.path)
     if (record) {
