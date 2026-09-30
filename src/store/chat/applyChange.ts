@@ -70,7 +70,8 @@ export async function applyToRequirement(
 export interface TicketTarget {
   project: Project
   task: Task
-  lists: { statuses: Option[]; priorities: Option[] }
+  /** What its fields are checked against: the project's lists, and every ticket it could follow. */
+  lists: { statuses: Option[]; priorities: Option[]; candidates: TicketCandidate[] }
 }
 
 /** The ticket the model named, by its title, loaded from its project as it is now. */
@@ -101,7 +102,11 @@ export async function ticketTarget(
   const config = store.configFor(project)
   const listed = (list: { id: string; label: string }[]): Option[] =>
     list.map((entry) => ({ id: entry.id, label: entry.label }))
-  return { project, task, lists: { statuses: listed(config.statuses), priorities: listed(config.priorities) } }
+  return {
+    project,
+    task,
+    lists: { statuses: listed(config.statuses), priorities: listed(config.priorities), candidates }
+  }
 }
 
 /**

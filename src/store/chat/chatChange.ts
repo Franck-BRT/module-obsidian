@@ -29,7 +29,16 @@ export const REQ_CHANGE_FIELDS = [
 ] as const
 export type ReqChangeField = (typeof REQ_CHANGE_FIELDS)[number]
 
-export const TICKET_CHANGE_FIELDS = ['title', 'status', 'priority', 'start', 'due', 'progress', 'assignees'] as const
+export const TICKET_CHANGE_FIELDS = [
+  'title',
+  'status',
+  'priority',
+  'start',
+  'due',
+  'progress',
+  'assignees',
+  'after'
+] as const
 export type TicketChangeField = (typeof TICKET_CHANGE_FIELDS)[number]
 
 export type ChangeSpec =
@@ -346,7 +355,7 @@ export type TicketResolution =
 export function ticketChange(
   spec: Extract<ChangeSpec, { kind: 'ticket' }>,
   task: Task,
-  lists: { statuses: Option[]; priorities: Option[] }
+  lists: { statuses: Option[]; priorities: Option[]; candidates?: TicketCandidate[] }
 ): TicketResolution {
   const rows: TicketRow[] = []
   const patch: Partial<Task> = {}
@@ -404,6 +413,29 @@ export function ticketChange(
         patch.assignees = names
         break
       }
+      case 'after': {
+        // What it follows, said whole: the list takes the place of its dependencies.
+        const candidates = lists.candidates ?? []
+        const titleOf = (id: string): string => candidates.find((candidate) => candidate.id === id)?.title ?? id
+        const titles = Array.isArray(raw) ? raw.map(text) : value.split(/[,;]/).map((one) => one.trim())
+        const ids: string[] = []
+        for (const one of titles.filter(Boolean)) {
+          const found = findTicket(candidates, one, spec.project)
+          if (!('found' in found) || found.found.id === task.id) return refuse('after', [one])
+          if (!ids.includes(found.found.id)) ids.push(found.found.id)
+        }
+        const before = task.dependencies
+        const same = before.length === ids.length && ids.every((id) => before.includes(id))
+        rows.push({ field, before: before.map(titleOf).join(', '), after: ids.map(titleOf).join(', '), applied: same })
+        patch.dependencies = ids
+        if (task.dependencyOptions) {
+          // How each kept link schedules stays; those dropped go with their link.
+          const kept = Object.fromEntries(Object.entries(task.dependencyOptions).filter(([id]) => ids.includes(id)))
+          patch.dependencyOptions = Object.keys(kept).length ? kept : undefined
+        }
+        reschedule = true
+        break
+      }
     }
   }
   // The dates as they would be once every field is taken, checked as a pair.
@@ -434,6 +466,9 @@ export function findTicket(
   title: string,
   project: string
 ): { found: TicketCandidate } | { problem: 'none' | 'ambiguous'; count: number } {
+  // Picked in a list rather than typed: by its id, which no other ticket has.
+  const byId = candidates.find((candidate) => candidate.id === title.trim())
+  if (byId) return { found: byId }
   const wanted = fold(title)
   let matches = candidates.filter((candidate) => fold(candidate.title) === wanted)
   if (project && matches.length > 1) {
@@ -637,7 +672,8 @@ export interface CreateEdits {
   title?: string
   project?: string
   parent?: string
-  fields?: Partial<Record<CreateField, string>>
+  /** A list — people, what it follows — as a list, which no comma in a title can cut. */
+  fields?: Partial<Record<CreateField, string | string[]>>
 }
 
 /** The fields said as lists: several names or titles, one written after the other. */
@@ -649,23 +685,22 @@ export function withEdits(
   edits: CreateEdits
 ): Extract<ChangeSpec, { kind: 'create' }> {
   const edited = edits.fields ?? {}
-  const valueOf = (field: CreateField, raw: string): unknown =>
-    LIST_FIELDS.includes(field)
-      ? raw
-          .split(/[,;]/)
-          .map((one) => one.trim())
-          .filter(Boolean)
-      : raw.trim()
+  const listOf = (raw: string | string[]): string[] =>
+    (Array.isArray(raw) ? raw : raw.split(/[,;]/)).map((one) => one.trim()).filter(Boolean)
+  const valueOf = (field: CreateField, raw: string | string[]): unknown =>
+    LIST_FIELDS.includes(field) ? listOf(raw) : (Array.isArray(raw) ? raw.join(', ') : raw).trim()
+  const empty = (field: CreateField, raw: string | string[]): boolean =>
+    LIST_FIELDS.includes(field) ? !listOf(raw).length : !(Array.isArray(raw) ? raw.join('') : raw).trim()
   // Each field where it was, its value as changed — or gone, emptied —, the new ones after.
   const fields: CreateFieldChange[] = []
   for (const change of spec.fields) {
     const raw = edited[change.field]
     if (raw === undefined) fields.push(change)
-    else if (raw.trim()) fields.push({ field: change.field, value: valueOf(change.field, raw) })
+    else if (!empty(change.field, raw)) fields.push({ field: change.field, value: valueOf(change.field, raw) })
   }
   for (const field of CREATE_FIELDS) {
     const raw = edited[field]
-    if (raw === undefined || !raw.trim() || spec.fields.some((change) => change.field === field)) continue
+    if (raw === undefined || empty(field, raw) || spec.fields.some((change) => change.field === field)) continue
     fields.push({ field, value: valueOf(field, raw) })
   }
   return {
@@ -704,4 +739,43 @@ export function replaceBlock(content: string, before: string, after: string): st
     if (at >= 0) return `${content.slice(0, at)}${quoted(after, prefix)}${content.slice(at + old.length)}`
   }
   return null
+}
+
+/** What the reader set a ticket's fields to before the change is made; a list as a list. */
+export type TicketEdits = Partial<Record<TicketChangeField, string | string[]>>
+
+/**
+ * A proposed change to a ticket as the reader set it: the fields they changed from what the
+ * ticket says now, in the order they come — every other field left as it is.
+ */
+export function withTicketEdits(
+  spec: Extract<ChangeSpec, { kind: 'ticket' }>,
+  edits: TicketEdits
+): Extract<ChangeSpec, { kind: 'ticket' }> {
+  const changes: TicketFieldChange[] = []
+  for (const field of TICKET_CHANGE_FIELDS) {
+    const raw = edits[field]
+    if (raw === undefined) continue
+    const value = Array.isArray(raw)
+      ? raw.map((one) => one.trim()).filter(Boolean)
+      : field === 'assignees'
+        ? raw
+            .split(/[,;]/)
+            .map((one) => one.trim())
+            .filter(Boolean)
+        : raw.trim()
+    changes.push({ field, value })
+  }
+  return { ...spec, changes }
+}
+
+/** A proposed change to a ticket written back as the block that proposes it. */
+export function ticketSource(spec: Extract<ChangeSpec, { kind: 'ticket' }>): string {
+  const record: Record<string, unknown> = {
+    ticket: spec.target,
+    ...(spec.project ? { project: spec.project } : {}),
+    changes: Object.fromEntries(spec.changes.map((change) => [change.field, change.value]))
+  }
+  if (spec.why) record.why = spec.why
+  return JSON.stringify(record, null, 2)
 }

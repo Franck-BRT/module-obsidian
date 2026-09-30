@@ -17,7 +17,9 @@ import {
   type ReqOptions,
   withEdits,
   createSource,
-  replaceBlock
+  replaceBlock,
+  withTicketEdits,
+  ticketSource
 } from './chatChange'
 
 const spec = (source: object): ChangeSpec => {
@@ -248,6 +250,89 @@ describe('ticketChange', () => {
   })
   const change = (source: object) => ticketChange(ticketSpec({ ticket: 'Soutènement', ...source }), task, LISTS)
 
+  it('sets what a ticket follows, the list taking the place of its dependencies, by title or id', () => {
+    const candidates = [
+      { id: 'a1', title: 'Terrassement', projectPath: 'GC.md', projectTitle: 'GC' },
+      { id: 'b2', title: 'Coffrage, lot 1', projectPath: 'GC.md', projectTitle: 'GC' },
+      { id: 'k3j9x2ab', title: 'Soutènement', projectPath: 'GC.md', projectTitle: 'GC' }
+    ]
+    const linked = makeTask({
+      ...task,
+      dependencies: ['a1', 'zz'],
+      dependencyOptions: { a1: { type: 'SS', lag: 2 }, zz: { type: 'FS', lag: 0 } }
+    })
+    const lists = { ...LISTS, candidates }
+    const got = ticketChange(
+      ticketSpec({ ticket: 'Soutènement', changes: { after: ['terrassement', 'b2'] } }),
+      linked,
+      lists
+    )
+    expect(got).toEqual({
+      ok: true,
+      rows: [{ field: 'after', before: 'Terrassement, zz', after: 'Terrassement, Coffrage, lot 1', applied: false }],
+      applied: false,
+      change: {
+        patch: { dependencies: ['a1', 'b2'], dependencyOptions: { a1: { type: 'SS', lag: 2 } } },
+        reschedule: true
+      }
+    })
+    // The same, said again: already so.
+    const same = makeTask({ ...task, dependencies: ['b2', 'a1'] })
+    expect(
+      ticketChange(ticketSpec({ ticket: 'Soutènement', changes: { after: 'a1, b2' } }), same, lists)
+    ).toMatchObject({
+      applied: true
+    })
+    // Emptied: it follows nothing any more.
+    expect(ticketChange(ticketSpec({ ticket: 'Soutènement', changes: { after: [] } }), linked, lists)).toMatchObject({
+      ok: true,
+      change: { patch: { dependencies: [], dependencyOptions: undefined } }
+    })
+    // Itself, or a ticket the vault does not have: refused.
+    expect(
+      ticketChange(ticketSpec({ ticket: 'Soutènement', changes: { after: ['Soutènement'] } }), linked, lists)
+    ).toMatchObject({
+      ok: false,
+      problem: 'after'
+    })
+    expect(
+      ticketChange(ticketSpec({ ticket: 'Soutènement', changes: { after: ['Inconnu'] } }), linked, lists)
+    ).toMatchObject({
+      ok: false,
+      problem: 'after',
+      allowed: ['Inconnu']
+    })
+  })
+
+  it('is written back as the reader set it, the fields they changed only', () => {
+    const proposed = ticketSpec({
+      ticket: 'Soutènement',
+      project: 'GC',
+      changes: { due: '2026-10-10' },
+      why: 'Retard.'
+    })
+    const edited = withTicketEdits(proposed, {
+      status: 'En cours',
+      due: '2026-10-17',
+      assignees: 'Anne, Bruno',
+      after: ['a1']
+    })
+    expect(edited.changes).toEqual([
+      { field: 'status', value: 'En cours' },
+      { field: 'due', value: '2026-10-17' },
+      { field: 'assignees', value: ['Anne', 'Bruno'] },
+      { field: 'after', value: ['a1'] }
+    ])
+    const source = ticketSource(edited)
+    expect(JSON.parse(source)).toEqual({
+      ticket: 'Soutènement',
+      project: 'GC',
+      changes: { status: 'En cours', due: '2026-10-17', assignees: ['Anne', 'Bruno'], after: ['a1'] },
+      why: 'Retard.'
+    })
+    expect(ticketSpec(JSON.parse(source) as object)).toEqual(edited)
+  })
+
   it('moves a due date, and says what waits on it may have to move too', () => {
     expect(change({ field: 'due', value: '2026-10-10' })).toEqual({
       ok: true,
@@ -341,6 +426,10 @@ describe('findTicket', () => {
     expect(findTicket(candidates, 'Réception', '')).toEqual({ problem: 'ambiguous', count: 2 })
     expect(findTicket(candidates, 'Réception', 'Autre')).toEqual({ problem: 'ambiguous', count: 2 })
     expect(findTicket(candidates, 'Terrassements', '')).toEqual({ problem: 'none', count: 0 })
+  })
+  it('finds a ticket picked in a list by its id, where two share its title', () => {
+    expect(findTicket(candidates, 'b2', '')).toEqual({ found: candidates[1] })
+    expect(findTicket(candidates, ' a1 ', 'Équipements')).toEqual({ found: candidates[0] })
   })
 })
 
@@ -622,6 +711,19 @@ describe('a proposed ticket changed by the reader', () => {
       { field: 'type', value: 'Jalon' },
       { field: 'start', value: '2026-10-05' }
     ])
+    // Lists given as lists: a title holding a comma is not cut.
+    expect(
+      withEdits(proposed, { fields: { after: ['Recenser, puis trier les codes'], assignees: ['[[Anne]]', ' '] } })
+        .fields
+    ).toEqual([
+      { field: 'status', value: 'À faire' },
+      { field: 'assignees', value: ['[[Anne]]'] },
+      { field: 'due', value: '2026-10-30' },
+      { field: 'after', value: ['Recenser, puis trier les codes'] }
+    ])
+    expect(withEdits(proposed, { fields: { assignees: [] } }).fields.some((each) => each.field === 'assignees')).toBe(
+      false
+    )
     // Nothing changed: the same proposal.
     expect(withEdits(proposed, {})).toEqual(proposed)
     expect(withEdits(proposed, { title: '   ' }).title).toBe('Définir les codes')

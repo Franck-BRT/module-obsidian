@@ -4,9 +4,14 @@ import {
   CHANGE_LANGUAGE,
   createChange,
   createSource,
+  findTicket,
   pickOption,
   replaceBlock,
+  ticketSource,
   withEdits,
+  withTicketEdits,
+  type TicketCandidate,
+  type TicketEdits,
   type CreateEdits,
   type CreateField,
   parseChange,
@@ -38,11 +43,17 @@ import {
 } from '../../store/chat/applyChange'
 import { typeConfigOf } from '../../store/TicketPalette'
 import { fold } from '../../store/library/libraryDoc'
+import { renderPersonPicker } from '../../ui/PersonPicker'
+import { renderMultiSelect } from '../../ui/composites/properties/MultiSelectControl'
+import { DependencyPickerModal } from '../../modals/DependencyPickerModal'
 import type { Project, TaskType } from '../../types'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { openRequirementModal } from '../requirements/RequirementModal'
 import { reqLanguages, verificationLabel } from '../requirements/reqPalette'
+
+/** The id a ticket not made yet goes by in the dependency picker: none of the vault's has it. */
+const NEW_TICKET = 'pm-chat-new-ticket'
 
 /**
  * A change the model proposed, drawn as a card with what would change and a button.
@@ -115,6 +126,8 @@ function ticketFieldLabel(field: TicketChangeField): string {
       return t('chat.change.field.progress')
     case 'assignees':
       return t('chat.change.field.assignees')
+    case 'after':
+      return t('chat.change.field.after')
   }
 }
 
@@ -262,6 +275,10 @@ class ChangeCard extends MarkdownRenderChild {
     }
     const target = await ticketTarget(this.plugin.index, this.plugin.store, spec)
     if (generation !== this.generation) return
+    if (this.editing && !('problem' in target)) {
+      this.paint((card) => this.renderTicketForm(card, spec, target))
+      return
+    }
     this.paint((card) => this.renderTicket(card, spec, target))
   }
 
@@ -395,8 +412,38 @@ class ChangeCard extends MarkdownRenderChild {
     const progress = input(t('chat.change.field.progress'), given('progress').replace(/\s*%$/, ''), 'number')
     progress.min = '0'
     progress.max = '100'
-    const assignees = input(t('chat.change.field.assignees'), given('assignees'), 'text', t('chat.change.listHint'))
-    const after = input(t('chat.change.field.after'), given('after'), 'text', t('chat.change.listHint'))
+    const listed = (field: CreateField): string[] => {
+      const found = spec.fields.find((change) => change.field === field)?.value
+      const list = Array.isArray(found) ? found : typeof found === 'string' ? found.split(/[,;]/) : []
+      return list.map((one) => (typeof one === 'string' ? one.trim() : '')).filter(Boolean)
+    }
+    const people = listed('assignees')
+    this.peopleField(
+      row(t('chat.change.field.assignees')).createDiv('pm-change-form-picker'),
+      target.project.filePath,
+      target.project.teamMembers,
+      people
+    )
+    const candidates = context.candidates
+    const upstream = listed('after').map((one) => {
+      const found = findTicket(candidates, one, target.project.title)
+      return 'found' in found ? found.found.id : one
+    })
+    this.followsField(
+      row(t('chat.change.field.after')).createDiv('pm-change-form-picker'),
+      NEW_TICKET,
+      target.project,
+      candidates,
+      upstream
+    )
+    // Written by title where that names it alone — the proposal reads as written —, by id otherwise.
+    const followed = (): string[] =>
+      upstream.map((id) => {
+        const found = candidates.find((candidate) => candidate.id === id)
+        if (!found) return id
+        const byTitle = findTicket(candidates, found.title, target.project.title)
+        return 'found' in byTitle && byTitle.found.id === id ? found.title : id
+      })
 
     // The project by its name where no other has it — the proposal reads as written —, by its path otherwise.
     const projectName = (path: string): string => {
@@ -414,8 +461,8 @@ class ChangeCard extends MarkdownRenderChild {
         start: start.value,
         due: due.value,
         progress: progress.value,
-        assignees: assignees.value,
-        after: after.value
+        assignees: [...people],
+        after: followed()
       }
     })
     // Another project: its lots, and its lists, drawn — what was typed kept.
@@ -632,6 +679,190 @@ class ChangeCard extends MarkdownRenderChild {
     } else this.body(card, ticketFieldLabel(resolved.field), null, false)
     this.why(card, spec.why)
     this.footer(card, resolved, () => this.applyTicket(spec))
+    if (!(resolved.ok && resolved.applied)) this.editButton(card)
+  }
+
+  /** The way into the form, beside the card's own button: its fields changed before it is applied. */
+  private editButton(card: HTMLElement): void {
+    const foot = card.querySelector('.pm-change-foot') ?? card.createDiv('pm-change-foot')
+    const edit = foot.createEl('button', { text: t('chat.change.edit') })
+    setIcon(edit.createSpan({ cls: 'pm-change-edit-icon' }), 'pencil')
+    edit.prepend(edit.lastChild as Node)
+    edit.addEventListener('click', () => {
+      this.editing = true
+      void this.draw()
+    })
+  }
+
+  /** People, picked as everywhere else: the team first, the vault's person notes as one types. */
+  private peopleField(container: HTMLElement, sourcePath: string, team: string[], people: string[]): void {
+    renderPersonPicker({
+      container,
+      plugin: this.plugin,
+      sourcePath,
+      extra: () => team,
+      addLabel: t('task.assign'),
+      selected: () => people,
+      add: (value) => {
+        if (!people.includes(value)) people.push(value)
+      },
+      remove: (value) => {
+        people.splice(people.indexOf(value), 1)
+      }
+    })
+  }
+
+  /** What a ticket follows, chosen in the plan's own shape — any ticket of the vault —, by id. */
+  private followsField(
+    container: HTMLElement,
+    ticket: string,
+    project: Project,
+    candidates: TicketCandidate[],
+    upstream: string[]
+  ): void {
+    renderMultiSelect({
+      container,
+      addLabel: t('task.addDependency'),
+      addLabelMore: t('task.addAnother'),
+      selected: () => upstream,
+      options: () => [],
+      labelFor: (id) => {
+        const found = candidates.find((candidate) => candidate.id === id)
+        if (!found) return id
+        return found.projectPath === project.filePath ? found.title : `${found.title} · ${found.projectTitle}`
+      },
+      openPicker: (refresh) => {
+        new DependencyPickerModal(this.plugin.app, {
+          plugin: this.plugin,
+          taskId: ticket,
+          homeProject: project.filePath,
+          selected: [...upstream],
+          onConfirm: (ids) => {
+            upstream.splice(0, upstream.length, ...ids)
+            refresh()
+          }
+        }).open()
+      },
+      add: (id) => {
+        if (!upstream.includes(id)) upstream.push(id)
+      },
+      remove: (id) => {
+        upstream.splice(upstream.indexOf(id), 1)
+      }
+    })
+  }
+
+  /**
+   * A proposed change to a ticket as a form: every field it can change, as proposed where
+   * the model proposed it and as the ticket says now elsewhere. Kept, the proposal holds
+   * the fields that differ from the ticket — any of them, not only those proposed.
+   */
+  private renderTicketForm(
+    card: HTMLElement,
+    spec: Extract<ChangeSpec, { kind: 'ticket' }>,
+    target: TicketTarget
+  ): void {
+    const { project, task, lists } = target
+    card.addClass('pm-change--editing')
+    this.head(card, 'square-pen', `${task.title} · ${project.title}`, null, t('chat.change.editTitle'))
+    const form = card.createDiv('pm-change-form')
+    const row = (label: string): HTMLElement => {
+      const line = form.createEl('label', { cls: 'pm-change-form-row' })
+      line.createSpan({ cls: 'pm-change-form-label', text: label })
+      return line
+    }
+    const proposed = (field: TicketChangeField): unknown => spec.changes.find((change) => change.field === field)?.value
+    const shown = (value: unknown): string =>
+      typeof value === 'string' || typeof value === 'number' ? String(value).trim() : ''
+    const listOf = (value: unknown): string[] =>
+      (Array.isArray(value) ? value.map(shown) : shown(value).split(/[,;]/)).map((one) => one.trim()).filter(Boolean)
+    const input = (label: string, value: string, type = 'text'): HTMLInputElement => {
+      const el = row(label).createEl('input', { attr: { type } })
+      el.value = value
+      return el
+    }
+    const select = (label: string, list: Option[], current: string, field: TicketChangeField): HTMLSelectElement => {
+      const el = row(label).createEl('select', { cls: 'dropdown' })
+      for (const option of list) el.createEl('option', { value: option.id, text: option.label })
+      el.value = pickOption(list, shown(proposed(field)))?.id ?? current
+      return el
+    }
+    const valueOr = (field: TicketChangeField, current: string): string => shown(proposed(field)) || current
+
+    const title = input(t('chat.change.field.title'), valueOr('title', task.title))
+    const status = select(t('chat.change.field.status'), lists.statuses, task.status, 'status')
+    const priority = select(t('chat.change.field.priority'), lists.priorities, task.priority, 'priority')
+    const start = input(t('chat.change.field.start'), valueOr('start', task.start), 'date')
+    const due = input(t('chat.change.field.due'), valueOr('due', task.due), 'date')
+    const progress = input(
+      t('chat.change.field.progress'),
+      valueOr('progress', String(task.progress)).replace(/\s*%$/, ''),
+      'number'
+    )
+    progress.min = '0'
+    progress.max = '100'
+    const people = proposed('assignees') !== undefined ? listOf(proposed('assignees')) : [...task.assignees]
+    this.peopleField(
+      row(t('chat.change.field.assignees')).createDiv('pm-change-form-picker'),
+      task.filePath ?? project.filePath,
+      project.teamMembers,
+      people
+    )
+    const upstream =
+      proposed('after') !== undefined
+        ? listOf(proposed('after')).map((one) => {
+            const found = findTicket(lists.candidates, one, project.title)
+            return 'found' in found ? found.found.id : one
+          })
+        : [...task.dependencies]
+    this.followsField(
+      row(t('chat.change.field.after')).createDiv('pm-change-form-picker'),
+      task.id,
+      project,
+      lists.candidates,
+      upstream
+    )
+
+    const foot = card.createDiv('pm-change-foot')
+    const save = foot.createEl('button', { cls: 'mod-cta', text: t('chat.change.saveEdits') })
+    save.addEventListener(
+      'click',
+      safeAsync(async () => {
+        const label = (list: Option[], id: string): string => list.find((option) => option.id === id)?.label ?? id
+        const sameSet = (a: string[], b: string[]): boolean =>
+          a.length === b.length && a.every((one) => b.includes(one))
+        // What differs from the ticket as it is: that is the change.
+        const edits: TicketEdits = {}
+        if (title.value.trim() && title.value.trim() !== task.title) edits.title = title.value
+        if (status.value !== task.status) edits.status = label(lists.statuses, status.value)
+        if (priority.value !== task.priority) edits.priority = label(lists.priorities, priority.value)
+        if (start.value !== task.start && start.value) edits.start = start.value
+        if (due.value !== task.due && due.value) edits.due = due.value
+        if (progress.value !== '' && Number(progress.value) !== task.progress) edits.progress = progress.value
+        if (!sameSet(people, task.assignees)) edits.assignees = [...people]
+        if (!sameSet(upstream, task.dependencies)) {
+          edits.after = upstream.map((id) => {
+            const found = lists.candidates.find((candidate) => candidate.id === id)
+            if (!found) return id
+            const byTitle = findTicket(lists.candidates, found.title, project.title)
+            return 'found' in byTitle && byTitle.found.id === id ? found.title : id
+          })
+        }
+        if (!Object.keys(edits).length) {
+          new Notice(t('chat.change.noEdits'))
+          return
+        }
+        save.disabled = true
+        await this.keepSource(ticketSource(withTicketEdits(spec, edits)))
+        this.editing = false
+        await this.draw()
+      })
+    )
+    const cancel = foot.createEl('button', { text: t('common.cancel') })
+    cancel.addEventListener('click', () => {
+      this.editing = false
+      void this.draw()
+    })
   }
 
   private app(): PMPlugin['app'] {

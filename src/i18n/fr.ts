@@ -1201,7 +1201,7 @@ export const fr: Catalog = {
   'chat.changeRequirement':
     'Pour une exigence : {"requirement": "identifiant", "field": "…", "value": "…", "why": "…"}. Champs : text (l’énoncé ; ajoute "lang" pour une autre langue que la langue source : {languages}), title, rationale, source, status ({statuses}), type ({types}), criticality ({criticalities}), verification ({verifications}).',
   'chat.changeTicket':
-    'Pour un ticket : {"ticket": "titre exact du ticket", "project": "titre de son projet", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, un seul bloc par ticket avec tous ses champs modifiés. Champs : title, status ({statuses}), priority ({priorities}), start et due (date AAAA-MM-JJ), progress (nombre de 0 à 100), assignees (liste de noms).',
+    'Pour un ticket : {"ticket": "titre exact du ticket", "project": "titre de son projet", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, un seul bloc par ticket avec tous ses champs modifiés. Champs : title, status ({statuses}), priority ({priorities}), start et due (date AAAA-MM-JJ), progress (nombre de 0 à 100), assignees (liste de noms), after (liste des titres des tickets qu’il suit, qui remplace ses dépendances).',
   'chat.change.title': 'Proposition',
   'chat.change.apply': 'Appliquer',
   'chat.change.applying': 'Application…',
@@ -1337,8 +1337,8 @@ export const fr: Catalog = {
   'chat.change.editTitle': 'Modifier le ticket',
   'chat.change.defaultValue': '(par défaut)',
   'chat.change.field.project': 'Projet',
-  'chat.change.listHint': 'Séparés par des virgules',
   'chat.change.saveEdits': 'Enregistrer',
+  'chat.change.noEdits': 'Aucun champ ne diffère du ticket actuel : rien à enregistrer.',
   'chat.change.newTitle': 'Nouveau ticket',
   'chat.change.create': 'Créer',
   'chat.change.created': 'Créé',

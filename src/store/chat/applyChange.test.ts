@@ -193,6 +193,31 @@ describe('applying a change to a ticket', () => {
     expect(moved?.start && moved.start > '2026-07-17').toBe(true)
   })
 
+  it('sets what a ticket follows, and schedules it after', async () => {
+    const { path, first, second } = await plan()
+    const project = await store.loadProjectByPath(path)
+    if (!project) throw new Error('no project')
+    const third = makeTask({ title: 'Radier', start: '2026-07-01', due: '2026-07-02' })
+    await store.insertTask(project, third)
+    index.build()
+    const done = await applyToTicket(
+      index,
+      store,
+      spec('ticket', { ticket: 'Radier', changes: { after: ['Soutènement'] } })
+    )
+    expect(done).toMatchObject({ ok: true, changed: true })
+    const radier = await task(path, third.id)
+    expect(radier?.dependencies).toEqual([second])
+    // Scheduled after what it now follows.
+    expect(radier?.start && radier.start > '2026-07-07').toBe(true)
+    // Said again: nothing to do.
+    index.build()
+    expect(
+      await applyToTicket(index, store, spec('ticket', { ticket: 'Radier', changes: { after: ['Soutènement'] } }))
+    ).toMatchObject({ ok: true, changed: false })
+    expect((await task(path, first))?.dependencies).toEqual([])
+  })
+
   it('finishes a ticket by its status label, stamping when it was finished', async () => {
     const { path, first } = await plan()
     const label = DEFAULT_SETTINGS.statuses.find((status) => status.id === 'done')?.label ?? 'done'

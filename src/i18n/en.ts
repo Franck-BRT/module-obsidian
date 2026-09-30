@@ -1222,7 +1222,7 @@ export const en = {
   'chat.changeRequirement':
     'For a requirement: {"requirement": "identifier", "field": "…", "value": "…", "why": "…"}. Fields: text (the statement; add "lang" for a language other than the source language: {languages}), title, rationale, source, status ({statuses}), type ({types}), criticality ({criticalities}), verification ({verifications}).',
   'chat.changeTicket':
-    'For a ticket: {"ticket": "exact title of the ticket", "project": "title of its project", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, a single block per ticket with all its changed fields. Fields: title, status ({statuses}), priority ({priorities}), start and due (YYYY-MM-DD date), progress (number from 0 to 100), assignees (list of names).',
+    'For a ticket: {"ticket": "exact title of the ticket", "project": "title of its project", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, a single block per ticket with all its changed fields. Fields: title, status ({statuses}), priority ({priorities}), start and due (YYYY-MM-DD date), progress (number from 0 to 100), assignees (list of names), after (list of the titles of the tickets it follows, replacing its dependencies).',
   'chat.change.title': 'Proposal',
   'chat.change.apply': 'Apply',
   'chat.change.applying': 'Applying…',
@@ -1358,8 +1358,8 @@ export const en = {
   'chat.change.editTitle': 'Edit the ticket',
   'chat.change.defaultValue': '(default)',
   'chat.change.field.project': 'Project',
-  'chat.change.listHint': 'Separated by commas',
   'chat.change.saveEdits': 'Save',
+  'chat.change.noEdits': 'No field differs from the ticket as it is: nothing to save.',
   'chat.change.newTitle': 'New ticket',
   'chat.change.create': 'Create',
   'chat.change.created': 'Created',
