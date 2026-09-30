@@ -1395,6 +1395,13 @@ export const fr: Catalog = {
     'Ta réponse a été coupée. Continue exactement là où tu t’es arrêté, sans répéter ce que tu as déjà écrit, jusqu’à la fin.',
   'chat.fileCut':
     '« {name} » est long : seuls ses {sent} premiers caractères sur {total} sont envoyés au modèle. Les tâches au-delà ne seront pas vues.',
+  'settings.chat.noteChars': 'Longueur maximale d’une note jointe',
+  'settings.chat.noteCharsDesc':
+    'En caractères (environ 3,5 par jeton). 0 : la note est toujours envoyée entière. Au-delà, le chat reçoit le début de la note et les passages qui parlent de la question. Si le modèle refuse une note trop longue pour lui, elle est renvoyée automatiquement, plus courte.',
+  'chat.noteExcerpted':
+    '[Note trop longue pour être envoyée entière : {sent} caractères sur {total}, soit son début et les passages qui parlent de la question, les coupures marquées […]. Dis-le si la réponse demande la note entière.]',
+  'chat.noteShortened':
+    'La note jointe était trop longue pour le modèle : elle est renvoyée réduite à {sent} caractères sur {total}.',
   'settings.chat.maxTokens': 'Longueur maximale des réponses',
   'settings.chat.maxTokensDesc':
     'En jetons. 0 : aucune limite du plugin, celle de la passerelle s’applique (recommandé : une mise à jour de planning propose beaucoup de modifications).',

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { chatMessages, currentContext, readableNote, withNote, withoutFailure, type ChatTurn } from './chatSession'
+import {
+  chatMessages,
+  currentContext,
+  NOTE_CONTEXT_BUDGET,
+  NOTE_FLOOR,
+  readableNote,
+  shorterNote,
+  withNote,
+  withoutFailure,
+  type ChatTurn
+} from './chatSession'
 
 const turn = (role: ChatTurn['role'], content: string, failed = false): ChatTurn => ({
   role,
@@ -89,6 +99,47 @@ describe('withNote', () => {
   it('cuts in the middle when no paragraph ends near the budget', () => {
     const sent = withNote('S', note('x'.repeat(500)), words, 100)
     expect(sent).toContain(`${'x'.repeat(100)}\n\n[tronquée : 100 sur 500]`)
+  })
+})
+
+describe('a long note with a question', () => {
+  const words = {
+    heading: (title: string) => `Note : ${title}`,
+    truncated: (sent: number, total: number) => `[tronquée : ${sent} sur ${total}]`,
+    excerpted: (sent: number, total: number) => `[passages : ${sent} sur ${total}]`
+  }
+  const pages = Array.from({ length: 40 }, (_, at) =>
+    at === 31 ? 'Critère d’arrêt : on s’arrête quand la température est figée.' : `Page ${at} : ${'texte '.repeat(40)}`
+  ).join('\n\n')
+  const note = { path: 'S.md', title: 'S', content: pages }
+
+  it('goes whole within the budget, which holds a long transcription', () => {
+    expect(NOTE_CONTEXT_BUDGET).toBeGreaterThanOrEqual(100000)
+    expect(withNote('S', note, words)).toContain('Critère d’arrêt')
+  })
+
+  it('goes by its start and the passages the question speaks of, when over the budget', () => {
+    const sent = withNote('S', note, words, 3000, ['critere', 'arret'])
+    expect(sent).toContain('Page 0 :')
+    expect(sent).toContain('Critère d’arrêt')
+    expect(sent).toContain('[…]')
+    expect(sent).toMatch(/\[passages : \d+ sur \d+\]/)
+    // Nothing the question speaks of: its start, cut.
+    expect(withNote('S', note, words, 3000, ['inexistant'])).toMatch(/\[tronquée : \d+ sur \d+\]/)
+  })
+
+  it('is sent again at half when the model finds it too long, never below a few pages', () => {
+    const tooLong = Object.assign(new Error('Rejected (400). — This model’s maximum context length is 32768 tokens'), {
+      status: 400
+    })
+    expect(shorterNote(tooLong, Infinity, 86444)).toBe(43222)
+    expect(shorterNote(tooLong, 43222, 86444)).toBe(21611)
+    expect(shorterNote(tooLong, 21611, 86444)).toBe(NOTE_FLOOR)
+    expect(shorterNote(tooLong, NOTE_FLOOR, 86444)).toBeNull()
+    expect(shorterNote(Object.assign(new Error('Payload'), { status: 413 }), 50000, 50000)).toBe(25000)
+    // Another failure is not the note's doing.
+    expect(shorterNote(new Error('The gateway could not reach the model (502).'), Infinity, 86444)).toBeNull()
+    expect(shorterNote(tooLong, Infinity, 8000)).toBeNull()
   })
 })
 

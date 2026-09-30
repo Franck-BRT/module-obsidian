@@ -1415,6 +1415,13 @@ export const en = {
     'Your reply was cut. Continue exactly where you stopped, without repeating what you already wrote, until the end.',
   'chat.fileCut':
     '“{name}” is long: only its first {sent} characters out of {total} are sent to the model. The tasks past them will not be seen.',
+  'settings.chat.noteChars': 'Longest attached note',
+  'settings.chat.noteCharsDesc':
+    'In characters (about 3.5 a token). 0: the note is always sent whole. Past it, the chat gets the start of the note and the passages the question speaks of. When the model turns down a note too long for it, it is sent again, shorter, on its own.',
+  'chat.noteExcerpted':
+    '[Note too long to be sent whole: {sent} characters of {total}, its start and the passages the question speaks of, the gaps marked […]. Say so when the answer needs the whole note.]',
+  'chat.noteShortened':
+    'The attached note was too long for the model: it is sent again, cut down to {sent} characters of {total}.',
   'settings.chat.maxTokens': 'Longest reply',
   'settings.chat.maxTokensDesc':
     'In tokens. 0: no limit of the plugin’s own, the gateway’s applies (recommended: a planning update proposes many changes).',

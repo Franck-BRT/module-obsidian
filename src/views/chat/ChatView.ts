@@ -19,6 +19,7 @@ import {
   currentContext,
   readableNote,
   withNote,
+  shorterNote,
   withoutFailure,
   type ChatTurn,
   type ContextNote
@@ -2112,10 +2113,21 @@ export class ChatView extends ItemView {
     try {
       // The note as it is at the moment of asking: the reader may have just edited it.
       const note = await this.contextNote(currentContext(this.turns))
-      const system = withNote(t('chat.system', { date: new Date().toISOString().slice(0, 10) }), note, {
-        heading: (title, path) => t('chat.noteHeading', { title, path }),
-        truncated: (sent, total) => t('chat.noteTruncated', { sent, total })
-      })
+      const question = questionWords([...this.turns].reverse().find((turn) => turn.role === 'user')?.content ?? '')
+      // The note whole up to what the reader allows; past it, its passages the question speaks of.
+      const systemFor = (budget: number): string =>
+        withNote(
+          t('chat.system', { date: new Date().toISOString().slice(0, 10) }),
+          note,
+          {
+            heading: (title, path) => t('chat.noteHeading', { title, path }),
+            truncated: (sent, total) => t('chat.noteTruncated', { sent, total }),
+            excerpted: (sent, total) => t('chat.noteExcerpted', { sent, total })
+          },
+          budget,
+          question
+        )
+      let noteBudget = this.plugin.settings.chat.noteChars > 0 ? this.plugin.settings.chat.noteChars : Infinity
       // The requirements as the library holds them now, not as they were when chosen.
       const requirements = currentRequirements(this.turns)
         .map((id) => this.plugin.index.requirementById(id))
@@ -2141,28 +2153,41 @@ export class ChatView extends ItemView {
       ]
         .filter(Boolean)
         .join('\n\n')
-      const request = {
+      const requestFor = (budget: number) => ({
         model,
         messages: chatMessages(
           this.turns,
-          [system, project?.text, block, files, library, skills, how].filter(Boolean).join('\n\n')
+          [systemFor(budget), project?.text, block, files, library, skills, how].filter(Boolean).join('\n\n')
         ),
         // The chat's own limit, none by default: a reply proposing thirty changes is long,
         // and one cut at the reviews' thousand tokens stops after seven.
         maxTokens: Math.max(0, this.plugin.settings.chat.maxTokens)
-      }
-      let reply: string
+      })
+      let reply = ''
       let stopped = false
       let truncated = false
-      if (this.stopper) {
-        const outcome = await this.llm.chatStream(request, (text) => this.showLive(text), {
-          signal: this.stopper.signal,
-          onFallback: () => new Notice(t('chat.streamFallback'), 10000)
-        })
-        reply = outcome.text
-        stopped = outcome.stopped
-        truncated = outcome.truncated
-      } else ({ text: reply, truncated } = await this.llm.reply(request))
+      const noteLength = note?.content.trim().length ?? 0
+      for (;;) {
+        const request = requestFor(noteBudget)
+        try {
+          if (this.stopper) {
+            const outcome = await this.llm.chatStream(request, (text) => this.showLive(text), {
+              signal: this.stopper.signal,
+              onFallback: () => new Notice(t('chat.streamFallback'), 10000)
+            })
+            reply = outcome.text
+            stopped = outcome.stopped
+            truncated = outcome.truncated
+          } else ({ text: reply, truncated } = await this.llm.reply(request))
+          break
+        } catch (error) {
+          // Too long for the model: the note, the likeliest culprit, sent again at half.
+          const next = shorterNote(error, noteBudget, noteLength)
+          if (next === null) throw error
+          noteBudget = next
+          new Notice(t('chat.noteShortened', { sent: next, total: noteLength }), 10000)
+        }
+      }
       // A ticket proposed as new that is there already: the change to it the model meant.
       if (project) {
         try {

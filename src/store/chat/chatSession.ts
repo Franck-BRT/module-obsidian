@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../llm'
+import { excerptFor } from './chatFile'
 import { COLLECTION_FRONTMATTER_KEY, FRONTMATTER_KEY, TASK_FRONTMATTER_KEY } from '../YamlParser'
 
 /**
@@ -97,11 +98,12 @@ export function withoutFailure(turns: ChatTurn[]): ChatTurn[] {
 }
 
 /**
- * How much of a note goes with a question, in characters: about three thousand tokens,
- * half the room the conversation itself is given. A note longer than that is cut, and
- * the model is told it was.
+ * How much of a note goes with a question, in characters, unless the reader says
+ * otherwise: some sixty thousand tokens, a long transcription whole, within what the
+ * large models read at once. A note longer than that goes by passages, and the model is
+ * told; a model that reads less says so, and the note is sent again, shorter.
  */
-export const NOTE_CONTEXT_BUDGET = 12000
+export const NOTE_CONTEXT_BUDGET = 200000
 
 export interface ContextNote {
   path: string
@@ -114,31 +116,41 @@ export interface ContextWords {
   heading: (title: string, path: string) => string
   /** What is said where the note was cut: how much of how much was sent. */
   truncated: (sent: number, total: number) => string
+  /** What is said when only passages of it were sent: those the question speaks of. */
+  excerpted?: (sent: number, total: number) => string
 }
 
 /**
  * The instructions, with the note the question is about after them.
  *
  * In the instructions rather than in the question: the note is what the conversation is
- * about, not something the reader said, and it is not kept in the record. A note over the
- * budget is cut at a paragraph where one falls in its last third, so the model reads
- * whole paragraphs — and is told the rest exists, so it does not answer as if it had
- * read it.
+ * about, not something the reader said, and it is not kept in the record. A note within
+ * the budget goes whole. One over it goes by its opening and the passages the question
+ * speaks of (`question`, its words), or, when none does, is cut at a paragraph where one
+ * falls in its last third — and the model is told the rest exists, so it does not answer
+ * as if it had read it.
  */
 export function withNote(
   system: string,
   note: ContextNote | null,
   words: ContextWords,
-  budget = NOTE_CONTEXT_BUDGET
+  budget = NOTE_CONTEXT_BUDGET,
+  question: string[] = []
 ): string {
   if (!note) return system
   const content = note.content.trim()
   let sent = content
   let tail = ''
   if (content.length > budget) {
-    const paragraph = content.lastIndexOf('\n\n', budget)
-    sent = content.slice(0, paragraph > budget * 0.66 ? paragraph : budget).trimEnd()
-    tail = `\n\n${words.truncated(sent.length, content.length)}`
+    const passages = words.excerpted ? excerptFor(content, budget, question) : null
+    if (passages && words.excerpted) {
+      sent = passages
+      tail = `\n\n${words.excerpted(sent.length, content.length)}`
+    } else {
+      const paragraph = content.lastIndexOf('\n\n', budget)
+      sent = content.slice(0, paragraph > budget * 0.66 ? paragraph : budget).trimEnd()
+      tail = `\n\n${words.truncated(sent.length, content.length)}`
+    }
   }
   return `${system}\n\n${words.heading(note.title, note.path)}\n<note path="${note.path}">\n${sent}${tail}\n</note>`
 }
@@ -172,4 +184,27 @@ export function currentContext(turns: ChatTurn[]): string | undefined {
     if (turns[at].role === 'user') return turns[at].context
   }
   return undefined
+}
+
+/** The least of a note sent, however short the model's reading: a few pages. */
+export const NOTE_FLOOR = 12000
+
+/** Whether a failure is the model finding the question too long for it, by what the gateway said. */
+export function tooLongForModel(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const status = (error as { status?: unknown }).status
+  if (status === 413) return true
+  return /context|too many tokens|too long|token limit|maximum.{0,40}tokens|reduce the length/i.test(error.message)
+}
+
+/**
+ * How much of the note to send again when the model found the question too long: half of
+ * what went, never below a few pages. Null when that is not what failed, or when there is
+ * nothing more to take off.
+ */
+export function shorterNote(error: unknown, budget: number, length: number): number | null {
+  if (!tooLongForModel(error)) return null
+  const sent = Math.min(budget, length)
+  if (sent <= NOTE_FLOOR) return null
+  return Math.max(NOTE_FLOOR, Math.floor(sent / 2))
 }
