@@ -1216,6 +1216,8 @@ export const en = {
   'chat.projectAfter': 'after',
   'chat.projectEmpty': '(no tickets)',
   'chat.projectDoneLeft': '({count} finished ticket(s) not shown for lack of room.)',
+  'chat.projectUnlisted':
+    'Tickets not detailed for lack of room, by their title and status: they do exist. To change one, use the change format (« ticket »), never « create ».',
   'chat.projectLeft': '({count} more line(s) not shown for lack of room. Say so if the question concerns them.)',
   'chat.changeHow':
     'When the person asks you to change what is attached, or when a precise change answers their question, write each change in a ```pm-change``` code block holding a single JSON object: the person will see the before and after and apply it with one click. One block per changed field, with a sentence justifying the change in "why". Write no block when you are only asked for an opinion, and propose nothing on what is not attached.',
@@ -1328,6 +1330,12 @@ export const en = {
   'chat.changePlanning':
     'If an attached file is a planning, compare each of its tasks with the project’s tickets (same title or same meaning), and propose for each ticket that changes a single block with all its changed fields. Go through every task of the planning, one by one, to the last: leave none out and never sum up with “etc.” or “likewise for the others”. Dates as YYYY-MM-DD, whatever their format in the file. For the planning’s tasks that have no ticket, propose to create them, under their lot where it exists, with their dates, owners and what they follow. List separately, without blocks, the tickets missing from the planning.',
   'chat.change.applyAll': 'Apply all ({count})',
+  'chat.change.undo': 'Undo',
+  'chat.change.undoHint': 'Put the {count} ticket(s) it touched back as they were',
+  'chat.change.undone': 'Undone: {name} ({count} ticket(s) put back as they were).',
+  'chat.change.undoConflicts': 'Left as they are, changed since: {list}.',
+  'chat.change.undoAll': 'Undo all ({count})',
+  'chat.change.undoAllName': '{count} proposal(s)',
   'chat.change.allDone': 'Proposals: {applied} applied, {already} already in place, {refused} refused.',
   'chat.presetScope.file': 'file',
   'chat.presetScope.planning': 'planning',

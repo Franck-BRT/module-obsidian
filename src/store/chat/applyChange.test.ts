@@ -11,12 +11,14 @@ import {
   applyCreate,
   applyToRequirement,
   applyToTicket,
+  applyWithUndo,
   asModifications,
   createLot,
   existingTicket,
   createPlace,
   projectsLike,
-  ticketPlaces
+  ticketPlaces,
+  undoChange
 } from './applyChange'
 import { changeBlocks, parseChange, verificationOptions, type ChangeSpec, type ReqOptions } from './chatChange'
 
@@ -460,5 +462,110 @@ describe('creating a ticket from the chat', () => {
       problem: 'project',
       allowed: ['Ligne 6']
     })
+  })
+})
+
+describe('undoing a change applied from the chat', () => {
+  let index: VaultIndex
+  let store: ProjectStore
+  const label = (type: string): string => type
+
+  beforeEach(() => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    index = new VaultIndex(app, () => DEFAULT_SETTINGS)
+    store = new ProjectStore(app, () => DEFAULT_SETTINGS, index)
+  })
+
+  async function plan() {
+    const civil = await store.createProject('Génie civil', 'Work')
+    const other = await store.createProject('Équipements', 'Work')
+    const first = makeTask({ title: 'Déblais', start: '2026-07-01', due: '2026-07-03', assignees: ['Anne'] })
+    const second = makeTask({ title: 'Soutènement', start: '2026-07-06', due: '2026-07-07', dependencies: [first.id] })
+    // In another project, waiting on the second: a date moved reaches it too.
+    const third = makeTask({ title: 'Pompes', start: '2026-07-08', due: '2026-07-09', dependencies: [second.id] })
+    const alone = makeTask({ title: 'Clôture', start: '2026-07-01', due: '2026-07-02' })
+    await store.insertTask(civil, first)
+    await store.insertTask(civil, second)
+    await store.insertTask(civil, alone)
+    await store.insertTask(other, third)
+    index.build()
+    return { civil: civil.filePath, other: other.filePath, first: first.id, second: second.id, third: third.id }
+  }
+
+  async function task(path: string, id: string) {
+    const project = await store.loadProjectByPath(path)
+    return project ? findTaskById(project, id) : null
+  }
+
+  it('puts back the ticket and everything its new dates moved, in every project', async () => {
+    const { civil, other, first, second, third } = await plan()
+    const change = spec('ticket', {
+      ticket: 'Déblais',
+      changes: { start: '2026-07-15', due: '2026-07-17', assignees: ['Paul'], status: 'Done' }
+    })
+    const { done, record } = await applyWithUndo(index, store, change, 'Déblais', label, () =>
+      applyToTicket(index, store, change)
+    )
+    expect(done).toMatchObject({ ok: true, changed: true })
+    expect(record?.changed.map((step) => step.title).sort()).toEqual(['Déblais', 'Pompes', 'Soutènement'])
+    expect(record?.created).toEqual([])
+    expect((await task(other, third))?.start).not.toBe('2026-07-08')
+    index.build()
+    expect(await undoChange(store, record!)).toEqual({ restored: 3, removed: 0, conflicts: [] })
+    expect(await task(civil, first)).toMatchObject({
+      start: '2026-07-01',
+      due: '2026-07-03',
+      assignees: ['Anne'],
+      completed: ''
+    })
+    expect((await task(civil, first))?.status).not.toBe('done')
+    expect(await task(civil, second)).toMatchObject({ start: '2026-07-06', due: '2026-07-07' })
+    expect(await task(other, third)).toMatchObject({ start: '2026-07-08', due: '2026-07-09' })
+  })
+
+  it('leaves a ticket changed since, and names it', async () => {
+    const { civil, other, first, second, third } = await plan()
+    const change = spec('ticket', { ticket: 'Déblais', changes: { due: '2026-07-10' } })
+    const { record } = await applyWithUndo(index, store, change, 'Déblais', label, () =>
+      applyToTicket(index, store, change)
+    )
+    const project = await store.loadProjectByPath(civil)
+    await store.updateTask(project!, second, { assignees: ['Chloé'], due: '2026-07-30' })
+    index.build()
+    expect(await undoChange(store, record!)).toMatchObject({ restored: 2, conflicts: ['Soutènement'] })
+    expect((await task(civil, first))?.due).toBe('2026-07-03')
+    expect((await task(civil, second))?.due).toBe('2026-07-30')
+    // What waits on the ticket left as it is stays after it.
+    const pumps = await task(other, third)
+    expect(pumps?.start && pumps.start > '2026-07-30').toBe(true)
+  })
+
+  it('removes a ticket it made, unless changed since; records nothing when nothing was written', async () => {
+    const { civil } = await plan()
+    const change = spec('create', { create: 'Radier', project: 'Génie civil', changes: { after: ['Déblais'] } })
+    const { record } = await applyWithUndo(index, store, change, 'Radier', label, () =>
+      applyCreate(index, store, change, label)
+    )
+    expect(record?.created.map((made) => made.title)).toEqual(['Radier'])
+    index.build()
+    expect(await undoChange(store, record!)).toMatchObject({ removed: 1, conflicts: [] })
+    const titles = async () =>
+      (await store.loadProjectByPath(civil))?.tasks.map((one) => one.title).filter((title) => title === 'Radier')
+    expect(await titles()).toEqual([])
+    // Made again, then renamed by hand: left.
+    const again = await applyWithUndo(index, store, change, 'Radier', label, () =>
+      applyCreate(index, store, change, label)
+    )
+    const project = await store.loadProjectByPath(civil)
+    const radier = project?.tasks.find((one) => one.title === 'Radier')
+    await store.updateTask(project!, radier!.id, { due: '2026-12-01' })
+    expect(await undoChange(store, again.record!)).toMatchObject({ removed: 0, conflicts: ['Radier'] })
+    // Asked again, already there: nothing written, nothing to undo.
+    index.build()
+    const twice = await applyWithUndo(index, store, change, 'Radier', label, () =>
+      applyCreate(index, store, change, label)
+    )
+    expect(twice).toMatchObject({ done: { ok: true, changed: false }, record: null })
   })
 })

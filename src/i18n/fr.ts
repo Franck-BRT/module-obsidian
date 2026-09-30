@@ -1195,6 +1195,8 @@ export const fr: Catalog = {
   'chat.projectAfter': 'après',
   'chat.projectEmpty': '(aucun ticket)',
   'chat.projectDoneLeft': '({count} ticket(s) terminé(s) non montré(s) faute de place.)',
+  'chat.projectUnlisted':
+    'Tickets non détaillés faute de place, par leur titre et leur statut : ils existent bien. Pour en changer un, utilise le format de modification (« ticket »), jamais « create ».',
   'chat.projectLeft': '({count} autre(s) ligne(s) non montrée(s) faute de place. Dis-le si la question les concerne.)',
   'chat.changeHow':
     'Quand la personne te demande de modifier ce qui est joint, ou quand une modification précise répond à sa question, écris chaque modification dans un bloc de code ```pm-change``` contenant un seul objet JSON : la personne verra l’avant et l’après, et l’appliquera d’un clic. Un bloc par champ modifié, avec en "why" une phrase qui justifie la modification. N’écris aucun bloc quand on ne te demande qu’un avis, et ne propose rien sur ce qui n’est pas joint.',
@@ -1307,6 +1309,12 @@ export const fr: Catalog = {
   'chat.changePlanning':
     'Si un fichier joint est un planning, compare chacune de ses tâches aux tickets du projet (même titre ou même sens), et propose pour chaque ticket qui change un seul bloc avec tous ses champs modifiés. Traite toutes les tâches du planning, une par une, jusqu’à la dernière : n’en omets aucune et ne résume jamais par « etc. » ou « de même pour les autres ». Dates au format AAAA-MM-JJ, quel que soit leur format dans le fichier. Pour les tâches du planning qui n’ont pas de ticket, propose leur création, sous leur lot quand il existe, avec leurs dates, leurs responsables et ce qu’elles suivent. Liste à part, sans bloc, les tickets absents du planning.',
   'chat.change.applyAll': 'Tout appliquer ({count})',
+  'chat.change.undo': 'Annuler',
+  'chat.change.undoHint': 'Remettre les {count} ticket(s) touché(s) comme ils étaient avant',
+  'chat.change.undone': 'Annulé : {name} ({count} ticket(s) remis comme avant).',
+  'chat.change.undoConflicts': 'Laissés tels quels, modifiés depuis : {list}.',
+  'chat.change.undoAll': 'Tout annuler ({count})',
+  'chat.change.undoAllName': '{count} proposition(s)',
   'chat.change.allDone': 'Propositions : {applied} appliquée(s), {already} déjà en place, {refused} refusée(s).',
   'chat.presetScope.file': 'fichier',
   'chat.presetScope.planning': 'planning',

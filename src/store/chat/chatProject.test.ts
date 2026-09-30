@@ -35,7 +35,8 @@ const WORDS: ProjectWords = {
   file: 'fichier',
   noTickets: '(aucun ticket)',
   doneLeft: (count) => `(${count} tickets terminés non montrés)`,
-  left: (count) => `(${count} autres non montrés faute de place)`
+  left: (count) => `(${count} autres non montrés faute de place)`,
+  unlisted: 'Autres tickets, par leur titre :'
 }
 
 const TODAY = '2026-09-28'
@@ -208,6 +209,24 @@ describe('projectContext', () => {
     expect(text).toContain('  - Tâche P · Done')
     expect(text).toContain('    - Tâche OPEN · To Do')
     expect(text).toContain('(30 tickets terminés non montrés)')
+    // Still there, by their title: as many as their share of the room holds.
+    expect(text).toContain('Autres tickets, par leur titre :\nTâche F-0 (Done) ; Tâche F-1 (Done)')
+    const named = (text.match(/Tâche F-\d+ \(Done\)/g) ?? []).length
+    expect(named).toBeGreaterThan(0)
+    expect(text).toContain(`(${30 - named} autres non montrés faute de place)`)
+  })
+
+  it('names every ticket left out when their titles fit, and says nothing more of them', () => {
+    const people = { assignees: ['Anne-Sophie Dupont', 'Jean-Baptiste Martin'], start: '2026-07-01', due: '2026-07-09' }
+    const plan = [
+      task('OPEN'),
+      ...Array.from({ length: 30 }, (_, at) => task(`F-${at}`, { status: 'done', ...people }))
+    ]
+    const text = projectContext(input(plan), WORDS, 2000)
+    expect(text).not.toContain('- Tâche F-')
+    expect(text).toContain('- Tâche OPEN')
+    expect(text).toContain('Tâche F-0 (Done) ; Tâche F-1 (Done)')
+    expect(text).toContain('Tâche F-29 (Done)')
     expect(text).not.toContain('faute de place')
   })
 
@@ -220,6 +239,28 @@ describe('projectContext', () => {
     expect(text).toContain(`(${40 - shown} autres non montrés faute de place)`)
     const lines = text.slice(text.indexOf('Tickets :')).split('\n')
     expect(lines.filter((line) => line.startsWith('- ')).join('\n').length).toBeLessThanOrEqual(300)
+    // The ones cut named after, from the first of them, and only those.
+    expect(text).toContain(`Autres tickets, par leur titre :\nTâche O-${shown} (To Do)`)
+    expect(text).not.toContain('Tâche O-0 (To Do)')
+  })
+
+  it('names nothing more when every ticket was shown, and a programme’s by project', () => {
+    expect(projectContext(input([task('A')]), WORDS)).not.toContain('Autres tickets')
+    const text = projectContext(
+      {
+        ...input([]),
+        program: true,
+        parts: [
+          { title: 'Équipements', path: 'eq.md', tasks: [task('LOT', { type: 'phase', subtasks: [task('E')] })] },
+          { title: 'Génie civil', path: 'gc.md', tasks: Array.from({ length: 20 }, (_, at) => task(`G-${at}`)) }
+        ]
+      },
+      WORDS,
+      400
+    )
+    expect(text).toContain('- Tâche LOT · Lot')
+    expect(text).toMatch(/\nGénie civil : Tâche G-\d+ \(To Do\) ; /)
+    expect(text).not.toContain('Équipements : ')
   })
 })
 

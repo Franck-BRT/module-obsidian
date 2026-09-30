@@ -67,6 +67,11 @@ export interface ProjectWords {
   doneLeft: (count: number) => string
   /** What is said when tickets were cut, however many there were. */
   left: (count: number) => string
+  /**
+   * What introduces the tickets that did not fit, named by their title alone: they are
+   * there, and a model that does not know it proposes to create them again.
+   */
+  unlisted: string
 }
 
 /**
@@ -74,6 +79,9 @@ export interface ProjectWords {
  * written out, beside the conversation and anything else attached.
  */
 export const PROJECT_BUDGET = 20000
+
+/** What the titles of the tickets left out may take, on top of the project's own budget, as a share of it. */
+const TITLES_SHARE = 0.4
 
 /** How much of the project's own description is kept: its opening, which says what it is. */
 const DESCRIPTION_BUDGET = 1500
@@ -143,8 +151,9 @@ function ticketLines(
   words: ProjectWords,
   openOnly: boolean,
   nameOf: (id: string) => string | undefined
-): { lines: string[]; skipped: number } {
+): { lines: string[]; ids: string[]; skipped: number } {
   const lines: string[] = []
+  const ids: string[] = []
   let skipped = 0
   const open = (task: Task): boolean =>
     (!isPhase(task) && !isTerminalStatus(task.status, input.statuses)) || task.subtasks.some(open)
@@ -155,11 +164,12 @@ function ticketLines(
         continue
       }
       lines.push(ticketLine(task, depth, input, words, nameOf))
+      ids.push(task.id)
       walk(task.subtasks, depth + 1)
     }
   }
   walk(tasks, 0)
-  return { lines, skipped }
+  return { lines, ids, skipped }
 }
 
 /** The tickets a ticket stands for, itself included; a lot counts only what it holds. */
@@ -213,16 +223,22 @@ export function projectContext(input: ProjectContextInput, words: ProjectWords, 
 
   // A programme's projects each under their own name: a ticket belongs somewhere.
   const titled = input.parts.length > 1 || input.program
-  const write = (openOnly: boolean): { lines: string[]; skipped: number } => {
+  // Each line with the ticket it writes, a part's heading with none.
+  const write = (openOnly: boolean): { lines: string[]; ids: (string | null)[]; skipped: number } => {
     const lines: string[] = []
+    const ids: (string | null)[] = []
     let skipped = 0
     for (const part of input.parts) {
       const written = ticketLines(part.tasks, input, words, openOnly, nameOf)
       skipped += written.skipped
-      if (titled) lines.push(`## ${part.title}`)
+      if (titled) {
+        lines.push(`## ${part.title}`)
+        ids.push(null)
+      }
       lines.push(...written.lines)
+      ids.push(...written.ids)
     }
-    return { lines, skipped }
+    return { lines, ids, skipped }
   }
   const size = (lines: string[]): number => lines.reduce((sum, line) => sum + line.length + 1, 0)
 
@@ -242,9 +258,11 @@ export function projectContext(input: ProjectContextInput, words: ProjectWords, 
     }
     const shown = kept.filter((line) => line.startsWith('- ') || line.startsWith(' ')).length
     const listed = written.lines.filter((line) => line.startsWith('- ') || line.startsWith(' ')).length
-    written = { lines: kept, skipped: written.skipped }
+    written = { lines: kept, ids: written.ids.slice(0, kept.length), skipped: written.skipped }
     tail = [tail, words.left(listed - shown)].filter(Boolean).join(' ')
   }
+  const unlisted = tail ? titlesLeft(input, new Set(written.ids), titled, words, Math.round(budget * TITLES_SHARE)) : ''
+  if (unlisted) tail = `${tail}\n\n${unlisted}`
 
   const tickets = all.length ? written.lines.join('\n') : words.noTickets
   return [
@@ -256,6 +274,46 @@ export function projectContext(input: ProjectContextInput, words: ProjectWords, 
     tickets + (tail ? `\n\n${tail}` : ''),
     '</project>'
   ].join('\n')
+}
+
+/**
+ * The tickets that did not fit, by their title and status alone, part by part — as many as
+ * the titles' own budget holds, and how many more past it. Empty when every one was shown.
+ */
+function titlesLeft(
+  input: ProjectContextInput,
+  shown: Set<string | null>,
+  titled: boolean,
+  words: ProjectWords,
+  budget: number
+): string {
+  const lines: string[] = []
+  let used = 0
+  let cut = 0
+  for (const part of input.parts) {
+    const names = flat(part.tasks)
+      .filter((task) => !shown.has(task.id))
+      .map((task) => {
+        const status = isPhase(task)
+          ? words.type('phase')
+          : (input.statuses.find((config) => config.id === task.status)?.label ?? task.status)
+        return `${task.title} (${status})`
+      })
+    if (!names.length) continue
+    const kept: string[] = []
+    for (const name of names) {
+      if (used + name.length + 3 > budget) {
+        cut++
+        continue
+      }
+      kept.push(name)
+      used += name.length + 3
+    }
+    if (kept.length) lines.push(`${titled ? `${part.title} : ` : ''}${kept.join(' ; ')}`)
+  }
+  if (!lines.length && !cut) return ''
+  if (cut) lines.push(words.left(cut))
+  return [words.unlisted, ...lines].join('\n')
 }
 
 /**

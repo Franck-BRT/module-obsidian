@@ -6,6 +6,7 @@ import type { TaskSource } from '../TaskSource'
 import type { RequirementStore } from '../requirements/RequirementStore'
 import { findTaskById } from '../TaskIndex'
 import type { VaultIndex } from '../VaultIndex'
+import { snapshot, undoPlan, undoRecord, type UndoRecord } from './chatUndo'
 import {
   changeBlocks,
   createAsTicket,
@@ -331,4 +332,96 @@ export async function asModifications(index: VaultIndex, store: TaskSource, repl
     if (change) text = replaceBlock(text, source, ticketSource(change)) ?? text
   }
   return text
+}
+
+/**
+ * The projects a change to one of them can reach: it, and every project holding a ticket
+ * that waits — however far down the chain — on one of its tickets, since a date moved
+ * moves those too.
+ */
+export async function projectsAround(index: VaultIndex, store: TaskSource, path: string): Promise<Project[]> {
+  const first = await store.loadProjectByPath(path)
+  if (!first) return []
+  const dependents = index.dependentsMap()
+  const paths = new Set([path])
+  const seen = new Set<string>()
+  const queue = flattenTasks(first.tasks).map(({ task }) => task.id)
+  while (queue.length) {
+    const id = queue.pop() as string
+    if (seen.has(id)) continue
+    seen.add(id)
+    for (const next of dependents.get(id) ?? []) {
+      const where = index.task(next)?.projectPath
+      if (where) paths.add(where)
+      queue.push(next)
+    }
+  }
+  return store.loadProjects([...paths])
+}
+
+/** The project a proposal writes into, found the way applying it finds it. */
+async function projectOf(
+  index: VaultIndex,
+  store: TaskSource,
+  spec: ChangeSpec,
+  typeLabel: (type: string) => string
+): Promise<string | null> {
+  if (spec.kind === 'ticket') {
+    const target = await ticketTarget(index, store, spec)
+    return 'problem' in target ? null : target.project.filePath
+  }
+  if (spec.kind === 'create') return (await createTarget(index, store, spec, typeLabel))?.project.filePath ?? null
+  return null
+}
+
+/**
+ * A proposal applied, with what it did kept to be undone: the plan around the project it
+ * writes into, before and after. Null record when nothing was written, or for what is not
+ * a ticket — a requirement keeps its own revisions.
+ */
+export async function applyWithUndo(
+  index: VaultIndex,
+  store: TaskSource,
+  spec: ChangeSpec,
+  label: string,
+  typeLabel: (type: string) => string,
+  apply: () => Promise<Applied>
+): Promise<{ done: Applied; record: UndoRecord | null }> {
+  const path = await projectOf(index, store, spec, typeLabel)
+  if (!path) return { done: await apply(), record: null }
+  const projects = await projectsAround(index, store, path)
+  const before = snapshot(projects)
+  const done = await apply()
+  if (!done.ok || !done.changed) return { done, record: null }
+  const after = snapshot(await store.loadProjects(projects.map((project) => project.filePath)))
+  return { done, record: undoRecord(before, after, label, new Date().toISOString()) }
+}
+
+/** What undoing came to: tickets put back, tickets removed, tickets changed since and left. */
+export interface Undone {
+  restored: number
+  removed: number
+  conflicts: string[]
+}
+
+/** A change from the chat taken back, as far as the plan still says what it made it say. */
+export async function undoChange(store: TaskSource, record: UndoRecord): Promise<Undone> {
+  const paths = [...new Set([...record.changed, ...record.created].map((step) => step.project))]
+  const projects = new Map((await store.loadProjects(paths)).map((project) => [project.filePath, project]))
+  const plan = undoPlan(record, (path, id) => {
+    const project = projects.get(path)
+    return project ? findTaskById(project, id) : null
+  })
+  for (const [path, project] of projects) {
+    const patches = new Map(plan.restore.filter((one) => one.project === path).map((one) => [one.id, one.patch]))
+    if (patches.size) await store.updateTasks(project, [...patches.keys()], (task) => patches.get(task.id) ?? null)
+    const made = plan.remove.filter((one) => one.project === path).map((one) => one.id)
+    if (made.length) await store.deleteTasks(project, made)
+  }
+  // A ticket left as someone changed it: what waits on it, put back, goes after it again.
+  for (const { project: path, id } of plan.kept) {
+    const project = projects.get(path)
+    if (project) await store.scheduleAfterChange(project, id)
+  }
+  return { restored: plan.restore.length, removed: plan.remove.length, conflicts: plan.conflicts }
 }

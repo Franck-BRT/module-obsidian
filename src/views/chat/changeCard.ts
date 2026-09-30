@@ -34,6 +34,8 @@ import {
   applyCreate,
   applyToRequirement,
   applyToTicket,
+  applyWithUndo,
+  undoChange,
   createLot,
   createPlace,
   createTarget,
@@ -41,7 +43,8 @@ import {
   projectsLike,
   ticketTarget,
   type Applied,
-  type TicketTarget
+  type TicketTarget,
+  type Undone
 } from '../../store/chat/applyChange'
 import { typeConfigOf } from '../../store/TicketPalette'
 import { fold } from '../../store/library/libraryDoc'
@@ -84,6 +87,15 @@ export function requirementOptions(plugin: PMPlugin): ReqOptions {
     verifications: verificationOptions(verificationLabel),
     languages: reqLanguages(settings)
   }
+}
+
+/** What taking a change back came to, said once. */
+export function reportUndone(undone: Undone, name: string): void {
+  const message = t('chat.change.undone', { name, count: undone.restored + undone.removed })
+  const left = undone.conflicts.length
+    ? `\n${t('chat.change.undoConflicts', { list: undone.conflicts.join(', ') })}`
+    : ''
+  new Notice(message + left, left ? 15000 : 5000)
 }
 
 /** Who a change applied from the chat is recorded as: the reader, where the vault knows them. */
@@ -209,6 +221,12 @@ class ChangeCard extends MarkdownRenderChild {
 
   onload(): void {
     void this.draw()
+    // Applied or taken back from the reply's buttons: whether it can be undone changed.
+    this.register(
+      this.plugin.chatUndo.onChange(() => {
+        if (!this.busy) void this.draw()
+      })
+    )
     this.register(
       this.plugin.index.onChange(() => {
         if (this.busy) return
@@ -228,6 +246,9 @@ class ChangeCard extends MarkdownRenderChild {
 
   private async draw(): Promise<void> {
     const generation = ++this.generation
+    // What can be undone is read from disk the first time.
+    await this.plugin.chatUndo.ready()
+    if (generation !== this.generation) return
     const read = parseChange(this.source)
     if ('problem' in read) {
       this.paint((card) => this.renderUnreadable(card, read.problem))
@@ -961,6 +982,7 @@ class ChangeCard extends MarkdownRenderChild {
       card.addClass('pm-change--done')
       setIcon(foot.createSpan({ cls: 'pm-change-state-icon' }), 'check')
       foot.createSpan({ cls: 'pm-change-state', text: words.done })
+      this.undoButton(foot)
       return
     }
     const button = foot.createEl('button', { cls: 'mod-cta', text: words.apply })
@@ -995,11 +1017,44 @@ class ChangeCard extends MarkdownRenderChild {
   }
 
   private async applyCreate(spec: Extract<ChangeSpec, { kind: 'create' }>): Promise<void> {
-    this.report(await applyCreate(this.plugin.index, this.plugin.store, this.placed(spec), typeLabel), spec.title)
+    const placed = this.placed(spec)
+    await this.keepUndo(placed, spec.title, () => applyCreate(this.plugin.index, this.plugin.store, placed, typeLabel))
   }
 
   private async applyTicket(spec: Extract<ChangeSpec, { kind: 'ticket' }>): Promise<void> {
-    this.report(await applyToTicket(this.plugin.index, this.plugin.store, spec), spec.target)
+    await this.keepUndo(spec, spec.target, () => applyToTicket(this.plugin.index, this.plugin.store, spec))
+  }
+
+  /** A change applied, reported, and kept so it can be taken back. */
+  private async keepUndo(spec: ChangeSpec, name: string, apply: () => Promise<Applied>): Promise<void> {
+    const { done, record } = await applyWithUndo(this.plugin.index, this.plugin.store, spec, name, typeLabel, apply)
+    if (record) await this.plugin.chatUndo.set(this.source, record)
+    this.report(done, name)
+  }
+
+  /** Beside a change in place that this card applied: the way to take it back. */
+  private undoButton(foot: Element): void {
+    const record = this.plugin.chatUndo.get(this.source)
+    if (!record) return
+    const button = foot.createEl('button', { cls: 'pm-change-undo', text: t('chat.change.undo') })
+    setIcon(button.createSpan({ cls: 'pm-change-edit-icon' }), 'undo-2')
+    button.prepend(button.lastChild as Node)
+    button.setAttr('title', t('chat.change.undoHint', { count: record.changed.length + record.created.length }))
+    button.addEventListener(
+      'click',
+      safeAsync(async () => {
+        button.disabled = true
+        this.busy = true
+        try {
+          const undone = await undoChange(this.plugin.store, record)
+          await this.plugin.chatUndo.delete(this.source)
+          reportUndone(undone, record.label)
+        } finally {
+          this.busy = false
+          await this.draw()
+        }
+      })
+    )
   }
 
   private report(done: Applied, target: string): void {

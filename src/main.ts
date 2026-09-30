@@ -99,6 +99,7 @@ import { askClassification, GUESS_CATEGORY, type ClassifyChoices } from './views
 import { proposeRegisterMatches } from './views/documents/matchRegister'
 import { followMoves } from './store/library/fileInRegister'
 import { adapterStorage, RagIndex } from './store/rag/RagIndex'
+import { UndoLog } from './store/chat/chatUndo'
 import { RagIndexer } from './store/rag/RagIndexer'
 import { excludedFolders, vaultSources } from './store/rag/ragSources'
 import { pourRegisterFiles } from './views/documents/pourRegisters'
@@ -143,6 +144,8 @@ export default class PMPlugin extends Plugin {
   ragIndexer!: RagIndexer
   /** Proposals the reader changed in the chat before making them: each as first written, and as changed. */
   changeEdits = new Map<string, string>()
+  /** The changes applied from the chat that can still be taken back. */
+  chatUndo!: UndoLog
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver
@@ -221,6 +224,9 @@ export default class PMPlugin extends Plugin {
       }
     )
     this.ragIndex = new RagIndex(adapterStorage(this.app, '.pm-rag'))
+    this.chatUndo = new UndoLog(
+      adapterStorage(this.app, this.manifest.dir ?? `${this.app.vault.configDir}/plugins/${this.manifest.id}`)
+    )
     this.ragIndexer = new RagIndexer(this.ragIndex, {
       sources: () =>
         vaultSources({

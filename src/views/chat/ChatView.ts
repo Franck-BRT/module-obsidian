@@ -41,10 +41,14 @@ import {
   applyCreate,
   applyToRequirement,
   applyToTicket,
+  applyWithUndo,
   ticketPlaces,
   asModifications,
-  type Applied
+  undoChange,
+  type Applied,
+  type Undone
 } from '../../store/chat/applyChange'
+import type { UndoRecord } from '../../store/chat/chatUndo'
 import {
   currentFiles,
   excerptFor,
@@ -78,7 +82,7 @@ import { keepDroppedFile } from '../../store/chat/keepFile'
 import { chatModel, chatModels } from '../../store/chat/chatModels'
 import { availablePrompts, parsePrompts, type ChatPrompt } from '../../store/chat/chatPrompts'
 import { builtinPrompts, scopeIcon } from './chatPresets'
-import { requirementOptions } from './changeCard'
+import { reportUndone, requirementOptions } from './changeCard'
 import type { Requirement } from '../../store/requirements/Requirement'
 import { ProjectScope, resolveScopePaths, type ScopeSpec } from '../../store/ProjectScope'
 import { collectionMemberIds } from '../../store/Collection'
@@ -1242,7 +1246,8 @@ export class ChatView extends ItemView {
       file: t('chat.projectFile'),
       noTickets: t('chat.projectEmpty'),
       doneLeft: (count) => t('chat.projectDoneLeft', { count }),
-      left: (count) => t('chat.projectLeft', { count })
+      left: (count) => t('chat.projectLeft', { count }),
+      unlisted: t('chat.projectUnlisted')
     }
   }
 
@@ -1678,7 +1683,8 @@ export class ChatView extends ItemView {
     }
     // A revised planning is a dozen proposals: one click for all of them, each still
     // checked as its own card would check it.
-    const blocks = changeBlocks(turn.content)
+    // As the reader changed them on their cards.
+    const blocks = changeBlocks(turn.content).map((block) => this.plugin.changeEdits.get(block.trim()) ?? block)
     if (blocks.length > 1) {
       const all = actions.createEl('button', { text: t('chat.change.applyAll', { count: blocks.length }) })
       all.addEventListener(
@@ -1689,6 +1695,23 @@ export class ChatView extends ItemView {
             await this.applyAll(blocks)
           } finally {
             all.disabled = false
+            this.render()
+          }
+        })
+      )
+    }
+    // Whatever of it was applied, taken back in one click, the last applied first.
+    const undoable = blocks.filter((block) => this.plugin.chatUndo.get(block) !== null)
+    if (undoable.length > 1) {
+      const back = actions.createEl('button', { text: t('chat.change.undoAll', { count: undoable.length }) })
+      back.addEventListener(
+        'click',
+        safeAsync(async () => {
+          back.disabled = true
+          try {
+            await this.undoAll(undoable)
+          } finally {
+            this.render()
           }
         })
       )
@@ -1854,19 +1877,44 @@ export class ChatView extends ItemView {
         done = path
           ? await applyToRequirement(this.plugin.requirements, path, spec, requirementOptions(this.plugin), by)
           : { ok: false, problem: 'none' }
-      } else if (spec.kind === 'create') {
-        done = await applyCreate(
+      } else {
+        const typeLabel = (type: string): string => typeConfigOf(type as TaskType).label
+        const kept = await applyWithUndo(
           this.plugin.index,
           this.plugin.store,
           spec,
-          (type) => typeConfigOf(type as TaskType).label
+          spec.kind === 'create' ? spec.title : spec.target,
+          typeLabel,
+          () =>
+            spec.kind === 'create'
+              ? applyCreate(this.plugin.index, this.plugin.store, spec, typeLabel)
+              : applyToTicket(this.plugin.index, this.plugin.store, spec)
         )
-      } else done = await applyToTicket(this.plugin.index, this.plugin.store, spec)
+        done = kept.done
+        if (kept.record) await this.plugin.chatUndo.set(source, kept.record)
+      }
       if (!done.ok) refused++
       else if (done.changed) applied++
       else already++
     }
     new Notice(t('chat.change.allDone', { applied, already, refused }), 10000)
+  }
+
+  /** Every change of a reply that can be taken back, taken back: the last applied first. */
+  private async undoAll(blocks: string[]): Promise<void> {
+    const kept = blocks
+      .map((source) => ({ source, record: this.plugin.chatUndo.get(source) }))
+      .filter((one): one is { source: string; record: UndoRecord } => one.record !== null)
+      .sort((a, b) => (a.record.at < b.record.at ? 1 : a.record.at > b.record.at ? -1 : 0))
+    const total: Undone = { restored: 0, removed: 0, conflicts: [] }
+    for (const { source, record } of kept) {
+      const undone = await undoChange(this.plugin.store, record)
+      await this.plugin.chatUndo.delete(source)
+      total.restored += undone.restored
+      total.removed += undone.removed
+      for (const title of undone.conflicts) if (!total.conflicts.includes(title)) total.conflicts.push(title)
+    }
+    reportUndone(total, t('chat.change.undoAllName', { count: kept.length }))
   }
 
   /** The ready questions that fit what is attached now. */
