@@ -229,3 +229,58 @@ export async function applyCreate(
   if (reschedule) await store.scheduleAfterChange(target.project, task.id)
   return { ok: true, name: task.title, changed: true }
 }
+
+/**
+ * A lot made at the top of a project, for a new ticket to go under — unless one of that
+ * title is there already, whatever its case and accents. True when one was made.
+ */
+export async function createLot(store: TaskSource, projectPath: string, title: string): Promise<boolean> {
+  const name = title.trim()
+  const project = name ? await store.loadProjectByPath(projectPath) : null
+  if (!project) return false
+  if (flattenTasks(project.tasks).some(({ task }) => !task.archived && fold(task.title) === fold(name))) return false
+  await store.insertTask(project, makeTask({ title: name, type: 'phase', start: '' }))
+  return true
+}
+
+/**
+ * The projects a new ticket could go into, those whose title looks like the name given
+ * first: the same, then one holding the other, then the rest in order.
+ */
+export function projectsLike(index: VaultIndex, name: string): ProjectCandidate[] {
+  const wanted = fold(name.trim())
+  const rank = (title: string): number => {
+    const own = fold(title)
+    if (!wanted) return 2
+    if (own === wanted) return 0
+    return own.includes(wanted) || wanted.includes(own) ? 1 : 2
+  }
+  return index
+    .projectRefs()
+    .filter((ref) => !ref.program && !ref.template)
+    .map((ref) => ({ path: ref.path, title: ref.title }))
+    .sort((a, b) => rank(a.title) - rank(b.title) || a.title.localeCompare(b.title))
+}
+
+/**
+ * The projects the conversation is about where tickets can be made — a programme stands
+ * for its projects — each with its lots, for the model to name them exactly.
+ */
+export async function ticketPlaces(
+  index: VaultIndex,
+  store: TaskSource,
+  paths: string[]
+): Promise<{ title: string; lots: string[] }[]> {
+  const wanted: string[] = []
+  for (const path of paths) {
+    const ref = index.projectRef(path)
+    if (!ref || ref.template) continue
+    const own = ref.program ? index.descendantRefs(path).filter((each) => !each.program && !each.template) : [ref]
+    for (const each of own) if (!wanted.includes(each.path)) wanted.push(each.path)
+  }
+  const projects = await store.loadProjects(wanted)
+  return projects.map((project) => ({
+    title: project.title,
+    lots: project.tasks.filter((task) => !task.archived && task.type === 'phase').map((task) => task.title)
+  }))
+}

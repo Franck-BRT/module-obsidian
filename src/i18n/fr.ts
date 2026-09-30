@@ -1322,6 +1322,17 @@ export const fr: Catalog = {
   'chat.change.pickProject':
     '« {program} » est un programme, qui ne reçoit pas de ticket : dans lequel de ses projets créer celui-ci ?',
   'chat.change.pickProjectButton': 'Choisir ce projet',
+  'chat.changePlaces':
+    'Projets où créer des tickets, chacun avec ses lots ({lot}) :\n{list}\n"project" nomme toujours exactement l’un de ces projets — jamais un programme — et "parent" exactement l’un de ses lots.',
+  'chat.changeNoLots': 'aucun lot',
+  'chat.changeAsk':
+    'Avant de proposer des tickets à créer, vérifie que tu sais où les mettre. Si le projet ou le lot n’est pas certain — plusieurs projets possibles, aucun lot qui corresponde, une demande ambiguë —, ne propose aucun bloc : pose d’abord une question courte, en listant les choix possibles tirés de la liste ci-dessus, et attends la réponse. Si le bon lot n’existe pas encore, dis-le et propose d’abord un bloc qui le crée (type {lot}, sans "parent"), puis les tickets avec "parent" égal au titre de ce nouveau lot. Pose de même une question quand il te manque une information qui change le résultat (dates, responsable, dépendances).',
+  'chat.change.pickProjectUnknown': 'Aucun projet ne s’appelle « {name} » : dans lequel créer ce ticket ?',
+  'chat.change.pickProjectNone': 'Le projet n’est pas précisé : dans lequel créer ce ticket ?',
+  'chat.change.createLot': 'Créer le lot « {title} »',
+  'chat.change.pickParent': 'ou le placer sous :',
+  'chat.change.atRoot': '(la racine du projet, sans lot)',
+  'chat.change.pickParentButton': 'Placer ici',
   'chat.change.newTitle': 'Nouveau ticket',
   'chat.change.create': 'Créer',
   'chat.change.created': 'Créé',

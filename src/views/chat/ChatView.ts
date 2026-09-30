@@ -37,7 +37,13 @@ import {
   type ProjectWords
 } from '../../store/chat/chatProject'
 import { changeBlocks, parseChange, withoutOpenChange } from '../../store/chat/chatChange'
-import { applyCreate, applyToRequirement, applyToTicket, type Applied } from '../../store/chat/applyChange'
+import {
+  applyCreate,
+  applyToRequirement,
+  applyToTicket,
+  ticketPlaces,
+  type Applied
+} from '../../store/chat/applyChange'
 import {
   currentFiles,
   excerptFor,
@@ -1147,7 +1153,8 @@ export class ChatView extends ItemView {
   private changeInstructions(
     requirements: boolean,
     project: { statuses: string[]; priorities: string[] } | null,
-    files: boolean
+    files: boolean,
+    places: { title: string; lots: string[] }[] = []
   ): string {
     if (!requirements && !project) return ''
     const lines = [t('chat.changeHow')]
@@ -1175,6 +1182,20 @@ export class ChatView extends ItemView {
             .join(', ')
         })
       )
+      // Where tickets can go, named exactly, and what to do when it is not clear.
+      if (places.length) {
+        lines.push(
+          t('chat.changePlaces', {
+            list: places
+              .map(
+                (place) => `- ${place.title} : ${place.lots.length ? place.lots.join(', ') : t('chat.changeNoLots')}`
+              )
+              .join('\n'),
+            lot: typeConfigOf('phase').label
+          })
+        )
+      }
+      lines.push(t('chat.changeAsk', { lot: typeConfigOf('phase').label }))
       // A planning received, read against the plan: what the whole feature is for.
       if (files) lines.push(t('chat.changePlanning'))
     }
@@ -2056,7 +2077,13 @@ export class ChatView extends ItemView {
       const library = lastQuestion?.library ? await this.libraryBlock(lastQuestion) : ''
       // The question now says what it was answered from.
       if (library) this.render()
-      const how = [this.changeInstructions(requirements.length > 0, project, paths.length > 0), this.noteInstructions()]
+      const places = project
+        ? await ticketPlaces(this.plugin.index, this.plugin.store, currentProjects(this.turns))
+        : []
+      const how = [
+        this.changeInstructions(requirements.length > 0, project, paths.length > 0, places),
+        this.noteInstructions()
+      ]
         .filter(Boolean)
         .join('\n\n')
       const request = {

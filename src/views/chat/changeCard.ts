@@ -22,13 +22,16 @@ import {
   applyCreate,
   applyToRequirement,
   applyToTicket,
+  createLot,
   createPlace,
   createTarget,
+  projectsLike,
   ticketTarget,
   type Applied,
   type TicketTarget
 } from '../../store/chat/applyChange'
 import { typeConfigOf } from '../../store/TicketPalette'
+import { fold } from '../../store/library/libraryDoc'
 import type { Project, TaskType } from '../../types'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
@@ -161,6 +164,8 @@ class ChangeCard extends MarkdownRenderChild {
   private busy = false
   /** The project the reader chose, a programme having been named, by its path. */
   private chosen: string | null = null
+  /** The lot the reader chose for a new ticket, by its title; '' for the top of the project. */
+  private chosenParent: string | null = null
 
   constructor(
     private plugin: PMPlugin,
@@ -203,14 +208,33 @@ class ChangeCard extends MarkdownRenderChild {
       return
     }
     if (spec.kind === 'create') {
-      const placed = this.chosen ? { ...spec, project: this.chosen } : spec
+      const placed = this.placed(spec)
       const target = await createTarget(this.plugin.index, this.plugin.store, placed, typeLabel)
       // A programme named, and several of its projects possible: the reader says which.
       const place = target ? null : await createPlace(this.plugin.index, this.plugin.store, placed)
       if (generation !== this.generation) return
       if (place && 'choices' in place) {
-        this.paint((card) => this.renderCreateChoice(card, spec, place.choices, place.via))
+        this.paint((card) =>
+          this.renderCreateChoice(card, spec, place.choices, t('chat.change.pickProject', { program: place.via }))
+        )
         return
+      }
+      // A project the vault does not have: the reader says which, the likeliest first.
+      if (!target && !place) {
+        const choices = projectsLike(this.plugin.index, spec.project)
+        if (choices.length) {
+          this.paint((card) =>
+            this.renderCreateChoice(
+              card,
+              spec,
+              choices,
+              spec.project.trim()
+                ? t('chat.change.pickProjectUnknown', { name: spec.project })
+                : t('chat.change.pickProjectNone')
+            )
+          )
+          return
+        }
       }
       this.paint((card) => this.renderCreate(card, placed, target))
       return
@@ -260,18 +284,71 @@ class ChangeCard extends MarkdownRenderChild {
       apply: t('chat.change.create'),
       done: t('chat.change.created')
     })
+    if (!resolved.ok && resolved.problem === 'parent') this.renderParentFix(card, spec, target)
   }
 
-  /** A programme named for a new ticket, several of its projects possible: which one, asked. */
+  /**
+   * A lot the new ticket was to go under, missing: made here in one click, another one
+   * chosen, or the top of the project — rather than a dead end.
+   */
+  private renderParentFix(
+    card: HTMLElement,
+    spec: Extract<ChangeSpec, { kind: 'create' }>,
+    target: { project: Project; context: CreateContext }
+  ): void {
+    const fix = card.createDiv('pm-change-fix')
+    const missing = !target.context.tickets.some((ticket) => fold(ticket.title) === fold(spec.parent))
+    if (missing && spec.parent.trim()) {
+      const make = fix.createEl('button', {
+        cls: 'mod-cta',
+        text: t('chat.change.createLot', { title: spec.parent.trim() })
+      })
+      make.addEventListener(
+        'click',
+        safeAsync(async () => {
+          make.disabled = true
+          this.busy = true
+          try {
+            await createLot(this.plugin.store, target.project.filePath, spec.parent)
+            this.chosenParent = null
+          } finally {
+            this.busy = false
+            await this.draw()
+          }
+        })
+      )
+    }
+    fix.createSpan({ cls: 'pm-change-fix-label', text: t('chat.change.pickParent') })
+    const select = fix.createEl('select', { cls: 'dropdown' })
+    select.createEl('option', { value: '', text: t('chat.change.atRoot') })
+    const lots = target.context.tickets.filter((ticket) => ticket.type === 'phase')
+    for (const lot of lots) select.createEl('option', { value: lot.title, text: lot.title })
+    const place = fix.createEl('button', { text: t('chat.change.pickParentButton') })
+    place.addEventListener('click', () => {
+      this.chosenParent = select.value
+      void this.draw()
+    })
+  }
+
+  /** The new ticket as the reader placed it: in the project and under the lot they chose. */
+  private placed(spec: Extract<ChangeSpec, { kind: 'create' }>): Extract<ChangeSpec, { kind: 'create' }> {
+    return {
+      ...spec,
+      ...(this.chosen ? { project: this.chosen } : {}),
+      ...(this.chosenParent !== null ? { parent: this.chosenParent } : {})
+    }
+  }
+
+  /** Where a new ticket goes, asked: a programme named with several projects, or a project the vault lacks. */
   private renderCreateChoice(
     card: HTMLElement,
     spec: Extract<ChangeSpec, { kind: 'create' }>,
     choices: { path: string; title: string }[],
-    program: string
+    question: string
   ): void {
     card.addClass('pm-change--create')
     this.head(card, 'square-plus', spec.title, null, t('chat.change.newTitle'))
-    card.createDiv({ cls: 'pm-change-note', text: t('chat.change.pickProject', { program }) })
+    card.createDiv({ cls: 'pm-change-note', text: question })
     const foot = card.createDiv('pm-change-foot')
     const select = foot.createEl('select', { cls: 'dropdown' })
     for (const choice of choices) select.createEl('option', { value: choice.path, text: choice.title })
@@ -469,8 +546,7 @@ class ChangeCard extends MarkdownRenderChild {
   }
 
   private async applyCreate(spec: Extract<ChangeSpec, { kind: 'create' }>): Promise<void> {
-    const placed = this.chosen ? { ...spec, project: this.chosen } : spec
-    this.report(await applyCreate(this.plugin.index, this.plugin.store, placed, typeLabel), spec.title)
+    this.report(await applyCreate(this.plugin.index, this.plugin.store, this.placed(spec), typeLabel), spec.title)
   }
 
   private async applyTicket(spec: Extract<ChangeSpec, { kind: 'ticket' }>): Promise<void> {

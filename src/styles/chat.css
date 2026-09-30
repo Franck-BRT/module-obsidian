@@ -732,3 +732,24 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
 .pm-rag-status.is-hidden {
   display: none;
 }
+
+/* A card's way out of a dead end: the lot made, another chosen, or a project picked. */
+.pm-change-fix,
+.pm-change--create .pm-change-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-2);
+}
+
+.pm-change-fix-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-change--create .pm-change-note {
+  margin: var(--size-2-2) 0 var(--size-4-1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}

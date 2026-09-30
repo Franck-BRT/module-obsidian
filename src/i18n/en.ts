@@ -1343,6 +1343,17 @@ export const en = {
   'chat.change.pickProject':
     '“{program}” is a programme, which holds no tickets: in which of its projects should this one be created?',
   'chat.change.pickProjectButton': 'Choose this project',
+  'chat.changePlaces':
+    'Projects where tickets can be created, each with its lots ({lot}):\n{list}\n"project" always names exactly one of these projects — never a programme — and "parent" exactly one of its lots.',
+  'chat.changeNoLots': 'no lot',
+  'chat.changeAsk':
+    'Before proposing tickets to create, check that you know where they go. If the project or the lot is not certain — several possible projects, no matching lot, an ambiguous request —, propose no block: first ask a short question, listing the possible choices from the list above, and wait for the answer. If the right lot does not exist yet, say so and first propose a block that creates it (type {lot}, without "parent"), then the tickets with "parent" set to the title of that new lot. Likewise ask when a piece of information that changes the result is missing (dates, owner, dependencies).',
+  'chat.change.pickProjectUnknown': 'No project is called “{name}”: in which one should this ticket be created?',
+  'chat.change.pickProjectNone': 'The project is not given: in which one should this ticket be created?',
+  'chat.change.createLot': 'Create the lot “{title}”',
+  'chat.change.pickParent': 'or place it under:',
+  'chat.change.atRoot': '(the top of the project, no lot)',
+  'chat.change.pickParentButton': 'Place it here',
   'chat.change.newTitle': 'New ticket',
   'chat.change.create': 'Create',
   'chat.change.created': 'Created',

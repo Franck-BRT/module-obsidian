@@ -7,7 +7,15 @@ import { RequirementStore } from '../requirements/RequirementStore'
 import { addLink, setText } from '../requirements/Requirement'
 import { findTaskById } from '../TaskIndex'
 import { VaultIndex } from '../VaultIndex'
-import { applyCreate, applyToRequirement, applyToTicket, createPlace } from './applyChange'
+import {
+  applyCreate,
+  applyToRequirement,
+  applyToTicket,
+  createLot,
+  createPlace,
+  projectsLike,
+  ticketPlaces
+} from './applyChange'
 import { parseChange, verificationOptions, type ChangeSpec, type ReqOptions } from './chatChange'
 
 /**
@@ -316,6 +324,42 @@ describe('creating a ticket from the chat', () => {
     })
     // Nothing of that name: nothing.
     expect(await createPlace(index, store, spec('create', { create: 'X', project: 'Inconnu' }))).toBeNull()
+  })
+
+  it('makes the lot a ticket goes under, once, then the ticket goes under it', async () => {
+    const project = await store.createProject('COSMA', 'Work')
+    index.build()
+    const change = spec('create', { create: 'Définir les codes', project: 'COSMA', parent: 'Actions complémentaires' })
+    expect(await applyCreate(index, store, change, label)).toMatchObject({ ok: false, problem: 'parent' })
+    expect(await createLot(store, project.filePath, ' Actions complémentaires ')).toBe(true)
+    // Already there, however it is written: not made twice.
+    expect(await createLot(store, project.filePath, 'actions complementaires')).toBe(false)
+    expect(await createLot(store, project.filePath, '  ')).toBe(false)
+    expect(await createLot(store, 'Work/Nowhere.md', 'Lot')).toBe(false)
+    index.build()
+    expect(await applyCreate(index, store, change, label)).toMatchObject({ ok: true, changed: true })
+    const lots = (await store.loadProjectByPath(project.filePath))?.tasks ?? []
+    expect(lots.map((task) => [task.title, task.type, task.subtasks.map((sub) => sub.title)])).toEqual([
+      ['Actions complémentaires', 'phase', ['Définir les codes']]
+    ])
+  })
+
+  it('offers the projects whose title looks like the name first, and says where tickets can go, with their lots', async () => {
+    const program = await store.createProject('COSMA - GMAO', 'Work', { program: true })
+    const cosma = await store.createProject('COSMA', 'Work', { parentPath: program.filePath })
+    await store.createProject('Autre', 'Work')
+    await store.createProject('Modèle COSMA', 'Work', { template: true })
+    await store.insertTask(cosma, makeTask({ title: 'Actions complémentaires', type: 'phase', start: '' }))
+    await store.insertTask(cosma, makeTask({ title: 'Ticket seul', start: '' }))
+    const done = makeTask({ title: 'Vieux lot', type: 'phase', start: '' })
+    await store.insertTask(cosma, done)
+    await store.archiveTask(cosma, done.id)
+    index.build()
+    expect(projectsLike(index, 'cosma').map((each) => each.title)).toEqual(['COSMA', 'Autre'])
+    expect(projectsLike(index, 'Inconnu').map((each) => each.title)).toEqual(['Autre', 'COSMA'])
+    expect(await ticketPlaces(index, store, [program.filePath, cosma.filePath, 'Work/Nowhere.md'])).toEqual([
+      { title: 'COSMA', lots: ['Actions complémentaires'] }
+    ])
   })
 
   it('gives a document its register entry, and refuses a programme as its project', async () => {
