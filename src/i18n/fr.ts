@@ -1329,6 +1329,16 @@ export const fr: Catalog = {
   'chat.change.exists':
     'Un ticket de ce titre existe déjà dans le projet, avec d’autres valeurs : cette proposition voulait sans doute le modifier.',
   'chat.change.asModification': 'Modifier le ticket existant',
+  'chat.change.newProgram': 'Nouveau programme',
+  'chat.change.newProject': 'Nouveau projet',
+  'chat.change.field.where': 'Dans',
+  'chat.change.field.description': 'Description',
+  'chat.change.createProgram': 'Créer le programme',
+  'chat.change.createProject': 'Créer le projet',
+  'chat.changeProjectNew':
+    'Cet outil, Black Projects, gère les projets du coffre : un programme regroupe des projets, un projet contient des tickets (tâches, lots, jalons, documents…). Quand la personne te demande de créer un programme ou un projet, ne propose jamais une note ni un dossier : écris un bloc de code ```pm-change``` contenant un seul objet JSON, {"newProgram": "titre du programme", "description": "…", "why": "…"} pour un programme, ou {"newProject": "titre du projet", "parent": "titre exact du programme qui le contient (facultatif)", "description": "…", "why": "…"} pour un projet. La personne le créera d’un clic, à sa place dans l’outil. Ne propose pas d’en créer un qui existe déjà. Programmes existants : {programs}. Projets existants : {projects}.',
+  'chat.changeProjectNone': 'aucun',
+  'chat.change.noProgram': 'Aucun programme ne s’appelle « {name} ». Programmes existants : {list}.',
   'chat.change.viaProgram': '« {program} » est un programme : le ticket sera créé dans son projet « {project} ».',
   'chat.change.pickProject':
     '« {program} » est un programme, qui ne reçoit pas de ticket : dans lequel de ses projets créer celui-ci ?',
@@ -1922,7 +1932,7 @@ export const fr: Catalog = {
   'chat.noteHow':
     'Quand la personne te demande d’écrire, de créer ou de rédiger une note (compte rendu, synthèse, fiche, décision…), ou de compléter une note existante, propose-la dans un bloc délimité par quatre accents graves : ````pm-note puis, une par ligne, « titre: … », « dossier: … » (facultatif ; sans dossier, la note va dans {folder}), « tags: a, b » (facultatif), une ligne « --- », puis le contenu complet de la note en Markdown, et enfin ```` pour fermer. Pour compléter une note existante, remplace « titre » par « ajouter à: [[Nom de la note]] » : le contenu sera ajouté à sa fin. La personne verra la note et la créera d’un clic ; rien n’est écrit sans elle. N’écris ce bloc que si on te demande une note.',
   'chat.noteLimits':
-    'Tu n’écris rien toi-même dans le coffre : tu proposes des blocs que la personne applique d’un clic. Ne dis jamais qu’une note a été modifiée, ni que tu ne peux rien faire : propose le bloc qui convient. Tu peux créer une note ou ajouter du texte à la fin d’une note ; tu ne peux ni réécrire ni supprimer une partie d’une note existante — dis-le si on te le demande, plutôt que d’ajouter une copie corrigée à sa fin. Pour retirer les en-têtes, pieds de page et numéros de page répétés d’une transcription (document lu par OCR), ne recopie pas la transcription : propose un bloc ````pm-note ne contenant que la ligne « nettoyer: [[Nom de la note]] » ; le plugin repère lui-même les lignes répétées de page en page et les retire de toute la transcription. Quand la note jointe est coupée, dis-le, plutôt que de traiter la partie vue comme si c’était le tout.',
+    'Tu n’écris rien toi-même dans le coffre : tu proposes des blocs que la personne applique d’un clic. Ne dis jamais qu’une note a été modifiée, ni que tu ne peux rien faire : propose le bloc qui convient. Tu peux créer une note ou ajouter du texte à la fin d’une note — mais jamais pour créer un projet, un programme ou un ticket de Black Projects : ceux-là passent par les blocs pm-change ; tu ne peux ni réécrire ni supprimer une partie d’une note existante — dis-le si on te le demande, plutôt que d’ajouter une copie corrigée à sa fin. Pour retirer les en-têtes, pieds de page et numéros de page répétés d’une transcription (document lu par OCR), ne recopie pas la transcription : propose un bloc ````pm-note ne contenant que la ligne « nettoyer: [[Nom de la note]] » ; le plugin repère lui-même les lignes répétées de page en page et les retire de toute la transcription. Quand la note jointe est coupée, dis-le, plutôt que de traiter la partie vue comme si c’était le tout.',
   'chat.noteProjectFolders': 'Dossiers des projets joints, pour une note qui les concerne : {list}.',
   'chat.note.newKind': 'Nouvelle note',
   'chat.note.appendKind': 'Ajout à la note',

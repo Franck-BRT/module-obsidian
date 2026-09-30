@@ -35,6 +35,8 @@ import {
   applyToRequirement,
   applyToTicket,
   applyWithUndo,
+  applyProject,
+  projectTarget,
   undoChange,
   createLot,
   createPlace,
@@ -258,6 +260,10 @@ class ChangeCard extends MarkdownRenderChild {
     if (spec.kind === 'requirement') {
       const requirement = this.plugin.index.requirementById(spec.target)
       this.paint((card) => this.renderRequirement(card, spec, requirement))
+      return
+    }
+    if (spec.kind === 'project') {
+      this.paint((card) => this.renderProject(card, spec))
       return
     }
     if (spec.kind === 'create') {
@@ -741,6 +747,62 @@ class ChangeCard extends MarkdownRenderChild {
     this.why(card, spec.why)
     this.footer(card, resolved, () => this.applyTicket(spec))
     if (!(resolved.ok && resolved.applied)) this.editButton(card)
+  }
+
+  /**
+   * A project or a programme to make in the plan: its kind, where it goes — under its
+   * programme, or where projects are kept —, what it is for, and a button that makes it.
+   */
+  private renderProject(card: HTMLElement, spec: Extract<ChangeSpec, { kind: 'project' }>): void {
+    card.addClass('pm-change--create')
+    const target = projectTarget(this.plugin.index, spec)
+    const existing = 'problem' in target ? null : target.existing
+    this.head(
+      card,
+      spec.program ? 'layers' : 'folder-kanban',
+      spec.title,
+      existing ? safeAsync(() => this.plugin.router.openProjectLink(existing.path)) : null,
+      spec.program ? t('chat.change.newProgram') : t('chat.change.newProject')
+    )
+    const grid = card.createDiv('pm-change-grid')
+    const parent = 'problem' in target ? spec.parent : (target.parent?.title ?? '')
+    this.body(
+      grid,
+      t('chat.change.field.where'),
+      { before: '', after: parent || this.plugin.newProjectFolder(null) },
+      false
+    )
+    if (spec.description.trim()) {
+      this.body(grid, t('chat.change.field.description'), { before: '', after: spec.description.trim() }, true)
+    }
+    this.why(card, spec.why)
+    if ('problem' in target) {
+      this.problem(
+        card,
+        t('chat.change.noProgram', {
+          name: spec.parent,
+          list: target.allowed.join(', ') || t('chat.changeProjectNone')
+        })
+      )
+      return
+    }
+    const resolved: CardState = { ok: true, applied: !!existing }
+    this.footer(card, resolved, () => this.applyProject(spec), {
+      apply: spec.program ? t('chat.change.createProgram') : t('chat.change.createProject'),
+      done: t('chat.change.created')
+    })
+  }
+
+  private async applyProject(spec: Extract<ChangeSpec, { kind: 'project' }>): Promise<void> {
+    const done = await applyProject(this.plugin.index, this.plugin.store, spec, (parent) =>
+      this.plugin.newProjectFolder(parent)
+    )
+    this.report(done, spec.title)
+    if (done.ok && done.changed) {
+      // Seen at once, the way the "new project" window opens what it made.
+      const made = projectTarget(this.plugin.index, spec)
+      if (!('problem' in made) && made.existing) await this.plugin.router.openProjectLink(made.existing.path)
+    }
   }
 
   /** The way into the form, beside the card's own button: its fields changed before it is applied. */

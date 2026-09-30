@@ -116,7 +116,7 @@ import { excludedFolders, vaultSources } from './store/rag/ragSources'
 import { pourRegisterFiles } from './views/documents/pourRegisters'
 import { skillNote } from './store/chat/skills'
 import { freePath } from './store/DocumentStore'
-import { ensureFolder } from './store/vaultFs'
+import { ensureFolder, folderOf, projectFolderOf } from './store/vaultFs'
 import { keptTranscript, scanPages, transcribeScan } from './views/chat/scanReader'
 import { LlmClient } from './store/llm/client'
 import { chatModel } from './store/chat/chatModels'
@@ -1008,6 +1008,12 @@ export default class PMPlugin extends Plugin {
       const count = found.reduce((sum, one) => sum + one.count, 0)
       new Notice(t('chat.note.cleaned', { count, name: file.basename }))
     }
+  }
+
+  /** Where a new project goes, as the "new project" window puts it: beside its programme, or where projects are kept. */
+  newProjectFolder(parentPath: string | null): string {
+    if (!parentPath) return this.settings.projectsFolder || this.app.vault.getName()
+    return projectFolderOf(this.app, parentPath) ?? folderOf(parentPath)
   }
 
   /** The library's categories: the reader's list, or the one shipped when it is empty. */

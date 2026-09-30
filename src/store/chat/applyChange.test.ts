@@ -12,6 +12,8 @@ import {
   applyToRequirement,
   applyToTicket,
   applyWithUndo,
+  applyProject,
+  projectTarget,
   asModifications,
   createLot,
   existingTicket,
@@ -567,5 +569,46 @@ describe('undoing a change applied from the chat', () => {
       applyCreate(index, store, change, label)
     )
     expect(twice).toMatchObject({ done: { ok: true, changed: false }, record: null })
+  })
+})
+
+describe('creating a project or a programme from the chat', () => {
+  let index: VaultIndex
+  let store: ProjectStore
+
+  beforeEach(() => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    index = new VaultIndex(app, () => DEFAULT_SETTINGS)
+    store = new ProjectStore(app, () => DEFAULT_SETTINGS, index)
+  })
+
+  const folderFor = (parent: string | null) => (parent ? parent.slice(0, parent.lastIndexOf('/')) : 'Projects')
+
+  it('makes a programme in the plan, where projects are kept, once', async () => {
+    const change = spec('project', { newProgram: 'FDS', description: 'Programme FDS', why: 'Demandé.' })
+    expect(change).toMatchObject({ kind: 'project', title: 'FDS', program: true, parent: '' })
+    expect(await applyProject(index, store, change, folderFor)).toEqual({ ok: true, name: 'FDS', changed: true })
+    index.build()
+    const made = index.projectRefs().find((ref) => ref.title === 'FDS')
+    expect(made).toMatchObject({ program: true })
+    expect(made?.path.startsWith('Projects/')).toBe(true)
+    expect(await applyProject(index, store, change, folderFor)).toEqual({ ok: true, name: 'FDS', changed: false })
+  })
+
+  it('makes a project under the programme it names, and refuses one the vault does not have', async () => {
+    const program = await store.createProject('FDS', 'Work', { program: true })
+    index.build()
+    const change = spec('project', { newProject: 'FDS - Lot 1', parent: 'fds' })
+    expect(projectTarget(index, change)).toMatchObject({ parent: { path: program.filePath }, existing: null })
+    expect(await applyProject(index, store, change, folderFor)).toMatchObject({ ok: true, changed: true })
+    index.build()
+    expect(index.projectRefs().find((ref) => ref.title === 'FDS - Lot 1')).toMatchObject({
+      program: false,
+      parentPath: program.filePath
+    })
+    const lost = spec('project', { newProject: 'Autre', parent: 'Inconnu' })
+    expect(projectTarget(index, lost)).toEqual({ problem: 'parent', allowed: ['FDS'] })
+    expect(await applyProject(index, store, lost, folderFor)).toMatchObject({ ok: false, problem: 'parent' })
   })
 })

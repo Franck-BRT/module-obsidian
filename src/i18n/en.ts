@@ -1350,6 +1350,16 @@ export const en = {
   'chat.change.exists':
     'A ticket of this title is already in the project, with other values: this proposal most likely meant to change it.',
   'chat.change.asModification': 'Change the existing ticket',
+  'chat.change.newProgram': 'New programme',
+  'chat.change.newProject': 'New project',
+  'chat.change.field.where': 'In',
+  'chat.change.field.description': 'Description',
+  'chat.change.createProgram': 'Create the programme',
+  'chat.change.createProject': 'Create the project',
+  'chat.changeProjectNew':
+    'This tool, Black Projects, manages the vault’s projects: a programme groups projects, a project holds tickets (tasks, lots, milestones, documents…). When the person asks you to create a programme or a project, never propose a note or a folder: write a ```pm-change``` code block holding a single JSON object, {"newProgram": "programme title", "description": "…", "why": "…"} for a programme, or {"newProject": "project title", "parent": "exact title of the programme that holds it (optional)", "description": "…", "why": "…"} for a project. The person will create it in one click, in its place in the tool. Do not propose one that already exists. Existing programmes: {programs}. Existing projects: {projects}.',
+  'chat.changeProjectNone': 'none',
+  'chat.change.noProgram': 'No programme is called “{name}”. Existing programmes: {list}.',
   'chat.change.viaProgram': '“{program}” is a programme: the ticket will be created in its project “{project}”.',
   'chat.change.pickProject':
     '“{program}” is a programme, which holds no tickets: in which of its projects should this one be created?',
@@ -1938,7 +1948,7 @@ export const en = {
   'chat.noteHow':
     'When the person asks you to write, create or draft a note (minutes, summary, sheet, decision…), or to add to an existing note, propose it in a block fenced by four backticks: ````pm-note then, one a line, “title: …”, “folder: …” (optional; with no folder the note goes to {folder}), “tags: a, b” (optional), a “---” line, then the note’s whole content in Markdown, and ```` to close it. To add to an existing note, put “append to: [[Note name]]” instead of the title: the content will be added at its end. The person will see the note and create it in one click; nothing is written without them. Only write this block when a note is asked for.',
   'chat.noteLimits':
-    'You write nothing in the vault yourself: you propose blocks the person applies in one click. Never say a note was changed, nor that you can do nothing: propose the block that fits. You can create a note or add text at the end of one; you can neither rewrite nor delete part of an existing note — say so when asked, rather than adding a corrected copy at its end. To remove the headers, footers and page numbers a transcription repeats (a document read by OCR), do not copy the transcription out: propose a ````pm-note block holding only the line “clean: [[Note name]]”; the plugin finds the lines repeated from page to page itself and removes them from the whole transcription. When the attached note is cut, say so, rather than treating the part seen as the whole.',
+    'You write nothing in the vault yourself: you propose blocks the person applies in one click. Never say a note was changed, nor that you can do nothing: propose the block that fits. You can create a note or add text at the end of one — but never to create a Black Projects project, programme or ticket: those go through pm-change blocks; you can neither rewrite nor delete part of an existing note — say so when asked, rather than adding a corrected copy at its end. To remove the headers, footers and page numbers a transcription repeats (a document read by OCR), do not copy the transcription out: propose a ````pm-note block holding only the line “clean: [[Note name]]”; the plugin finds the lines repeated from page to page itself and removes them from the whole transcription. When the attached note is cut, say so, rather than treating the part seen as the whole.',
   'chat.noteProjectFolders': 'Folders of the attached projects, for a note about them: {list}.',
   'chat.note.newKind': 'New note',
   'chat.note.appendKind': 'Addition to the note',

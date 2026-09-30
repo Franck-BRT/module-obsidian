@@ -425,3 +425,52 @@ export async function undoChange(store: TaskSource, record: UndoRecord): Promise
   }
   return { restored: plan.restore.length, removed: plan.remove.length, conflicts: plan.conflicts }
 }
+
+type ProjectSpec = Extract<ChangeSpec, { kind: 'project' }>
+
+/**
+ * Where a new project or programme goes, and whether it is there already: under the
+ * programme it names — found by title, as every project the model was shown is named —
+ * and made already when one of its title and kind is in the plan. A programme named that
+ * the vault does not have is refused, with the programmes it has.
+ */
+export function projectTarget(
+  index: VaultIndex,
+  spec: ProjectSpec
+): { parent: ProjectCandidate | null; existing: ProjectCandidate | null } | { problem: 'parent'; allowed: string[] } {
+  const refs = index.projectRefs().filter((ref) => !ref.template)
+  const candidate = (ref: { path: string; title: string }): ProjectCandidate => ({ path: ref.path, title: ref.title })
+  let parent: ProjectCandidate | null = null
+  if (spec.parent.trim()) {
+    parent = findProject(refs.map(candidate), spec.parent)
+    if (!parent) {
+      return { problem: 'parent', allowed: refs.filter((ref) => ref.program).map((ref) => ref.title) }
+    }
+  }
+  const made = refs.find((ref) => fold(ref.title.trim()) === fold(spec.title.trim()) && ref.program === spec.program)
+  return { parent, existing: made ? candidate(made) : null }
+}
+
+/**
+ * A new project or programme, made the way the "new project" window makes one: in the
+ * folder `folderFor` says — beside its programme, or where the reader keeps projects —,
+ * its storage folders with it. Once only: made already, it is said to be in place.
+ */
+export async function applyProject(
+  index: VaultIndex,
+  store: TaskSource,
+  spec: ProjectSpec,
+  folderFor: (parentPath: string | null) => string
+): Promise<Applied> {
+  const target = projectTarget(index, spec)
+  if ('problem' in target) return { ok: false, problem: 'parent', allowed: target.allowed }
+  if (target.existing) return { ok: true, name: target.existing.title, changed: false }
+  const title = spec.title.trim()
+  if (!title) return { ok: false, problem: 'empty' }
+  const project = await store.createProject(title, folderFor(target.parent?.path ?? null), {
+    ...(spec.program ? { program: true } : {}),
+    ...(target.parent ? { parentPath: target.parent.path } : {}),
+    ...(spec.description.trim() ? { description: spec.description.trim() } : {})
+  })
+  return { ok: true, name: project.title, changed: true }
+}

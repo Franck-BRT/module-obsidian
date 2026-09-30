@@ -44,6 +44,7 @@ import {
   applyToRequirement,
   applyToTicket,
   applyWithUndo,
+  applyProject,
   ticketPlaces,
   asModifications,
   undoChange,
@@ -1239,6 +1240,26 @@ export class ChatView extends ItemView {
   }
 
   /**
+   * How to propose a project or a programme: always said, since one can be asked for with
+   * nothing attached — with the ones there are, so none is made twice and a project is
+   * put under a programme by its exact title.
+   */
+  private projectInstructions(): string {
+    const refs = this.plugin.index.projectRefs().filter((ref) => !ref.template)
+    const names = (list: { title: string }[]): string =>
+      list.length
+        ? list
+            .slice(0, 80)
+            .map((ref) => ref.title)
+            .join(', ')
+        : t('chat.changeProjectNone')
+    return t('chat.changeProjectNew', {
+      programs: names(refs.filter((ref) => ref.program)),
+      projects: names(refs.filter((ref) => !ref.program))
+    })
+  }
+
+  /**
    * How to propose a note: always said, since a note can be asked for about anything. The
    * attached projects' folders are named, so a note about one goes beside it.
    */
@@ -1909,6 +1930,10 @@ export class ChatView extends ItemView {
         done = path
           ? await applyToRequirement(this.plugin.requirements, path, spec, requirementOptions(this.plugin), by)
           : { ok: false, problem: 'none' }
+      } else if (spec.kind === 'project') {
+        done = await applyProject(this.plugin.index, this.plugin.store, spec, (parent) =>
+          this.plugin.newProjectFolder(parent)
+        )
       } else {
         const typeLabel = (type: string): string => typeConfigOf(type as TaskType).label
         const kept = await applyWithUndo(
@@ -2181,6 +2206,7 @@ export class ChatView extends ItemView {
         : []
       const how = [
         this.changeInstructions(requirements.length > 0, project, paths.length > 0, places),
+        this.projectInstructions(),
         this.noteInstructions()
       ]
         .filter(Boolean)

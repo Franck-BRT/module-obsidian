@@ -43,6 +43,17 @@ export type TicketChangeField = (typeof TICKET_CHANGE_FIELDS)[number]
 
 export type ChangeSpec =
   | { kind: 'requirement'; target: string; field: ReqChangeField; lang: string; value: unknown; why: string }
+  | {
+      kind: 'project'
+      /** The new project's or programme's title. */
+      title: string
+      /** A programme, which groups projects, rather than a project, which holds tickets. */
+      program: boolean
+      /** The programme it goes under, by title; '' for none. */
+      parent: string
+      description: string
+      why: string
+    }
   | { kind: 'ticket'; target: string; project: string; changes: TicketFieldChange[]; why: string }
   | {
       kind: 'create'
@@ -133,6 +144,21 @@ export function parseChange(source: string): { spec: ChangeSpec } | { problem: C
   const why = text(record.why)
   const requirement = text(record.requirement ?? record.exigence)
   const ticket = text(record.ticket)
+  // A project or a programme to make, in the plan rather than as a note.
+  const newProgram = text(record.newProgram ?? record.nouveauProgramme ?? record['nouveau programme'])
+  const newProject = text(record.newProject ?? record.nouveauProjet ?? record['nouveau projet'])
+  if (newProgram || newProject) {
+    return {
+      spec: {
+        kind: 'project',
+        title: newProgram || newProject,
+        program: !!newProgram,
+        parent: text(record.parent ?? record.programme ?? record.under ?? record.sous),
+        description: text(record.description),
+        why
+      }
+    }
+  }
   const created = text(record.create ?? record.creer ?? record['créer'])
   if (created) {
     if (requirement || ticket) return { problem: 'target' }
