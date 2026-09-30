@@ -753,3 +753,37 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
+
+/* A proposed ticket changed before it is made: a label and its field a line. */
+.pm-change-form {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--size-4-2) var(--size-4-3);
+  align-items: center;
+  margin-top: var(--size-4-2);
+}
+
+.pm-change-form-row {
+  display: contents;
+}
+
+.pm-change-form-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-change-form input,
+.pm-change-form select {
+  width: 100%;
+  max-width: 28em;
+}
+
+.pm-change-edit-icon {
+  display: inline-flex;
+  margin-right: var(--size-2-2);
+}
+
+.pm-change-edit-icon svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}

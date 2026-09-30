@@ -141,6 +141,8 @@ export default class PMPlugin extends Plugin {
   ragIndex!: RagIndex
   /** Keeps the vault index following the vault. */
   ragIndexer!: RagIndexer
+  /** Proposals the reader changed in the chat before making them: each as first written, and as changed. */
+  changeEdits = new Map<string, string>()
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver

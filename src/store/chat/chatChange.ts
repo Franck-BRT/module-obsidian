@@ -631,3 +631,77 @@ export function createChange(spec: Extract<ChangeSpec, { kind: 'create' }>, cont
   const applied = context.tickets.some((ticket) => same(ticket.title, title))
   return { ok: true, rows, applied, change: { task, parentId, reschedule: dependencies.length > 0 } }
 }
+
+/** What the reader changed of a proposed ticket before making it; a field left '' is taken off. */
+export interface CreateEdits {
+  title?: string
+  project?: string
+  parent?: string
+  fields?: Partial<Record<CreateField, string>>
+}
+
+/** The fields said as lists: several names or titles, one written after the other. */
+const LIST_FIELDS: CreateField[] = ['assignees', 'after']
+
+/** A proposed ticket as the reader changed it: what they touched replaced, the rest as proposed. */
+export function withEdits(
+  spec: Extract<ChangeSpec, { kind: 'create' }>,
+  edits: CreateEdits
+): Extract<ChangeSpec, { kind: 'create' }> {
+  const edited = edits.fields ?? {}
+  const valueOf = (field: CreateField, raw: string): unknown =>
+    LIST_FIELDS.includes(field)
+      ? raw
+          .split(/[,;]/)
+          .map((one) => one.trim())
+          .filter(Boolean)
+      : raw.trim()
+  // Each field where it was, its value as changed — or gone, emptied —, the new ones after.
+  const fields: CreateFieldChange[] = []
+  for (const change of spec.fields) {
+    const raw = edited[change.field]
+    if (raw === undefined) fields.push(change)
+    else if (raw.trim()) fields.push({ field: change.field, value: valueOf(change.field, raw) })
+  }
+  for (const field of CREATE_FIELDS) {
+    const raw = edited[field]
+    if (raw === undefined || !raw.trim() || spec.fields.some((change) => change.field === field)) continue
+    fields.push({ field, value: valueOf(field, raw) })
+  }
+  return {
+    ...spec,
+    title: edits.title?.trim() || spec.title,
+    project: edits.project?.trim() ?? spec.project,
+    parent: edits.parent !== undefined ? edits.parent.trim() : spec.parent,
+    fields
+  }
+}
+
+/** A proposed ticket written back as the block that proposes it, for the conversation to keep. */
+export function createSource(spec: Extract<ChangeSpec, { kind: 'create' }>): string {
+  const changes = Object.fromEntries(spec.fields.map((change) => [change.field, change.value]))
+  const record: Record<string, unknown> = { create: spec.title, project: spec.project }
+  if (spec.parent) record.parent = spec.parent
+  if (spec.fields.length) record.changes = changes
+  if (spec.why) record.why = spec.why
+  return JSON.stringify(record, null, 2)
+}
+
+/**
+ * A block of a note replaced by another, wherever it is: as it is written at the top level,
+ * or inside a conversation's callout, each of its lines after a « > ». Null when the note
+ * does not hold it.
+ */
+export function replaceBlock(content: string, before: string, after: string): string | null {
+  const lines = (text: string): string[] => text.replace(/\r\n?/g, '\n').trim().split('\n')
+  const quoted = (text: string, prefix: string): string =>
+    lines(text)
+      .map((line) => (prefix && !line ? prefix.trimEnd() : `${prefix}${line}`))
+      .join('\n')
+  for (const prefix of ['', '> ']) {
+    const old = quoted(before, prefix)
+    const at = content.indexOf(old)
+    if (at >= 0) return `${content.slice(0, at)}${quoted(after, prefix)}${content.slice(at + old.length)}`
+  }
+  return null
+}

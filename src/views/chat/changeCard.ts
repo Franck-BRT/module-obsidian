@@ -1,8 +1,14 @@
-import { MarkdownRenderChild, Notice, setIcon } from 'obsidian'
+import { MarkdownRenderChild, Notice, setIcon, TFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import {
   CHANGE_LANGUAGE,
   createChange,
+  createSource,
+  pickOption,
+  replaceBlock,
+  withEdits,
+  type CreateEdits,
+  type CreateField,
   parseChange,
   requirementChange,
   type CreateContext,
@@ -49,7 +55,7 @@ import { reqLanguages, verificationLabel } from '../requirements/reqPalette'
  */
 export function registerChangeBlock(plugin: PMPlugin): void {
   plugin.registerMarkdownCodeBlockProcessor(CHANGE_LANGUAGE, (source, el, ctx) => {
-    ctx.addChild(new ChangeCard(plugin, source, el))
+    ctx.addChild(new ChangeCard(plugin, source, el, ctx.sourcePath))
   })
 }
 
@@ -167,12 +173,23 @@ class ChangeCard extends MarkdownRenderChild {
   /** The lot the reader chose for a new ticket, by its title; '' for the top of the project. */
   private chosenParent: string | null = null
 
+  /** The block as it was first read here: what an edit made since is found by. */
+  private original: string
+  /** Whether the reader is changing the proposed ticket before making it. */
+  private editing = false
+  /** What the reader has typed so far, kept while the form is drawn again. */
+  private draft: CreateEdits | null = null
+
   constructor(
     private plugin: PMPlugin,
     private source: string,
-    container: HTMLElement
+    container: HTMLElement,
+    private sourcePath = ''
   ) {
     super(container)
+    this.original = source
+    // Changed by the reader already — here or where the same proposal is drawn —: as changed.
+    this.source = plugin.changeEdits.get(source.trim()) ?? source
   }
 
   onload(): void {
@@ -208,7 +225,7 @@ class ChangeCard extends MarkdownRenderChild {
       return
     }
     if (spec.kind === 'create') {
-      const placed = this.placed(spec)
+      const placed = this.draft ? withEdits(this.placed(spec), this.draft) : this.placed(spec)
       const target = await createTarget(this.plugin.index, this.plugin.store, placed, typeLabel)
       // A programme named, and several of its projects possible: the reader says which.
       const place = target ? null : await createPlace(this.plugin.index, this.plugin.store, placed)
@@ -220,6 +237,10 @@ class ChangeCard extends MarkdownRenderChild {
         return
       }
       // A project the vault does not have: the reader says which, the likeliest first.
+      if (target && this.editing) {
+        this.paint((card) => this.renderCreateForm(card, placed, target))
+        return
+      }
       if (!target && !place) {
         const choices = projectsLike(this.plugin.index, spec.project)
         if (choices.length) {
@@ -285,6 +306,163 @@ class ChangeCard extends MarkdownRenderChild {
       done: t('chat.change.created')
     })
     if (!resolved.ok && resolved.problem === 'parent') this.renderParentFix(card, spec, target)
+    // Not made yet: its fields can be changed before it is.
+    if (!(resolved.ok && resolved.applied)) {
+      const foot = card.querySelector('.pm-change-foot') ?? card.createDiv('pm-change-foot')
+      const edit = foot.createEl('button', { text: t('chat.change.edit') })
+      setIcon(edit.createSpan({ cls: 'pm-change-edit-icon' }), 'pencil')
+      edit.prepend(edit.lastChild as Node)
+      edit.addEventListener('click', () => {
+        this.editing = true
+        void this.draw()
+      })
+    }
+  }
+
+  /**
+   * The proposed ticket as a form: every field it can be given, as proposed, to be changed
+   * before it is made. Kept, the proposal is written back into the conversation, so it
+   * reads as changed wherever it is drawn, and later.
+   */
+  private renderCreateForm(
+    card: HTMLElement,
+    spec: Extract<ChangeSpec, { kind: 'create' }>,
+    target: { project: Project; context: CreateContext }
+  ): void {
+    card.addClass('pm-change--create', 'pm-change--editing')
+    this.head(card, 'square-pen', spec.title, null, t('chat.change.editTitle'))
+    const form = card.createDiv('pm-change-form')
+    const context = target.context
+    const given = (field: CreateField): string => {
+      const found = spec.fields.find((change) => change.field === field)
+      if (!found) return ''
+      const shown = (value: unknown): string =>
+        typeof value === 'string' || typeof value === 'number' ? String(value).trim() : ''
+      return Array.isArray(found.value) ? found.value.map(shown).filter(Boolean).join(', ') : shown(found.value)
+    }
+    const row = (label: string): HTMLElement => {
+      const line = form.createEl('label', { cls: 'pm-change-form-row' })
+      line.createSpan({ cls: 'pm-change-form-label', text: label })
+      return line
+    }
+    const input = (label: string, value: string, type = 'text', placeholder = ''): HTMLInputElement => {
+      const el = row(label).createEl('input', { attr: { type, placeholder } })
+      el.value = value
+      return el
+    }
+    const select = (label: string, options: [string, string][], value: string): HTMLSelectElement => {
+      const el = row(label).createEl('select', { cls: 'dropdown' })
+      for (const [key, text] of options) el.createEl('option', { value: key, text })
+      el.value = options.some(([key]) => key === value) ? value : (options[0]?.[0] ?? '')
+      return el
+    }
+    const chosen = (list: Option[], field: CreateField): string => pickOption(list, given(field))?.label ?? ''
+    const fallback = t('chat.change.defaultValue')
+
+    const title = input(t('chat.change.field.title'), spec.title)
+    const projects = projectsLike(this.plugin.index, target.project.title)
+    const project = select(
+      t('chat.change.field.project'),
+      projects.map((each): [string, string] => [each.path, each.title]),
+      target.project.filePath
+    )
+    const lots = context.tickets.filter((ticket) => ticket.type === 'phase')
+    const parentNow = context.tickets.find((ticket) => fold(ticket.title) === fold(spec.parent))?.title ?? ''
+    const parent = select(
+      t('chat.change.field.parent'),
+      [
+        ['', t('chat.change.atRoot')],
+        ...lots.map((lot): [string, string] => [lot.title, lot.title]),
+        ...(parentNow && !lots.some((lot) => lot.title === parentNow)
+          ? [[parentNow, parentNow] as [string, string]]
+          : [])
+      ],
+      parentNow
+    )
+    const labels = (list: Option[]): [string, string][] => [
+      ['', fallback],
+      ...list.map((option): [string, string] => [option.label, option.label])
+    ]
+    const type = select(t('chat.change.field.type'), labels(context.types), chosen(context.types, 'type'))
+    const status = select(t('chat.change.field.status'), labels(context.statuses), chosen(context.statuses, 'status'))
+    const priority = select(
+      t('chat.change.field.priority'),
+      labels(context.priorities),
+      chosen(context.priorities, 'priority')
+    )
+    const start = input(t('chat.change.field.start'), given('start'), 'date')
+    const due = input(t('chat.change.field.due'), given('due'), 'date')
+    const progress = input(t('chat.change.field.progress'), given('progress').replace(/\s*%$/, ''), 'number')
+    progress.min = '0'
+    progress.max = '100'
+    const assignees = input(t('chat.change.field.assignees'), given('assignees'), 'text', t('chat.change.listHint'))
+    const after = input(t('chat.change.field.after'), given('after'), 'text', t('chat.change.listHint'))
+
+    // The project by its name where no other has it — the proposal reads as written —, by its path otherwise.
+    const projectName = (path: string): string => {
+      const name = projects.find((each) => each.path === path)?.title ?? ''
+      return name && projects.filter((each) => fold(each.title) === fold(name)).length === 1 ? name : path
+    }
+    const collect = (): CreateEdits => ({
+      title: title.value,
+      project: projectName(project.value),
+      parent: parent.value,
+      fields: {
+        type: type.value,
+        status: status.value,
+        priority: priority.value,
+        start: start.value,
+        due: due.value,
+        progress: progress.value,
+        assignees: assignees.value,
+        after: after.value
+      }
+    })
+    // Another project: its lots, and its lists, drawn — what was typed kept.
+    project.addEventListener('change', () => {
+      this.draft = { ...collect(), parent: '' }
+      void this.draw()
+    })
+
+    const foot = card.createDiv('pm-change-foot')
+    const save = foot.createEl('button', { cls: 'mod-cta', text: t('chat.change.saveEdits') })
+    save.addEventListener(
+      'click',
+      safeAsync(async () => {
+        save.disabled = true
+        const base = parseChange(this.source)
+        if (!('spec' in base) || base.spec.kind !== 'create') return
+        await this.keepSource(createSource(withEdits(base.spec, collect())))
+        this.editing = false
+        this.draft = null
+        this.chosen = null
+        this.chosenParent = null
+        await this.draw()
+      })
+    )
+    const cancel = foot.createEl('button', { text: t('common.cancel') })
+    cancel.addEventListener('click', () => {
+      this.editing = false
+      this.draft = null
+      void this.draw()
+    })
+  }
+
+  /**
+   * The proposal as the reader changed it, kept: for the cards drawing it now, and written
+   * over the block in the conversation's note, so it is drawn changed when read again.
+   */
+  private async keepSource(source: string): Promise<void> {
+    const before = this.source
+    const edits = this.plugin.changeEdits
+    for (const [key, value] of edits) if (value === before) edits.set(key, source)
+    edits.set(this.original.trim(), source)
+    edits.set(before.trim(), source)
+    this.source = source
+    const file = this.sourcePath ? this.plugin.app.vault.getAbstractFileByPath(this.sourcePath) : null
+    if (file instanceof TFile) {
+      await this.plugin.app.vault.process(file, (content) => replaceBlock(content, before, source) ?? content)
+    }
   }
 
   /**

@@ -14,7 +14,10 @@ import {
   findProject,
   type CreateContext,
   type ChangeSpec,
-  type ReqOptions
+  type ReqOptions,
+  withEdits,
+  createSource,
+  replaceBlock
 } from './chatChange'
 
 const spec = (source: object): ChangeSpec => {
@@ -584,5 +587,78 @@ describe('findProject', () => {
     expect(findProject(projects, 'Autre')).toBeNull()
     expect(findProject(projects, '')).toBeNull()
     expect(findProject([projects[0]], '')).toEqual(projects[0])
+  })
+})
+
+describe('a proposed ticket changed by the reader', () => {
+  const read = (source: object) => {
+    const got = parseChange(JSON.stringify(source))
+    if (!('spec' in got) || got.spec.kind !== 'create') throw new Error('not read')
+    return got.spec
+  }
+  const proposed = read({
+    create: 'Définir les codes',
+    project: 'COSMA',
+    parent: 'Actions complémentaires',
+    changes: { status: 'À faire', assignees: ['Anne'], due: '2026-10-30' },
+    why: 'Plan.'
+  })
+
+  it('takes what was changed, keeps the rest, and takes off what was emptied', () => {
+    const edited = withEdits(proposed, {
+      title: '  Définir les codes intervention ',
+      parent: '',
+      fields: { assignees: 'Anne, Bruno ; Chloé', due: '', start: '2026-10-05', type: 'Jalon' }
+    })
+    expect(edited).toMatchObject({
+      title: 'Définir les codes intervention',
+      project: 'COSMA',
+      parent: '',
+      why: 'Plan.'
+    })
+    expect(edited.fields).toEqual([
+      { field: 'status', value: 'À faire' },
+      { field: 'assignees', value: ['Anne', 'Bruno', 'Chloé'] },
+      { field: 'type', value: 'Jalon' },
+      { field: 'start', value: '2026-10-05' }
+    ])
+    // Nothing changed: the same proposal.
+    expect(withEdits(proposed, {})).toEqual(proposed)
+    expect(withEdits(proposed, { title: '   ' }).title).toBe('Définir les codes')
+  })
+
+  it('is written back as a block that reads as the same proposal', () => {
+    const edited = withEdits(proposed, { fields: { priority: 'Haute' } })
+    const source = createSource(edited)
+    expect(JSON.parse(source)).toEqual({
+      create: 'Définir les codes',
+      project: 'COSMA',
+      parent: 'Actions complémentaires',
+      changes: { status: 'À faire', assignees: ['Anne'], due: '2026-10-30', priority: 'Haute' },
+      why: 'Plan.'
+    })
+    expect(parseChange(source)).toEqual({ spec: edited })
+    expect(JSON.parse(createSource(read({ create: 'X', project: 'P' })))).toEqual({ create: 'X', project: 'P' })
+  })
+
+  it('replaces the block in the note, at the top level or in a conversation’s callout', () => {
+    const before = '{\n  "create": "A",\n\n  "project": "P"\n}'
+    const after = '{\n  "create": "B"\n}'
+    const note = [
+      '> [!answer]',
+      '> Voici :',
+      '> ```pm-change',
+      '> {',
+      '>   "create": "A",',
+      '>',
+      '>   "project": "P"',
+      '> }',
+      '> ```'
+    ].join('\n')
+    expect(replaceBlock(note, before, after)).toBe(
+      ['> [!answer]', '> Voici :', '> ```pm-change', '> {', '>   "create": "B"', '> }', '> ```'].join('\n')
+    )
+    expect(replaceBlock(`\`\`\`pm-change\n${before}\n\`\`\``, before, after)).toBe(`\`\`\`pm-change\n${after}\n\`\`\``)
+    expect(replaceBlock('rien', before, after)).toBeNull()
   })
 })
