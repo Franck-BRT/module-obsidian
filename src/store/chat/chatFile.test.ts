@@ -108,10 +108,13 @@ describe('filesContext', () => {
 describe('sharing the files’ budget', () => {
   it('sends a few files whole, and many a fair part each, never below a few pages', () => {
     expect(fileShare(1)).toBe(FILE_BUDGET)
-    expect(fileShare(3)).toBe(FILE_BUDGET)
-    expect(fileShare(5)).toBe(30000)
-    expect(fileShare(10)).toBe(15000)
+    expect(fileShare(2)).toBe(FILE_BUDGET)
+    expect(fileShare(4)).toBe(100000)
+    expect(fileShare(10)).toBe(40000)
     expect(fileShare(100)).toBe(6000)
+    // As the reader set it: whole, or their own budget shared.
+    expect(fileShare(5, Infinity, Infinity)).toBe(Infinity)
+    expect(fileShare(5, 50000, 100000)).toBe(20000)
   })
 
   it('looks for the question’s words of four letters or more, folded, once each', () => {

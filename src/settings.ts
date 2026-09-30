@@ -1219,6 +1219,21 @@ export class PMSettingTab extends PluginSettingTab {
           }
         },
         {
+          name: t('settings.chat.fileChars'),
+          desc: t('settings.chat.fileCharsDesc'),
+          render: (setting: Setting) => {
+            setting.addText((text) =>
+              text.setValue(String(this.plugin.settings.chat.fileChars)).onChange((value) => {
+                const parsed = Number.parseInt(value, 10)
+                if (Number.isFinite(parsed) && parsed >= 0) {
+                  this.plugin.settings.chat.fileChars = parsed
+                  this.persist()
+                }
+              })
+            )
+          }
+        },
+        {
           name: t('settings.llm.timeout'),
           render: (setting: Setting) => {
             setting.addText((text) =>

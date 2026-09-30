@@ -157,23 +157,26 @@ export async function fileText(extension: string, bytes: Uint8Array): Promise<st
 }
 
 /**
- * How much of one file goes with a question, in characters: a planning of several
- * hundred lines whole — a scanned one's transcription runs long — and a long
- * specification cut, with the reader told.
+ * How much of one file goes with a question, in characters, unless the reader says
+ * otherwise: some sixty thousand tokens, a long specification or a scanned document's
+ * transcription whole. A longer one goes by its passages the question speaks of, the
+ * reader told; a model that reads less says so, and the files are sent again, shorter.
  */
-export const FILE_BUDGET = 50000
+export const FILE_BUDGET = 200000
 
 /**
- * What all the files sent with one question may add up to, in characters: three long
- * files whole, and a dozen documents of a project each with a fair part of it — within
- * what a model with a large context reads in one go.
+ * What all the files sent with one question may add up to, in characters, by default:
+ * two long files whole, and a dozen documents of a project each with a fair part of it.
  */
-export const FILES_TOTAL = 150000
+export const FILES_TOTAL = 400000
+
+/** The least of a file sent, however many go together or however short the model's reading: a few pages. */
+export const FILE_FLOOR = 6000
 
 /** How much of each file goes, when this many go together: never below a few pages. */
-export function fileShare(count: number): number {
-  if (count <= 1) return FILE_BUDGET
-  return Math.min(FILE_BUDGET, Math.max(6000, Math.floor(FILES_TOTAL / count)))
+export function fileShare(count: number, budget = FILE_BUDGET, total = FILES_TOTAL): number {
+  if (count <= 1) return budget
+  return Math.min(budget, Math.max(FILE_FLOOR, Math.floor(total / count)))
 }
 
 /** The words of a question worth looking for in a document: four letters or more, folded, once each. */

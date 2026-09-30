@@ -19,6 +19,7 @@ import {
   currentContext,
   readableNote,
   withNote,
+  shorter,
   shorterNote,
   withoutFailure,
   type ChatTurn,
@@ -53,6 +54,7 @@ import type { UndoRecord } from '../../store/chat/chatUndo'
 import {
   currentFiles,
   excerptFor,
+  FILE_FLOOR,
   fileShare,
   questionWords,
   fileText,
@@ -853,7 +855,8 @@ export class ChatView extends ItemView {
    * cannot be read is named with why, so the model says so rather than answering as if
    * it had read it; the reader is told too.
    */
-  private async filesBlock(paths: string[], question: string): Promise<string> {
+  /** The attached files, read — or said to be unreadable, and why. */
+  private async readFiles(paths: string[]): Promise<{ read: ContextFile[]; unread: string[] }> {
     const read: ContextFile[] = []
     const unread: string[] = []
     const library = new Map(this.plugin.library.docs().map((doc) => [doc.file, doc]))
@@ -892,22 +895,35 @@ export class ChatView extends ItemView {
       }
       read.push({ path: file.path, name: file.name, text })
     }
-    // Several files share what can be sent; one too long for its share goes by the
-    // passages the question speaks of, or by its start — and the reader is told which.
-    const share = fileShare(read.length)
+    return { read, unread }
+  }
+
+  /**
+   * The attached files as they go with a question: each whole within its share, or by its
+   * passages the question speaks of. `notify` says so to the reader, once a question.
+   */
+  private filesText(
+    files: { read: ContextFile[]; unread: string[] },
+    share: number,
+    question: string,
+    notify: boolean
+  ): string {
+    const { read, unread } = files
     const words = questionWords(question)
-    const long = read.filter((each) => each.text.length > share)
-    if (long.length > 2) {
-      new Notice(t('chat.filesShared', { count: long.length, share }), 12000)
-    } else {
-      for (const file of long) {
-        const passages = excerptFor(file.text, share, words) !== null
-        new Notice(
-          passages
-            ? t('chat.filePassages', { name: file.name, total: file.text.length })
-            : t('chat.fileCut', { name: file.name, sent: share, total: file.text.length }),
-          12000
-        )
+    if (notify) {
+      const long = read.filter((each) => each.text.length > share)
+      if (long.length > 2) {
+        new Notice(t('chat.filesShared', { count: long.length, share }), 12000)
+      } else {
+        for (const file of long) {
+          const passages = excerptFor(file.text, share, words) !== null
+          new Notice(
+            passages
+              ? t('chat.filePassages', { name: file.name, total: file.text.length })
+              : t('chat.fileCut', { name: file.name, sent: share, total: file.text.length }),
+            12000
+          )
+        }
       }
     }
     const block = filesContext(
@@ -2138,7 +2154,14 @@ export class ChatView extends ItemView {
       // The files as they are now: a planning replaced by its next issue is read again.
       const paths = currentFiles(this.turns)
       const asked = [...this.turns].reverse().find((turn) => turn.role === 'user')?.content ?? ''
-      const files = await this.filesBlock(paths, asked)
+      const attached = await this.readFiles(paths)
+      const fileChars = this.plugin.settings.chat.fileChars
+      let share = fileShare(
+        attached.read.length,
+        fileChars > 0 ? fileChars : Infinity,
+        fileChars > 0 ? 2 * fileChars : Infinity
+      )
+      const longestFile = Math.max(0, ...attached.read.map((file) => file.text.length))
       const lastQuestion = [...this.turns].reverse().find((turn) => turn.role === 'user')
       const skills = await this.skillsBlock(lastQuestion?.skills ?? [])
       const library = lastQuestion?.library ? await this.libraryBlock(lastQuestion) : ''
@@ -2153,11 +2176,22 @@ export class ChatView extends ItemView {
       ]
         .filter(Boolean)
         .join('\n\n')
-      const requestFor = (budget: number) => ({
+      let told = false
+      const requestFor = (budget: number, fileBudget: number) => ({
         model,
         messages: chatMessages(
           this.turns,
-          [systemFor(budget), project?.text, block, files, library, skills, how].filter(Boolean).join('\n\n')
+          [
+            systemFor(budget),
+            project?.text,
+            block,
+            this.filesText(attached, fileBudget, asked, !told),
+            library,
+            skills,
+            how
+          ]
+            .filter(Boolean)
+            .join('\n\n')
         ),
         // The chat's own limit, none by default: a reply proposing thirty changes is long,
         // and one cut at the reviews' thousand tokens stops after seven.
@@ -2168,7 +2202,8 @@ export class ChatView extends ItemView {
       let truncated = false
       const noteLength = note?.content.trim().length ?? 0
       for (;;) {
-        const request = requestFor(noteBudget)
+        const request = requestFor(noteBudget, share)
+        told = true
         try {
           if (this.stopper) {
             const outcome = await this.llm.chatStream(request, (text) => this.showLive(text), {
@@ -2181,11 +2216,19 @@ export class ChatView extends ItemView {
           } else ({ text: reply, truncated } = await this.llm.reply(request))
           break
         } catch (error) {
-          // Too long for the model: the note, the likeliest culprit, sent again at half.
-          const next = shorterNote(error, noteBudget, noteLength)
-          if (next === null) throw error
-          noteBudget = next
-          new Notice(t('chat.noteShortened', { sent: next, total: noteLength }), 10000)
+          // Too long for the model: the note and the files, what makes a question long, at half.
+          const nextNote = shorterNote(error, noteBudget, noteLength)
+          const nextShare = shorter(error, share, longestFile, FILE_FLOOR)
+          if (nextNote === null && nextShare === null) throw error
+          if (nextNote !== null) noteBudget = nextNote
+          if (nextShare !== null) share = nextShare
+          const what = [
+            nextNote !== null ? t('chat.contextNote') : '',
+            nextShare !== null ? t('chat.contextFiles') : ''
+          ]
+            .filter(Boolean)
+            .join(' + ')
+          new Notice(t('chat.contextShortened', { what }), 10000)
         }
       }
       // A ticket proposed as new that is there already: the change to it the model meant.

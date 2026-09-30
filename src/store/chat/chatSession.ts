@@ -203,8 +203,17 @@ export function tooLongForModel(error: unknown): boolean {
  * nothing more to take off.
  */
 export function shorterNote(error: unknown, budget: number, length: number): number | null {
+  return shorter(error, budget, length, NOTE_FLOOR)
+}
+
+/**
+ * How much to send again of something that went with a question the model found too long
+ * — the note, each file —: half of what went of it, never below `floor`. Null when that is
+ * not what failed, or when there is nothing more to take off it.
+ */
+export function shorter(error: unknown, budget: number, length: number, floor: number): number | null {
   if (!tooLongForModel(error)) return null
   const sent = Math.min(budget, length)
-  if (sent <= NOTE_FLOOR) return null
-  return Math.max(NOTE_FLOOR, Math.floor(sent / 2))
+  if (sent <= floor) return null
+  return Math.max(floor, Math.floor(sent / 2))
 }

@@ -5,6 +5,7 @@ import {
   NOTE_CONTEXT_BUDGET,
   NOTE_FLOOR,
   readableNote,
+  shorter,
   shorterNote,
   withNote,
   withoutFailure,
@@ -140,6 +141,10 @@ describe('a long note with a question', () => {
     // Another failure is not the note's doing.
     expect(shorterNote(new Error('The gateway could not reach the model (502).'), Infinity, 86444)).toBeNull()
     expect(shorterNote(tooLong, Infinity, 8000)).toBeNull()
+    // Each file the same way, to its own floor.
+    expect(shorter(tooLong, Infinity, 150000, 6000)).toBe(75000)
+    expect(shorter(tooLong, 7000, 150000, 6000)).toBe(6000)
+    expect(shorter(tooLong, 6000, 150000, 6000)).toBeNull()
   })
 })
 

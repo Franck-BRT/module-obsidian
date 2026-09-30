@@ -1420,8 +1420,12 @@ export const en = {
     'In characters (about 3.5 a token). 0: the note is always sent whole. Past it, the chat gets the start of the note and the passages the question speaks of. When the model turns down a note too long for it, it is sent again, shorter, on its own.',
   'chat.noteExcerpted':
     '[Note too long to be sent whole: {sent} characters of {total}, its start and the passages the question speaks of, the gaps marked […]. Say so when the answer needs the whole note.]',
-  'chat.noteShortened':
-    'The attached note was too long for the model: it is sent again, cut down to {sent} characters of {total}.',
+  'settings.chat.fileChars': 'Longest attached file',
+  'settings.chat.fileCharsDesc':
+    'In characters, per file; several attached files share twice that. 0: files are always sent whole. Past it, the chat gets the start of each file and the passages the question speaks of. When the model turns down a question too long for it, the files are sent again, shorter, on their own.',
+  'chat.contextShortened': 'The question was too long for the model: it is sent again with {what} cut by half.',
+  'chat.contextNote': 'the note',
+  'chat.contextFiles': 'the files',
   'settings.chat.maxTokens': 'Longest reply',
   'settings.chat.maxTokensDesc':
     'In tokens. 0: no limit of the plugin’s own, the gateway’s applies (recommended: a planning update proposes many changes).',

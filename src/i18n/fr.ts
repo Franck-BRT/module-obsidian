@@ -1400,8 +1400,13 @@ export const fr: Catalog = {
     'En caractères (environ 3,5 par jeton). 0 : la note est toujours envoyée entière. Au-delà, le chat reçoit le début de la note et les passages qui parlent de la question. Si le modèle refuse une note trop longue pour lui, elle est renvoyée automatiquement, plus courte.',
   'chat.noteExcerpted':
     '[Note trop longue pour être envoyée entière : {sent} caractères sur {total}, soit son début et les passages qui parlent de la question, les coupures marquées […]. Dis-le si la réponse demande la note entière.]',
-  'chat.noteShortened':
-    'La note jointe était trop longue pour le modèle : elle est renvoyée réduite à {sent} caractères sur {total}.',
+  'settings.chat.fileChars': 'Longueur maximale d’un fichier joint',
+  'settings.chat.fileCharsDesc':
+    'En caractères, par fichier ; plusieurs fichiers joints se partagent le double. 0 : les fichiers sont toujours envoyés entiers. Au-delà, le chat reçoit le début de chaque fichier et les passages qui parlent de la question. Si le modèle refuse une question trop longue pour lui, les fichiers sont renvoyés automatiquement, plus courts.',
+  'chat.contextShortened':
+    'La question était trop longue pour le modèle : elle est renvoyée avec {what} réduits de moitié.',
+  'chat.contextNote': 'la note',
+  'chat.contextFiles': 'les fichiers',
   'settings.chat.maxTokens': 'Longueur maximale des réponses',
   'settings.chat.maxTokensDesc':
     'En jetons. 0 : aucune limite du plugin, celle de la passerelle s’applique (recommandé : une mise à jour de planning propose beaucoup de modifications).',

@@ -516,6 +516,8 @@ export interface ChatSettings {
   maxTokens: number
   /** The most of an attached note sent with a question, in characters; 0 sends it whole. */
   noteChars: number
+  /** The most of each attached file sent with a question, in characters; 0 sends them whole. */
+  fileChars: number
   /** Where a note the chat writes goes when it names no folder; empty follows Obsidian's own setting. */
   notesFolder: string
   /** Where new skills are written; they are found wherever they are. */
@@ -530,6 +532,7 @@ export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   model: '',
   maxTokens: 0,
   noteChars: 200000,
+  fileChars: 200000,
   notesFolder: '',
   skillsFolder: 'Chats/Skills'
 }
