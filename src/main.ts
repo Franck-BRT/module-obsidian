@@ -358,6 +358,20 @@ export default class PMPlugin extends Plugin {
       }
     })
 
+    // A document of the library read again by the model that sees, the transcription kept replaced.
+    this.addCommand({
+      id: 'reread-scan',
+      name: t('command.rereadScan'),
+      checkCallback: (checking) => {
+        const file = this.app.workspace.getActiveFile()
+        const doc =
+          file && this.library.isRecord(file) ? this.library.docs().find((one) => one.record === file.path) : null
+        if (!doc?.file) return false
+        if (!checking) void this.readLibraryScans([doc], true)
+        return true
+      }
+    })
+
     this.addCommand({
       id: 'open-chat',
       name: t('command.openChat'),
@@ -1131,7 +1145,7 @@ export default class PMPlugin extends Plugin {
    * Scans read by the model that sees, one after another, so the library's search finds
    * what they say; false when no model is set up to read them.
    */
-  async readLibraryScans(docs: LibraryDoc[]): Promise<boolean> {
+  async readLibraryScans(docs: LibraryDoc[], again = false): Promise<boolean> {
     const llm = this.settings.llm
     const model = llm.modelOcr.trim() || chatModel(this.settings.chat.model, llm.modelText)
     if (!llm.enabled || !llm.baseUrl.trim() || !model) {
@@ -1144,7 +1158,7 @@ export default class PMPlugin extends Plugin {
         await this.libraryText.readScan(doc, async (file, bytes) => {
           const source = await scanPages(file, bytes)
           try {
-            return (await transcribeScan(this.app, client, model, file, source, this.library)).text
+            return (await transcribeScan(this.app, client, model, file, source, this.library, again)).text
           } finally {
             source.close()
           }

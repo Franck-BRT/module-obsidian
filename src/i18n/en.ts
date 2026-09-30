@@ -1396,8 +1396,12 @@ export const en = {
   'chat.ocrOff': 'Read the PDF’s text rather than its pages as pictures',
   'chat.ocrReading': 'Reading “{name}” with the model: page {page} of {total}…',
   'chat.ocrPrompt':
-    'Here is page {page} of {total} of a document scanned or exported as an image. Transcribe all its text faithfully, in reading order. Render each table as a Markdown table (| … |), one line per row, leaving none out. Copy dates, numbers, durations and names exactly as they appear. If the page shows a Gantt chart whose dates are only given by the position of the bars, work them out from the calendar scale and mark them “(estimated)”. Add no comment: only the transcription.',
+    'Here is page {page} of {total} of a document scanned or exported as an image. Transcribe ALL its text faithfully, from the top of the page to the bottom, in reading order: on a page in columns, the left column whole then the right one. Leave nothing out: headings, paragraphs, lists, boxes, notes, figure captions, formulas. Do not summarise or shorten. Render each table as a Markdown table (| … |), one line per row, leaving none out. Copy dates, numbers, durations and names exactly as they appear. If the page shows a Gantt chart whose dates are only given by the position of the bars, work them out from the calendar scale and mark them “(estimated)”. Add no comment: only the transcription.',
   'chat.ocrPage': 'Page {page} of {total}',
+  'chat.ocrPromptAgain':
+    'Here is page {page} of {total} of a document. A first transcription of this page was incomplete: paragraphs, columns or lists were missing. Now transcribe ALL the text on the page, without exception, from top to bottom, the left column whole then the right one, headings, lists, notes, captions and formulas included. Render tables in Markdown. Summarise nothing, add no comment: only the complete transcription.',
+  'chat.ocrMore': 'Continue the transcription exactly where it stopped, without repeating or commenting anything.',
+  'chat.ocrLayer': '[Page {page}: the reading seemed incomplete; here is the text the PDF itself holds for this page.]',
   'chat.ocrPageFailed': '[Page {page} not read: {reason}]',
   'chat.ocrSkipped': '[{count} further page(s) not read: past the page limit.]',
   'chat.ocrNothing':
@@ -1918,6 +1922,7 @@ export const en = {
   'chat.note.open': 'Open',
   'chat.note.copy': 'Copy the text',
   'chat.note.copied': 'Note text copied.',
+  'command.rereadScan': 'Read the document again with the model (OCR) and replace its transcription',
   'command.cleanTranscript': 'Remove headers and footers from the transcription',
   'chat.note.cleanKind': 'Transcription clean-up',
   'chat.note.noTranscript': '“{name}” holds no transcription to clean.',

@@ -16,8 +16,8 @@ import { extensionOf, fold } from './libraryDoc'
 /** Bumped when the readers improve, so what was read before is read again. */
 export const TEXT_VERSION = 1
 
-/** The most kept of one document: past a few hundred pages, the start is enough to find it. */
-export const TEXT_LIMIT = 200_000
+/** The most kept of one document: five hundred dense pages or so, past which the start is enough to find it. */
+export const TEXT_LIMIT = 1_000_000
 
 export type TextState = 'ok' | 'scan' | 'empty' | 'unreadable' | 'unsupported'
 

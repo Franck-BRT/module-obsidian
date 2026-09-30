@@ -95,19 +95,28 @@ export async function transcribeScan(
   model: string,
   file: TFile,
   source: OcrSource,
-  records?: Records
+  records?: Records,
+  /** Read again, whatever is kept: a transcription made before it read documents whole. */
+  again = false
 ): Promise<{ text: string; fresh: boolean }> {
-  const kept = await keptTranscript(app, file, records)
+  const kept = again ? null : await keptTranscript(app, file, records)
   if (kept) return { text: kept, fresh: false }
   const notice = new Notice(t('chat.ocrReading', { name: file.name, page: 1, total: source.pages }), 0)
   try {
     const result = await transcribe(
       source,
-      (image, page, total) => llm.readImage({ model, prompt: t('chat.ocrPrompt', { page, total }), image }),
+      (image, page, total, insist) =>
+        llm.readImage({
+          model,
+          prompt: insist ? t('chat.ocrPromptAgain', { page, total }) : t('chat.ocrPrompt', { page, total }),
+          image,
+          more: t('chat.ocrMore')
+        }),
       {
         page: (page, total) => t('chat.ocrPage', { page, total }),
         failed: (page, reason) => t('chat.ocrPageFailed', { page, reason }),
-        skipped: (count) => t('chat.ocrSkipped', { count })
+        skipped: (count) => t('chat.ocrSkipped', { count }),
+        layer: (page) => t('chat.ocrLayer', { page })
       },
       (page, total) => notice.setMessage(t('chat.ocrReading', { name: file.name, page, total }))
     )

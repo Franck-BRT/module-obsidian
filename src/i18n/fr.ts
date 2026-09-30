@@ -1375,8 +1375,13 @@ export const fr: Catalog = {
   'chat.ocrOff': 'Lire le texte du PDF plutôt que ses pages en image',
   'chat.ocrReading': 'Lecture de « {name} » par le modèle : page {page} sur {total}…',
   'chat.ocrPrompt':
-    'Voici la page {page} sur {total} d’un document scanné ou exporté en image. Transcris fidèlement tout son texte, dans l’ordre de lecture. Rends chaque tableau en tableau Markdown (| … |), une ligne par ligne du tableau, sans en omettre aucune. Recopie les dates, numéros, durées et noms exactement comme ils apparaissent. Si la page montre un diagramme de Gantt dont des dates ne sont données que par la position des barres, déduis-les de l’échelle du calendrier et marque-les « (estimé) ». N’ajoute aucun commentaire : seulement la transcription.',
+    'Voici la page {page} sur {total} d’un document scanné ou exporté en image. Transcris fidèlement TOUT son texte, du haut au bas de la page, dans l’ordre de lecture : sur une page en colonnes, la colonne de gauche en entier puis celle de droite. N’omets rien : titres, paragraphes, listes, encadrés, notes, légendes de figures, formules. Ne résume pas et ne raccourcis pas. Rends chaque tableau en tableau Markdown (| … |), une ligne par ligne du tableau, sans en omettre aucune. Recopie les dates, numéros, durées et noms exactement comme ils apparaissent. Si la page montre un diagramme de Gantt dont des dates ne sont données que par la position des barres, déduis-les de l’échelle du calendrier et marque-les « (estimé) ». N’ajoute aucun commentaire : seulement la transcription.',
   'chat.ocrPage': 'Page {page} sur {total}',
+  'chat.ocrPromptAgain':
+    'Voici la page {page} sur {total} d’un document. Une première transcription de cette page était incomplète : des paragraphes, des colonnes ou des listes manquaient. Transcris maintenant TOUT le texte de la page, sans exception, du haut au bas, colonne de gauche en entier puis colonne de droite, titres, listes, notes, légendes et formules compris. Rends les tableaux en Markdown. Ne résume rien, n’ajoute aucun commentaire : seulement la transcription complète.',
+  'chat.ocrMore': 'Continue la transcription exactement là où elle s’est arrêtée, sans rien répéter ni commenter.',
+  'chat.ocrLayer':
+    '[Page {page} : la lecture semblait incomplète ; voici le texte que porte le PDF lui-même pour cette page.]',
   'chat.ocrPageFailed': '[Page {page} non lue : {reason}]',
   'chat.ocrSkipped': '[{count} page(s) suivante(s) non lue(s) : au-delà de la limite de pages.]',
   'chat.ocrNothing':
@@ -1899,6 +1904,7 @@ export const fr: Catalog = {
   'chat.note.open': 'Ouvrir',
   'chat.note.copy': 'Copier le texte',
   'chat.note.copied': 'Texte de la note copié.',
+  'command.rereadScan': 'Relire le document avec le modèle (OCR) et remplacer sa transcription',
   'command.cleanTranscript': 'Retirer les en-têtes et pieds de page de la transcription',
   'chat.note.cleanKind': 'Nettoyage de la transcription',
   'chat.note.noTranscript': '« {name} » ne contient pas de transcription à nettoyer.',

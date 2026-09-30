@@ -18,8 +18,11 @@ import { fold } from '../library/libraryDoc'
 
 export const TRANSCRIPT_KEY = 'pm-transcript'
 
-/** How many pages are read at most: a planning, not a whole specification. */
-export const OCR_PAGE_LIMIT = 30
+/**
+ * How many pages are read at most, when a caller sets a bound: by default every page is,
+ * a transcription that stops at page thirty being a document that is not all there.
+ */
+export const OCR_PAGE_LIMIT = Number.POSITIVE_INFINITY
 
 /**
  * Whether a PDF's text is too thin to be the document: less than a few lines a page is
@@ -34,31 +37,88 @@ export interface OcrWords {
   page: (page: number, total: number) => string
   failed: (page: number, reason: string) => string
   skipped: (count: number) => string
+  /** Said before the text the PDF itself holds for a page the model read only in part. */
+  layer?: (page: number) => string
 }
 
 export interface OcrSource {
   pages: number
   /** The page, drawn as an image, as a data URL. */
   render: (page: number) => Promise<string>
+  /** The text the file itself holds on the page, when it holds any: what a reading is checked against. */
+  layer?: (page: number) => Promise<string>
 }
 
-/** Every page, read in turn; `progress` is told before each one. */
+export interface TranscribeOptions {
+  /** How many times a page that fails is asked for, in all. */
+  attempts?: number
+  /** How long to wait before asking again. */
+  wait?: (ms: number) => Promise<void>
+}
+
+/** The letters of a text: how much of a page it holds, whatever its layout. */
+function letterCount(text: string): number {
+  return (text.match(/\p{L}/gu) ?? []).length
+}
+
+/**
+ * Whether a reading of a page holds what the page says, against the text the file holds
+ * for it: most of its letters. A page with little text of its own is not judged.
+ */
+export function readsWhole(reading: string, layer: string): boolean {
+  const own = letterCount(layer)
+  return own < 200 || letterCount(reading) >= 0.7 * own
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+/**
+ * Every page, read in turn; `progress` is told before each one.
+ *
+ * Nothing is left out quietly. A page the model fails on is asked for again, twice, a
+ * moment apart; one it read only in part — fewer letters than the file itself holds for
+ * it — is read again, told so (`insist`), and when that is still short, the file's own
+ * text for the page follows the reading, said as such. Only a page failed every time is
+ * named in its place.
+ */
 export async function transcribe(
   source: OcrSource,
-  read: (image: string, page: number, total: number) => Promise<string>,
+  read: (image: string, page: number, total: number, insist?: boolean) => Promise<string>,
   words: OcrWords,
   progress: (page: number, total: number) => void = () => {},
-  limit = OCR_PAGE_LIMIT
+  limit = OCR_PAGE_LIMIT,
+  options: TranscribeOptions = {}
 ): Promise<{ text: string; read: number; failed: number }> {
+  const attempts = Math.max(1, options.attempts ?? 3)
+  const wait = options.wait ?? sleep
   const total = source.pages
   const shown = Math.min(total, limit)
   const parts: string[] = []
   let failed = 0
+  const asked = async (image: string, page: number, insist: boolean): Promise<string> => {
+    let last: unknown = null
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      if (attempt) await wait(attempt * 2000)
+      try {
+        return (await read(image, page, total, insist)).trim()
+      } catch (error) {
+        last = error
+      }
+    }
+    throw last instanceof Error ? last : new Error(String(last))
+  }
   for (let page = 1; page <= shown; page++) {
     progress(page, shown)
     let body: string
     try {
-      body = (await read(await source.render(page), page, total)).trim()
+      const image = await source.render(page)
+      body = await asked(image, page, false)
+      const layer = source.layer ? (await source.layer(page).catch(() => '')).trim() : ''
+      if (layer && !readsWhole(body, layer)) {
+        const again = await asked(image, page, true).catch(() => '')
+        if (letterCount(again) > letterCount(body)) body = again
+        if (!readsWhole(body, layer) && words.layer) body = `${body}\n\n${words.layer(page)}\n\n${layer}`
+      }
     } catch (error) {
       failed++
       body = words.failed(page, error instanceof Error ? error.message : String(error))

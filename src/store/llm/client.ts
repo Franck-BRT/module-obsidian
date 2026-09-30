@@ -137,6 +137,9 @@ export interface LlmClientOpts {
  * something in a shape, and turn text into a vector. Everything else the gateway can do
  * is reachable through the first two.
  */
+/** How many times a reading cut by the length limit is carried on. */
+const IMAGE_CONTINUATIONS = 4
+
 export class LlmClient {
   private readonly settings: LlmSettings
   private readonly transport: HttpTransport
@@ -164,22 +167,44 @@ export class LlmClient {
    * The reply room is wider than a chat's: a page of planning written out as a table runs
    * to thousands of words, and one cut at the setting's default would lose its last rows.
    */
-  async readImage(request: { model: string; prompt: string; image: string; maxTokens?: number }): Promise<string> {
-    const body = {
-      model: request.model,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: request.prompt },
-            { type: 'image_url', image_url: { url: request.image } }
-          ]
-        }
-      ],
-      temperature: 0,
-      max_tokens: request.maxTokens ?? Math.max(this.settings.maxTokens, 4096)
+  /**
+   * What an image says, read by a model that sees. A reading cut by the length limit — a
+   * dense page, a long table — is carried on, when `more` says how to ask: the model is
+   * shown what it wrote and asked to go on from there, a few times at most, and the parts
+   * are put end to end.
+   */
+  async readImage(request: {
+    model: string
+    prompt: string
+    image: string
+    maxTokens?: number
+    /** What asks the model to go on where its reading was cut. */
+    more?: string
+  }): Promise<string> {
+    const messages: Record<string, unknown>[] = [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: request.prompt },
+          { type: 'image_url', image_url: { url: request.image } }
+        ]
+      }
+    ]
+    let text = ''
+    for (let round = 0; round <= IMAGE_CONTINUATIONS; round++) {
+      const payload = await this.send('chat/completions', 'POST', {
+        model: request.model,
+        messages,
+        temperature: 0,
+        max_tokens: request.maxTokens ?? Math.max(this.settings.maxTokens, 4096)
+      })
+      const part = readChatContent(payload)
+      // As it came: the model goes on exactly where it stopped, mid-word as often as not.
+      text += part
+      if (!request.more || readFinish(payload) !== 'length') break
+      messages.push({ role: 'assistant', content: part }, { role: 'user', content: request.more })
     }
-    return readChatContent(await this.send('chat/completions', 'POST', body))
+    return text
   }
 
   /** A reply, and whether it was cut by the length limit rather than finished. */

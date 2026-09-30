@@ -5,6 +5,7 @@ import {
   readTranscriptSection,
   cleanTranscriptIn,
   stripFurniture,
+  readsWhole,
   transcribe,
   transcriptNote,
   transcriptPath,
@@ -15,7 +16,8 @@ import {
 const WORDS: OcrWords = {
   page: (page, total) => `Page ${page}/${total}`,
   failed: (page, reason) => `[Page ${page} illisible : ${reason}]`,
-  skipped: (count) => `[${count} page(s) non lue(s)]`
+  skipped: (count) => `[${count} page(s) non lue(s)]`,
+  layer: (page) => `[Page ${page} : texte du PDF]`
 }
 
 describe('needsOcr', () => {
@@ -64,7 +66,8 @@ describe('transcribe', () => {
       (_image, page) => (page === 2 ? Promise.reject(new Error('délai dépassé')) : Promise.resolve(`p${page}`)),
       WORDS,
       () => {},
-      3
+      3,
+      { wait: () => Promise.resolve() }
     )
     expect(out).toEqual({
       text: [
@@ -76,6 +79,80 @@ describe('transcribe', () => {
       read: 2,
       failed: 1
     })
+  })
+})
+
+describe('transcribing a whole document', () => {
+  const noWait = { wait: () => Promise.resolve() }
+  const source = (pages: number, layer?: (page: number) => string) => ({
+    pages,
+    render: (page: number) => Promise.resolve(`P${page}`),
+    ...(layer ? { layer: (page: number) => Promise.resolve(layer(page)) } : {})
+  })
+
+  it('reads every page, however many, with no limit of its own', async () => {
+    const out = await transcribe(source(45), (_image, page) => Promise.resolve(`p${page}`), WORDS)
+    expect(out.read).toBe(45)
+    expect(out.text).toContain('## Page 45/45\n\np45')
+    expect(out.text).not.toContain('non lue')
+  })
+
+  it('asks again for a page that failed, a moment later, and names it only when it failed every time', async () => {
+    const tries = new Map<number, number>()
+    const waits: number[] = []
+    const out = await transcribe(
+      source(3),
+      (_image, page) => {
+        const n = (tries.get(page) ?? 0) + 1
+        tries.set(page, n)
+        if (page === 2 && n < 3) return Promise.reject(new Error('délai dépassé'))
+        if (page === 3) return Promise.reject(new Error('refusé'))
+        return Promise.resolve(`p${page}`)
+      },
+      WORDS,
+      () => {},
+      undefined,
+      {
+        wait: (ms) => {
+          waits.push(ms)
+          return Promise.resolve()
+        }
+      }
+    )
+    expect(out.text).toContain('## Page 2/3\n\np2')
+    expect(out.text).toContain('[Page 3 illisible : refusé]')
+    expect(out).toMatchObject({ read: 2, failed: 1 })
+    expect([...tries.values()]).toEqual([1, 3, 3])
+    expect(waits).toEqual([2000, 4000, 2000, 4000])
+  })
+
+  it('reads again a page read only in part, told so, and adds the PDF’s own text when it is still short', async () => {
+    const layer = (page: number) => `Texte complet de la page ${page}. `.repeat(20)
+    const insisted: number[] = []
+    const out = await transcribe(
+      source(3, layer),
+      (_image, page, _total, insist) => {
+        if (insist) insisted.push(page)
+        // Page 1 whole at once; page 2 whole once told; page 3 short both times.
+        if (page === 1 || (page === 2 && insist)) return Promise.resolve(layer(page))
+        return Promise.resolve(`Début de la page ${page}.`)
+      },
+      WORDS,
+      () => {},
+      undefined,
+      noWait
+    )
+    expect(insisted).toEqual([2, 3])
+    expect(out.text).toContain(`## Page 2/3\n\n${layer(2).trim()}`)
+    expect(out.text).toContain(`## Page 3/3\n\nDébut de la page 3.\n\n[Page 3 : texte du PDF]\n\n${layer(3).trim()}`)
+    expect(out.text).not.toContain('[Page 1 : texte du PDF]')
+  })
+
+  it('judges a reading against the file’s own text only when that holds a page’s worth', () => {
+    const page = 'Le placement fait partie du problème de découpe. '.repeat(10)
+    expect(readsWhole(page, page)).toBe(true)
+    expect(readsWhole(page.slice(0, page.length / 2), page)).toBe(false)
+    expect(readsWhole('', 'Titre seul')).toBe(true)
   })
 })
 

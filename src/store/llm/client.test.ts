@@ -308,4 +308,51 @@ describe('reading an image', () => {
       max_tokens: 4096
     })
   })
+
+  // A dense page cut by the length limit: carried on from where it stopped, the parts end to end.
+  it('goes on with a reading cut by the length limit, shown what it wrote, until it is finished', async () => {
+    const replies = [
+      { choices: [{ message: { content: '| Lot 1 | Terrass' }, finish_reason: 'length' }] },
+      { choices: [{ message: { content: 'ements |\n| Lot 2 |' }, finish_reason: 'length' }] },
+      { choices: [{ message: { content: ' Gros œuvre |' }, finish_reason: 'stop' }] }
+    ]
+    const seen: Parameters<HttpTransport>[0][] = []
+    const transport: HttpTransport = (request) => {
+      seen.push(request)
+      return Promise.resolve({ status: 200, text: JSON.stringify(replies[seen.length - 1]) })
+    }
+    const text = await new LlmClient({ settings: settings(), transport }).readImage({
+      model: 'vision',
+      prompt: 'Transcris.',
+      image: 'data:image/jpeg;base64,AAAA',
+      more: 'Continue.'
+    })
+    expect(text).toBe('| Lot 1 | Terrassements |\n| Lot 2 | Gros œuvre |')
+    expect(seen).toHaveLength(3)
+    const last = JSON.parse(seen[2].body ?? '') as { messages: { role: string; content: unknown }[] }
+    expect(last.messages.map((message) => message.role)).toEqual(['user', 'assistant', 'user', 'assistant', 'user'])
+    expect(last.messages[3]).toEqual({ role: 'assistant', content: 'ements |\n| Lot 2 |' })
+    expect(last.messages[4]).toEqual({ role: 'user', content: 'Continue.' })
+  })
+
+  it('stops after a few rounds, and never goes on when not told how to ask', async () => {
+    const cut = { choices: [{ message: { content: 'x' }, finish_reason: 'length' }] }
+    const endless = fake({ body: cut })
+    expect(
+      await new LlmClient({ settings: settings(), transport: endless.transport }).readImage({
+        model: 'vision',
+        prompt: 'Transcris.',
+        image: 'data:,',
+        more: 'Continue.'
+      })
+    ).toBe('xxxxx')
+    expect(endless.seen).toHaveLength(5)
+    const once = fake({ body: cut })
+    await new LlmClient({ settings: settings(), transport: once.transport }).readImage({
+      model: 'vision',
+      prompt: 'Transcris.',
+      image: 'data:,'
+    })
+    expect(once.seen).toHaveLength(1)
+  })
 })

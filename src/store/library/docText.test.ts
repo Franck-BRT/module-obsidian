@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { buildDocx, para, type DocxDocument } from '../docx'
 import { buildPdf } from '../pdf'
 import { buildXlsx } from '../xlsx'
-import { decodeText, encodeText, extractText, foldWithMap, snippet, TEXT_VERSION, type Snippet } from './docText'
+import {
+  decodeText,
+  encodeText,
+  extractText,
+  foldWithMap,
+  snippet,
+  TEXT_LIMIT,
+  TEXT_VERSION,
+  type Snippet
+} from './docText'
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
 const WORDS = { from: 'De :', to: 'À :', date: 'Date :', attachments: 'Pièces jointes :' }
@@ -91,8 +100,8 @@ describe('extractText', () => {
   })
 
   it('keeps the start of a very long text', async () => {
-    const long = await extractText('long.txt', bytes('a'.repeat(250_000)), WORDS)
-    expect(long.text).toHaveLength(200_000)
+    const long = await extractText('long.txt', bytes('a'.repeat(TEXT_LIMIT + 50_000)), WORDS)
+    expect(long.text).toHaveLength(TEXT_LIMIT)
   })
 })
 

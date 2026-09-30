@@ -18,6 +18,7 @@ interface PdfJsViewport {
 interface PdfJsPage {
   getViewport(options: { scale: number }): PdfJsViewport
   render(options: { canvasContext: CanvasRenderingContext2D; viewport: PdfJsViewport }): { promise: Promise<void> }
+  getTextContent(): Promise<{ items: { str?: string; hasEOL?: boolean }[] }>
   cleanup(): void
 }
 
@@ -59,6 +60,12 @@ export async function pdfPages(bytes: Uint8Array): Promise<OcrSource & { close: 
       await page.render({ canvasContext: context, viewport }).promise
       page.cleanup()
       return canvas.toDataURL('image/jpeg', 0.85)
+    },
+    // What the file itself holds on the page, when it holds text: what a reading is checked against.
+    layer: async (number) => {
+      const page = await doc.getPage(number)
+      const content = await page.getTextContent()
+      return content.items.map((item) => `${item.str ?? ''}${item.hasEOL ? '\n' : ''}`).join('')
     },
     close: () => {
       doc.destroy().catch(() => undefined)
