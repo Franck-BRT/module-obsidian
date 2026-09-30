@@ -162,10 +162,11 @@ export class DocTextIndex {
         }
       }
       if (!entry || entry.mtime !== file.stat.mtime) todo.push({ doc, file })
-      else if (entry.state === 'scan') {
-        // A scan read since — by the chat, for a question about it — is found by that.
+      else if (entry.state === 'scan' || entry.ocr) {
+        // A scan read since — by the chat, for a question about it — is found by that; and
+        // one read already, by what the reader corrected in its transcription since.
         const kept = await this.deps.kept(file)
-        if (kept) {
+        if (kept && kept.slice(0, TEXT_LIMIT) !== entry.text) {
           await this.keep(doc.hash, { state: 'ok', text: kept.slice(0, TEXT_LIMIT), mtime: file.stat.mtime, ocr: true })
         }
       }

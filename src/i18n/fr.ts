@@ -1366,6 +1366,9 @@ export const fr: Catalog = {
   'chat.modelsUnavailable': 'Liste des modèles indisponible : {reason}',
   'chat.modelsNone': 'La passerelle ne propose aucun modèle de conversation.',
   'chat.modelBy': 'Réponse écrite par {model}',
+  'library.transcriptHeading': 'Transcription',
+  'library.transcriptNote':
+    '> [!info] Transcription faite par {model}. Relis-la et corrige-la au besoin : le chat et la recherche lisent cette section tant que le document ne change pas. Supprime-la pour relancer la lecture.',
   'chat.ocrSuffix': 'transcription',
   'chat.ocrOpen': 'Ouvrir la transcription',
   'chat.ocrOn': 'Lire les pages comme des images (pour un planning inséré en image)',
@@ -1760,7 +1763,7 @@ export const fr: Catalog = {
     'Faire lire les documents scannés par le modèle qui voit, pour les retrouver par leur contenu',
   'library.readScansTitle': { one: 'Lire {count} scan avec le modèle ?', other: 'Lire {count} scans avec le modèle ?' },
   'library.readScansText':
-    'Chaque page est envoyée au modèle de vision configuré (ou au modèle du chat) : cela prend un moment par page et consomme des requêtes. La transcription est gardée à côté du document, le chat s’en servira aussi, et vous pourrez la corriger.',
+    'Chaque page est envoyée au modèle de vision configuré (ou au modèle du chat) : cela prend un moment par page et consomme des requêtes. La transcription est ajoutée à la fiche du document, dans une section « Transcription » : le chat et la recherche s’en servent, et vous pouvez la corriger.',
   'library.readScans': 'Lire les scans',
   'library.scanBadge': 'scan non lu',
   'library.scanBadgeHint': 'Document scanné, sans texte : cliquez pour le faire lire par le modèle',

@@ -63,8 +63,8 @@ import {
   type ContextFile,
   type FileProblem
 } from '../../store/chat/chatFile'
-import { needsOcr, transcriptPath } from '../../store/chat/ocr'
-import { scanPages, transcribeScan } from './scanReader'
+import { needsOcr } from '../../store/chat/ocr'
+import { scanPages, transcribeScan, transcriptFile } from './scanReader'
 import { notesFallback } from './noteCard'
 import { calledSkills, readSkill, skillBody, skillsContext, type Skill } from '../../store/chat/skills'
 import { lookUpVault, SEARCH_DEFAULTS, vaultContext } from '../../store/rag/ragSearch'
@@ -492,16 +492,21 @@ export class ChatView extends ItemView {
         'click',
         safeAsync(() => this.app.workspace.openLinkText(path, '', 'tab'))
       )
-      // A transcription already made is the reader's to check, one click away.
-      const transcript = this.app.vault.getAbstractFileByPath(transcriptPath(path, t('chat.ocrSuffix')))
-      if (transcript instanceof TFile) {
-        const open = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.ocrOpen') } })
-        setIcon(open, 'file-scan')
+      // A transcription already made is the reader's to check, one click away: in the
+      // document's record, or beside it.
+      const open = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.ocrOpen') } })
+      setIcon(open, 'file-scan')
+      open.hide()
+      const offer = safeAsync(async () => {
+        const transcript = await transcriptFile(this.app, this.plugin.library, path)
+        if (!transcript) return
+        open.show()
         open.addEventListener(
           'click',
           safeAsync(() => this.app.workspace.getLeaf('tab').openFile(transcript))
         )
-      }
+      })
+      offer()
       // A PDF with a title block around a picture of the planning: its text is not the
       // document, and the reader can say so.
       if (path.toLowerCase().endsWith('.pdf')) {
@@ -938,7 +943,7 @@ export class ChatView extends ItemView {
     const source = await scanPages(file, bytes)
     try {
       const model = this.plugin.settings.llm.modelOcr.trim() || this.model
-      const read = await transcribeScan(this.app, this.llm, model, file, source)
+      const read = await transcribeScan(this.app, this.llm, model, file, source, this.plugin.library)
       if (read.fresh) this.renderContext()
       return read.text
     } finally {

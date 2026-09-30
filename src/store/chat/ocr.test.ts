@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { needsOcr, readTranscript, transcribe, transcriptNote, transcriptPath, type OcrWords } from './ocr'
+import {
+  needsOcr,
+  readTranscript,
+  readTranscriptSection,
+  transcribe,
+  transcriptNote,
+  transcriptPath,
+  withTranscriptSection,
+  type OcrWords
+} from './ocr'
 
 const WORDS: OcrWords = {
   page: (page, total) => `Page ${page}/${total}`,
@@ -82,7 +91,13 @@ describe('the transcription note', () => {
     expect(
       note.startsWith('---\npm-transcript: "[[Work/Ligne 6/_docs/Planning scanné.pdf]]"\nsource-mtime: 1759000000000\n')
     ).toBe(true)
-    expect(readTranscript(note)).toEqual({ sourceMtime: 1759000000000, text: '| Radier | 19/10/2026 |' })
+    expect(readTranscript(note)).toEqual({
+      sourceMtime: 1759000000000,
+      text: '| Radier | 19/10/2026 |',
+      model: 'qwen2.5-vl-72b',
+      at: '2026-09-28T12:00:00.000Z',
+      pages: 2
+    })
     const corrected = note.replace('19/10/2026', '20/10/2026')
     expect(readTranscript(corrected)?.text).toBe('| Radier | 20/10/2026 |')
   })
@@ -97,5 +112,47 @@ describe('the transcription note', () => {
       'Work/_docs/Planning C (transcription).md'
     )
     expect(transcriptPath('scan.png', 'transcription')).toBe('scan (transcription).md')
+  })
+})
+
+describe('the transcription in a library record', () => {
+  const meta = { sourceMtime: 1759000000000, model: 'qwen2.5-vl', at: '2026-09-28T12:00:00.000Z', pages: 2 }
+  const words = { heading: 'Transcription', note: '> [!info] Lu par qwen2.5-vl' }
+  const record = '---\npm-library-doc: true\ntitle: Planning\n---\n\n## Notes\n\nÀ relire avec Anne.\n'
+  const text = '## Page 1/2\n\n| Radier | 19/10/2026 |\n\n## Page 2/2\n\n| Dalle | 26/10/2026 |'
+
+  it('goes at the end, under its heading, the notes left as they were, and reads back', () => {
+    const kept = withTranscriptSection(record, meta, text, words)
+    expect(
+      kept.startsWith(`${record.trimEnd()}\n\n## Transcription\n\n%% pm-transcript {"sourceMtime":1759000000000,`)
+    ).toBe(true)
+    // One level under its own heading.
+    expect(kept).toContain('\n### Page 1/2\n\n| Radier | 19/10/2026 |\n')
+    expect(kept.endsWith('%% /pm-transcript %%\n')).toBe(true)
+    expect(readTranscriptSection(kept)).toEqual({
+      sourceMtime: 1759000000000,
+      text: '### Page 1/2\n\n| Radier | 19/10/2026 |\n\n### Page 2/2\n\n| Dalle | 26/10/2026 |'
+    })
+    // Corrected by the reader: as corrected.
+    expect(readTranscriptSection(kept.replace('19/10', '20/10'))?.text).toContain('| Radier | 20/10/2026 |')
+  })
+
+  it('replaces the one there, heading and all, whatever was written after it', () => {
+    const first = withTranscriptSection(record, meta, text, words)
+    const later = `${first}\n## Suite\n\nAjouté après.\n`
+    const again = withTranscriptSection(later, { ...meta, sourceMtime: 1760000000000 }, 'Nouveau texte', words)
+    expect(again.match(/## Transcription/g)).toHaveLength(1)
+    expect(again).not.toContain('Radier')
+    expect(again).toContain('Nouveau texte\n\n%% /pm-transcript %%\n\n## Suite\n\nAjouté après.')
+    expect(again).toContain('À relire avec Anne.')
+    expect(readTranscriptSection(again)).toEqual({ sourceMtime: 1760000000000, text: 'Nouveau texte' })
+  })
+
+  it('is none in a record without one, and read again when its facts do not read', () => {
+    expect(readTranscriptSection(record)).toBeNull()
+    expect(readTranscriptSection('%% pm-transcript oops %%\n> note\nTexte\n%% /pm-transcript %%')).toEqual({
+      sourceMtime: 0,
+      text: 'Texte'
+    })
   })
 })

@@ -220,7 +220,7 @@ export default class PMPlugin extends Plugin {
           date: t('email.date'),
           attachments: t('library.mailAttachments')
         }),
-        kept: (file) => keptTranscript(this.app, file)
+        kept: (file) => keptTranscript(this.app, file, this.library)
       }
     )
     this.ragIndex = new RagIndex(adapterStorage(this.app, '.pm-rag'))
@@ -1085,7 +1085,7 @@ export default class PMPlugin extends Plugin {
         await this.libraryText.readScan(doc, async (file, bytes) => {
           const source = await scanPages(file, bytes)
           try {
-            return (await transcribeScan(this.app, client, model, file, source)).text
+            return (await transcribeScan(this.app, client, model, file, source, this.library)).text
           } finally {
             source.close()
           }

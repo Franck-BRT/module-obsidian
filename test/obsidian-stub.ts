@@ -14,6 +14,10 @@ export class Notice {
   constructor(message?: string) {
     if (message !== undefined) Notice.shown.push(message)
   }
+  setMessage(message: string): this {
+    Notice.shown.push(message)
+    return this
+  }
   hide(): void {}
 }
 

@@ -1387,6 +1387,9 @@ export const en = {
   'chat.modelsUnavailable': 'Model list unavailable: {reason}',
   'chat.modelsNone': 'The gateway offers no conversation model.',
   'chat.modelBy': 'Reply written by {model}',
+  'library.transcriptHeading': 'Transcription',
+  'library.transcriptNote':
+    '> [!info] Transcribed by {model}. Read it over and correct it if need be: the chat and the search read this section as long as the document does not change. Delete it to have the document read again.',
   'chat.ocrSuffix': 'transcription',
   'chat.ocrOpen': 'Open the transcription',
   'chat.ocrOn': 'Read the pages as pictures (for a planning inserted as an image)',
@@ -1780,7 +1783,7 @@ export const en = {
   'library.readScansHint': 'Have the scanned documents read by the model that sees, to find them by what they say',
   'library.readScansTitle': { one: 'Read {count} scan with the model?', other: 'Read {count} scans with the model?' },
   'library.readScansText':
-    'Each page is sent to the configured vision model (or the chat’s model): it takes a moment a page and uses requests. The transcription is kept beside the document, the chat uses it too, and you can correct it.',
+    'Each page is sent to the configured vision model (or the chat’s model): it takes a moment a page and uses requests. The transcription is added to the document’s record, under a « Transcription » heading: the chat and the search use it, and you can correct it.',
   'library.readScans': 'Read the scans',
   'library.scanBadge': 'scan not read',
   'library.scanBadgeHint': 'Scanned document with no text: click to have the model read it',

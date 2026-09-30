@@ -147,6 +147,19 @@ describe('DocTextIndex', () => {
     expect(index.entry(doc)).toMatchObject({ state: 'ok', text: 'Planning lu par le chat', ocr: true })
   })
 
+  it('takes a transcription as the reader corrected it since, and leaves the others be', async () => {
+    await vault.createBinary('L/_files/planning.pdf', bytes('%PDF'))
+    transcripts.set('L/_files/planning.pdf', '| Radier | 19/10 |')
+    const doc = docOf('p', 'L/_files/planning.pdf')
+    await index.refresh([doc])
+    const writes = shelf.writes
+    await index.refresh([doc])
+    expect(shelf.writes).toBe(writes)
+    transcripts.set('L/_files/planning.pdf', '| Radier | 20/10 |')
+    await index.refresh([doc])
+    expect(index.entry(doc)).toMatchObject({ state: 'ok', text: '| Radier | 20/10 |', ocr: true })
+  })
+
   it('keeps what a model made of a scan as its text', async () => {
     await vault.createBinary('L/_files/photo.png', bytes('png'))
     const photo = docOf('q', 'L/_files/photo.png')

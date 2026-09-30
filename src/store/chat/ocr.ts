@@ -101,13 +101,22 @@ export function transcriptNote(meta: TranscriptMeta, text: string, heading: stri
  * A transcription read back: its text — as the reader may have corrected it — and the
  * time of the document it was read from. Null when the note is not one.
  */
-export function readTranscript(content: string): { sourceMtime: number; text: string } | null {
+export function readTranscript(
+  content: string
+): { sourceMtime: number; text: string; model: string; at: string; pages: number } | null {
   const { frontmatter, body } = parseFrontmatter(content)
   if (!frontmatter || frontmatter[TRANSCRIPT_KEY] === undefined) return null
   const mtime = Number(frontmatter['source-mtime'])
+  const pages = Number(frontmatter.pages)
   // The heading line the note opens with is the plugin's, not the document's.
   const text = body.replace(/^\s*>[^\n]*\n/, '').trim()
-  return { sourceMtime: Number.isFinite(mtime) ? mtime : 0, text }
+  return {
+    sourceMtime: Number.isFinite(mtime) ? mtime : 0,
+    text,
+    model: typeof frontmatter.model === 'string' ? frontmatter.model : '',
+    at: typeof frontmatter.at === 'string' ? frontmatter.at : '',
+    pages: Number.isFinite(pages) ? pages : 0
+  }
 }
 
 /** Where a document's transcription is kept: beside it, named after it. */
@@ -118,4 +127,77 @@ export function transcriptPath(source: string, suffix: string): string {
   const dot = name.lastIndexOf('.')
   const base = dot > 0 ? name.slice(0, dot) : name
   return `${folder}${base} (${suffix}).md`
+}
+
+/** Where a transcription opens and closes in a library record: comments, unseen when read. */
+const SECTION_OPEN = '%% pm-transcript'
+const SECTION_CLOSE = '%% /pm-transcript %%'
+
+/** A transcription's headings, one level down: it sits under its own heading in the record. */
+function demoted(text: string): string {
+  return text.replace(/^(#{1,5}) /gm, '#$1 ')
+}
+
+/**
+ * A library record with the transcription of its document in it: the section it already
+ * has replaced, or one added at its end — under its heading, what it was read from kept
+ * in a comment, the text as the model read it.
+ */
+export function withTranscriptSection(
+  content: string,
+  meta: Omit<TranscriptMeta, 'source'>,
+  text: string,
+  words: { heading: string; note: string }
+): string {
+  const facts = JSON.stringify({ sourceMtime: meta.sourceMtime, model: meta.model, at: meta.at, pages: meta.pages })
+  const section = [
+    `## ${words.heading}`,
+    '',
+    `${SECTION_OPEN} ${facts} %%`,
+    words.note,
+    '',
+    demoted(text.trim()),
+    '',
+    SECTION_CLOSE
+  ].join('\n')
+  const found = sectionAt(content)
+  if (found) return `${content.slice(0, found.start)}${section}${content.slice(found.end)}`
+  return `${content.replace(/\s*$/, '')}\n\n${section}\n`
+}
+
+/** Where the section is: from its heading, when right above it, to its closing comment. */
+function sectionAt(content: string): { start: number; end: number } | null {
+  const open = content.indexOf(SECTION_OPEN)
+  if (open < 0) return null
+  const close = content.indexOf(SECTION_CLOSE, open)
+  const end = close < 0 ? content.length : close + SECTION_CLOSE.length
+  // Its heading comes with it, when nothing but blank lines stands between them.
+  const before = content.slice(0, open)
+  const heading = /(^|\n)## [^\n]*\n\s*$/.exec(before)
+  return { start: heading ? heading.index + heading[1].length : open, end }
+}
+
+/**
+ * The transcription a library record holds: its text — as the reader may have corrected
+ * it — and the time of the document it was read from. Null when it holds none.
+ */
+export function readTranscriptSection(content: string): { sourceMtime: number; text: string } | null {
+  const open = content.indexOf(SECTION_OPEN)
+  if (open < 0) return null
+  const lineEnd = content.indexOf('\n', open)
+  const line = content.slice(open + SECTION_OPEN.length, lineEnd < 0 ? content.length : lineEnd)
+  let sourceMtime = 0
+  try {
+    const facts = JSON.parse(line.replace(/%%\s*$/, '').trim()) as { sourceMtime?: unknown }
+    const mtime = Number(facts.sourceMtime)
+    sourceMtime = Number.isFinite(mtime) ? mtime : 0
+  } catch {
+    // Its facts unreadable: read again, as a document that changed would be.
+  }
+  if (lineEnd < 0) return { sourceMtime, text: '' }
+  const close = content.indexOf(SECTION_CLOSE, lineEnd)
+  const body = content.slice(lineEnd + 1, close < 0 ? content.length : close)
+  // The line the section opens with is the plugin's, not the document's.
+  const text = body.replace(/^\s*>[^\n]*\n/, '').trim()
+  return { sourceMtime, text }
 }
