@@ -11,12 +11,14 @@ import {
   applyCreate,
   applyToRequirement,
   applyToTicket,
+  asModifications,
   createLot,
+  existingTicket,
   createPlace,
   projectsLike,
   ticketPlaces
 } from './applyChange'
-import { parseChange, verificationOptions, type ChangeSpec, type ReqOptions } from './chatChange'
+import { changeBlocks, parseChange, verificationOptions, type ChangeSpec, type ReqOptions } from './chatChange'
 
 /**
  * A proposal applied the whole way: found in the vault, checked, written through the
@@ -349,6 +351,60 @@ describe('creating a ticket from the chat', () => {
     })
     // Nothing of that name: nothing.
     expect(await createPlace(index, store, spec('create', { create: 'X', project: 'Inconnu' }))).toBeNull()
+  })
+
+  it('turns a ticket proposed as new but already there into the change to it, and leaves new ones as they are', async () => {
+    const program = await store.createProject('COSMA - GMAO', 'Work', { program: true })
+    const cosma = await store.createProject('COSMA', 'Work', { parentPath: program.filePath })
+    const other = await store.createProject('Autre', 'Work')
+    const radier = makeTask({ title: 'Radier', start: '2026-10-01', due: '2026-10-09' })
+    await store.insertTask(cosma, radier)
+    await store.insertTask(other, makeTask({ title: 'Réception', start: '' }))
+    await store.insertTask(cosma, makeTask({ title: 'Réception', start: '' }))
+    index.build()
+    const block = (record: object): string => ['```pm-change', JSON.stringify(record), '```'].join('\n')
+    const reply = [
+      'Voici les modifications :',
+      block({
+        create: 'radier',
+        project: 'COSMA - GMAO',
+        parent: 'Terrassements',
+        changes: { type: 'Tâche', due: '2026-10-20', assignees: ['Anne'] },
+        why: 'Retard.'
+      }),
+      // In another project than the one named: a new ticket there.
+      block({ create: 'Radier', project: 'Autre', changes: { due: '2026-10-20' } }),
+      // Nothing a ticket changes: left, the card says it is there.
+      block({ create: 'Radier', project: 'COSMA', changes: { type: 'Tâche' } }),
+      // Two of that name, and no project to tell them apart: not guessed.
+      block({ create: 'Réception', project: 'Inconnu', changes: { due: '2026-10-20' } }),
+      block({ create: 'Pose', project: 'COSMA', changes: { due: '2026-10-20' } })
+    ].join('\n\n')
+    const turned = changeBlocks(await asModifications(index, store, reply)).map(
+      (source) => JSON.parse(source) as Record<string, unknown>
+    )
+    expect(turned).toEqual([
+      {
+        ticket: 'Radier',
+        project: 'COSMA',
+        changes: { due: '2026-10-20', assignees: ['Anne'] },
+        why: 'Retard.'
+      },
+      { create: 'Radier', project: 'Autre', changes: { due: '2026-10-20' } },
+      { create: 'Radier', project: 'COSMA', changes: { type: 'Tâche' } },
+      { create: 'Réception', project: 'Inconnu', changes: { due: '2026-10-20' } },
+      { create: 'Pose', project: 'COSMA', changes: { due: '2026-10-20' } }
+    ])
+    // A project the vault does not have: the only ticket of that title, wherever it is.
+    expect(await existingTicket(index, store, spec('create', { create: 'Radier', project: 'Inconnu' }))).toMatchObject({
+      id: radier.id
+    })
+    // And the change, applied, is to the ticket that was there.
+    const change = spec('ticket', turned[0])
+    expect(await applyToTicket(index, store, change)).toMatchObject({ ok: true, changed: true })
+    const reloaded = await store.loadProjectByPath(cosma.filePath)
+    expect(reloaded?.tasks.filter((task) => task.title === 'Radier')).toHaveLength(1)
+    expect(findTaskById(reloaded!, radier.id)).toMatchObject({ due: '2026-10-20', assignees: ['Anne'] })
   })
 
   it('makes the lot a ticket goes under, once, then the ticket goes under it', async () => {

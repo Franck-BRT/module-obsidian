@@ -19,6 +19,7 @@ import {
   createSource,
   replaceBlock,
   withTicketEdits,
+  createAsTicket,
   ticketSource
 } from './chatChange'
 
@@ -762,5 +763,44 @@ describe('a proposed ticket changed by the reader', () => {
     )
     expect(replaceBlock(`\`\`\`pm-change\n${before}\n\`\`\``, before, after)).toBe(`\`\`\`pm-change\n${after}\n\`\`\``)
     expect(replaceBlock('rien', before, after)).toBeNull()
+  })
+})
+
+describe('a ticket proposed as new that is there already', () => {
+  const read = (record: object): Extract<ChangeSpec, { kind: 'create' }> => {
+    const result = parseChange(JSON.stringify(record))
+    if (!('spec' in result) || result.spec.kind !== 'create') throw new Error('not read')
+    return result.spec
+  }
+
+  it('becomes the change to it: what a ticket changes kept, in order, its type and lot left', () => {
+    expect(
+      createAsTicket(
+        read({
+          create: 'radier',
+          project: 'COSMA - GMAO',
+          parent: 'Lot 1',
+          changes: { type: 'Tâche', start: '2026-10-01', status: 'En cours', after: ['Recenser'] },
+          why: 'Retard.'
+        }),
+        { title: 'Radier', projectTitle: 'COSMA' }
+      )
+    ).toEqual({
+      kind: 'ticket',
+      target: 'Radier',
+      project: 'COSMA',
+      changes: [
+        { field: 'start', value: '2026-10-01' },
+        { field: 'status', value: 'En cours' },
+        { field: 'after', value: ['Recenser'] }
+      ],
+      why: 'Retard.'
+    })
+  })
+
+  it('is nothing to do when it says nothing a ticket changes', () => {
+    expect(
+      createAsTicket(read({ create: 'Radier', changes: { type: 'Tâche' } }), { title: 'Radier', projectTitle: 'P' })
+    ).toBeNull()
   })
 })

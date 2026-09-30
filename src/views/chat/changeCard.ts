@@ -2,6 +2,7 @@ import { MarkdownRenderChild, Notice, setIcon, TFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import {
   CHANGE_LANGUAGE,
+  createAsTicket,
   createChange,
   createSource,
   findTicket,
@@ -36,6 +37,7 @@ import {
   createLot,
   createPlace,
   createTarget,
+  existingTicket,
   projectsLike,
   ticketTarget,
   type Applied,
@@ -270,7 +272,9 @@ class ChangeCard extends MarkdownRenderChild {
           return
         }
       }
-      this.paint((card) => this.renderCreate(card, placed, target))
+      const meant = target ? await this.meantChange(placed, target.context) : null
+      if (generation !== this.generation) return
+      this.paint((card) => this.renderCreate(card, placed, target, meant))
       return
     }
     const target = await ticketTarget(this.plugin.index, this.plugin.store, spec)
@@ -282,11 +286,33 @@ class ChangeCard extends MarkdownRenderChild {
     this.paint((card) => this.renderTicket(card, spec, target))
   }
 
+  /**
+   * A ticket proposed as new that the project holds already, with fields it does not have:
+   * the change to it the model more likely meant — a proposal from before replies were
+   * read for that, or a ticket made since with other dates. Null when there is nothing to
+   * change, a ticket made from this very card among others.
+   */
+  private async meantChange(
+    spec: Extract<ChangeSpec, { kind: 'create' }>,
+    context: CreateContext
+  ): Promise<Extract<ChangeSpec, { kind: 'ticket' }> | null> {
+    // Whatever else it says — a type or a lot that does not read —: its title is what counts.
+    if (!context.tickets.some((ticket) => fold(ticket.title.trim()) === fold(spec.title.trim()))) return null
+    const existing = await existingTicket(this.plugin.index, this.plugin.store, spec)
+    const meant = existing ? createAsTicket(spec, existing) : null
+    if (!meant) return null
+    const target = await ticketTarget(this.plugin.index, this.plugin.store, meant)
+    if ('problem' in target) return null
+    const change = ticketChange(meant, target.task, target.lists)
+    return change.ok && !change.applied ? meant : null
+  }
+
   /** A ticket to create: where it goes, what it will say, and a button that makes it. */
   private renderCreate(
     card: HTMLElement,
     spec: Extract<ChangeSpec, { kind: 'create' }>,
-    target: { project: Project; context: CreateContext; via?: string } | null
+    target: { project: Project; context: CreateContext; via?: string } | null,
+    meant: Extract<ChangeSpec, { kind: 'ticket' }> | null = null
   ): void {
     card.addClass('pm-change--create')
     if (!target) {
@@ -318,6 +344,20 @@ class ChangeCard extends MarkdownRenderChild {
       }
     }
     this.why(card, spec.why)
+    // There already, and not as proposed: said, with the way to make it the change it was.
+    if (meant) {
+      const fix = card.createDiv('pm-change-fix')
+      fix.createDiv({ cls: 'pm-change-note', text: t('chat.change.exists') })
+      const button = fix.createEl('button', { cls: 'mod-cta', text: t('chat.change.asModification') })
+      button.addEventListener(
+        'click',
+        safeAsync(async () => {
+          await this.keepSource(ticketSource(meant))
+          await this.draw()
+        })
+      )
+      return
+    }
     this.footer(card, resolved, () => this.applyCreate(spec), {
       apply: t('chat.change.create'),
       done: t('chat.change.created')

@@ -42,6 +42,7 @@ import {
   applyToRequirement,
   applyToTicket,
   ticketPlaces,
+  asModifications,
   type Applied
 } from '../../store/chat/applyChange'
 import {
@@ -2108,6 +2109,14 @@ export class ChatView extends ItemView {
         stopped = outcome.stopped
         truncated = outcome.truncated
       } else ({ text: reply, truncated } = await this.llm.reply(request))
+      // A ticket proposed as new that is there already: the change to it the model meant.
+      if (project) {
+        try {
+          reply = await asModifications(this.plugin.index, this.plugin.store, reply)
+        } catch {
+          // Kept as written: the cards still say what they can.
+        }
+      }
       if (reply.trim()) {
         // Stopped part way, what had been written is kept: it is what the reader read.
         this.turns = [

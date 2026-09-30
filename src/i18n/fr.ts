@@ -1201,7 +1201,7 @@ export const fr: Catalog = {
   'chat.changeRequirement':
     'Pour une exigence : {"requirement": "identifiant", "field": "…", "value": "…", "why": "…"}. Champs : text (l’énoncé ; ajoute "lang" pour une autre langue que la langue source : {languages}), title, rationale, source, status ({statuses}), type ({types}), criticality ({criticalities}), verification ({verifications}).',
   'chat.changeTicket':
-    'Pour un ticket : {"ticket": "titre exact du ticket", "project": "titre de son projet", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, un seul bloc par ticket avec tous ses champs modifiés. Champs : title, status ({statuses}), priority ({priorities}), start et due (date AAAA-MM-JJ), progress (nombre de 0 à 100), assignees (liste de noms), after (liste des titres des tickets qu’il suit, qui remplace ses dépendances).',
+    'Pour modifier un ticket qui existe déjà (il figure dans le projet ci-dessus) : {"ticket": "titre exact du ticket", "project": "titre de son projet", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, un seul bloc par ticket avec tous ses champs modifiés. Champs : title, status ({statuses}), priority ({priorities}), start et due (date AAAA-MM-JJ), progress (nombre de 0 à 100), assignees (liste de noms), after (liste des titres des tickets qu’il suit, qui remplace ses dépendances).',
   'chat.change.title': 'Proposition',
   'chat.change.apply': 'Appliquer',
   'chat.change.applying': 'Application…',
@@ -1317,7 +1317,10 @@ export const fr: Catalog = {
   'chat.preset.documentQ':
     'Résume ce document : de quoi il s’agit, qui l’a émis et quand, ce qu’il change ou demande, et les dates et chiffres à retenir.',
   'chat.changeCreate':
-    'Pour créer un ticket qui n’existe pas encore : {"create": "titre du nouveau ticket", "project": "titre exact du projet où le créer (jamais celui d’un programme : nomme celui de ses projets qui contient le lot)", "parent": "titre du lot ou du ticket sous lequel le placer (facultatif)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["titre du ticket qu’il suit"]}, "why": "…"}. Types : {types}. Les champs de "changes" sont tous facultatifs ; status, priority et progress s’y ajoutent comme pour un ticket existant. Ne propose jamais de créer un ticket dont le titre existe déjà dans le projet.',
+    'Pour créer un ticket qui n’existe pas encore : {"create": "titre du nouveau ticket", "project": "titre exact du projet où le créer (jamais celui d’un programme : nomme celui de ses projets qui contient le lot)", "parent": "titre du lot ou du ticket sous lequel le placer (facultatif)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["titre du ticket qu’il suit"]}, "why": "…"}. Types : {types}. Les champs de "changes" sont tous facultatifs ; status, priority et progress s’y ajoutent comme pour un ticket existant. Ne propose jamais de créer un ticket dont le titre existe déjà dans le projet : un ticket qui y figure se modifie toujours avec le format « ticket » ci-dessus, même pour changer ses dates, ses personnes ou ce qu’il suit. Quand on te demande de modifier des tickets, n’utilise jamais « create ».',
+  'chat.change.exists':
+    'Un ticket de ce titre existe déjà dans le projet, avec d’autres valeurs : cette proposition voulait sans doute le modifier.',
+  'chat.change.asModification': 'Modifier le ticket existant',
   'chat.change.viaProgram': '« {program} » est un programme : le ticket sera créé dans son projet « {project} ».',
   'chat.change.pickProject':
     '« {program} » est un programme, qui ne reçoit pas de ticket : dans lequel de ses projets créer celui-ci ?',

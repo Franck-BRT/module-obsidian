@@ -779,3 +779,19 @@ export function ticketSource(spec: Extract<ChangeSpec, { kind: 'ticket' }>): str
   if (spec.why) record.why = spec.why
   return JSON.stringify(record, null, 2)
 }
+
+/**
+ * A ticket proposed as new that is there already, as the change the model meant: what the
+ * proposal says of it set on the one there. Null when it says nothing a ticket changes — a
+ * type, a lot — and so leaves nothing to do.
+ */
+export function createAsTicket(
+  spec: Extract<ChangeSpec, { kind: 'create' }>,
+  existing: { title: string; projectTitle: string }
+): Extract<ChangeSpec, { kind: 'ticket' }> | null {
+  const changes: TicketFieldChange[] = spec.fields
+    .filter((change) => (TICKET_CHANGE_FIELDS as readonly string[]).includes(change.field))
+    .map((change) => ({ field: change.field as TicketChangeField, value: change.value }))
+  if (!changes.length) return null
+  return { kind: 'ticket', target: existing.title, project: existing.projectTitle, changes, why: spec.why }
+}

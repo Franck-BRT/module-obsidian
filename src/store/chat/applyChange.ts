@@ -7,6 +7,8 @@ import type { RequirementStore } from '../requirements/RequirementStore'
 import { findTaskById } from '../TaskIndex'
 import type { VaultIndex } from '../VaultIndex'
 import {
+  changeBlocks,
+  createAsTicket,
   createChange,
   findProject,
   findTicket,
@@ -18,7 +20,10 @@ import {
   type ChangeSpec,
   type Option,
   type ReqOptions,
-  type ValueProblem
+  type ValueProblem,
+  parseChange,
+  replaceBlock,
+  ticketSource
 } from './chatChange'
 
 /**
@@ -288,4 +293,42 @@ export async function ticketPlaces(
     title: project.title,
     lots: project.tasks.filter((task) => !task.archived && task.type === 'phase').map((task) => task.title)
   }))
+}
+
+/**
+ * The ticket a proposal to create one names, already there: of that title, in the project
+ * it would go into — any of a programme's, or anywhere when the project named is unknown.
+ * Null when there is none, or more than one to choose from.
+ */
+export async function existingTicket(
+  index: VaultIndex,
+  store: TaskSource,
+  spec: CreateSpec
+): Promise<TicketCandidate | null> {
+  const same = ticketCandidates(index).filter((candidate) => fold(candidate.title.trim()) === fold(spec.title.trim()))
+  if (!same.length) return null
+  const place = await createPlace(index, store, spec)
+  const paths = !place ? null : 'choices' in place ? place.choices.map((choice) => choice.path) : [place.project.path]
+  const within = paths
+    ? same.filter((candidate) => candidate.projectPath !== null && paths.includes(candidate.projectPath))
+    : same
+  return within.length === 1 ? within[0] : null
+}
+
+/**
+ * A reply as it arrives, each ticket it proposes to create that is there already turned
+ * into the change to that ticket the model meant. Nothing has been made from the reply
+ * yet, so a ticket of that title is one that was there before — asked to be changed, and
+ * which a creation would only have reported as made.
+ */
+export async function asModifications(index: VaultIndex, store: TaskSource, reply: string): Promise<string> {
+  let text = reply
+  for (const source of changeBlocks(reply)) {
+    const read = parseChange(source)
+    if (!('spec' in read) || read.spec.kind !== 'create') continue
+    const existing = await existingTicket(index, store, read.spec)
+    const change = existing ? createAsTicket(read.spec, existing) : null
+    if (change) text = replaceBlock(text, source, ticketSource(change)) ?? text
+  }
+  return text
 }
