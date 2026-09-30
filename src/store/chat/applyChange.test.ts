@@ -7,7 +7,7 @@ import { RequirementStore } from '../requirements/RequirementStore'
 import { addLink, setText } from '../requirements/Requirement'
 import { findTaskById } from '../TaskIndex'
 import { VaultIndex } from '../VaultIndex'
-import { applyCreate, applyToRequirement, applyToTicket } from './applyChange'
+import { applyCreate, applyToRequirement, applyToTicket, createPlace } from './applyChange'
 import { parseChange, verificationOptions, type ChangeSpec, type ReqOptions } from './chatChange'
 
 /**
@@ -257,6 +257,65 @@ describe('creating a ticket from the chat', () => {
     index.build()
     expect(await applyCreate(index, store, change, label)).toEqual({ ok: true, name: 'Radier', changed: false })
     expect((await store.loadProjectByPath(project.filePath))?.tasks[0].subtasks).toHaveLength(2)
+  })
+
+  it('takes a programme named for the one of its projects that holds the lot, and creates the tickets there', async () => {
+    const program = await store.createProject('COSMA - GMAO', 'Work', { program: true })
+    const cosma = await store.createProject('COSMA', 'Work', { parentPath: program.filePath })
+    const other = await store.createProject('COSMA - Formation', 'Work', { parentPath: program.filePath })
+    await store.insertTask(cosma, makeTask({ title: 'Actions complémentaires', type: 'phase', start: '' }))
+    await store.insertTask(other, makeTask({ title: 'Sessions', type: 'phase', start: '' }))
+    index.build()
+    const change = spec('create', {
+      create: 'Définir les codes intervention',
+      project: 'COSMA - GMAO',
+      // As a model may write it: case and accents aside.
+      parent: 'actions complementaires'
+    })
+    expect(await createPlace(index, store, change)).toMatchObject({
+      project: { path: cosma.filePath, title: 'COSMA' },
+      via: 'COSMA - GMAO'
+    })
+    expect(await applyCreate(index, store, change, label)).toEqual({
+      ok: true,
+      name: 'Définir les codes intervention',
+      changed: true
+    })
+    const lot = (await store.loadProjectByPath(cosma.filePath))?.tasks.find(
+      (task) => task.title === 'Actions complémentaires'
+    )
+    expect(lot?.subtasks.map((task) => task.title)).toEqual(['Définir les codes intervention'])
+  })
+
+  it('offers the programme’s projects when none or several hold the lot, and keeps to the one chosen once made', async () => {
+    const program = await store.createProject('COSMA - GMAO', 'Work', { program: true })
+    const a = await store.createProject('COSMA', 'Work', { parentPath: program.filePath })
+    const b = await store.createProject('COSMA - Formation', 'Work', { parentPath: program.filePath })
+    // A programme within it is no place for a ticket either.
+    await store.createProject('Sous-programme', 'Work', { parentPath: program.filePath, program: true })
+    index.build()
+    const change = spec('create', { create: 'Tester la sélection', project: 'COSMA - GMAO' })
+    const place = await createPlace(index, store, change)
+    expect(place && 'choices' in place ? place.choices.map((each) => each.title).sort() : place).toEqual([
+      'COSMA',
+      'COSMA - Formation'
+    ])
+    expect(await applyCreate(index, store, change, label)).toMatchObject({ ok: false, problem: 'project' })
+    // Chosen by the reader: created there — and found there afterwards, the programme named.
+    expect(await applyCreate(index, store, { ...change, project: b.filePath }, label)).toMatchObject({ ok: true })
+    index.build()
+    expect(await createPlace(index, store, change)).toMatchObject({ project: { path: b.filePath } })
+    expect((await store.loadProjectByPath(a.filePath))?.tasks).toHaveLength(0)
+    // A programme with a single project: that one.
+    const lone = await store.createProject('Solo', 'Work', { program: true })
+    const only = await store.createProject('Seul projet', 'Work', { parentPath: lone.filePath })
+    index.build()
+    expect(await createPlace(index, store, spec('create', { create: 'X', project: 'Solo' }))).toMatchObject({
+      project: { path: only.filePath },
+      via: 'Solo'
+    })
+    // Nothing of that name: nothing.
+    expect(await createPlace(index, store, spec('create', { create: 'X', project: 'Inconnu' }))).toBeNull()
   })
 
   it('gives a document its register entry, and refuses a programme as its project', async () => {

@@ -1338,7 +1338,11 @@ export const en = {
   'chat.preset.documentQ':
     'Summarise this document: what it is about, who issued it and when, what it changes or asks for, and the dates and figures to remember.',
   'chat.changeCreate':
-    'To create a ticket that does not exist yet: {"create": "title of the new ticket", "project": "title of the project to create it in", "parent": "title of the lot or ticket to place it under (optional)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["title of the ticket it follows"]}, "why": "…"}. Types: {types}. Every field of "changes" is optional; status, priority and progress may be added as for an existing ticket. Never propose to create a ticket whose title already exists in the project.',
+    'To create a ticket that does not exist yet: {"create": "title of the new ticket", "project": "exact title of the project to create it in (never a programme’s: name the one of its projects that holds the lot)", "parent": "title of the lot or ticket to place it under (optional)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["title of the ticket it follows"]}, "why": "…"}. Types: {types}. Every field of "changes" is optional; status, priority and progress may be added as for an existing ticket. Never propose to create a ticket whose title already exists in the project.',
+  'chat.change.viaProgram': '“{program}” is a programme: the ticket will be created in its project “{project}”.',
+  'chat.change.pickProject':
+    '“{program}” is a programme, which holds no tickets: in which of its projects should this one be created?',
+  'chat.change.pickProjectButton': 'Choose this project',
   'chat.change.newTitle': 'New ticket',
   'chat.change.create': 'Create',
   'chat.change.created': 'Created',

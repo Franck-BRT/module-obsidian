@@ -1,6 +1,7 @@
 import { makeDocument, makeTask, TASK_TYPES, type Project, type Task } from '../../types'
 import { getDefaultPriorityId, getDefaultStatusId } from '../../utils'
 import { flattenTasks } from '../TaskTreeOps'
+import { fold } from '../library/libraryDoc'
 import type { TaskSource } from '../TaskSource'
 import type { RequirementStore } from '../requirements/RequirementStore'
 import { findTaskById } from '../TaskIndex'
@@ -10,6 +11,7 @@ import {
   findProject,
   findTicket,
   type CreateContext,
+  type ProjectCandidate,
   type TicketCandidate,
   requirementChange,
   ticketChange,
@@ -128,24 +130,64 @@ type CreateSpec = Extract<ChangeSpec, { kind: 'create' }>
  *
  * `titles` names the ticket types in the reader's words.
  */
+/** Where a new ticket goes: a project; or, a programme named, the projects it could go into. */
+export type CreatePlace = { project: ProjectCandidate; via?: string } | { choices: ProjectCandidate[]; via: string }
+
+/**
+ * The project a new ticket goes into: the one named. A programme holds no tickets, so one
+ * named — the model often names the programme the conversation is about — stands for its
+ * projects: the one holding the lot or ticket the new one goes under, or its only project.
+ * Several could: they are offered, rather than one guessed. Null when nothing is named
+ * that the vault has.
+ */
+export async function createPlace(index: VaultIndex, store: TaskSource, spec: CreateSpec): Promise<CreatePlace | null> {
+  const refs = index.projectRefs().filter((ref) => !ref.template)
+  const candidate = (ref: { path: string; title: string }): ProjectCandidate => ({ path: ref.path, title: ref.title })
+  const named = findProject(refs.filter((ref) => !ref.program).map(candidate), spec.project)
+  if (named) return { project: named }
+  const program = findProject(refs.filter((ref) => ref.program).map(candidate), spec.project)
+  if (!program) return null
+  const inside = index
+    .descendantRefs(program.path)
+    .filter((ref) => !ref.program && !ref.template)
+    .map(candidate)
+  if (!inside.length) return null
+  const loaded = await store.loadProjects(inside.map((each) => each.path))
+  const titled = (title: string) => (project: Project) =>
+    flattenTasks(project.tasks).some(({ task }) => !task.archived && fold(task.title) === fold(title))
+  const among = (projects: Project[]): ProjectCandidate[] =>
+    projects.map(
+      (project) =>
+        inside.find((each) => each.path === project.filePath) ??
+        candidate({ path: project.filePath, title: project.title })
+    )
+  // The lot or ticket it goes under says which project, when only one holds it.
+  const holding = spec.parent?.trim() ? loaded.filter(titled(spec.parent)) : loaded
+  const possible = holding.length ? holding : loaded
+  if (possible.length === 1) return { project: among(possible)[0], via: program.title }
+  // Made already, in one of them — chosen by the reader before —: that one.
+  const made = possible.filter(titled(spec.title))
+  if (made.length === 1) return { project: among(made)[0], via: program.title }
+  return possible.length ? { choices: among(possible), via: program.title } : null
+}
+
 export async function createTarget(
   index: VaultIndex,
   store: TaskSource,
   spec: CreateSpec,
   typeLabel: (type: string) => string
-): Promise<{ project: Project; context: CreateContext } | null> {
-  const refs = index.projectRefs().filter((ref) => !ref.program)
-  const named = findProject(
-    refs.map((ref) => ({ path: ref.path, title: ref.title })),
-    spec.project
-  )
-  const project = named ? await store.loadProjectByPath(named.path) : null
-  if (!named || !project) return null
+): Promise<{ project: Project; context: CreateContext; via?: string } | null> {
+  const place = await createPlace(index, store, spec)
+  if (!place || 'choices' in place) return null
+  const named = place.project
+  const project = await store.loadProjectByPath(named.path)
+  if (!project) return null
   const config = store.configFor(project)
   const listed = (list: { id: string; label: string }[]): Option[] =>
     list.map((entry) => ({ id: entry.id, label: entry.label }))
   return {
     project,
+    ...(place.via ? { via: place.via } : {}),
     context: {
       project: named,
       tickets: flattenTasks(project.tasks)

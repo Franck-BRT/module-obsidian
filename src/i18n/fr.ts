@@ -1317,7 +1317,11 @@ export const fr: Catalog = {
   'chat.preset.documentQ':
     'Résume ce document : de quoi il s’agit, qui l’a émis et quand, ce qu’il change ou demande, et les dates et chiffres à retenir.',
   'chat.changeCreate':
-    'Pour créer un ticket qui n’existe pas encore : {"create": "titre du nouveau ticket", "project": "titre du projet où le créer", "parent": "titre du lot ou du ticket sous lequel le placer (facultatif)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["titre du ticket qu’il suit"]}, "why": "…"}. Types : {types}. Les champs de "changes" sont tous facultatifs ; status, priority et progress s’y ajoutent comme pour un ticket existant. Ne propose jamais de créer un ticket dont le titre existe déjà dans le projet.',
+    'Pour créer un ticket qui n’existe pas encore : {"create": "titre du nouveau ticket", "project": "titre exact du projet où le créer (jamais celui d’un programme : nomme celui de ses projets qui contient le lot)", "parent": "titre du lot ou du ticket sous lequel le placer (facultatif)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["titre du ticket qu’il suit"]}, "why": "…"}. Types : {types}. Les champs de "changes" sont tous facultatifs ; status, priority et progress s’y ajoutent comme pour un ticket existant. Ne propose jamais de créer un ticket dont le titre existe déjà dans le projet.',
+  'chat.change.viaProgram': '« {program} » est un programme : le ticket sera créé dans son projet « {project} ».',
+  'chat.change.pickProject':
+    '« {program} » est un programme, qui ne reçoit pas de ticket : dans lequel de ses projets créer celui-ci ?',
+  'chat.change.pickProjectButton': 'Choisir ce projet',
   'chat.change.newTitle': 'Nouveau ticket',
   'chat.change.create': 'Créer',
   'chat.change.created': 'Créé',
