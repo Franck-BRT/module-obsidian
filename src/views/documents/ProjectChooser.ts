@@ -2,7 +2,7 @@ import { Modal, Setting, setIcon, type App } from 'obsidian'
 import { fold } from '../../store/library/libraryDoc'
 import { t } from '../../i18n'
 import type { Classification } from '../../store/library/libraryClass'
-import { renderClassifyFields, type ClassifyChoices } from './classifyFields'
+import { renderClassifyFields, type ClassifyChoices, type ClassifyForm } from './classifyFields'
 
 /**
  * Which projects documents belong to: none, one or several, ticked in a list that a few
@@ -50,6 +50,8 @@ class ProjectChooser extends Modal {
   private query = ''
   private listEl!: HTMLElement
   private countEl!: HTMLElement
+  /** How the documents are filed, when asked: its lot among the projects ticked. */
+  private form: ClassifyForm | null = null
 
   constructor(
     app: App,
@@ -90,12 +92,13 @@ class ProjectChooser extends Modal {
     this.listEl = this.contentEl.createDiv('pm-docs-chooser-list')
     this.renderList()
 
-    const readClassification = request.classify
+    this.form = request.classify
       ? renderClassifyFields(
           this.contentEl.createDiv('pm-docs-chooser-classify'),
           request.classify,
           { category: '', lot: '', issuer: '', tags: [] },
-          'guess'
+          'guess',
+          [...this.chosen]
         )
       : null
 
@@ -123,7 +126,7 @@ class ProjectChooser extends Modal {
             this.resolve({
               projects,
               move: this.move,
-              ...(readClassification ? { classification: readClassification() } : {})
+              ...(this.form ? { classification: this.form.read() } : {})
             })
             this.close()
           })
@@ -160,6 +163,7 @@ class ProjectChooser extends Modal {
         if (box.checked) this.chosen.add(project.path)
         else this.chosen.delete(project.path)
         this.renderCount()
+        this.form?.setProjects(this.request.projects.map((one) => one.path).filter((path) => this.chosen.has(path)))
       })
       setIcon(row.createSpan({ cls: 'pm-docs-chooser-icon' }), 'folder-kanban')
       row.createSpan({ cls: 'pm-docs-chooser-title', text: project.title })

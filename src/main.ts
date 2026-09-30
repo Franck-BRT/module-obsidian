@@ -94,7 +94,14 @@ import {
 import { DocLibrary, type PourItem } from './store/library/DocLibrary'
 import { DocTextIndex, folderShelf } from './store/library/DocTextIndex'
 import type { LibraryDoc } from './store/library/libraryDoc'
-import { guessCategory, knownValues, parseCategories, type Category } from './store/library/libraryClass'
+import {
+  guessCategory,
+  knownValues,
+  parseCategories,
+  projectLots,
+  withCategory,
+  type Category
+} from './store/library/libraryClass'
 import { askClassification, GUESS_CATEGORY, type ClassifyChoices } from './views/documents/classifyFields'
 import { proposeRegisterMatches } from './views/documents/matchRegister'
 import { followMoves } from './store/library/fileInRegister'
@@ -966,8 +973,22 @@ export default class PMPlugin extends Plugin {
       categories,
       lots: knownValues(docs, 'lot'),
       issuers: knownValues(docs, 'issuer'),
-      tags: knownValues(docs, 'tags')
+      tags: knownValues(docs, 'tags'),
+      // The lots of the projects, as their plans have them, then those documents of theirs are filed under.
+      lotsFor: (projects) => projectLots(this.index.allTaskRefs(), docs, projects)
     }
+  }
+
+  /**
+   * A category chosen that the list does not have, added to it: offered next time, and
+   * found in the settings to be given the words that recognise it.
+   */
+  async rememberCategory(name: string | undefined): Promise<void> {
+    if (!name || name === GUESS_CATEGORY) return
+    const list = withCategory(this.settings.libraryCategories, t('library.defaultCategories'), name)
+    if (list === this.settings.libraryCategories) return
+    this.settings.libraryCategories = list
+    await this.saveSettings()
   }
 
   /**
@@ -984,9 +1005,13 @@ export default class PMPlugin extends Plugin {
       one
         ? { category: one.category, lot: one.lot, issuer: one.issuer, tags: one.tags }
         : { category: '', lot: '', issuer: '', tags: [] },
-      !one
+      !one,
+      // Their projects' lots, when they have projects; every lot otherwise, never hidden:
+      // a lot filed already is not to be lost for want of a project.
+      docs.some((doc) => doc.projects.length) ? [...new Set(docs.flatMap((doc) => doc.projects))] : null
     )
     if (!given) return
+    await this.rememberCategory(given.category)
     if (one) {
       await this.library.setClassification(one, given)
       return
@@ -1024,6 +1049,7 @@ export default class PMPlugin extends Plugin {
       confirm: t('library.pourConfirm')
     })
     if (!answer) return
+    await this.rememberCategory(answer.classification?.category)
     const progress = items.length > 3 ? new Notice(t('library.pouring', { done: 0, total: items.length }), 0) : null
     const report = await this.library.pour(
       items,

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { cleanTags, guessCategory, knownValues, mergeClassification, parseCategories } from './libraryClass'
+import {
+  cleanTags,
+  guessCategory,
+  knownValues,
+  mergeClassification,
+  parseCategories,
+  projectLots,
+  withCategory
+} from './libraryClass'
 import type { LibraryDoc } from './libraryDoc'
 
 const LIST = parseCategories(`
@@ -131,5 +139,55 @@ describe('the shipped French categories', () => {
       ['Tableau de bord.xlsx', '']
     ]
     for (const [name, category] of cases) expect([name, guessCategory(name, list)]).toEqual([name, category])
+  })
+})
+
+describe('the lots a document can be filed under', () => {
+  const ticket = (title: string, projectPath: string | null, type = 'phase', archived = false) => ({
+    title,
+    type,
+    projectPath,
+    archived
+  })
+
+  it('are the projects’ own lots, then those their documents are filed under', () => {
+    const tickets = [
+      ticket('Lot 1 – Terrassements', 'A.md'),
+      ticket('Radier', 'A.md', 'task'),
+      ticket('Lot 9 – Archivé', 'A.md', 'phase', true),
+      ticket('Lot 2 – Gros œuvre', 'B.md'),
+      ticket('Lot X', 'C.md')
+    ]
+    const docs = [
+      doc({ lot: 'Lot 3 – Réseaux', projects: ['A.md'] }),
+      doc({ lot: 'Autre lot', projects: ['C.md'] }),
+      doc({ lot: 'Lot 3 – Réseaux', projects: ['A.md', 'C.md'] })
+    ]
+    expect(projectLots(tickets, docs, ['A.md', 'B.md'])).toEqual([
+      'Lot 1 – Terrassements',
+      'Lot 2 – Gros œuvre',
+      'Lot 3 – Réseaux'
+    ])
+    expect(projectLots(tickets, docs, [])).toEqual([])
+  })
+})
+
+describe('a category added to the list', () => {
+  const shipped = 'Plan : plan, coupe\nDevis : devis'
+
+  it('goes at the end of the reader’s list, or of the shipped one taken as theirs', () => {
+    expect(withCategory('Plan : plan', shipped, 'Fiche technique')).toBe('Plan : plan\nFiche technique')
+    expect(withCategory('', shipped, 'Fiche technique')).toBe(`${shipped}\nFiche technique`)
+    expect(parseCategories(withCategory('', shipped, 'Fiche technique')).map((one) => one.name)).toEqual([
+      'Plan',
+      'Devis',
+      'Fiche technique'
+    ])
+  })
+
+  it('leaves the list as it was when it has that one already, whatever its case, or when it is empty', () => {
+    expect(withCategory('Plan : plan', shipped, ' plan ')).toBe('Plan : plan')
+    expect(withCategory('', shipped, 'devis')).toBe('')
+    expect(withCategory('Plan : plan', shipped, '  ')).toBe('Plan : plan')
   })
 })

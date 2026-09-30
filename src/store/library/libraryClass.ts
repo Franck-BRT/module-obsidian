@@ -108,6 +108,36 @@ export function knownValues(docs: LibraryDoc[], field: 'category' | 'lot' | 'iss
 }
 
 /**
+ * The lots documents of these projects can be filed under: the projects' own, as their
+ * plans have them, then those the library already files their documents under.
+ */
+export function projectLots(
+  tickets: { title: string; type: string; projectPath: string | null; archived: boolean }[],
+  docs: LibraryDoc[],
+  projects: string[]
+): string[] {
+  const wanted = new Set(projects)
+  const lots = tickets
+    .filter(
+      (ticket) => !ticket.archived && ticket.type === 'phase' && ticket.projectPath && wanted.has(ticket.projectPath)
+    )
+    .map((ticket) => ticket.title)
+  const filed = docs.filter((doc) => doc.projects.some((path) => wanted.has(path)))
+  return [...lots, ...knownValues(filed, 'lot')]
+}
+
+/**
+ * The reader's list of categories with one more at its end — the list shipped taken as
+ * theirs when they have none —, or as it was when it has that one already.
+ */
+export function withCategory(list: string, shipped: string, name: string): string {
+  const category = name.trim()
+  const current = list.trim() || shipped
+  if (!category || parseCategories(current).some((known) => fold(known.name) === fold(category))) return list
+  return `${current}\n${category}`
+}
+
+/**
  * A classification laid over what a document already has: the fields given replace, the
  * empty ones leave alone, and tags are added to rather than replaced — so ticking forty
  * documents and giving them a lot does not wipe their categories.
