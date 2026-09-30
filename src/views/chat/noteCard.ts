@@ -4,6 +4,7 @@ import {
   appendProposal,
   appendTarget,
   holdsProposal,
+  noteNamed,
   NOTE_LANGUAGE,
   parseNoteProposal,
   proposalFolder,
@@ -11,6 +12,7 @@ import {
   writtenNote,
   type NoteProposal
 } from '../../store/chat/noteProposal'
+import { cleanTranscriptIn } from '../../store/chat/ocr'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 
@@ -77,6 +79,10 @@ class NoteCard extends MarkdownRenderChild {
       card.createEl('pre', { cls: 'pm-change-source', text: this.source.trim() })
       return
     }
+    if (proposal.clean) {
+      await this.drawClean(proposal.clean, generation)
+      return
+    }
     const fallback = notesFallback(this.plugin, this.sourcePath)
     const target = proposal.append ? appendTarget(this.plugin.app, proposal, this.sourcePath) : null
     const done = proposal.append
@@ -103,6 +109,72 @@ class NoteCard extends MarkdownRenderChild {
     }
     await this.preview(card, proposal)
     this.footer(card, proposal, target, done)
+  }
+
+  /**
+   * A transcription to clean of what its printed pages repeat: the lines found, each with
+   * how often it went, and the button that takes them out — of the whole note, however
+   * much of it the model was shown.
+   */
+  private async drawClean(name: string, generation: number): Promise<void> {
+    const target = noteNamed(this.plugin.app, name, this.sourcePath)
+    const cleaned = target ? cleanTranscriptIn(await this.plugin.app.vault.cachedRead(target)) : null
+    if (generation !== this.generation) return
+    this.containerEl.empty()
+    const card = this.containerEl.createDiv('pm-change pm-note')
+    this.head(card, 'eraser', t('chat.note.cleanKind'), target?.basename ?? name)
+    const foot = (): HTMLElement => card.createDiv('pm-change-foot')
+    const problem = (text: string): void => {
+      card.addClass('pm-change--problem')
+      const el = foot()
+      setIcon(el.createSpan({ cls: 'pm-change-state-icon' }), 'circle-alert')
+      el.createSpan({ cls: 'pm-change-problem', text })
+    }
+    if (!target) {
+      problem(t('chat.note.noTarget', { name }))
+      return
+    }
+    if (!cleaned) {
+      problem(t('chat.note.noTranscript', { name: target.basename }))
+      return
+    }
+    if (!cleaned.removed.length) {
+      card.addClass('pm-change--done')
+      const el = foot()
+      setIcon(el.createSpan({ cls: 'pm-change-state-icon' }), 'check')
+      el.createSpan({ cls: 'pm-change-state', text: t('chat.note.cleanNone') })
+      const open = el.createEl('a', { cls: 'pm-note-open', href: '#', text: t('chat.note.open') })
+      open.addEventListener('click', (event) => {
+        event.preventDefault()
+        void this.plugin.app.workspace.getLeaf('tab').openFile(target)
+      })
+      return
+    }
+    const count = cleaned.removed.reduce((sum, one) => sum + one.count, 0)
+    card.createDiv({ cls: 'pm-note-where', text: t('chat.note.cleanFound', { count }) })
+    const list = card.createEl('ul', { cls: 'pm-note-clean-list' })
+    for (const one of cleaned.removed.slice(0, 8)) {
+      const item = list.createEl('li')
+      item.createSpan({ text: one.line.length > 110 ? `${one.line.slice(0, 110)}…` : one.line })
+      item.createSpan({ cls: 'pm-note-clean-count', text: ` ×${one.count}` })
+    }
+    if (cleaned.removed.length > 8) {
+      list.createEl('li', { text: t('library.andMore', { count: cleaned.removed.length - 8 }) })
+    }
+    const el = foot()
+    const button = el.createEl('button', { cls: 'mod-cta', text: t('chat.note.clean') })
+    button.addEventListener(
+      'click',
+      safeAsync(async () => {
+        button.disabled = true
+        try {
+          await this.plugin.app.vault.process(target, (content) => cleanTranscriptIn(content)?.content ?? content)
+          new Notice(t('chat.note.cleaned', { count, name: target.basename }))
+        } finally {
+          await this.draw()
+        }
+      })
+    )
   }
 
   private head(card: HTMLElement, icon: string, kind: string, name: string): void {

@@ -3,6 +3,8 @@ import {
   needsOcr,
   readTranscript,
   readTranscriptSection,
+  cleanTranscriptIn,
+  stripFurniture,
   transcribe,
   transcriptNote,
   transcriptPath,
@@ -154,5 +156,108 @@ describe('the transcription in a library record', () => {
       sourceMtime: 0,
       text: 'Texte'
     })
+  })
+})
+
+describe('a transcription without its pages’ furniture', () => {
+  // As a vision model reads a journal article: a running header, the publisher's footer,
+  // the article's page number, a delivery stamp at the foot of some pages.
+  const page = (n: number, body: string[], stamp = false): string =>
+    [
+      `## Page ${n} sur 6`,
+      '',
+      n === 1
+        ? '## Optimisation du placement des formes irrégulières'
+        : '## OPTIMISATION DU PLACEMENT DES FORMES IRRÉGULIÈRES',
+      '',
+      ...body,
+      '',
+      'Toute reproduction sans autorisation du Centre français d’exploitation du droit de copie est strictement interdite.',
+      '© Techniques de l’Ingénieur, traité Informatique industrielle',
+      '',
+      `**S 7 212 - ${n}**`,
+      ...(stamp
+        ? ['', `Parution : décembre 2000 - Ce document a été délivré pour le compte de 7200105995 // 194.199.174.235`]
+        : [])
+    ].join('\n')
+  const text = [
+    page(1, ['Le placement fait partie du problème de découpe.', '| Colonne | Valeur |', '| --- | --- |']),
+    page(2, ['### 1. Considérations générales', 'Le domaine du placement reste ouvert.', '| --- | --- |']),
+    page(3, ['### 2. Description des formes', 'Le contour est discrétisé.', '$$', 'D = Int[C]', '$$'], true),
+    page(4, ['Les peignes de contour.', '$$', 'D = Int[C]', '$$']),
+    page(5, ['### 3. Représentation', 'Le placement est une combinaison ordonnée.'], true),
+    page(6, ['### 7. Conclusion', 'Trois algorithmes ont été présentés.'])
+  ].join('\n\n')
+
+  it('drops the header, the footers, the page numbers and the stamp, and keeps the text, the title and the markup', () => {
+    const { text: cleaned, removed } = stripFurniture(text)
+    expect(cleaned).not.toContain('Toute reproduction')
+    expect(cleaned).not.toContain('© Techniques')
+    expect(cleaned).not.toContain('S 7 212')
+    expect(cleaned).not.toContain('Parution')
+    expect(cleaned).not.toContain('OPTIMISATION DU PLACEMENT')
+    // The first heading of it is the document's title: kept.
+    expect(cleaned).toContain('## Optimisation du placement des formes irrégulières')
+    for (const kept of [
+      'Le placement fait partie du problème de découpe.',
+      '### 1. Considérations générales',
+      '| --- | --- |',
+      'D = Int[C]',
+      'Trois algorithmes ont été présentés.',
+      '## Page 3 sur 6'
+    ]) {
+      expect(cleaned).toContain(kept)
+    }
+    expect(cleaned).not.toMatch(/\n{3,}/)
+    expect(removed.map((one) => [one.line.slice(0, 20), one.count])).toEqual([
+      ['Toute reproduction s', 6],
+      ['© Techniques de l’In', 6],
+      ['**S 7 212 - 1**', 6],
+      ['## OPTIMISATION DU P', 5],
+      ['Parution : décembre ', 2]
+    ])
+  })
+
+  it('tells a line of text from a page number, though both differ by a number from page to page', () => {
+    const text = [1, 2, 3]
+      .map((n) => `## Page ${n} sur 3\n\nRésultats du chapitre ${n}.\n\nCorps du chapitre ${n}.\n\nPage ${n}/3`)
+      .join('\n\n')
+    const { text: cleaned, removed } = stripFurniture(text)
+    expect(cleaned).toContain('Résultats du chapitre 2.')
+    expect(removed.map((one) => one.line)).toEqual(['Page 1/3'])
+    // Nor a line that speaks of a page.
+    const pages = [1, 2, 3, 4].map((n) => `## Page ${n} sur 4\n\nVoir la page ${n + 10}.\n\nPage ${n}`).join('\n\n')
+    expect(stripFurniture(pages).text).toContain('Voir la page 13.')
+  })
+
+  it('leaves a text of one page, or with nothing repeated, as it is', () => {
+    expect(stripFurniture(page(1, ['Seul.']))).toEqual({ text: page(1, ['Seul.']), removed: [] })
+    const plain = '## Page 1 sur 2\n\nUn.\n\n## Page 2 sur 2\n\nDeux.'
+    expect(stripFurniture(plain)).toEqual({ text: plain, removed: [] })
+  })
+
+  it('cleans the transcription of a record, and of a transcription note, and nothing else', () => {
+    const words = { heading: 'Transcription', note: '> [!info] Lu' }
+    const record = withTranscriptSection(
+      '## Notes\n\nÀ relire.\n',
+      { sourceMtime: 1, model: 'm', at: '', pages: 6 },
+      text,
+      words
+    )
+    const after = `${record}\n## Mes notes\n\nToute reproduction sans autorisation du Centre français d’exploitation du droit de copie est strictement interdite.\n`
+    const cleaned = cleanTranscriptIn(after)
+    expect(cleaned?.removed).toHaveLength(5)
+    // What the reader wrote after the section is theirs.
+    expect(
+      cleaned?.content.endsWith(
+        '## Mes notes\n\nToute reproduction sans autorisation du Centre français d’exploitation du droit de copie est strictement interdite.\n'
+      )
+    ).toBe(true)
+    expect(readTranscriptSection(cleaned!.content)?.text).not.toContain('© Techniques')
+    const note = transcriptNote({ source: 'a.pdf', sourceMtime: 1, model: 'm', at: '', pages: 6 }, text, '> [!info] Lu')
+    const cleanedNote = cleanTranscriptIn(note)
+    expect(cleanedNote?.content.startsWith('---\npm-transcript:')).toBe(true)
+    expect(readTranscript(cleanedNote!.content)?.text).not.toContain('S 7 212')
+    expect(cleanTranscriptIn('# Une note\n\nTexte.')).toBeNull()
   })
 })

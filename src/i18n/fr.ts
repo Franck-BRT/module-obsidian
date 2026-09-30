@@ -1881,6 +1881,8 @@ export const fr: Catalog = {
   'library.toLibrary': 'Verser dans la bibliothèque',
   'chat.noteHow':
     'Quand la personne te demande d’écrire, de créer ou de rédiger une note (compte rendu, synthèse, fiche, décision…), ou de compléter une note existante, propose-la dans un bloc délimité par quatre accents graves : ````pm-note puis, une par ligne, « titre: … », « dossier: … » (facultatif ; sans dossier, la note va dans {folder}), « tags: a, b » (facultatif), une ligne « --- », puis le contenu complet de la note en Markdown, et enfin ```` pour fermer. Pour compléter une note existante, remplace « titre » par « ajouter à: [[Nom de la note]] » : le contenu sera ajouté à sa fin. La personne verra la note et la créera d’un clic ; rien n’est écrit sans elle. N’écris ce bloc que si on te demande une note.',
+  'chat.noteLimits':
+    'Tu n’écris rien toi-même dans le coffre : tu proposes des blocs que la personne applique d’un clic. Ne dis jamais qu’une note a été modifiée, ni que tu ne peux rien faire : propose le bloc qui convient. Tu peux créer une note ou ajouter du texte à la fin d’une note ; tu ne peux ni réécrire ni supprimer une partie d’une note existante — dis-le si on te le demande, plutôt que d’ajouter une copie corrigée à sa fin. Pour retirer les en-têtes, pieds de page et numéros de page répétés d’une transcription (document lu par OCR), ne recopie pas la transcription : propose un bloc ````pm-note ne contenant que la ligne « nettoyer: [[Nom de la note]] » ; le plugin repère lui-même les lignes répétées de page en page et les retire de toute la transcription. Quand la note jointe est coupée, dis-le, plutôt que de traiter la partie vue comme si c’était le tout.',
   'chat.noteProjectFolders': 'Dossiers des projets joints, pour une note qui les concerne : {list}.',
   'chat.note.newKind': 'Nouvelle note',
   'chat.note.appendKind': 'Ajout à la note',
@@ -1897,6 +1899,13 @@ export const fr: Catalog = {
   'chat.note.open': 'Ouvrir',
   'chat.note.copy': 'Copier le texte',
   'chat.note.copied': 'Texte de la note copié.',
+  'command.cleanTranscript': 'Retirer les en-têtes et pieds de page de la transcription',
+  'chat.note.cleanKind': 'Nettoyage de la transcription',
+  'chat.note.noTranscript': '« {name} » ne contient pas de transcription à nettoyer.',
+  'chat.note.cleanNone': 'Aucun en-tête ni pied de page répété dans la transcription.',
+  'chat.note.cleanFound': '{count} lignes répétées de page en page seront retirées, sur toute la transcription :',
+  'chat.note.clean': 'Retirer ces lignes',
+  'chat.note.cleaned': '{count} lignes d’en-tête et de pied de page retirées de « {name} ».',
   'chat.note.noTarget': 'La note « {name} » est introuvable dans le coffre.',
   'settings.chat.notesFolder': 'Dossier des notes écrites par le chat',
   'settings.chat.notesFolderDesc':

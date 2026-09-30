@@ -1,4 +1,5 @@
 import { parseFrontmatter } from '../YamlParser'
+import { fold } from '../library/libraryDoc'
 
 /**
  * A document with no text in it — a scanned planning, a Gantt exported as a picture —
@@ -200,4 +201,112 @@ export function readTranscriptSection(content: string): { sourceMtime: number; t
   // The line the section opens with is the plugin's, not the document's.
   const text = body.replace(/^\s*>[^\n]*\n/, '').trim()
   return { sourceMtime, text }
+}
+
+/** A line repeated from page to page — a running header, a footer, a page number — and how often it went. */
+export interface Furniture {
+  line: string
+  count: number
+}
+
+/** How many lines at the top and at the bottom of a page are where headers and footers sit. */
+const FURNITURE_ZONE = 3
+
+/** The heading a transcription opens each page with: « Page 3 sur 19 », « Page 3 of 19 ». */
+const PAGE_MARK = /^#{1,6}\s+page\s+\d+\s+(?:sur|of|\/)\s+\d+\s*$/i
+
+/** What a line is known by from page to page: its words, whatever its numbers and emphasis; null when it is no candidate. */
+function furnitureKey(line: string): string | null {
+  const bare = line
+    .trim()
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/[*_`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  // Markup — tables, formulas, pictures — and lines of a word or two are the document's own;
+  // a short one with a number in it — « S 7 212 - 4 », « 12 » — may be a page's number.
+  if (!bare || /^[<|$!]/.test(bare) || PAGE_MARK.test(line.trim())) return null
+  const letters = (bare.match(/\p{L}/gu) ?? []).length
+  const numbered = bare.length <= 30 && /\d/.test(bare)
+  if (letters < 3 && !numbered) return null
+  // Its numbers aside only when it reads like a page's number: a line of text that differs
+  // by a number from one page to the next — « chapitre 2 », « total : 12 € » — is text.
+  const pageLike = numbered && (letters < 3 || /^\W*(?:page|p\.)\s*\d+(?:\s*(?:\/|sur|of|de)\s*\d+)?\W*$/i.test(bare))
+  return pageLike ? fold(bare).replace(/\d+/g, '#') : fold(bare)
+}
+
+/**
+ * A transcription without what the printed pages repeat: a line found at the top or the
+ * bottom of two pages or more, or on two pages in five anywhere, is the page's furniture
+ * and goes — every occurrence of it, but the first of a heading, which is the document's
+ * title as often as a running header. Pages are told apart by the headings the
+ * transcription opens them with; a text of one page is left as it is.
+ */
+export function stripFurniture(text: string): { text: string; removed: Furniture[] } {
+  const lines = text.split('\n')
+  const pages: number[][] = []
+  for (let at = 0; at < lines.length; at++) {
+    if (PAGE_MARK.test(lines[at].trim())) pages.push([])
+    else if (pages.length && lines[at].trim()) pages[pages.length - 1].push(at)
+  }
+  if (pages.length < 2) return { text, removed: [] }
+  const onPages = new Map<string, number>()
+  const inZone = new Map<string, number>()
+  for (const page of pages) {
+    const seen = new Set<string>()
+    const zone = new Set<string>()
+    // A page too short to have a middle has no top nor bottom to tell from it.
+    const zoned = page.length > 2 * FURNITURE_ZONE
+    page.forEach((at, index) => {
+      const key = furnitureKey(lines[at])
+      if (!key) return
+      seen.add(key)
+      if (zoned && (index < FURNITURE_ZONE || index >= page.length - FURNITURE_ZONE)) zone.add(key)
+    })
+    for (const key of seen) onPages.set(key, (onPages.get(key) ?? 0) + 1)
+    for (const key of zone) inZone.set(key, (inZone.get(key) ?? 0) + 1)
+  }
+  const often = Math.max(3, Math.ceil(pages.length * 0.4))
+  const furniture = (key: string): boolean => (inZone.get(key) ?? 0) >= 2 || (onPages.get(key) ?? 0) >= often
+  const removed = new Map<string, Furniture>()
+  const keptHeading = new Set<string>()
+  const kept: string[] = []
+  for (const line of lines) {
+    const key = furnitureKey(line)
+    if (key && furniture(key)) {
+      if (/^\s*#/.test(line) && !keptHeading.has(key)) {
+        keptHeading.add(key)
+        kept.push(line)
+        continue
+      }
+      const found = removed.get(key)
+      if (found) found.count++
+      else removed.set(key, { line: line.trim(), count: 1 })
+      continue
+    }
+    kept.push(line)
+  }
+  if (!removed.size) return { text, removed: [] }
+  return { text: kept.join('\n').replace(/\n{3,}/g, '\n\n'), removed: [...removed.values()] }
+}
+
+/**
+ * A note's transcription without its pages' furniture: the section of a library record,
+ * or the body of a transcription note. Null when the note holds no transcription.
+ */
+export function cleanTranscriptIn(content: string): { content: string; removed: Furniture[] } | null {
+  const open = content.indexOf(SECTION_OPEN)
+  if (open >= 0) {
+    const from = content.indexOf('\n', open)
+    if (from < 0) return { content, removed: [] }
+    const close = content.indexOf(SECTION_CLOSE, from)
+    const to = close < 0 ? content.length : close
+    const cleaned = stripFurniture(content.slice(from + 1, to))
+    return { content: `${content.slice(0, from + 1)}${cleaned.text}${content.slice(to)}`, removed: cleaned.removed }
+  }
+  if (!readTranscript(content)) return null
+  const end = content.indexOf('\n---', 3)
+  const bodyAt = end < 0 ? 0 : content.indexOf('\n', end + 1) + 1
+  const cleaned = stripFurniture(content.slice(bodyAt))
+  return { content: `${content.slice(0, bodyAt)}${cleaned.text}`, removed: cleaned.removed }
 }

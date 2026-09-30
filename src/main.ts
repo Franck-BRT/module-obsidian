@@ -93,7 +93,8 @@ import {
 } from './views/documents/ProjectChooser'
 import { DocLibrary, type PourItem } from './store/library/DocLibrary'
 import { DocTextIndex, folderShelf } from './store/library/DocTextIndex'
-import type { LibraryDoc } from './store/library/libraryDoc'
+import { isLibraryDoc, type LibraryDoc } from './store/library/libraryDoc'
+import { cleanTranscriptIn, TRANSCRIPT_KEY, type Furniture } from './store/chat/ocr'
 import {
   guessCategory,
   knownValues,
@@ -341,6 +342,21 @@ export default class PMPlugin extends Plugin {
         new ChatNotes(this.app, () => this.settings.chat.folder).ensureBranchBlock(file).catch(() => undefined)
       })
     )
+
+    // A transcription made before headers and footers were taken out, or read otherwise.
+    this.addCommand({
+      id: 'clean-transcript',
+      name: t('command.cleanTranscript'),
+      checkCallback: (checking) => {
+        const file = this.app.workspace.getActiveFile()
+        const frontmatter = file ? this.app.metadataCache.getFileCache(file)?.frontmatter : undefined
+        if (!file || !frontmatter || (frontmatter[TRANSCRIPT_KEY] === undefined && !isLibraryDoc(frontmatter))) {
+          return false
+        }
+        if (!checking) void this.cleanTranscript(file)
+        return true
+      }
+    })
 
     this.addCommand({
       id: 'open-chat',
@@ -957,6 +973,23 @@ export default class PMPlugin extends Plugin {
       .filter((ref) => !ref.template)
       .map((ref) => ({ path: ref.path, title: ref.title, detail: ref.path.slice(0, ref.path.lastIndexOf('/')) }))
       .sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }))
+  }
+
+  /** Takes out of a note's transcription what its printed pages repeat, and says how much went. */
+  async cleanTranscript(file: TFile): Promise<void> {
+    const outcome: { removed: Furniture[] | null } = { removed: null }
+    await this.app.vault.process(file, (content) => {
+      const cleaned = cleanTranscriptIn(content)
+      outcome.removed = cleaned?.removed ?? null
+      return cleaned?.content ?? content
+    })
+    const found = outcome.removed
+    if (!found) new Notice(t('chat.note.noTranscript', { name: file.basename }))
+    else if (!found.length) new Notice(t('chat.note.cleanNone'))
+    else {
+      const count = found.reduce((sum, one) => sum + one.count, 0)
+      new Notice(t('chat.note.cleaned', { count, name: file.basename }))
+    }
   }
 
   /** The library's categories: the reader's list, or the one shipped when it is empty. */

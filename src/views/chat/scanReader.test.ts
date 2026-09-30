@@ -95,4 +95,23 @@ describe('a scan read by a model', () => {
     expect(record).toContain('"model":"vision"')
     expect(await keptTranscript(app, pdf, records)).toBe('| Radier | 20/10/2026 |')
   })
+
+  it('takes out what the printed pages repeat before keeping the transcription', async () => {
+    const { app, records, file } = await setUp()
+    let page = 0
+    const llm = {
+      readImage: () => {
+        page++
+        return Promise.resolve(
+          `Texte propre au chapitre ${page}.\n\nToute reproduction interdite © Éditeur\n\nS 7 212 - ${page}`
+        )
+      }
+    } as unknown as LlmClient
+    const source = { pages: 3, render: () => Promise.resolve('data:image/png;base64,') }
+    const read = await transcribeScan(app, llm, 'vision', file('Bibliothèque/_files/Planning.pdf'), source, records)
+    expect(read.text).toContain('Texte propre au chapitre 3.')
+    expect(read.text).not.toContain('Toute reproduction')
+    expect(read.text).not.toContain('S 7 212')
+    expect(await app.vault.read(file('Bibliothèque/Planning.md'))).not.toContain('© Éditeur')
+  })
 })

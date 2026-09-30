@@ -1223,6 +1223,7 @@ export class ChatView extends ItemView {
     const fallback = notesFallback(this.plugin, this.notePath ?? '')
     return [
       t('chat.noteHow', { folder: fallback || '/' }),
+      t('chat.noteLimits'),
       folders.length ? t('chat.noteProjectFolders', { list: [...new Set(folders)].join(', ') }) : ''
     ]
       .filter(Boolean)

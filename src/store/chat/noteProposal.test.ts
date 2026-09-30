@@ -26,6 +26,7 @@ describe('parseNoteProposal', () => {
       title: 'Compte rendu réunion 12',
       folder: 'Work/Génie civil/CR',
       append: '',
+      clean: '',
       tags: ['cr', 'chantier'],
       body: '# Compte rendu réunion 12\n\n- Radier décalé au 19/10.'
     })
@@ -55,6 +56,13 @@ describe('parseNoteProposal', () => {
       append: '[[Journal de chantier]]',
       body: '## 29/09\nBéton coulé.'
     })
+  })
+
+  it('reads the note whose transcription is to be cleaned, with no rule nor body', () => {
+    expect(parseNoteProposal('nettoyer: [[S-7-212-V1]]')).toMatchObject({ clean: '[[S-7-212-V1]]', body: '' })
+    expect(parseNoteProposal('Clean: Planning scanné\n---\n')).toMatchObject({ clean: 'Planning scanné' })
+    // A note that only says the word is a note.
+    expect(parseNoteProposal('# Nettoyer\n\nnettoyer: le chantier')?.clean).toBe('')
   })
 
   it('has nothing to write without a body, or without a title or a note to add to', () => {

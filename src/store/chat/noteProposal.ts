@@ -32,6 +32,8 @@ export interface NoteProposal {
   folder: string
   /** The note to add to, as the model named it; '' to write a new one. */
   append: string
+  /** The note whose transcription is to lose its pages' headers and footers; '' for none. */
+  clean: string
   tags: string[]
   body: string
 }
@@ -49,6 +51,8 @@ const KEYS: Record<string, keyof Omit<NoteProposal, 'body' | 'tags'> | 'tags'> =
   append: 'append',
   'append to': 'append',
   completer: 'append',
+  nettoyer: 'clean',
+  clean: 'clean',
   tags: 'tags',
   etiquettes: 'tags'
 }
@@ -56,8 +60,10 @@ const KEYS: Record<string, keyof Omit<NoteProposal, 'body' | 'tags'> | 'tags'> =
 /** The block, read; null when it names no note to write nor one to add to. */
 export function parseNoteProposal(source: string): NoteProposal | null {
   const lines = source.replace(/\r\n?/g, '\n').split('\n')
-  const proposal: NoteProposal = { title: '', folder: '', append: '', tags: [], body: '' }
-  const dashes = lines.findIndex((line) => /^-{3,}\s*$/.test(line))
+  const proposal: NoteProposal = { title: '', folder: '', append: '', clean: '', tags: [], body: '' }
+  const found = lines.findIndex((line) => /^-{3,}\s*$/.test(line))
+  // A note to clean is all header: nothing to write, so no rule under it.
+  const dashes = found < 0 && /^\s*(nettoyer|clean)\s*:/im.test(source) ? lines.length : found
   let bodyFrom = 0
   if (dashes >= 0) {
     // Only a header of « key: value » lines counts as one: a note starting with a rule does not.
@@ -77,6 +83,7 @@ export function parseNoteProposal(source: string): NoteProposal | null {
   proposal.body = lines.slice(bodyFrom).join('\n').trim()
   // No title given: the note's own first heading is its title.
   if (!proposal.title) proposal.title = /^#\s+(.+)$/m.exec(proposal.body)?.[1].trim() ?? ''
+  if (proposal.clean) return proposal
   if (!proposal.body || (!proposal.title && !proposal.append)) return null
   return proposal
 }
@@ -121,7 +128,12 @@ export function proposalFolder(proposal: NoteProposal, fallback: string): string
 
 /** The note a proposal adds to, found as Obsidian finds a link. */
 export function appendTarget(app: App, proposal: NoteProposal, from: string): TFile | null {
-  const path = linkPath(proposal.append)
+  return noteNamed(app, proposal.append, from)
+}
+
+/** A note the model named, by a link or a path, found as Obsidian finds a link. */
+export function noteNamed(app: App, name: string, from: string): TFile | null {
+  const path = linkPath(name)
   if (!path) return null
   const found = app.metadataCache.getFirstLinkpathDest(path, from)
   if (found) return found

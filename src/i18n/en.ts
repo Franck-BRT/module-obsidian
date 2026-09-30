@@ -1900,6 +1900,8 @@ export const en = {
   'library.toLibrary': 'Pour into the library',
   'chat.noteHow':
     'When the person asks you to write, create or draft a note (minutes, summary, sheet, decision…), or to add to an existing note, propose it in a block fenced by four backticks: ````pm-note then, one a line, “title: …”, “folder: …” (optional; with no folder the note goes to {folder}), “tags: a, b” (optional), a “---” line, then the note’s whole content in Markdown, and ```` to close it. To add to an existing note, put “append to: [[Note name]]” instead of the title: the content will be added at its end. The person will see the note and create it in one click; nothing is written without them. Only write this block when a note is asked for.',
+  'chat.noteLimits':
+    'You write nothing in the vault yourself: you propose blocks the person applies in one click. Never say a note was changed, nor that you can do nothing: propose the block that fits. You can create a note or add text at the end of one; you can neither rewrite nor delete part of an existing note — say so when asked, rather than adding a corrected copy at its end. To remove the headers, footers and page numbers a transcription repeats (a document read by OCR), do not copy the transcription out: propose a ````pm-note block holding only the line “clean: [[Note name]]”; the plugin finds the lines repeated from page to page itself and removes them from the whole transcription. When the attached note is cut, say so, rather than treating the part seen as the whole.',
   'chat.noteProjectFolders': 'Folders of the attached projects, for a note about them: {list}.',
   'chat.note.newKind': 'New note',
   'chat.note.appendKind': 'Addition to the note',
@@ -1916,6 +1918,13 @@ export const en = {
   'chat.note.open': 'Open',
   'chat.note.copy': 'Copy the text',
   'chat.note.copied': 'Note text copied.',
+  'command.cleanTranscript': 'Remove headers and footers from the transcription',
+  'chat.note.cleanKind': 'Transcription clean-up',
+  'chat.note.noTranscript': '“{name}” holds no transcription to clean.',
+  'chat.note.cleanNone': 'No header or footer repeated in the transcription.',
+  'chat.note.cleanFound': '{count} lines repeated from page to page will be removed, across the whole transcription:',
+  'chat.note.clean': 'Remove these lines',
+  'chat.note.cleaned': '{count} header and footer lines removed from “{name}”.',
   'chat.note.noTarget': 'The note “{name}” cannot be found in the vault.',
   'settings.chat.notesFolder': 'Folder for notes the chat writes',
   'settings.chat.notesFolderDesc':

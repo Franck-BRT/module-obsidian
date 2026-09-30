@@ -3,6 +3,7 @@ import { imageDataUrl, isImage } from '../../store/chat/chatFile'
 import {
   readTranscript,
   readTranscriptSection,
+  stripFurniture,
   transcribe,
   transcriptNote,
   transcriptPath,
@@ -112,20 +113,22 @@ export async function transcribeScan(
     )
     // Nothing read at all is a model that does not see, most likely: said as such.
     if (!result.read) throw new Error(t('chat.ocrNothing', { model }))
+    // What the printed pages repeat — headers, footers, page numbers — is not the document.
+    const text = stripFurniture(result.text).text
     const meta = { sourceMtime: file.stat.mtime, model, at: new Date().toISOString(), pages: source.pages }
     const record = recordOf(app, records, file.path)
     if (record) {
-      await keepInRecord(app, record, meta, result.text)
+      await keepInRecord(app, record, meta, text)
       new Notice(t('chat.ocrDone', { name: file.name, path: record.path }), 8000)
-      return { text: result.text, fresh: true }
+      return { text, fresh: true }
     }
     const path = normalizePath(transcriptPath(file.path, t('chat.ocrSuffix')))
-    const note = transcriptNote({ source: file.path, ...meta }, result.text, t('chat.ocrHeading', { model }))
+    const note = transcriptNote({ source: file.path, ...meta }, text, t('chat.ocrHeading', { model }))
     const existing = app.vault.getAbstractFileByPath(path)
     if (existing instanceof TFile) await app.vault.modify(existing, note)
     else await app.vault.create(path, note)
     new Notice(t('chat.ocrDone', { name: file.name, path }), 8000)
-    return { text: result.text, fresh: true }
+    return { text, fresh: true }
   } finally {
     notice.hide()
   }
