@@ -1238,9 +1238,24 @@ export const fr: Catalog = {
   'chat.presetScope.project': 'projet',
   'chat.presetScope.requirements': 'exigences',
   'chat.presetScope.note': 'note',
+  'chat.statusIntro':
+    'Faits du point d’avancement, calculés par l’outil à partir du planning et de sa photographie au point précédent : appuie-toi sur eux, ne les invente pas et ne les contredis pas.',
+  'chat.statusHeading': 'Point du {today} (premier point de ce projet).',
+  'chat.statusHeadingSince': 'Point du {today}, comparé au point précédent du {since}.',
+  'chat.statusFirst':
+    'Premier point : pas de comparaison possible, les décalages, nouveautés et tickets terminés depuis le dernier point seront donnés au prochain.',
+  'chat.statusProgress': 'Avancement : {done} tickets terminés sur {total} ({percent} %).',
+  'chat.statusLate': 'En retard ({count}) :',
+  'chat.statusFinished': 'Terminés depuis le dernier point ({count}) :',
+  'chat.statusShifted': 'Décalés depuis le dernier point ({count}) :',
+  'chat.statusAdded': 'Nouveaux depuis le dernier point ({count}) :',
+  'chat.statusUpcoming': 'À venir sous {days} jours ({count}), jalons d’abord :',
+  'chat.statusNone': '(aucun)',
+  'chat.statusMilestone': 'jalon',
+  'chat.statusLateBy': '{days} j de retard',
   'chat.preset.status': 'Point d’avancement',
   'chat.preset.statusQ':
-    'Fais le point sur ce projet : avancement global, ce qui est en retard et ce que ces retards bloquent, les jalons des deux prochaines semaines, et les trois actions à mener en priorité.',
+    'Rédige le point d’avancement de ce projet à partir des faits calculés par l’outil : une synthèse en trois à cinq phrases, puis les retards et ce qu’ils bloquent, les décalages depuis le dernier point et leurs causes quand elles sont connues, ce qui est terminé, ce qui vient dans les deux semaines (jalons d’abord), et les trois actions à mener en priorité. Propose-le comme une note, dans un bloc pm-note titré « Point d’avancement – nom du projet – date du jour », dans le dossier du projet.',
   'chat.preset.late': 'Retards et blocages',
   'chat.preset.lateQ':
     'Qu’est-ce qui est en retard dans ce projet, qu’est-ce que chaque retard bloque par les dépendances, et que proposes-tu pour rattraper ?',

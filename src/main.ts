@@ -113,6 +113,7 @@ import { adapterStorage, RagIndex } from './store/rag/RagIndex'
 import { NOTE_UNDO_FILE, UndoLog, type NoteUndo } from './store/chat/chatUndo'
 import { ScanQueue, ScanStopped } from './store/library/ScanQueue'
 import { ScanProgress } from './store/library/scanProgress'
+import { StatusSnapshots } from './store/chat/statusPoint'
 import { RagIndexer } from './store/rag/RagIndexer'
 import { excludedFolders, vaultSources } from './store/rag/ragSources'
 import { pourRegisterFiles } from './views/documents/pourRegisters'
@@ -165,6 +166,8 @@ export default class PMPlugin extends Plugin {
   scans = new ScanQueue()
   /** The readings of scans cut short, page by page, to go on from. */
   scanProgress!: ScanProgress
+  /** The plan as it was at each status point, for the next to say what moved. */
+  statusPoints!: StatusSnapshots
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver
@@ -250,6 +253,7 @@ export default class PMPlugin extends Plugin {
     this.chatUndo = new UndoLog(ownFolder)
     this.noteUndo = new UndoLog<NoteUndo>(ownFolder, 300, NOTE_UNDO_FILE)
     this.scanProgress = new ScanProgress(ownFolder)
+    this.statusPoints = new StatusSnapshots(ownFolder)
     this.ragIndexer = new RagIndexer(this.ragIndex, {
       sources: () =>
         vaultSources({

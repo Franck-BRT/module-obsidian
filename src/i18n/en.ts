@@ -1258,9 +1258,24 @@ export const en = {
   'chat.presetScope.project': 'project',
   'chat.presetScope.requirements': 'requirements',
   'chat.presetScope.note': 'note',
+  'chat.statusIntro':
+    'The status point’s facts, worked out by the tool from the plan and its photograph at the previous point: build on them, do not invent nor contradict them.',
+  'chat.statusHeading': 'Point of {today} (this project’s first).',
+  'chat.statusHeadingSince': 'Point of {today}, compared with the previous one of {since}.',
+  'chat.statusFirst':
+    'First point: nothing to compare with; what moved, is new or finished since the last point will be given at the next.',
+  'chat.statusProgress': 'Progress: {done} tickets finished of {total} ({percent} %).',
+  'chat.statusLate': 'Late ({count}):',
+  'chat.statusFinished': 'Finished since the last point ({count}):',
+  'chat.statusShifted': 'Moved since the last point ({count}):',
+  'chat.statusAdded': 'New since the last point ({count}):',
+  'chat.statusUpcoming': 'Coming within {days} days ({count}), milestones first:',
+  'chat.statusNone': '(none)',
+  'chat.statusMilestone': 'milestone',
+  'chat.statusLateBy': '{days} days late',
   'chat.preset.status': 'Status update',
   'chat.preset.statusQ':
-    'Give a status update on this project: overall progress, what is late and what those delays hold up, the milestones of the next two weeks, and the three actions to take first.',
+    'Write this project’s status report from the facts worked out by the tool: a summary in three to five sentences, then what is late and what it holds up, what moved since the last point and why when known, what finished, what comes within two weeks (milestones first), and the three actions to take first. Propose it as a note, in a pm-note block titled “Status report – project name – today’s date”, in the project’s folder.',
   'chat.preset.late': 'Delays and blockers',
   'chat.preset.lateQ':
     'What is late in this project, what does each delay hold up through the dependencies, and what do you propose to catch up?',

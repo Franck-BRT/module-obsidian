@@ -86,6 +86,7 @@ import { keepDroppedFile } from '../../store/chat/keepFile'
 import { chatModel, chatModels } from '../../store/chat/chatModels'
 import { availablePrompts, parsePrompts, type ChatPrompt } from '../../store/chat/chatPrompts'
 import { builtinPrompts, scopeIcon } from './chatPresets'
+import { asksForStatus, planState, pointKey, statusFacts, statusText } from '../../store/chat/statusPoint'
 import { reportUndone, requirementOptions } from './changeCard'
 import type { Requirement } from '../../store/requirements/Requirement'
 import { ProjectScope, resolveScopePaths, type ScopeSpec } from '../../store/ProjectScope'
@@ -1250,6 +1251,49 @@ export class ChatView extends ItemView {
   }
 
   /**
+   * A status point's facts for the projects asked about — a programme's own projects with
+   * it —: late, finished, moved and new since the last point, and what is coming, worked
+   * out from the plan and the photograph of it taken at the last point. This one is
+   * photographed in turn, for the next.
+   */
+  private async statusBlock(paths: string[]): Promise<string> {
+    const index = this.plugin.index
+    const all = new Set<string>()
+    for (const path of paths) {
+      const ref = index.projectRef(path)
+      if (!ref || ref.template) continue
+      if (!ref.program) all.add(path)
+      for (const below of index.descendantRefs(path)) if (!below.program && !below.template) all.add(below.path)
+    }
+    if (!all.size) return ''
+    const projects = await this.plugin.store.loadProjects([...all])
+    const state = planState(projects, (one) => this.plugin.store.configFor(one).statuses)
+    const points = this.plugin.statusPoints
+    await points.ready()
+    const key = pointKey(paths)
+    const day = today().toString()
+    const facts = statusFacts(state, points.baseline(key, day), day)
+    await points.record(key, day, state)
+    return [
+      t('chat.statusIntro'),
+      statusText(facts, {
+        heading: (now, since) =>
+          since ? t('chat.statusHeadingSince', { today: now, since }) : t('chat.statusHeading', { today: now }),
+        first: t('chat.statusFirst'),
+        progress: (done, total, percent) => t('chat.statusProgress', { done, total, percent }),
+        late: (count) => t('chat.statusLate', { count }),
+        finished: (count) => t('chat.statusFinished', { count }),
+        shifted: (count) => t('chat.statusShifted', { count }),
+        added: (count) => t('chat.statusAdded', { count }),
+        upcoming: (count, days) => t('chat.statusUpcoming', { count, days }),
+        none: t('chat.statusNone'),
+        milestone: t('chat.statusMilestone'),
+        lateBy: (days) => t('chat.statusLateBy', { days })
+      })
+    ].join('\n\n')
+  }
+
+  /**
    * How to propose a project or a programme: always said, since one can be asked for with
    * nothing attached — with the ones there are, so none is made twice and a project is
    * put under a programme by its exact title.
@@ -2214,6 +2258,8 @@ export class ChatView extends ItemView {
       const places = project
         ? await ticketPlaces(this.plugin.index, this.plugin.store, currentProjects(this.turns))
         : []
+      // A status point asked for: its facts worked out here, against the plan at the last one.
+      const status = project && asksForStatus(asked) ? await this.statusBlock(currentProjects(this.turns)) : ''
       const how = [
         this.changeInstructions(requirements.length > 0, project, paths.length > 0, places),
         this.projectInstructions(),
@@ -2229,6 +2275,7 @@ export class ChatView extends ItemView {
           [
             systemFor(budget),
             project?.text,
+            status,
             block,
             this.filesText(attached, fileBudget, asked, !told),
             library,
