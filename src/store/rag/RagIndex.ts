@@ -142,6 +142,11 @@ export class RagIndex {
     return count
   }
 
+  /** How many of the sources are to be read again: new, or changed since. */
+  pending(sources: RagSourceSpec[]): number {
+    return sources.filter((source) => this.entries.get(source.path)?.key !== source.key).length
+  }
+
   /** The model the vectors were made by; '' while there are none. */
   get modelName(): string {
     return this.model
@@ -209,6 +214,13 @@ export class RagIndex {
       stop?: () => boolean
       /** Saved at most this often while it works, in milliseconds: the whole index is written each time. */
       saveEvery?: number
+      /**
+       * A source asked for now — a note the reader wants found as it is —: read before the
+       * next one waiting, changed or not. Asked between sources.
+       */
+      urgent?: () => RagSourceSpec | undefined
+      /** Told of each source read, with how many passages it was cut into. */
+      onIndexed?: (path: string, passages: number) => void
     }
   ): Promise<RagUpdate> {
     await this.load(options.model)
@@ -227,8 +239,18 @@ export class RagIndex {
     options.onProgress?.({ ...progress })
     let embedded = 0
     let savedAt = Date.now()
-    for (const source of todo) {
+    const queue = [...todo]
+    for (;;) {
       if (options.stop?.()) break
+      const pressing = options.urgent?.()
+      if (pressing) {
+        // Waiting already, it is taken out of the queue; not, it is one more to do.
+        const waiting = queue.findIndex((one) => one.path === pressing.path)
+        if (waiting >= 0) queue.splice(waiting, 1)
+        else progress.total++
+      }
+      const source = pressing ?? queue.shift()
+      if (!source) break
       const chunks = chunkText(await source.read())
       const vectors: number[][] = []
       for (let at = 0; at < chunks.length; at += batch) {
@@ -265,6 +287,7 @@ export class RagIndex {
         }))
       })
       embedded++
+      options.onIndexed?.(source.path, chunks.length)
       progress.done++
       options.onProgress?.({ ...progress })
       if (Date.now() - savedAt >= saveEvery) {

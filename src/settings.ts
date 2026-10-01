@@ -1374,6 +1374,7 @@ export class PMSettingTab extends PluginSettingTab {
             model: index.modelName || this.plugin.settings.llm.modelEmbed
           })
         )
+        if (state.pending) line.appendText(` ${t('settings.rag.pending', { count: state.pending })}`)
       }
     }
     // Followed while the page is open; forgotten once it is not.
@@ -1381,7 +1382,13 @@ export class PMSettingTab extends PluginSettingTab {
       if (!line.isConnected) off()
       else show()
     })
-    if (indexer.ready) void index.load(this.plugin.settings.llm.modelEmbed.trim()).then(show)
+    if (indexer.ready) {
+      safeAsync(async () => {
+        await index.load(this.plugin.settings.llm.modelEmbed.trim())
+        await indexer.refreshPending()
+        show()
+      })()
+    }
     show()
     setting
       .addButton((button) =>

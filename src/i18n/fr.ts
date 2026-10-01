@@ -2008,6 +2008,7 @@ export const fr: Catalog = {
   'chat.note.copied': 'Texte de la note copié.',
   'command.rereadScan': 'Relire le document avec le modèle (OCR) et remplacer sa transcription',
   'command.cleanTranscript': 'Retirer les en-têtes et pieds de page de la transcription',
+  'command.reindexNote': 'Réindexer la note active pour la recherche du coffre',
   'chat.note.cleanKind': 'Nettoyage de la transcription',
   'chat.note.noTranscript': '« {name} » ne contient pas de transcription à nettoyer.',
   'chat.note.cleanNone': 'Aucun en-tête ni pied de page répété dans la transcription.',
@@ -2058,6 +2059,22 @@ export const fr: Catalog = {
   'rag.statusRunningDesc':
     'Les notes et documents nouveaux ou modifiés sont envoyés au modèle d’embedding de la passerelle ; l’index reste sur cette machine.',
   'rag.statusError': 'Index du coffre : arrêté',
+  'rag.statusPending': {
+    one: 'Index du coffre : {count} à indexer',
+    other: 'Index du coffre : {count} à indexer'
+  },
+  'rag.statusPendingDesc':
+    'Notes et documents nouveaux ou modifiés, pas encore lus par l’index. Cliquer pour les indexer maintenant.',
+  'rag.reindexMenu': 'Réindexer pour la recherche du coffre',
+  'rag.reindexing': 'Réindexation de « {name} »…',
+  'rag.reindexed': {
+    one: '« {name} » est à jour dans l’index du coffre ({count} passage).',
+    other: '« {name} » est à jour dans l’index du coffre ({count} passages).'
+  },
+  'rag.reindexOutside':
+    '« {name} » n’est pas lu par la recherche du coffre : son dossier est exclu, ou c’est un document hors bibliothèque alors que « Documents du coffre hors bibliothèque » est désactivé.',
+  'rag.reindexStopped': 'L’indexation a été arrêtée avant « {name} ».',
+  'rag.reindexFailed': 'Réindexation de « {name} » impossible : {reason}',
   'rag.kind.note': 'Note',
   'rag.kind.document': 'Document',
   'rag.kind.project': 'Projet',
@@ -2077,6 +2094,10 @@ export const fr: Catalog = {
   'settings.rag.running': 'Indexation en cours : {done} sur {total} notes et documents.',
   'settings.rag.failed': 'Indexation arrêtée : {reason}',
   'settings.rag.holds': '{sources} notes et documents, {passages} passages, modèle {model}.',
+  'settings.rag.pending': {
+    one: '{count} note ou document nouveau ou modifié reste à indexer.',
+    other: '{count} notes et documents nouveaux ou modifiés restent à indexer.'
+  },
   'settings.rag.update': 'Mettre à jour',
   'settings.rag.stop': 'Arrêter',
   'settings.rag.rebuild': 'Tout réindexer',

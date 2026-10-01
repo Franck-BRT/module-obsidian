@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RagIndex } from './RagIndex'
-import { RagIndexer } from './RagIndexer'
+import { RagIndexer, ReindexStopped } from './RagIndexer'
 import { MemoryStorage, source, wordEmbedder } from './ragTestKit'
 
 const MODEL = 'sidonie/embeddings-cnes-latest'
@@ -79,7 +79,7 @@ describe('RagIndexer', () => {
       enabled: () => true
     })
     await failing.run()
-    expect(failing.state).toEqual({ running: false, progress: null, error: 'Sidonie injoignable' })
+    expect(failing.state).toEqual({ running: false, progress: null, error: 'Sidonie injoignable', pending: 1 })
 
     const embed = wordEmbedder()
     const stopping = new RagIndexer(index, {
@@ -117,5 +117,92 @@ describe('RagIndexer', () => {
     await indexer.rebuild()
     expect(calls).toHaveLength(2)
     indexer.dispose()
+  })
+
+  it('reads one note again when asked, unchanged, and counts what is left to read', async () => {
+    const index = new RagIndex(new MemoryStorage())
+    const sources = [source('A.md', 'Radier coulé.'), source('B.md', 'Coffrage posé.')]
+    const calls: string[][] = []
+    const indexer = new RagIndexer(index, {
+      sources: () => sources,
+      embed: wordEmbedder([], calls),
+      model: () => MODEL,
+      enabled: () => true
+    })
+    await indexer.refreshPending()
+    expect(indexer.state.pending).toBe(2)
+    await indexer.run()
+    expect(indexer.state.pending).toBe(0)
+    calls.length = 0
+    // Unchanged, read again all the same; nothing else is.
+    expect(await indexer.reindex('A.md')).toBe(1)
+    expect(calls.flat().join(' ')).toContain('Radier')
+    expect(calls.flat().join(' ')).not.toContain('Coffrage')
+    // A note the search does not look through: nothing to do.
+    expect(await indexer.reindex('Exclu/C.md')).toBeNull()
+    sources.push(source('C.md', 'Dalle.'))
+    await indexer.refreshPending()
+    expect(indexer.state.pending).toBe(1)
+  })
+
+  it('reads a note asked for during a long indexing before those still waiting', async () => {
+    const index = new RagIndex(new MemoryStorage())
+    const sources = ['A', 'B', 'C', 'D'].map((name) => source(`${name}.md`, `Texte ${name}.`))
+    const order: string[] = []
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const embed = wordEmbedder()
+    const indexer = new RagIndexer(index, {
+      sources: () => sources,
+      embed: async (texts) => {
+        order.push(texts[0].includes('Texte A') ? 'A' : texts[0].replace(/[\s\S]*Texte (\w)[\s\S]*/, '$1'))
+        if (order.length === 1) await gate
+        return embed(texts)
+      },
+      model: () => MODEL,
+      enabled: () => true
+    })
+    const running = indexer.run()
+    await Promise.resolve()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    const asked = indexer.reindex('D.md')
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    release()
+    expect(await asked).toBe(1)
+    await running
+    expect(order).toEqual(['A', 'D', 'B', 'C'])
+  })
+
+  it('says a note asked for was not read when the indexing is stopped first, or fails', async () => {
+    const index = new RagIndex(new MemoryStorage())
+    const indexer = new RagIndexer(index, {
+      sources: () => [source('A.md', 'Radier.')],
+      embed: () => Promise.reject(new Error('gateway down')),
+      model: () => MODEL,
+      enabled: () => true
+    })
+    await expect(indexer.reindex('A.md')).rejects.toThrow('gateway down')
+    expect(indexer.state.error).toBe('gateway down')
+
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const embed = wordEmbedder()
+    const stopped = new RagIndexer(new RagIndex(new MemoryStorage()), {
+      sources: () => [source('A.md', 'Radier.'), source('B.md', 'Dalle.')],
+      embed: async (texts) => {
+        await gate
+        return embed(texts)
+      },
+      model: () => MODEL,
+      enabled: () => true
+    })
+    const running = stopped.run()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    const asked = stopped.reindex('B.md')
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    stopped.stop()
+    release()
+    await expect(asked).rejects.toBeInstanceOf(ReindexStopped)
+    await running
   })
 })

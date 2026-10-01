@@ -2019,6 +2019,7 @@ export const en = {
   'chat.note.copied': 'Note text copied.',
   'command.rereadScan': 'Read the document again with the model (OCR) and replace its transcription',
   'command.cleanTranscript': 'Remove headers and footers from the transcription',
+  'command.reindexNote': 'Reindex the active note for the vault search',
   'chat.note.cleanKind': 'Transcription clean-up',
   'chat.note.noTranscript': '“{name}” holds no transcription to clean.',
   'chat.note.cleanNone': 'No header or footer repeated in the transcription.',
@@ -2069,6 +2070,21 @@ export const en = {
   'rag.statusRunningDesc':
     'New or changed notes and documents are sent to the gateway’s embedding model; the index stays on this machine.',
   'rag.statusError': 'Vault index: stopped',
+  'rag.statusPending': {
+    one: 'Vault index: {count} to index',
+    other: 'Vault index: {count} to index'
+  },
+  'rag.statusPendingDesc': 'New or changed notes and documents the index has not read yet. Click to index them now.',
+  'rag.reindexMenu': 'Reindex for the vault search',
+  'rag.reindexing': 'Reindexing “{name}”…',
+  'rag.reindexed': {
+    one: '“{name}” is up to date in the vault index ({count} passage).',
+    other: '“{name}” is up to date in the vault index ({count} passages).'
+  },
+  'rag.reindexOutside':
+    '“{name}” is not read by the vault search: its folder is left out, or it is a document outside the library while “Vault documents outside the library” is off.',
+  'rag.reindexStopped': 'The indexing was stopped before “{name}”.',
+  'rag.reindexFailed': 'Could not reindex “{name}”: {reason}',
   'rag.kind.note': 'Note',
   'rag.kind.document': 'Document',
   'rag.kind.project': 'Project',
@@ -2088,6 +2104,10 @@ export const en = {
   'settings.rag.running': 'Indexing: {done} of {total} notes and documents.',
   'settings.rag.failed': 'Indexing stopped: {reason}',
   'settings.rag.holds': '{sources} notes and documents, {passages} passages, model {model}.',
+  'settings.rag.pending': {
+    one: '{count} new or changed note or document is left to index.',
+    other: '{count} new or changed notes and documents are left to index.'
+  },
   'settings.rag.update': 'Update',
   'settings.rag.stop': 'Stop',
   'settings.rag.rebuild': 'Rebuild the index',

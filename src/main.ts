@@ -114,8 +114,8 @@ import { NOTE_UNDO_FILE, UndoLog, type NoteUndo } from './store/chat/chatUndo'
 import { ScanQueue, ScanStopped } from './store/library/ScanQueue'
 import { ScanProgress } from './store/library/scanProgress'
 import { StatusSnapshots } from './store/chat/statusPoint'
-import { RagIndexer } from './store/rag/RagIndexer'
-import { excludedFolders, vaultSources } from './store/rag/ragSources'
+import { RagIndexer, ReindexStopped } from './store/rag/RagIndexer'
+import { DOCUMENT_EXTENSIONS, excludedFolders, vaultSources } from './store/rag/ragSources'
 import { pourRegisterFiles } from './views/documents/pourRegisters'
 import { skillNote } from './store/chat/skills'
 import { freePath } from './store/DocumentStore'
@@ -377,6 +377,35 @@ export default class PMPlugin extends Plugin {
         return true
       }
     })
+
+    // A note read again by the vault search now, as it stands: found by what it says this minute.
+    this.addCommand({
+      id: 'reindex-note',
+      name: t('command.reindexNote'),
+      checkCallback: (checking) => {
+        const file = this.app.workspace.getActiveFile()
+        if (!file || !this.ragIndexer.ready) return false
+        if (!checking) void this.reindexFile(file)
+        return true
+      }
+    })
+    this.registerEvent(
+      this.app.workspace.on('file-menu', (menu, file) => {
+        if (!(file instanceof TFile) || !this.ragIndexer.ready) return
+        // What the search reads: notes, documents, and whatever the library holds — a scan read.
+        const readable =
+          file.extension === 'md' ||
+          DOCUMENT_EXTENSIONS.has(file.extension.toLowerCase()) ||
+          this.library.docs().some((one) => one.file === file.path)
+        if (!readable) return
+        menu.addItem((item) =>
+          item
+            .setTitle(t('rag.reindexMenu'))
+            .setIcon('refresh-cw')
+            .onClick(safeAsync(() => this.reindexFile(file)))
+        )
+      })
+    )
 
     // A document of the library read again by the model that sees, the transcription kept replaced.
     this.addCommand({
@@ -741,10 +770,16 @@ export default class PMPlugin extends Plugin {
     this.register(this.libraryText.onChange(later))
     const status = this.addStatusBarItem()
     status.addClass('pm-rag-status')
+    status.addClass('mod-clickable')
+    // What is left to read, read now at a click.
+    this.registerDomEvent(status, 'click', () => {
+      if (!this.ragIndexer.state.running) void this.ragIndexer.run()
+    })
     const show = (): void => {
       const state = this.ragIndexer.state
+      const pending = this.ragIndexer.ready ? state.pending : 0
       status.empty()
-      status.toggleClass('is-hidden', !state.running && !state.error)
+      status.toggleClass('is-hidden', !state.running && !state.error && !pending)
       if (state.running) {
         status.setText(
           state.progress && state.progress.total
@@ -755,11 +790,39 @@ export default class PMPlugin extends Plugin {
       } else if (state.error) {
         status.setText(t('rag.statusError'))
         status.setAttr('aria-label', state.error)
+      } else if (pending) {
+        status.setText(t('rag.statusPending', { count: pending }))
+        status.setAttr('aria-label', t('rag.statusPendingDesc'))
       }
     }
     this.register(this.ragIndexer.onChange(show))
     show()
+    void this.ragIndexer.refreshPending()
     this.ragIndexer.schedule(15000)
+  }
+
+  /**
+   * A note — or a document of the library, by its record — read again by the vault search
+   * now, changed or not, before whatever else waits; how it went said in a notice.
+   */
+  private async reindexFile(file: TFile): Promise<void> {
+    // A record stands for its document, which is what the search reads.
+    const doc = this.library.isRecord(file) ? this.library.docs().find((one) => one.record === file.path) : undefined
+    const name = doc?.title ?? file.basename
+    const notice = new Notice(t('rag.reindexing', { name }), 0)
+    try {
+      const passages = await this.ragIndexer.reindex(doc?.file || file.path)
+      notice.setMessage(
+        passages === null ? t('rag.reindexOutside', { name }) : t('rag.reindexed', { name, count: passages })
+      )
+    } catch (error) {
+      notice.setMessage(
+        error instanceof ReindexStopped
+          ? t('rag.reindexStopped', { name })
+          : t('rag.reindexFailed', { name, reason: error instanceof Error ? error.message : String(error) })
+      )
+    }
+    window.setTimeout(() => notice.hide(), 8000)
   }
 
   /**
