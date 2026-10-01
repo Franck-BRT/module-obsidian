@@ -825,3 +825,59 @@ a.pm-docs-clear-filters {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
+
+/* The scans being read: the document, its page and for how long, those waiting, a stop. */
+.pm-docs-scan-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin: var(--size-4-2) 0;
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  font-size: var(--font-ui-small);
+}
+
+.pm-docs-scan-strip.is-problem {
+  border-color: var(--text-warning);
+}
+
+.pm-docs-scan-icon {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.pm-docs-scan-icon.is-running svg {
+  animation: pm-docs-spin 1.6s linear infinite;
+}
+
+@keyframes pm-docs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pm-docs-scan-text {
+  font-weight: var(--font-semibold);
+}
+
+.pm-docs-scan-elapsed,
+.pm-docs-scan-waiting {
+  color: var(--text-muted);
+}
+
+.pm-docs-scan-elapsed.is-slow {
+  color: var(--text-warning);
+}
+
+.pm-docs-scan-strip button {
+  margin-left: auto;
+}
+
+.pm-docs-badge.is-reading,
+.pm-docs-badge.is-waiting {
+  color: var(--text-accent);
+  border-color: var(--text-accent);
+}

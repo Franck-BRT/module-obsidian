@@ -73,6 +73,9 @@ const PAGE = 200
  * otherwise later. A document is opened by its title; its record, where notes about it
  * can be written, from its menu.
  */
+/** How long one page may take before the library says it is slow: models read a page in a minute or two. */
+const SLOW_PAGE_SECONDS = 300
+
 export class DocumentsView extends ItemView {
   private query: DocQuery = { text: '', project: '', family: '' }
   private sort: DocSort = 'added'
@@ -83,6 +86,8 @@ export class DocumentsView extends ItemView {
   private filtersEl!: HTMLElement
   private bodyEl!: HTMLElement
   private redrawTimer: number | null = null
+  /** Where the time spent on the page being read is said, while one is. */
+  private scanElapsedEl: HTMLElement | null = null
   private textTimer: number | null = null
   /** The documents ticked, by their records, to be asked about together. */
   private picked = new Set<string>()
@@ -151,6 +156,9 @@ export class DocumentsView extends ItemView {
     this.register(this.plugin.index.onChange(later))
     // What the documents say, read in the background: the list follows as it comes in.
     this.register(this.plugin.libraryText.onChange(() => this.textSoon()))
+    // The scans being read: the document at its page, those waiting, how the last one ended.
+    this.register(this.plugin.scans.onChange(() => this.textSoon()))
+    this.registerInterval(window.setInterval(() => this.tickScan(), 1000))
     void this.plugin.libraryText.refresh(this.plugin.library.docs())
     void this.loadRegister()
 
@@ -475,6 +483,7 @@ export class DocumentsView extends ItemView {
           : t('library.found', { count: found.length, total: all.length })
     })
     this.renderTextStatus(summary, all)
+    this.renderScanQueue()
     this.renderRegistersOutside(all)
     if (this.picked.size) this.renderPickedBar(all)
     if (!found.length) {
@@ -748,8 +757,87 @@ export class DocumentsView extends ItemView {
     }
   }
 
+  /**
+   * The reading of scans as it goes: the document being read, the page it is at and for
+   * how long — a page that takes long is said to — those waiting, and a button that stops
+   * it; once done, how the last one ended, until dismissed.
+   */
+  private renderScanQueue(): void {
+    const scans = this.plugin.scans
+    this.scanElapsedEl = null
+    const current = scans.current
+    if (!current && !scans.last) return
+    const strip = this.bodyEl.createDiv('pm-docs-scan-strip')
+    if (current) {
+      setIcon(strip.createSpan({ cls: 'pm-docs-scan-icon is-running' }), 'loader')
+      strip.createSpan({
+        cls: 'pm-docs-scan-text',
+        text: current.total
+          ? t('library.scanReadingPage', { title: current.title, page: current.page, total: current.total })
+          : t('library.scanStatusStarting', { title: current.title })
+      })
+      this.scanElapsedEl = strip.createSpan({ cls: 'pm-docs-scan-elapsed' })
+      if (scans.waiting.length) {
+        strip.createSpan({
+          cls: 'pm-docs-scan-waiting',
+          text: t('library.scanWaitingCount', { count: scans.waiting.length }),
+          attr: { title: scans.waiting.map((job) => job.title).join('\n') }
+        })
+      }
+      const stop = strip.createEl('button', { cls: 'mod-warning', text: t('library.scanStop') })
+      stop.addEventListener('click', () => {
+        scans.stop()
+        stop.disabled = true
+        stop.setText(t('library.scanStopping'))
+      })
+      this.tickScan()
+      return
+    }
+    const last = scans.last
+    if (!last) return
+    setIcon(strip.createSpan({ cls: 'pm-docs-scan-icon' }), last.ok ? 'check' : 'circle-alert')
+    strip.toggleClass('is-problem', !last.ok)
+    strip.createSpan({
+      cls: 'pm-docs-scan-text',
+      text: last.ok
+        ? t('library.scanDone', { title: last.title })
+        : last.reason === 'stopped'
+          ? t('library.scanStopped', { title: last.title })
+          : t('library.scanFailed', { title: last.title, reason: last.reason ?? '' })
+    })
+    const close = strip.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('common.close') } })
+    setIcon(close, 'x')
+    close.addEventListener('click', () => scans.dismiss())
+  }
+
+  /** How long the page being read has taken, said each second; a long one said to be. */
+  private tickScan(): void {
+    const el = this.scanElapsedEl
+    const current = this.plugin.scans.current
+    if (!el || !current) return
+    const seconds = Math.max(0, Math.floor((Date.now() - current.since) / 1000))
+    const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+    el.setText(seconds >= SLOW_PAGE_SECONDS ? t('library.scanSlow', { time }) : t('library.scanElapsed', { time }))
+    el.toggleClass('is-slow', seconds >= SLOW_PAGE_SECONDS)
+  }
+
   /** Said when its text could not be read, and offered to a model when it is a scan. */
   private renderTextState(meta: HTMLElement, doc: LibraryDoc): void {
+    // Being read, or waiting to be: said before anything else.
+    const queued = this.plugin.scans.stateOf(doc.record)
+    if (queued) {
+      const current = this.plugin.scans.current
+      meta.createSpan({
+        cls: `pm-docs-badge ${queued === 'reading' ? 'is-reading' : 'is-waiting'}`,
+        text:
+          queued === 'reading' && current?.total
+            ? t('library.scanBadgeReading', { page: current.page, total: current.total })
+            : queued === 'reading'
+              ? t('library.scanBadgeStarting')
+              : t('library.scanBadgeWaiting')
+      })
+      return
+    }
     const entry = this.plugin.libraryText.entry(doc)
     if (!entry || entry.state === 'ok') return
     if (entry.state === 'scan') {

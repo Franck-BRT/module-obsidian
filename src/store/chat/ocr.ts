@@ -1,5 +1,6 @@
 import { parseFrontmatter } from '../YamlParser'
 import { fold } from '../library/libraryDoc'
+import { ScanStopped } from '../library/ScanQueue'
 
 /**
  * A document with no text in it — a scanned planning, a Gantt exported as a picture —
@@ -61,6 +62,8 @@ export interface TranscribeOptions {
   check?: boolean
   /** Whether the file's own text follows a reading still short once read again. */
   layerText?: boolean
+  /** Asked before each page: true stops the reading, which then fails as stopped. */
+  stopped?: () => boolean
 }
 
 /** The letters of a text: how much of a page it holds, whatever its layout. */
@@ -115,6 +118,7 @@ export async function transcribe(
     throw last instanceof Error ? last : new Error(String(last))
   }
   for (let page = 1; page <= shown; page++) {
+    if (options.stopped?.()) throw new ScanStopped()
     progress(page, shown)
     let body: string
     try {

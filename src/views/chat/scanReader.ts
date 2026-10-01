@@ -103,7 +103,9 @@ export async function transcribeScan(
   /** Read again, whatever is kept: a transcription made before it read documents whole. */
   again = false,
   /** Which of the steps of a reading to take. */
-  options: OcrSettings = DEFAULT_OCR_SETTINGS
+  options: OcrSettings = DEFAULT_OCR_SETTINGS,
+  /** Who follows the reading: told each page, and asked between pages whether to stop. */
+  watch: { page?: (page: number, total: number) => void; stopped?: () => boolean } = {}
 ): Promise<{ text: string; fresh: boolean }> {
   const kept = again ? null : await keptTranscript(app, file, records)
   if (kept) return { text: kept, fresh: false }
@@ -124,9 +126,17 @@ export async function transcribeScan(
         skipped: (count) => t('chat.ocrSkipped', { count }),
         layer: (page) => t('chat.ocrLayer', { page })
       },
-      (page, total) => notice.setMessage(t('chat.ocrReading', { name: file.name, page, total })),
+      (page, total) => {
+        notice.setMessage(t('chat.ocrReading', { name: file.name, page, total }))
+        watch.page?.(page, total)
+      },
       options.allPages ? OCR_PAGE_LIMIT : OCR_FIRST_PAGES,
-      { attempts: options.retry ? 3 : 1, check: options.check, layerText: options.layerText }
+      {
+        attempts: options.retry ? 3 : 1,
+        check: options.check,
+        layerText: options.layerText,
+        ...(watch.stopped ? { stopped: watch.stopped } : {})
+      }
     )
     // Nothing read at all is a model that does not see, most likely: said as such.
     if (!result.read) throw new Error(t('chat.ocrNothing', { model }))

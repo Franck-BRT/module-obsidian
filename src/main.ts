@@ -111,6 +111,7 @@ import { proposeRegisterMatches } from './views/documents/matchRegister'
 import { followMoves } from './store/library/fileInRegister'
 import { adapterStorage, RagIndex } from './store/rag/RagIndex'
 import { UndoLog } from './store/chat/chatUndo'
+import { ScanQueue, ScanStopped } from './store/library/ScanQueue'
 import { RagIndexer } from './store/rag/RagIndexer'
 import { excludedFolders, vaultSources } from './store/rag/ragSources'
 import { pourRegisterFiles } from './views/documents/pourRegisters'
@@ -157,6 +158,8 @@ export default class PMPlugin extends Plugin {
   changeEdits = new Map<string, string>()
   /** The changes applied from the chat that can still be taken back. */
   chatUndo!: UndoLog
+  /** The documents being read by the model that sees, and those waiting. */
+  scans = new ScanQueue()
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver
@@ -321,6 +324,7 @@ export default class PMPlugin extends Plugin {
         this.index.build()
         await this.startupSweep()
         this.watchVaultIndex()
+        this.watchScans()
       })
     )
 
@@ -745,7 +749,40 @@ export default class PMPlugin extends Plugin {
     this.ragIndexer.schedule(15000)
   }
 
+  /**
+   * The reading of scans, said in the status bar while it runs: the document, its page,
+   * those waiting — a click opens the library, where it can be stopped.
+   */
+  private watchScans(): void {
+    const status = this.addStatusBarItem()
+    status.addClass('pm-rag-status')
+    status.addClass('mod-clickable')
+    status.addEventListener('click', () => {
+      void this.openDocuments('')
+    })
+    const show = (): void => {
+      const current = this.scans.current
+      status.toggleClass('is-hidden', !current)
+      if (!current) return
+      const waiting = this.scans.waiting.length
+      status.setText(
+        [
+          current.total
+            ? t('library.scanStatus', { title: current.title, page: current.page, total: current.total })
+            : t('library.scanStatusStarting', { title: current.title }),
+          waiting ? t('library.scanWaitingCount', { count: waiting }) : ''
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      )
+      status.setAttr('aria-label', t('library.scanStatusDesc'))
+    }
+    this.register(this.scans.onChange(show))
+    show()
+  }
+
   onunload(): void {
+    this.scans.stop()
     this.ragIndexer?.dispose()
     setImpactLookup(null)
     this.notifier.stop()
@@ -1188,23 +1225,41 @@ export default class PMPlugin extends Plugin {
       return false
     }
     const client = new LlmClient({ settings: llm })
-    for (const doc of docs) {
-      try {
-        await this.libraryText.readScan(doc, async (file, bytes) => {
-          const source = await scanPages(file, bytes)
+    // In the queue, after those waiting: one at a time, seen in the library and the status bar.
+    await this.scans.add(
+      docs.map((doc) => ({
+        key: doc.record,
+        title: doc.title,
+        run: async (progress, stopped) => {
           try {
-            return (await transcribeScan(this.app, client, model, file, source, this.library, again, options)).text
-          } finally {
-            source.close()
+            await this.libraryText.readScan(doc, async (file, bytes) => {
+              const source = await scanPages(file, bytes)
+              try {
+                return (
+                  await transcribeScan(this.app, client, model, file, source, this.library, again, options, {
+                    page: progress,
+                    stopped
+                  })
+                ).text
+              } finally {
+                source.close()
+              }
+            })
+          } catch (error) {
+            new Notice(
+              error instanceof ScanStopped
+                ? t('library.scanStopped', { title: doc.title })
+                : t('library.scanFailed', {
+                    title: doc.title,
+                    reason: error instanceof Error ? error.message : String(error)
+                  }),
+              10000
+            )
+            throw error
           }
-        })
-      } catch (error) {
-        new Notice(
-          t('library.scanFailed', { title: doc.title, reason: error instanceof Error ? error.message : String(error) }),
-          10000
-        )
-      }
-    }
+        }
+      }))
+    )
     return true
   }
 

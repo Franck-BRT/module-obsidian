@@ -137,6 +137,9 @@ export interface LlmClientOpts {
  * something in a shape, and turn text into a vector. Everything else the gateway can do
  * is reachable through the first two.
  */
+/** How long a page's reading may take at least, whatever the settings say for a question. */
+export const IMAGE_TIMEOUT_SECONDS = 300
+
 /** How many times a reading cut by the length limit is carried on. */
 const IMAGE_CONTINUATIONS = 4
 
@@ -192,12 +195,18 @@ export class LlmClient {
     ]
     let text = ''
     for (let round = 0; round <= IMAGE_CONTINUATIONS; round++) {
-      const payload = await this.send('chat/completions', 'POST', {
-        model: request.model,
-        messages,
-        temperature: 0,
-        max_tokens: request.maxTokens ?? Math.max(this.settings.maxTokens, 4096)
-      })
+      // A page written out whole takes a model minutes, not the seconds a question does.
+      const payload = await this.send(
+        'chat/completions',
+        'POST',
+        {
+          model: request.model,
+          messages,
+          temperature: 0,
+          max_tokens: request.maxTokens ?? Math.max(this.settings.maxTokens, 4096)
+        },
+        IMAGE_TIMEOUT_SECONDS
+      )
       const part = readChatContent(payload)
       // As it came: the model goes on exactly where it stopped, mid-word as often as not.
       text += part
@@ -396,7 +405,13 @@ export class LlmClient {
     }
   }
 
-  private async send(path: string, method: string, body?: Record<string, unknown>): Promise<unknown> {
+  private async send(
+    path: string,
+    method: string,
+    body?: Record<string, unknown>,
+    /** Longer than the settings' own, for a call known to take long. */
+    timeoutSeconds?: number
+  ): Promise<unknown> {
     if (!this.configured) throw new LlmError('disabled', 'No gateway is configured.')
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     // Sent only when there is one: this gateway wants no key, and an empty bearer token
@@ -410,7 +425,8 @@ export class LlmClient {
         method,
         headers,
         ...(body === undefined ? {} : { body: JSON.stringify(body) })
-      })
+      }),
+      timeoutSeconds
     )
 
     if (response.status < 200 || response.status >= 300) {
@@ -427,8 +443,8 @@ export class LlmClient {
    * A call that never answers is worse than one that fails: the reader is left with a
    * spinner and no way to tell a slow model from a wrong address.
    */
-  private async withTimeout<T>(work: Promise<T>): Promise<T> {
-    const seconds = Math.max(1, this.settings.timeoutSeconds)
+  private async withTimeout<T>(work: Promise<T>, longer?: number): Promise<T> {
+    const seconds = Math.max(1, this.settings.timeoutSeconds, longer ?? 0)
     let timer: number | undefined
     const alarm = new Promise<never>((_resolve, reject) => {
       timer = window.setTimeout(() => reject(new LlmError('timeout', `No answer after ${seconds}s.`)), seconds * 1000)

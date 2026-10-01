@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_LLM_SETTINGS, type LlmSettings } from '../../types'
-import { LlmClient, describeHttp, type HttpTransport } from './client'
+import { IMAGE_TIMEOUT_SECONDS, LlmClient, describeHttp, type HttpTransport } from './client'
 import { LlmError } from './protocol'
 
 const settings = (over: Partial<LlmSettings> = {}): LlmSettings => ({
@@ -354,5 +354,25 @@ describe('reading an image', () => {
       image: 'data:,'
     })
     expect(once.seen).toHaveLength(1)
+  })
+
+  // A page written out whole takes minutes: not cut at the minute a question is given.
+  it('waits longer for a page than for a question', async () => {
+    vi.useFakeTimers()
+    try {
+      const transport: HttpTransport = () => new Promise(() => {})
+      const client = new LlmClient({ settings: settings({ timeoutSeconds: 60 }), transport })
+      let failed: unknown = null
+      const reading = client.readImage({ model: 'vision', prompt: 'Transcris.', image: 'data:,' }).catch((error) => {
+        failed = error
+      })
+      await vi.advanceTimersByTimeAsync(61_000)
+      expect(failed).toBeNull()
+      await vi.advanceTimersByTimeAsync(IMAGE_TIMEOUT_SECONDS * 1000)
+      await reading
+      expect(String(failed)).toContain(`${IMAGE_TIMEOUT_SECONDS}s`)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

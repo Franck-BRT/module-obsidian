@@ -183,6 +183,25 @@ describe('transcribing a whole document', () => {
     expect(once.failed).toBe(1)
   })
 
+  it('stops between pages when asked, as a reading stopped', async () => {
+    let read = 0
+    let stop = false
+    const out = transcribe(
+      source(5),
+      () => {
+        read++
+        if (read === 2) stop = true
+        return Promise.resolve('p')
+      },
+      WORDS,
+      () => {},
+      undefined,
+      { ...noWait, stopped: () => stop }
+    )
+    await expect(out).rejects.toThrow('stopped')
+    expect(read).toBe(2)
+  })
+
   it('judges a reading against the file’s own text only when that holds a page’s worth', () => {
     const page = 'Le placement fait partie du problème de découpe. '.repeat(10)
     expect(readsWhole(page, page)).toBe(true)
