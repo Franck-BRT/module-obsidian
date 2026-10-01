@@ -2,6 +2,7 @@ import { MarkdownRenderChild, Notice, setIcon, TFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import {
   CHANGE_LANGUAGE,
+  dayShift,
   createAsTicket,
   createChange,
   createSource,
@@ -36,6 +37,7 @@ import {
   applyToTicket,
   applyWithUndo,
   applyProject,
+  previewTicketChange,
   projectTarget,
   undoChange,
   createLot,
@@ -49,6 +51,7 @@ import {
   type Undone
 } from '../../store/chat/applyChange'
 import { typeConfigOf } from '../../store/TicketPalette'
+import type { ScheduleMove } from '../../store/TaskSource'
 import { fold } from '../../store/library/libraryDoc'
 import { renderPersonPicker } from '../../ui/PersonPicker'
 import { renderMultiSelect } from '../../ui/composites/properties/MultiSelectControl'
@@ -190,6 +193,15 @@ function typeLabel(type: string): string {
 }
 
 /** Where a card stands: its change to be made or already made, or why it cannot be. */
+/** How many moved tickets are shown open; more are folded under their count. */
+const MOVES_OPEN = 6
+
+/** A ticket's dates, as one span: its start to its end, or the one it has. */
+function span(dates: { start: string; due: string }): string {
+  if (dates.start && dates.due && dates.start !== dates.due) return `${dates.start} – ${dates.due}`
+  return dates.due || dates.start || '—'
+}
+
 type CardState = { ok: true; applied: boolean } | { ok: false; problem: ValueProblem; allowed?: string[] }
 
 class ChangeCard extends MarkdownRenderChild {
@@ -310,7 +322,10 @@ class ChangeCard extends MarkdownRenderChild {
       this.paint((card) => this.renderTicketForm(card, spec, target))
       return
     }
-    this.paint((card) => this.renderTicket(card, spec, target))
+    // What the scheduling would move besides it, seen before the click.
+    const moves = await previewTicketChange(this.plugin.index, this.plugin.store, spec).catch(() => [])
+    if (generation !== this.generation) return
+    this.paint((card) => this.renderTicket(card, spec, target, moves))
   }
 
   /**
@@ -720,7 +735,8 @@ class ChangeCard extends MarkdownRenderChild {
   private renderTicket(
     card: HTMLElement,
     spec: Extract<ChangeSpec, { kind: 'ticket' }>,
-    target: TicketTarget | { problem: 'none' | 'ambiguous'; count: number }
+    target: TicketTarget | { problem: 'none' | 'ambiguous'; count: number },
+    moves: ScheduleMove[] = []
   ): void {
     if ('problem' in target) {
       this.head(card, 'square-check-big', spec.target, null)
@@ -744,6 +760,7 @@ class ChangeCard extends MarkdownRenderChild {
     if (resolved.ok) {
       for (const row of resolved.rows) this.body(card, ticketFieldLabel(row.field), row, row.field === 'title')
     } else this.body(card, ticketFieldLabel(resolved.field), null, false)
+    if (moves.length) this.renderMoves(card, moves, target.project.title)
     this.why(card, spec.why)
     this.footer(card, resolved, () => this.applyTicket(spec))
     if (!(resolved.ok && resolved.applied)) this.editButton(card)
@@ -802,6 +819,35 @@ class ChangeCard extends MarkdownRenderChild {
       // Seen at once, the way the "new project" window opens what it made.
       const made = projectTarget(this.plugin.index, spec)
       if (!('problem' in made) && made.existing) await this.plugin.router.openProjectLink(made.existing.path)
+    }
+  }
+
+  /**
+   * The tickets the scheduling would move with this one, each with its dates before and
+   * after and by how many days; folded past a few, its project named when it is another.
+   */
+  private renderMoves(card: HTMLElement, moves: ScheduleMove[], projectTitle: string): void {
+    const box = card.createEl('details', { cls: 'pm-change-moves' })
+    if (moves.length <= MOVES_OPEN) box.setAttr('open', '')
+    box.createEl('summary', { text: t('chat.change.moves', { count: moves.length }) })
+    const list = box.createEl('ul')
+    for (const move of moves) {
+      const item = list.createEl('li')
+      item.createSpan({
+        cls: 'pm-change-move-title',
+        text: move.projectTitle === projectTitle ? move.title : `${move.title} · ${move.projectTitle}`
+      })
+      item.createSpan({
+        cls: 'pm-change-move-dates',
+        text: ` ${span(move.before)} → ${span(move.after)}`
+      })
+      const shift = dayShift(move.before, move.after)
+      if (shift) {
+        item.createSpan({
+          cls: `pm-change-move-shift ${shift > 0 ? 'is-later' : 'is-earlier'}`,
+          text: ` (${shift > 0 ? '+' : '−'}${t('chat.change.days', { count: Math.abs(shift) })})`
+        })
+      }
     }
   }
 

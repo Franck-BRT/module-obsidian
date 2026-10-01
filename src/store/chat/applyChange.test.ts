@@ -13,6 +13,7 @@ import {
   applyToTicket,
   applyWithUndo,
   applyProject,
+  previewTicketChange,
   projectTarget,
   asModifications,
   createLot,
@@ -524,6 +525,31 @@ describe('undoing a change applied from the chat', () => {
     expect((await task(civil, first))?.status).not.toBe('done')
     expect(await task(civil, second)).toMatchObject({ start: '2026-07-06', due: '2026-07-07' })
     expect(await task(other, third)).toMatchObject({ start: '2026-07-08', due: '2026-07-09' })
+  })
+
+  it('shows what a change would move before it is applied, exactly, writing nothing', async () => {
+    const { civil, other, first, second, third } = await plan()
+    const change = spec('ticket', { ticket: 'Déblais', changes: { due: '2026-07-10' } })
+    const moves = await previewTicketChange(index, store, change)
+    expect(moves.map((move) => [move.title, move.projectTitle]).sort()).toEqual([
+      ['Pompes', 'Équipements'],
+      ['Soutènement', 'Génie civil']
+    ])
+    // Nothing written: the plan as it was.
+    expect((await task(civil, first))?.due).toBe('2026-07-03')
+    expect(await task(civil, second)).toMatchObject({ start: '2026-07-06', due: '2026-07-07' })
+    expect(await task(other, third)).toMatchObject({ start: '2026-07-08', due: '2026-07-09' })
+    // Applied: the tickets land where the preview said.
+    await applyToTicket(index, store, change)
+    for (const move of moves) {
+      const path = move.projectTitle === 'Génie civil' ? civil : other
+      expect(await task(path, move.id)).toMatchObject(move.after)
+    }
+    // A change that moves no date moves nothing else.
+    index.build()
+    expect(
+      await previewTicketChange(index, store, spec('ticket', { ticket: 'Déblais', changes: { assignees: ['Paul'] } }))
+    ).toEqual([])
   })
 
   it('leaves a ticket changed since, and names it', async () => {

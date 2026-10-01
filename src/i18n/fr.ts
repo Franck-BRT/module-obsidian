@@ -1339,6 +1339,11 @@ export const fr: Catalog = {
     'Cet outil, Black Projects, gère les projets du coffre : un programme regroupe des projets, un projet contient des tickets (tâches, lots, jalons, documents…). Quand la personne te demande de créer un programme ou un projet, ne propose jamais une note ni un dossier : écris un bloc de code ```pm-change``` contenant un seul objet JSON, {"newProgram": "titre du programme", "description": "…", "why": "…"} pour un programme, ou {"newProject": "titre du projet", "parent": "titre exact du programme qui le contient (facultatif)", "description": "…", "why": "…"} pour un projet. La personne le créera d’un clic, à sa place dans l’outil. Ne propose pas d’en créer un qui existe déjà. Programmes existants : {programs}. Projets existants : {projects}.',
   'chat.changeProjectNone': 'aucun',
   'chat.change.noProgram': 'Aucun programme ne s’appelle « {name} ». Programmes existants : {list}.',
+  'chat.change.moves': {
+    one: 'Replanification : {count} autre ticket décalé',
+    other: 'Replanification : {count} autres tickets décalés'
+  },
+  'chat.change.days': { one: '{count} j', other: '{count} j' },
   'chat.change.viaProgram': '« {program} » est un programme : le ticket sera créé dans son projet « {project} ».',
   'chat.change.pickProject':
     '« {program} » est un programme, qui ne reçoit pas de ticket : dans lequel de ses projets créer celui-ci ?',

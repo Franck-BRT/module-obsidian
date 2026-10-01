@@ -60,7 +60,7 @@ import {
   resolveVaultLink,
   TASK_FOLDER_NAME
 } from './vaultFs'
-import type { CreateFromTemplateOptions, ImportNoteOptions, TaskSource } from './TaskSource'
+import type { CreateFromTemplateOptions, ImportNoteOptions, ScheduleMove, TaskSource } from './TaskSource'
 import { tasksFromTemplate } from './Template'
 import { t } from '../i18n'
 
@@ -1589,17 +1589,79 @@ export class ProjectStore implements TaskSource {
    */
   async scheduleAfterChange(project: Project, changedTaskId?: string): Promise<number> {
     const loaded = new Map<string, Project>([[project.filePath, project]])
+    const total = await this.propagate(
+      loaded,
+      project,
+      changedTaskId === undefined ? undefined : [changedTaskId],
+      false,
+      (path) => this.loadProjectByPath(path)
+    )
+    return total
+  }
+
+  /**
+   * What a change to a ticket would move, worked out on copies of the plan and written
+   * nowhere: each ticket the scheduling would give other dates, wherever it is, with its
+   * dates before and after. The ticket changed is not among them.
+   */
+  async previewSchedule(project: Project, taskId: string, patch: Partial<Task>): Promise<ScheduleMove[]> {
+    const copy = (live: Project): Project => {
+      const twin = { ...live, tasks: structuredClone(live.tasks) }
+      rebuildTaskIndex(twin)
+      return twin
+    }
+    const first = copy(project)
+    updateTaskInTree(first.tasks, taskId, patch)
+    const loaded = new Map<string, Project>([[first.filePath, first]])
+    const before = new Map<string, { start: string; due: string }>()
+    const remember = (one: Project): void => {
+      for (const { task } of flattenTasks(one.tasks)) before.set(task.id, { start: task.start, due: task.due })
+    }
+    remember(project)
+    await this.propagate(loaded, first, [taskId], true, async (path) => {
+      const live = await this.loadProjectByPath(path)
+      if (!live) return null
+      remember(live)
+      return copy(live)
+    })
+    const moves: ScheduleMove[] = []
+    for (const one of loaded.values()) {
+      for (const { task } of flattenTasks(one.tasks)) {
+        const was = before.get(task.id)
+        if (task.id === taskId || !was || (was.start === task.start && was.due === task.due)) continue
+        moves.push({
+          id: task.id,
+          title: task.title,
+          projectTitle: one.title,
+          before: was,
+          after: { start: task.start, due: task.due }
+        })
+      }
+    }
+    return moves
+  }
+
+  /**
+   * The scheduling's passes, project after project, from the tickets that moved: each
+   * project holding a ticket that waits on one a pass moved gets its own. `dry` writes
+   * nothing — the projects are copies to work out what would move.
+   */
+  private async propagate(
+    loaded: Map<string, Project>,
+    project: Project,
+    seeds: string[] | undefined,
+    dry: boolean,
+    load: (path: string) => Promise<Project | null>
+  ): Promise<number> {
     const dependentsOf = this.index?.dependentsMap() ?? new Map<string, string[]>()
-    let frontier: { project: Project; seeds: string[] | undefined }[] = [
-      { project, seeds: changedTaskId === undefined ? undefined : [changedTaskId] }
-    ]
+    let frontier: { project: Project; seeds: string[] | undefined }[] = [{ project, seeds }]
     let total = 0
     const cycleIds = new Set<string>()
 
     for (let round = 0; round < ProjectStore.MAX_SCHEDULE_ROUNDS && frontier.length > 0; round++) {
       const nextSeeds = new Map<string, Set<string>>()
       for (const job of frontier) {
-        const moved = await this.schedulePass(job.project, job.seeds, loaded, cycleIds)
+        const moved = await this.schedulePass(job.project, job.seeds, loaded, cycleIds, dry)
         total += moved.length
         for (const [path, ids] of this.dependentsElsewhere(
           dependentsOf,
@@ -1614,13 +1676,13 @@ export class ProjectStore implements TaskSource {
 
       frontier = []
       for (const [path, ids] of nextSeeds) {
-        const target = loaded.get(path) ?? (await this.loadProjectByPath(path))
+        const target = loaded.get(path) ?? (await load(path))
         if (!target) continue
         loaded.set(path, target)
         frontier.push({ project: target, seeds: [...ids] })
       }
     }
-    this.reportCycles(cycleIds, loaded)
+    if (!dry) this.reportCycles(cycleIds, loaded)
     return total
   }
 
@@ -1629,7 +1691,9 @@ export class ProjectStore implements TaskSource {
     seeds: string[] | undefined,
     loaded: Map<string, Project>,
     /** Ids caught in a dependency cycle, collected across passes for one report. */
-    cycleIds: Set<string>
+    cycleIds: Set<string>,
+    /** Worked out on copies, written nowhere. */
+    dry = false
   ): Promise<string[]> {
     const config = this.configFor(project)
     if (!config.autoSchedule) return []
@@ -1650,9 +1714,9 @@ export class ProjectStore implements TaskSource {
 
     for (const p of patches) {
       updateTaskInTree(project.tasks, p.taskId, { start: p.start, due: p.due })
-      this.markDirty(project, [p.taskId], 'fm')
+      if (!dry) this.markDirty(project, [p.taskId], 'fm')
     }
-    await this.saveProject(project)
+    if (!dry) await this.saveProject(project)
     return patches.map((p) => p.taskId)
   }
 

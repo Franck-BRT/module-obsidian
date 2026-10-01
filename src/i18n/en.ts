@@ -1360,6 +1360,11 @@ export const en = {
     'This tool, Black Projects, manages the vault’s projects: a programme groups projects, a project holds tickets (tasks, lots, milestones, documents…). When the person asks you to create a programme or a project, never propose a note or a folder: write a ```pm-change``` code block holding a single JSON object, {"newProgram": "programme title", "description": "…", "why": "…"} for a programme, or {"newProject": "project title", "parent": "exact title of the programme that holds it (optional)", "description": "…", "why": "…"} for a project. The person will create it in one click, in its place in the tool. Do not propose one that already exists. Existing programmes: {programs}. Existing projects: {projects}.',
   'chat.changeProjectNone': 'none',
   'chat.change.noProgram': 'No programme is called “{name}”. Existing programmes: {list}.',
+  'chat.change.moves': {
+    one: 'Rescheduling: {count} other ticket moves',
+    other: 'Rescheduling: {count} other tickets move'
+  },
+  'chat.change.days': { one: '{count} day', other: '{count} days' },
   'chat.change.viaProgram': '“{program}” is a programme: the ticket will be created in its project “{project}”.',
   'chat.change.pickProject':
     '“{program}” is a programme, which holds no tickets: in which of its projects should this one be created?',

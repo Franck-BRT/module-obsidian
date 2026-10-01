@@ -787,3 +787,32 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
   width: var(--icon-xs);
   height: var(--icon-xs);
 }
+
+/* What the scheduling would move with a ticket: before → after, by how many days. */
+.pm-change-moves {
+  margin: var(--size-4-2) 0;
+  font-size: var(--font-ui-small);
+}
+
+.pm-change-moves summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-weight: var(--font-semibold);
+}
+
+.pm-change-moves ul {
+  margin: var(--size-4-1) 0 0;
+  padding-left: var(--size-4-5);
+}
+
+.pm-change-move-dates {
+  color: var(--text-muted);
+}
+
+.pm-change-move-shift.is-later {
+  color: var(--text-warning);
+}
+
+.pm-change-move-shift.is-earlier {
+  color: var(--text-success);
+}

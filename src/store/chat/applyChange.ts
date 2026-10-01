@@ -2,7 +2,7 @@ import { makeDocument, makeTask, TASK_TYPES, type Project, type Task } from '../
 import { getDefaultPriorityId, getDefaultStatusId } from '../../utils'
 import { flattenTasks } from '../TaskTreeOps'
 import { fold } from '../library/libraryDoc'
-import type { TaskSource } from '../TaskSource'
+import type { ScheduleMove, TaskSource } from '../TaskSource'
 import type { RequirementStore } from '../requirements/RequirementStore'
 import { findTaskById } from '../TaskIndex'
 import type { VaultIndex } from '../VaultIndex'
@@ -473,4 +473,22 @@ export async function applyProject(
     ...(spec.description.trim() ? { description: spec.description.trim() } : {})
   })
   return { ok: true, name: project.title, changed: true }
+}
+
+/**
+ * What applying a change to a ticket would move besides it: the tickets its new dates or
+ * what it now follows would push or pull, wherever they are — worked out on copies, so the
+ * reader sees it before the click. Empty when the change moves nothing else, or does not
+ * read.
+ */
+export async function previewTicketChange(
+  index: VaultIndex,
+  store: TaskSource,
+  spec: TicketSpec
+): Promise<ScheduleMove[]> {
+  const target = await ticketTarget(index, store, spec)
+  if ('problem' in target) return []
+  const resolved = ticketChange(spec, target.task, target.lists)
+  if (!resolved.ok || resolved.applied || !resolved.change.reschedule) return []
+  return store.previewSchedule(target.project, target.task.id, resolved.change.patch)
 }

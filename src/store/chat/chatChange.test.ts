@@ -20,6 +20,7 @@ import {
   replaceBlock,
   withTicketEdits,
   createAsTicket,
+  dayShift,
   ticketSource
 } from './chatChange'
 
@@ -802,5 +803,13 @@ describe('a ticket proposed as new that is there already', () => {
     expect(
       createAsTicket(read({ create: 'Radier', changes: { type: 'Tâche' } }), { title: 'Radier', projectTitle: 'P' })
     ).toBeNull()
+  })
+})
+
+describe('how far a ticket moves', () => {
+  it('counts the days its end moves by, or its start when it has no end', () => {
+    expect(dayShift({ start: '2026-10-06', due: '2026-10-10' }, { start: '2026-10-15', due: '2026-10-19' })).toBe(9)
+    expect(dayShift({ start: '2026-10-06', due: '' }, { start: '2026-10-01', due: '' })).toBe(-5)
+    expect(dayShift({ start: '', due: '' }, { start: '2026-10-01', due: '' })).toBe(0)
   })
 })

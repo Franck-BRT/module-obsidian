@@ -821,3 +821,11 @@ export function createAsTicket(
   if (!changes.length) return null
   return { kind: 'ticket', target: existing.title, project: existing.projectTitle, changes, why: spec.why }
 }
+
+/** How many days a ticket moves by: its end, or its start when it has no end. */
+export function dayShift(before: { start: string; due: string }, after: { start: string; due: string }): number {
+  const from = before.due || before.start
+  const to = after.due || after.start
+  if (!from || !to) return 0
+  return Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000)
+}

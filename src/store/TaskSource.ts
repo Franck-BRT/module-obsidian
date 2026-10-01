@@ -12,6 +12,15 @@ export interface ImportNoteOptions {
  * The persistence surface views, modals, and commands program against (`plugin.store`).
  * ProjectStore implements it over pm-task markdown files; other backends can too.
  */
+/** A ticket the scheduling would give other dates: what they are, and what they would be. */
+export interface ScheduleMove {
+  id: string
+  title: string
+  projectTitle: string
+  before: { start: string; due: string }
+  after: { start: string; due: string }
+}
+
 export interface TaskSource {
   registerVaultSync(plugin: Plugin): void
 
@@ -93,6 +102,8 @@ export interface TaskSource {
 
   /** Runs dependency-based auto-scheduling; a no-op when the project's config disables it. */
   scheduleAfterChange(project: Project, changedTaskId?: string): Promise<number>
+  /** What a change to a ticket would move, worked out on copies of the plan and written nowhere. */
+  previewSchedule(project: Project, taskId: string, patch: Partial<Task>): Promise<ScheduleMove[]>
   saveTaskAttachment(project: Project, task: Task, fileName: string, data: ArrayBuffer): Promise<TFile>
   findTaskFileConflict(project: Project, task: Task): TaskFileNameConflictError | null
 }
