@@ -159,6 +159,31 @@
   pointer-events: none;
 }
 
+/* The reference plan: a thin bar under each one, and how far it moved, past its end. */
+.pm-gantt-baseline {
+  fill: var(--text-faint);
+  opacity: 0.75;
+}
+
+.pm-gantt-slip {
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  pointer-events: none;
+}
+
+.pm-gantt-slip--late {
+  fill: var(--color-red);
+}
+
+.pm-gantt-slip--early {
+  fill: var(--color-green);
+}
+
+.pm-gantt-baseline-legend {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
 .theme-dark .pm-root {
   --pm-ghost-border: rgba(255, 255, 255, 0.06);
   --pm-shadow-ambient: rgba(0, 0, 0, 0.15);

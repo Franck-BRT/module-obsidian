@@ -461,6 +461,25 @@ export const en = {
   'sort.desc': 'Descending',
   'gantt.expandAll': 'Expand all',
   'gantt.collapseAll': 'Collapse all',
+  'gantt.baseline': 'Baseline',
+  'gantt.baselineDesc':
+    'The baseline: the plan frozen on a day, drawn under the bars with how far each task moved from it.',
+  'gantt.baselineFreeze': 'Freeze the baseline',
+  'gantt.baselineRefreeze': 'Freeze the baseline again',
+  'gantt.baselineShow': 'Show the baseline',
+  'gantt.baselineClear': 'Clear the baseline',
+  'gantt.baselineOf': 'Baseline of {date}',
+  'gantt.baselineSeveral': '{count} baselines',
+  'gantt.baselineReplace':
+    'The baseline of {date} will be replaced by today’s plan: slips will be counted from now on.',
+  'gantt.baselineFreezeConfirm': 'Freeze',
+  'gantt.baselineFrozen': {
+    one: 'Baseline frozen on {date}: {count} ticket.',
+    other: 'Baseline frozen on {date}: {count} tickets.'
+  },
+  'gantt.baselineClearConfirm': 'Clear the baseline? The tickets’ baseline dates are taken out of their notes.',
+  'gantt.baselineTooltip': 'Baseline: {start} → {due}{gap}',
+  'gantt.dayUnit': 'd',
   'bulk.setStatus': 'Set status',
   'bulk.setPriority': 'Set priority',
   'bulk.setAssignee': 'Set assignee',
@@ -1273,6 +1292,12 @@ export const en = {
   'chat.statusNone': '(none)',
   'chat.statusMilestone': 'milestone',
   'chat.statusLateBy': '{days} days late',
+  'chat.statusReference': {
+    one: 'Behind the baseline of {at} ({count} ticket)',
+    other: 'Behind the baseline of {at} ({count} tickets)'
+  },
+  'chat.statusReferenceEnd': 'End of the plan: {planned} in the baseline, {now} today ({days} d).',
+  'chat.statusReferenceOnTime': 'End of the plan: {planned}, as in the baseline.',
   'chat.preset.status': 'Status update',
   'chat.preset.statusQ':
     'Write this project’s status report from the facts worked out by the tool: a summary in three to five sentences, then what is late and what it holds up, what moved since the last point and why when known, what finished, what comes within two weeks (milestones first), and the three actions to take first. Propose it as a note, in a pm-note block titled “Status report – project name – today’s date”, in the project’s folder.',

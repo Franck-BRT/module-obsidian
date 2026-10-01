@@ -148,6 +148,14 @@ function readType(raw: unknown): Task['type'] {
   return isTaskType(raw) ? raw : 'task'
 }
 
+/** A ticket's reference dates, as written in its note; none when they are not there. */
+function readBaseline(raw: unknown): Task['baseline'] {
+  if (!raw || typeof raw !== 'object') return undefined
+  const { start, due } = raw as Record<string, unknown>
+  const date = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
+  return { start: date(start), due: date(due) }
+}
+
 export function mapRawToTask(r: Record<string, unknown>, overrides?: Partial<Task>): Task {
   return makeTask({
     id: r.id as string,
@@ -188,6 +196,7 @@ export function mapRawToTask(r: Record<string, unknown>, overrides?: Partial<Tas
         ? { ...(r.customFields as Record<string, unknown>) }
         : {},
     document: readDocument(r.document),
+    baseline: readBaseline(r.baseline),
     collapsed: r.collapsed === true,
     createdAt: (r.createdAt as string) ?? new Date().toISOString(),
     updatedAt: (r.updatedAt as string) ?? new Date().toISOString(),
@@ -244,6 +253,9 @@ export function hydrateProjectFromFrontmatter(
     updatedAt: (frontmatter.updatedAt as string) ?? new Date().toISOString(),
     filePath,
     savedViews: hydrateSavedViews((frontmatter.savedViews as unknown[]) ?? []),
+    ...(typeof frontmatter.baselineAt === 'string' && frontmatter.baselineAt.trim()
+      ? { baselineAt: frontmatter.baselineAt.trim() }
+      : {}),
     config: hydrateProjectConfig(frontmatter.config),
     // Only when it is one, so a plain project carries no field saying it is not.
     ...(frontmatter[PROGRAM_FRONTMATTER_KEY] === true ? { program: true } : {}),

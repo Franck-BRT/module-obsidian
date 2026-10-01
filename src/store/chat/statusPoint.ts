@@ -20,6 +20,8 @@ export interface TicketState {
   status: string
   done: boolean
   assignees: string[]
+  /** Its last day in the reference plan, where the project has one and it was in it. */
+  baselineEnd?: string
 }
 
 /** The plan at one moment: every ticket by its id. */
@@ -40,7 +42,10 @@ export function planState(projects: Project[], statusesOf: (project: Project) =>
         due: task.due,
         status: task.status,
         done: isTerminalStatus(task.status, statuses),
-        assignees: [...task.assignees]
+        assignees: [...task.assignees],
+        ...(task.baseline && (task.baseline.due || task.baseline.start)
+          ? { baselineEnd: task.baseline.due || task.baseline.start }
+          : {})
       }
     }
   }
@@ -65,6 +70,11 @@ export interface StatusFacts {
   shifted: ShiftedTicket[]
   added: TicketState[]
   upcoming: TicketState[]
+  /**
+   * The plan against its reference, where there is one: when it was frozen, when the plan
+   * ended then and ends now, and the open tickets that finish later than it said.
+   */
+  reference: { at: string; planned: string; now: string; days: number; behind: ShiftedTicket[] } | null
 }
 
 const DAY = 86_400_000
@@ -82,7 +92,9 @@ export function statusFacts(
   now: PlanState,
   before: { at: string; state: PlanState } | null,
   today: string,
-  horizon = 14
+  horizon = 14,
+  /** When the reference plan was frozen; '' when there is none. */
+  referenceAt = ''
 ): StatusFacts {
   const tickets = Object.entries(now)
   const byDue = (a: TicketState, b: TicketState): number => (a.due || a.start).localeCompare(b.due || b.start)
@@ -111,6 +123,24 @@ export function statusFacts(
       if (from && to && from !== to) shifted.push({ ticket: one, from, to, days: days(from, to) })
     }
   }
+  let reference: StatusFacts['reference'] = null
+  const kept = tickets.map(([, one]) => one).filter((one) => one.baselineEnd)
+  if (referenceAt && kept.length) {
+    const endOf = (one: TicketState): string => one.due || one.start
+    const planned = kept.reduce((last, one) => ((one.baselineEnd ?? '') > last ? (one.baselineEnd ?? '') : last), '')
+    const ends = kept.map(endOf).filter(Boolean)
+    const latest = ends.reduce((last, one) => (one > last ? one : last), '')
+    const behind = kept
+      .filter((one) => !one.done && endOf(one) && one.baselineEnd && endOf(one) > one.baselineEnd)
+      .map((one) => ({
+        ticket: one,
+        from: one.baselineEnd ?? '',
+        to: endOf(one),
+        days: days(one.baselineEnd ?? '', endOf(one))
+      }))
+      .sort((a, b) => b.days - a.days)
+    reference = { at: referenceAt, planned, now: latest, days: planned && latest ? days(planned, latest) : 0, behind }
+  }
   return {
     today,
     since: before?.at ?? '',
@@ -120,7 +150,8 @@ export function statusFacts(
     finished,
     shifted: shifted.sort((a, b) => Math.abs(b.days) - Math.abs(a.days)),
     added,
-    upcoming
+    upcoming,
+    reference
   }
 }
 
@@ -136,6 +167,10 @@ export interface StatusWords {
   none: string
   milestone: string
   lateBy: (days: number) => string
+  /** The section of tickets behind the reference frozen on `at`. */
+  reference: (count: number, at: string) => string
+  /** When the plan ended in the reference and ends now. */
+  referenceEnd: (planned: string, now: string, days: number) => string
 }
 
 /** How many of each are written out; the rest are counted. */
@@ -182,6 +217,18 @@ export function statusText(facts: StatusFacts, words: StatusWords, horizon = 14)
       )
     )
   } else out.push(words.first, '')
+  if (facts.reference) {
+    const { at, planned, now, behind, days: moved } = facts.reference
+    const shown = section(
+      words.reference(behind.length, at),
+      behind.map(
+        (move) => `- ${move.ticket.title} · ${move.ticket.project} · ${move.from} → ${move.to} (+${move.days} j)`
+      )
+    )
+    // The plan's end first, under the heading: what is asked before anything else.
+    if (planned && now) shown.splice(1, 0, words.referenceEnd(planned, now, moved))
+    out.push(...shown)
+  }
   out.push(
     ...section(
       words.upcoming(facts.upcoming.length, horizon),

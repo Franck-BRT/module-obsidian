@@ -1,6 +1,6 @@
-import { ButtonComponent, type Scope } from 'obsidian'
+import { ButtonComponent, Menu, Notice, type Scope } from 'obsidian'
 import type PMPlugin from '../../main'
-import type { Task, GanttGranularity, FilterState } from '../../types'
+import type { Task, GanttGranularity, FilterState, Project } from '../../types'
 import { personKeyer, type ProjectScope } from '../../store'
 import { type FlatTask, flattenTasks } from '../../store/TaskTreeOps'
 import { applyTaskFilterPromote } from '../../store/TaskFilter'
@@ -23,8 +23,8 @@ import {
   renderDependencyArrows,
   renderMilestoneLabels
 } from './GanttRenderer'
-import { svgEl } from '../../utils'
-import { Temporal, today } from '../../dates'
+import { safeAsync, svgEl } from '../../utils'
+import { formatDate, Temporal, today } from '../../dates'
 import type { RendererContext } from './GanttRenderer'
 import { renderTaskLabel } from './TaskLabelRenderer'
 import { attachRowDragDrop } from './rowDragDrop'
@@ -35,6 +35,7 @@ import { isPhase, phaseSpan } from '../../store/Phase'
 import { phaseBracket } from './GanttPhaseBar'
 import { SUBVIEW_CLASS } from '../subviewClasses'
 import { t } from '../../i18n'
+import { confirmDialog } from '../../ui/ModalFactory'
 
 /**
  * One line of the chart. A project heading occupies a row of its own so the label
@@ -178,6 +179,99 @@ export class GanttView implements SubView {
 
     new ButtonComponent(bar).setButtonText(t('gantt.expandAll')).onClick(() => this.setAllCollapsed(false))
     new ButtonComponent(bar).setButtonText(t('gantt.collapseAll')).onClick(() => this.setAllCollapsed(true))
+    if (!this.relative) this.renderBaselineControl(bar)
+  }
+
+  /** The projects the chart draws, a ticket's own each: those a reference is frozen for. */
+  private chartedProjects(): Project[] {
+    const out = new Map<string, Project>()
+    for (const { task } of flattenTasks(this.scope.tasks())) {
+      const project = this.scope.projectOf(task.id)
+      if (project && !project.template && !project.program) out.set(project.filePath, project)
+    }
+    return [...out.values()]
+  }
+
+  /**
+   * The reference plan: frozen now, shown or not under the bars, forgotten — and, when one
+   * is shown, the day it was frozen.
+   */
+  private renderBaselineControl(bar: HTMLElement): void {
+    const projects = this.chartedProjects()
+    if (!projects.length) return
+    const frozen = [...new Set(projects.map((project) => project.baselineAt).filter((at): at is string => !!at))]
+    const shown = this.plugin.settings.ganttBaseline
+    new ButtonComponent(bar)
+      .setButtonText(t('gantt.baseline'))
+      .setTooltip(t('gantt.baselineDesc'))
+      .onClick((event) => {
+        const menu = new Menu()
+        menu.addItem((item) =>
+          item
+            .setTitle(frozen.length ? t('gantt.baselineRefreeze') : t('gantt.baselineFreeze'))
+            .setIcon('flag')
+            .onClick(safeAsync(() => this.freezeBaseline(projects)))
+        )
+        if (frozen.length) {
+          menu.addItem((item) =>
+            item
+              .setTitle(t('gantt.baselineShow'))
+              .setIcon('eye')
+              .setChecked(shown)
+              .onClick(
+                safeAsync(async () => {
+                  this.plugin.settings.ganttBaseline = !shown
+                  await this.plugin.saveSettings()
+                  this.refresh()
+                })
+              )
+          )
+          menu.addItem((item) =>
+            item
+              .setTitle(t('gantt.baselineClear'))
+              .setIcon('trash-2')
+              .onClick(safeAsync(() => this.clearBaseline(projects)))
+          )
+        }
+        menu.showAtMouseEvent(event)
+      })
+    if (frozen.length && shown) {
+      bar.createSpan({
+        cls: 'pm-gantt-baseline-legend',
+        text:
+          frozen.length === 1
+            ? t('gantt.baselineOf', { date: formatDate(frozen[0]) })
+            : t('gantt.baselineSeveral', { count: frozen.length })
+      })
+    }
+  }
+
+  /** The plan of each project drawn frozen as its reference, one frozen before replaced once confirmed. */
+  private async freezeBaseline(projects: Project[]): Promise<void> {
+    const replaced = projects.filter((project) => project.baselineAt)
+    if (
+      replaced.length &&
+      !(await confirmDialog(
+        this.plugin.app,
+        t('gantt.baselineReplace', { date: formatDate(replaced[0].baselineAt ?? '') }),
+        t('gantt.baselineFreezeConfirm')
+      ))
+    ) {
+      return
+    }
+    const day = today().toString()
+    let count = 0
+    for (const project of projects) count += await this.plugin.store.setBaseline(project, day)
+    this.plugin.settings.ganttBaseline = true
+    await this.plugin.saveSettings()
+    new Notice(t('gantt.baselineFrozen', { count, date: formatDate(day) }))
+    await this.onRefresh()
+  }
+
+  private async clearBaseline(projects: Project[]): Promise<void> {
+    if (!(await confirmDialog(this.plugin.app, t('gantt.baselineClearConfirm')))) return
+    for (const project of projects) if (project.baselineAt) await this.plugin.store.clearBaseline(project)
+    await this.onRefresh()
   }
 
   private order(): SortOrder {
@@ -475,6 +569,7 @@ export class GanttView implements SubView {
       drag: this.drag,
       link: this.link,
       relative: this.relative,
+      baseline: this.plugin.settings.ganttBaseline,
       onRefresh: this.onRefresh,
       cleanupFns: this.cleanupFns
     }

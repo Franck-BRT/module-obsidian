@@ -1425,6 +1425,35 @@ export class ProjectStore implements TaskSource {
     await this.saveProject(project)
   }
 
+  /**
+   * The plan as it stands frozen as the project's reference: each ticket keeps its dates
+   * of today beside its own, in its note, for the slips to be counted from. A reference
+   * frozen before is replaced. How many tickets it holds comes back.
+   */
+  async setBaseline(project: Project, at: string): Promise<number> {
+    let count = 0
+    for (const { task } of flattenTasks(project.tasks)) {
+      if (task.archived) {
+        delete task.baseline
+        continue
+      }
+      task.baseline = { start: task.start, due: task.due }
+      count++
+    }
+    project.baselineAt = at
+    this.markAllDirty(project, 'fm')
+    await this.saveProject(project)
+    return count
+  }
+
+  /** The reference forgotten: no ticket keeps dates of it, and nothing is counted as slipped. */
+  async clearBaseline(project: Project): Promise<void> {
+    for (const { task } of flattenTasks(project.tasks)) delete task.baseline
+    delete project.baselineAt
+    this.markAllDirty(project, 'fm')
+    await this.saveProject(project)
+  }
+
   async archiveTask(project: Project, taskId: string): Promise<void> {
     await doArchiveTask(this.app, project, taskId, (path) => this.markSelfWrite(path))
     await this.saveProject(project)

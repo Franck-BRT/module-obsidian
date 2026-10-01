@@ -20,6 +20,77 @@ import { attachBarDrag } from './GanttDragHandler'
 import { handleLinkDotClick } from './GanttLinkHandler'
 import type { RendererContext } from './GanttRenderer'
 import { t } from '../../i18n'
+import { baselineGap, gapText } from '../../store/baseline'
+
+/** Below the bar, in the row's bottom margin: where the reference plan is drawn. */
+const BASELINE_HEIGHT = 4
+
+/**
+ * Where the ticket was in the reference plan: a thin bar under its own — a mark under a
+ * milestone —, the reference's dates in its title.
+ */
+function renderBaseline(g: SVGGElement, task: Task, rowY: number, ctx: RendererContext): void {
+  const was = task.baseline
+  if (!was) return
+  const start = parsePlainDate(was.start)
+  const end = parsePlainDate(was.due)
+  const first = start ?? end
+  if (!first) return
+  const y = rowY + ROW_HEIGHT - BAR_PADDING + 1
+  const shape =
+    task.type === 'milestone'
+      ? svgEl('rect', {
+          x: dateToX(ctx.cfg, end ?? first) + ctx.cfg.dayWidth / 2 - 3,
+          y: y - 1,
+          width: 6,
+          height: 6,
+          transform: `rotate(45 ${dateToX(ctx.cfg, end ?? first) + ctx.cfg.dayWidth / 2} ${y + 2})`,
+          class: 'pm-gantt-baseline'
+        })
+      : (() => {
+          const x = Math.max(0, dateToX(ctx.cfg, first))
+          const xEnd = Math.min(ctx.cfg.totalWidth, dateToX(ctx.cfg, (end ?? first).add({ days: 1 })))
+          return svgEl('rect', {
+            x,
+            y,
+            width: Math.max(4, xEnd - x),
+            height: BASELINE_HEIGHT,
+            rx: 2,
+            ry: 2,
+            class: 'pm-gantt-baseline'
+          })
+        })()
+  const title = svgEl('title', {})
+  title.textContent = baselineLine(task)
+  shape.appendChild(title)
+  g.appendChild(shape)
+}
+
+/** The reference's dates and how far the ticket moved from them, as its tooltips say. */
+function baselineLine(task: Task): string {
+  const was = task.baseline
+  if (!was) return ''
+  const gap = gapText(baselineGap(task)?.end ?? null, t('gantt.dayUnit'))
+  return t('gantt.baselineTooltip', {
+    start: was.start || '\u2014',
+    due: was.due || '\u2014',
+    gap: gap ? ` (${gap})` : ''
+  })
+}
+
+/** How far its end moved from the reference, written past the bar: later in red, earlier in green. */
+function renderSlip(g: SVGGElement, task: Task, x: number, y: number): void {
+  const moved = baselineGap(task)?.end ?? null
+  const text = gapText(moved, t('gantt.dayUnit'))
+  if (!text || moved === null) return
+  const label = svgEl('text', {
+    x,
+    y,
+    class: `pm-gantt-slip ${moved > 0 ? 'pm-gantt-slip--late' : 'pm-gantt-slip--early'}`
+  })
+  label.textContent = text
+  g.appendChild(label)
+}
 
 export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: number, ctx: RendererContext): void {
   const project = ctx.scope.projectOf(task.id)
@@ -47,8 +118,16 @@ export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: n
     })
   )
 
+  const showBaseline = ctx.baseline && !ctx.relative && !!task.baseline
+  if (showBaseline) renderBaseline(g, task, rowY, ctx)
+
   if (task.type === 'milestone') {
     renderMilestoneDiamond(g, task, row, color, ctx)
+    if (showBaseline) {
+      const date = parsePlainDate(task.due) ?? parsePlainDate(task.start)
+      const right = date ? dateToX(ctx.cfg, date) + ctx.cfg.dayWidth / 2 + MILESTONE_SIZE + 6 : null
+      if (right !== null) renderSlip(g, task, right, rowY + ROW_HEIGHT / 2 + 4)
+    }
     return
   }
 
@@ -104,6 +183,8 @@ export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: n
     barGroup.appendChild(icon)
   }
 
+  if (showBaseline) renderSlip(barGroup, task, x + width + (task.recurrence ? 18 : 6), y + height / 2 + 5)
+
   if (width > 55) {
     const label = svgEl('text', {
       x: x + 8,
@@ -127,7 +208,8 @@ export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: n
   ttEl.textContent =
     `${task.title}\n${statusConfig?.label ?? task.status} \u00b7 ${task.priority}\n` +
     whenStr +
-    `${t('gantt.tooltipProgress')}: ${task.progress}%${assigneesStr}`
+    `${t('gantt.tooltipProgress')}: ${task.progress}%${assigneesStr}` +
+    (showBaseline ? `\n${baselineLine(task)}` : '')
   rect.appendChild(ttEl)
 
   // Dragging writes dates. In a template there are none to write: the bar is where the

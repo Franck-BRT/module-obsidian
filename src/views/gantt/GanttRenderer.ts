@@ -35,6 +35,8 @@ export interface RendererContext {
    * tickets, because the ones being drawn are projections and must never be edited.
    */
   relative: { realById: Map<string, Task>; plan: RelativePlan; week: number } | null
+  /** Whether the reference plan is drawn under the bars, with how far each moved from it. */
+  baseline: boolean
   onRefresh: () => Promise<void>
   cleanupFns: (() => void)[]
 }

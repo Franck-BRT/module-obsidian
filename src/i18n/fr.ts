@@ -454,6 +454,26 @@ export const fr: Catalog = {
   'sort.desc': 'Décroissant',
   'gantt.expandAll': 'Tout déplier',
   'gantt.collapseAll': 'Tout replier',
+  'gantt.baseline': 'Référence',
+  'gantt.baselineDesc':
+    'Le planning de référence : figé à une date, il reste dessiné sous les barres, avec l’écart de chaque tâche.',
+  'gantt.baselineFreeze': 'Figer le planning de référence',
+  'gantt.baselineRefreeze': 'Figer à nouveau le planning de référence',
+  'gantt.baselineShow': 'Afficher la référence',
+  'gantt.baselineClear': 'Effacer la référence',
+  'gantt.baselineOf': 'Référence du {date}',
+  'gantt.baselineSeveral': '{count} références',
+  'gantt.baselineReplace':
+    'Le planning de référence du {date} sera remplacé par le planning d’aujourd’hui : les écarts seront comptés à partir de maintenant.',
+  'gantt.baselineFreezeConfirm': 'Figer',
+  'gantt.baselineFrozen': {
+    one: 'Planning de référence figé au {date} : {count} ticket.',
+    other: 'Planning de référence figé au {date} : {count} tickets.'
+  },
+  'gantt.baselineClearConfirm':
+    'Effacer le planning de référence ? Les dates de référence des tickets sont retirées de leurs notes.',
+  'gantt.baselineTooltip': 'Référence : {start} → {due}{gap}',
+  'gantt.dayUnit': 'j',
   'bulk.setStatus': 'Définir le statut',
   'bulk.setPriority': 'Définir la priorité',
   'bulk.setAssignee': "Définir l'assigné",
@@ -1253,6 +1273,12 @@ export const fr: Catalog = {
   'chat.statusNone': '(aucun)',
   'chat.statusMilestone': 'jalon',
   'chat.statusLateBy': '{days} j de retard',
+  'chat.statusReference': {
+    one: 'En retard sur le planning de référence du {at} ({count} ticket)',
+    other: 'En retard sur le planning de référence du {at} ({count} tickets)'
+  },
+  'chat.statusReferenceEnd': 'Fin du planning : {planned} dans la référence, {now} aujourd’hui ({days} j).',
+  'chat.statusReferenceOnTime': 'Fin du planning : {planned}, comme dans la référence.',
   'chat.preset.status': 'Point d’avancement',
   'chat.preset.statusQ':
     'Rédige le point d’avancement de ce projet à partir des faits calculés par l’outil : une synthèse en trois à cinq phrases, puis les retards et ce qu’ils bloquent, les décalages depuis le dernier point et leurs causes quand elles sont connues, ce qui est terminé, ce qui vient dans les deux semaines (jalons d’abord), et les trois actions à mener en priorité. Propose-le comme une note, dans un bloc pm-note titré « Point d’avancement – nom du projet – date du jour », dans le dossier du projet.',

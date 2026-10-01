@@ -79,6 +79,10 @@ export interface TaskSource {
     handling: 'move' | 'copy'
   ): Promise<number>
   updateTask(project: Project, taskId: string, patch: Partial<Task>): Promise<void>
+  /** The plan frozen as the project's reference; how many tickets it holds. */
+  setBaseline(project: Project, at: string): Promise<number>
+  /** The reference forgotten. */
+  clearBaseline(project: Project): Promise<void>
   updateTasks(
     project: Project,
     taskIds: string[],

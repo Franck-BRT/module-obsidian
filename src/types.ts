@@ -170,6 +170,12 @@ export function makeDocument(overrides: Partial<DocumentMeta> = {}): DocumentMet
   }
 }
 
+/** A ticket's dates in the reference plan; '' where it had none. */
+export interface TaskBaseline {
+  start: string
+  due: string
+}
+
 export interface Task {
   id: string
   title: string
@@ -220,6 +226,11 @@ export interface Task {
   /** Set on a ticket of type `document`: its file, its versions, its approvals. */
   // oxlint-disable-next-line obsidianmd/prefer-active-doc -- a field, not the global
   document?: DocumentMeta
+  /**
+   * Its dates as they stood when the project's plan was frozen as the reference: what the
+   * Gantt draws under it, and what a slip is counted from. Absent on a ticket made since.
+   */
+  baseline?: TaskBaseline
   /** UI state, persisted per project in plugin settings (data.json), not in frontmatter. */
   collapsed: boolean
   createdAt: string
@@ -267,6 +278,8 @@ export interface Project {
    * editor, and never run. A project made from one carries none of this flag.
    */
   template?: boolean
+  /** When the plan was frozen as the reference its tickets' slips are counted from, YYYY-MM-DD. */
+  baselineAt?: string
   /** Per-project overrides for the global settings. Absent fields inherit. */
   config?: ProjectConfig
   /** Not serialized. Rebuilt on load, maintained by the store's mutators. */
@@ -712,6 +725,8 @@ export interface PMSettings {
   defaultView: ViewMode
   ganttGranularity: GanttGranularity
   ganttWeekLabel: GanttWeekLabel
+  /** Whether the Gantt draws the reference plan under the bars, where a project has one. */
+  ganttBaseline: boolean
   statuses: StatusConfig[]
   priorities: PriorityConfig[]
   /**
@@ -1022,6 +1037,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   defaultView: 'table',
   ganttGranularity: 'week',
   ganttWeekLabel: 'weekNumber',
+  ganttBaseline: true,
   statuses: DEFAULT_STATUSES,
   types: DEFAULT_TYPES,
   docStates: DEFAULT_DOC_STATES,

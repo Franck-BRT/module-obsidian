@@ -1410,7 +1410,12 @@ export class ChatView extends ItemView {
     await points.ready()
     const key = pointKey(paths)
     const day = today().toString()
-    const facts = statusFacts(state, points.baseline(key, day), day)
+    // The reference the plan is measured against: the latest frozen of the projects asked about.
+    const referenceAt = projects.reduce(
+      (last, one) => ((one.baselineAt ?? '') > last ? (one.baselineAt ?? '') : last),
+      ''
+    )
+    const facts = statusFacts(state, points.baseline(key, day), day, 14, referenceAt)
     await points.record(key, day, state)
     return [
       t('chat.statusIntro'),
@@ -1426,7 +1431,12 @@ export class ChatView extends ItemView {
         upcoming: (count, days) => t('chat.statusUpcoming', { count, days }),
         none: t('chat.statusNone'),
         milestone: t('chat.statusMilestone'),
-        lateBy: (days) => t('chat.statusLateBy', { days })
+        lateBy: (days) => t('chat.statusLateBy', { days }),
+        reference: (count, at) => t('chat.statusReference', { count, at }),
+        referenceEnd: (planned, now, days) =>
+          days
+            ? t('chat.statusReferenceEnd', { planned, now, days: `${days > 0 ? '+' : '−'}${Math.abs(days)}` })
+            : t('chat.statusReferenceOnTime', { planned })
       })
     ].join('\n\n')
   }

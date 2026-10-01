@@ -34,8 +34,46 @@ const WORDS = {
   upcoming: (count: number, days: number) => `À venir sous ${days} j (${count})`,
   none: '(aucun)',
   milestone: 'jalon',
-  lateBy: (days: number) => `${days} j de retard`
+  lateBy: (days: number) => `${days} j de retard`,
+  reference: (count: number, at: string) => `En retard sur la référence du ${at} (${count})`,
+  referenceEnd: (planned: string, now: string, days: number) => `Fin : ${planned} → ${now} (${days} j)`
 }
+
+describe('a status point against the reference plan', () => {
+  const now: PlanState = {
+    a: ticket('Radier', { start: '2026-09-20', due: '2026-10-20', baselineEnd: '2026-10-10' }),
+    b: ticket('Dalle', { due: '2026-11-20', baselineEnd: '2026-11-06' }),
+    c: ticket('Terrassement', { due: '2026-09-30', done: true, baselineEnd: '2026-09-25' }),
+    d: ticket('Clôture', { due: '2026-10-01', baselineEnd: '2026-10-05' }),
+    e: ticket('Réception', { type: 'milestone', due: '2026-12-01' })
+  }
+
+  it('names the open tickets finishing later than the reference said, the furthest first, and the plan’s end', () => {
+    const facts = statusFacts(now, null, '2026-10-01', 14, '2026-09-15')
+    expect(facts.reference).toMatchObject({ at: '2026-09-15', planned: '2026-11-06', now: '2026-11-20', days: 14 })
+    expect(facts.reference?.behind.map((move) => [move.ticket.title, move.days])).toEqual([
+      ['Dalle', 14],
+      ['Radier', 10]
+    ])
+    const text = statusText(facts, WORDS)
+    expect(text).toContain(
+      'En retard sur la référence du 2026-09-15 (2)\nFin : 2026-11-06 → 2026-11-20 (14 j)\n- Dalle · COSMA · 2026-11-06 → 2026-11-20 (+14 j)'
+    )
+  })
+
+  it('says nothing of a reference the projects do not have', () => {
+    expect(statusFacts(now, null, '2026-10-01').reference).toBeNull()
+    expect(statusText(statusFacts(now, null, '2026-10-01'), WORDS)).not.toContain('référence')
+  })
+
+  it('keeps each ticket’s end in the reference with the plan', () => {
+    const project = {
+      title: 'COSMA',
+      tasks: [makeTask({ title: 'Radier', due: '2026-10-20', baseline: { start: '', due: '2026-10-10' } })]
+    } as unknown as Project
+    expect(Object.values(planState([project], () => DEFAULT_STATUSES))[0].baselineEnd).toBe('2026-10-10')
+  })
+})
 
 describe('the facts of a status point', () => {
   const before: PlanState = {

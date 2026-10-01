@@ -99,6 +99,8 @@ function cloneNode(source: Task, includeSubtasks: boolean, idMap: Map<string, st
     ...source,
     id: newId,
     filePath: undefined,
+    // A copy is a ticket of its own: it was in no reference plan.
+    baseline: undefined,
     createdAt: now,
     updatedAt: now,
     collapsed: false,
