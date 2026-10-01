@@ -43,6 +43,14 @@ export function builtinPrompts(): ChatPrompt[] {
   ]
 }
 
+/**
+ * Whether a ready question proposes tickets to make — the projects of its note then go
+ * with it —: one shipped so, or the reader's copy of it, known by its question.
+ */
+export function makesTickets(prompt: ChatPrompt): boolean {
+  return !!prompt.tickets || builtinPrompts().some((one) => one.tickets && one.question === prompt.question)
+}
+
 /** What each kind of question is about, in the word the settings list takes. */
 export function scopeWord(scope: PromptScope): string {
   switch (scope) {

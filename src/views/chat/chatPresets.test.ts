@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parsePrompts } from '../../store/chat/chatPrompts'
 import { promptParams } from '../../store/chat/promptParams'
-import { builtinPrompts, promptLine } from './chatPresets'
+import { builtinPrompts, makesTickets, promptLine } from './chatPresets'
 
 describe('the shipped questions', () => {
   // Copied into the reader's list to be adjusted, each must read back as itself: same
@@ -9,7 +9,9 @@ describe('the shipped questions', () => {
   it('read back from the settings list exactly as they were', () => {
     const shipped = builtinPrompts()
     const copied = parsePrompts(shipped.map(promptLine).join('\n'))
-    expect(copied).toEqual(shipped.map((prompt) => ({ ...prompt, own: true })))
+    expect(copied.map((prompt) => ({ ...prompt, ...(makesTickets(prompt) ? { tickets: true } : {}) }))).toEqual(
+      shipped.map((prompt) => ({ ...prompt, own: true }))
+    )
   })
 
   it('offer something for a project, requirements, a note, a file and a planning', () => {

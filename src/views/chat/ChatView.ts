@@ -99,7 +99,7 @@ import { sortDocs, type LibraryDoc } from '../../store/library/libraryDoc'
 import { keepDroppedFile } from '../../store/chat/keepFile'
 import { chatModel, chatModels } from '../../store/chat/chatModels'
 import { availablePrompts, parsePrompts, type ChatPrompt } from '../../store/chat/chatPrompts'
-import { builtinPrompts, scopeIcon } from './chatPresets'
+import { builtinPrompts, makesTickets, scopeIcon } from './chatPresets'
 import { asksForStatus, planState, pointKey, statusFacts, statusText } from '../../store/chat/statusPoint'
 import { reportUndone, requirementOptions } from './changeCard'
 import type { Requirement } from '../../store/requirements/Requirement'
@@ -2246,7 +2246,7 @@ export class ChatView extends ItemView {
    */
   private async askPreset(preset: ChatPrompt): Promise<void> {
     // Tickets to make need a project to make them in: the note's own, or one picked first.
-    if (preset.tickets && !this.projects.length && !this.collections.length) {
+    if (makesTickets(preset) && !this.projects.length && !this.collections.length) {
       const found = this.contextProjects()
       if (!found.length) {
         new Notice(t('chat.actionTicketsPick'), 8000)

@@ -554,7 +554,11 @@ describe('creating a ticket', () => {
       ],
       why: 'Au planning, pas de ticket.'
     })
-    expect(parseChange('{"create": "X", "changes": {"description": "…"}}')).toEqual({ problem: 'field' })
+    expect(parseChange('{"create": "X", "changes": {"couleur": "rouge"}}')).toEqual({ problem: 'field' })
+    // Its text, where it comes from: what the actions of a meeting are made with.
+    expect(parseChange('{"create": "X", "changes": {"description": "Issu du CR 07"}}')).toMatchObject({
+      spec: { fields: [{ field: 'description', value: 'Issu du CR 07' }] }
+    })
     expect(parseChange('{"create": "X", "ticket": "Y"}')).toEqual({ problem: 'target' })
   })
 
