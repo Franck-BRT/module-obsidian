@@ -6,6 +6,7 @@ import {
   MarkdownView,
   normalizePath,
   Notice,
+  resolveSubpath,
   setIcon,
   SuggestModal,
   TFile,
@@ -74,9 +75,21 @@ import { calledSkills, readSkill, skillBody, skillsContext, type Skill } from '.
 import { lookUpVault, SEARCH_DEFAULTS, vaultContext } from '../../store/rag/ragSearch'
 import { citedFile } from '../../store/chat/citedLink'
 import {
+  bestPage,
+  bestPassage,
+  citationContext,
+  locatePassage,
+  transcriptPage,
+  type PassagePlace
+} from '../../store/chat/citedPassage'
+import { chunkText } from '../../store/rag/ragChunk'
+import { noteBody } from '../../store/notes/NoteLibrary'
+import { pdfPages } from './pdfPages'
+import {
   documentSource,
   lookUp,
   noteSource,
+  passagesOf,
   retrievalContext,
   type LibrarySource
 } from '../../store/chat/libraryRetrieval'
@@ -116,6 +129,9 @@ import { ensureFolder } from '../../store/vaultFs'
 import { t } from '../../i18n'
 
 export const PM_CHAT_VIEW_TYPE = 'pm-chat'
+
+/** The pages of a PDF looked through for a passage cited: enough for a long report, and quick. */
+const MAX_PAGES_SEARCHED = 400
 
 /**
  * A conversation with the language model the plugin is already set up to use.
@@ -166,6 +182,10 @@ export class ChatView extends ItemView {
   private searchLibrary = false
   /** What each question was looked up as, when a follow-up was made to stand alone. */
   private lookedUp = new WeakMap<ChatTurn, string>()
+  /** The passages each question was given, by the path of their source: what its replies cite. */
+  private shown = new WeakMap<ChatTurn, Map<string, string[]>>()
+  /** Each turn drawn, by its element: a link clicked in a reply is read with what it answered. */
+  private turnOf = new WeakMap<HTMLElement, ChatTurn>()
   private libraryButton: HTMLButtonElement | null = null
   /** Files already read, by path and way of reading, with the modification time they were read at. */
   private fileCache = new Map<string, { mtime: number; text: string }>()
@@ -261,7 +281,7 @@ export class ChatView extends ItemView {
         if (!(link instanceof HTMLElement)) return
         event.preventDefault()
         event.stopPropagation()
-        void this.openCited(link.dataset.href ?? link.getAttribute('href') ?? link.textContent ?? '')
+        void this.openCited(link.dataset.href ?? link.getAttribute('href') ?? link.textContent ?? '', link)
       },
       { capture: true }
     )
@@ -592,18 +612,122 @@ export class ChatView extends ItemView {
    * A source a reply cites, opened: found however the model wrote its link, among the
    * sources the conversation looked through if need be; a document Obsidian cannot show
    * opened by the system. Found nowhere, it is said so, and no note is made.
+   *
+   * Opened where the reply took from it: a note at the passage, highlighted, a PDF at the
+   * passage's page — the passage being the one of those the question was given that the
+   * reply's words around the link come from. A heading or a page the model named itself
+   * is where it opens.
    */
-  private async openCited(raw: string): Promise<void> {
+  private async openCited(raw: string, link?: HTMLElement): Promise<void> {
     const consulted = this.turns.flatMap((turn) => turn.library ?? [])
     const cited = citedFile(this.app, raw, this.notePath ?? '', consulted)
     if (!cited) {
       new Notice(t('chat.sourceMissing', { name: raw.split('|')[0].trim() }))
       return
     }
-    if (cited.file.extension === 'md') {
-      await this.app.workspace.openLinkText(`${cited.file.path}${cited.subpath}`, '', 'tab')
-    } else if (!(await openDocumentFile(this.app, cited.file))) {
-      new Notice(t('library.cannotOpen', { name: cited.file.name }))
+    const { file, subpath } = cited
+    const pdf = file.extension.toLowerCase() === 'pdf'
+    // A heading the note has, a block, a page: where the model said; a heading it made up — a
+    // passage's « Lot 2 › Radier » — is not, and the passage is looked for instead.
+    const named =
+      file.extension === 'md'
+        ? !!subpath && !!resolveSubpath(this.app.metadataCache.getFileCache(file) ?? {}, subpath)
+        : pdf && /^#page=\d+/.test(subpath)
+    if (named) {
+      await this.app.workspace.openLinkText(`${file.path}${subpath}`, '', 'tab')
+      return
+    }
+    const context = link ? this.linkContext(link) : ''
+    if (file.extension === 'md') {
+      const content = await this.app.vault.cachedRead(file)
+      const passages = this.passagesShown(link, file.path)
+      const chosen = bestPassage(
+        passages.length ? passages : chunkText(noteBody(content)).map((chunk) => chunk.text),
+        context
+      )
+      const place = chosen ? locatePassage(content, chosen.passage) : null
+      if (place) await this.openNoteAt(file, content, place)
+      else await this.app.workspace.openLinkText(file.path, '', 'tab')
+      return
+    }
+    if (pdf && context) {
+      const page = await this.pageCited(file, link, context).catch(() => null)
+      if (page) {
+        await this.app.workspace.openLinkText(`${file.path}#page=${page}`, '', 'tab')
+        return
+      }
+    }
+    if (!(await openDocumentFile(this.app, file))) new Notice(t('library.cannotOpen', { name: file.name }))
+  }
+
+  /** What a reply says around a link: its sentence, or the whole reply when that says too little. */
+  private linkContext(link: HTMLElement): string {
+    const block = link.closest('p, li, td, th, blockquote, h1, h2, h3, h4, h5, h6')
+    const around = (block?.textContent ?? '').replace(link.textContent ?? '', ' ')
+    return citationContext(around, link.closest('.pm-chat-turn')?.textContent ?? '')
+  }
+
+  /**
+   * The passages of a source the reply was written from: those its question was given,
+   * else those any question of the conversation was given; none once the panel is
+   * opened again, when the source's own text stands in for them.
+   */
+  private passagesShown(link: HTMLElement | undefined, path: string): string[] {
+    const el = link?.closest('.pm-chat-turn')
+    const reply = el instanceof HTMLElement ? this.turnOf.get(el) : undefined
+    const at = reply ? this.turns.indexOf(reply) : -1
+    const question =
+      at > 0
+        ? this.turns
+            .slice(0, at)
+            .reverse()
+            .find((turn) => turn.role === 'user')
+        : undefined
+    const own = question ? this.shown.get(question)?.get(path) : undefined
+    if (own?.length) return own
+    for (const turn of [...this.turns].reverse()) {
+      const given = this.shown.get(turn)?.get(path)
+      if (given?.length) return given
+    }
+    return []
+  }
+
+  /** A note opened at a passage, the passage highlighted — selected, in the editor. */
+  private async openNoteAt(file: TFile, content: string, place: PassagePlace): Promise<void> {
+    const leaf = this.app.workspace.getLeaf('tab')
+    await leaf.openFile(file, {
+      active: true,
+      eState: { line: place.from, match: { content, matches: [[place.start, place.end]] } }
+    })
+    const view = leaf.view
+    if (view instanceof MarkdownView && view.getMode() === 'source') {
+      const from = { line: place.from, ch: 0 }
+      const to = { line: place.to, ch: view.editor.getLine(place.to).length }
+      view.editor.setSelection(from, to)
+      view.editor.scrollIntoView({ from, to }, true)
+    }
+  }
+
+  /**
+   * The page of a PDF a citation points to: by its transcription's page headings, a scan;
+   * by what each page holds, a PDF with text. Null when no page can be told.
+   */
+  private async pageCited(file: TFile, link: HTMLElement | undefined, context: string): Promise<number | null> {
+    const doc = this.plugin.library.docs().find((one) => one.file === file.path)
+    const text = doc ? (this.plugin.libraryText.entry(doc)?.text ?? '') : ''
+    const shown = this.passagesShown(link, file.path)
+    const chosen = bestPassage(shown.length ? shown : passagesOf(text), context)?.passage ?? ''
+    const marked = chosen && text ? transcriptPage(text, chosen) : null
+    if (marked) return marked
+    const pages = await pdfPages(new Uint8Array(await this.app.vault.readBinary(file)))
+    try {
+      const texts: string[] = []
+      for (let page = 1; page <= Math.min(pages.pages, MAX_PAGES_SEARCHED); page++) {
+        texts.push((await pages.layer?.(page).catch(() => '')) ?? '')
+      }
+      return bestPage(texts, chosen || context)
+    } finally {
+      pages.close()
     }
   }
 
@@ -654,6 +778,7 @@ export class ChatView extends ItemView {
     const upTo = asked.slice(0, asked.indexOf(question) + 1).map((turn) => turn.content)
     const found = lookUp(sources, upTo.length ? upTo : [question.content])
     question.library = found.map((each) => each.source.path)
+    this.shown.set(question, new Map(found.map((each) => [each.source.path, each.passages])))
     return retrievalContext(found, {
       intro: t('chat.libraryIntro'),
       none: t('chat.libraryNone'),
@@ -691,6 +816,16 @@ export class ChatView extends ItemView {
       { ...SEARCH_DEFAULTS, projects: currentProjects(this.turns) }
     )
     question.library = report.found.map((each) => each.entry.path)
+    // Those found first, then those given for what is around them.
+    this.shown.set(
+      question,
+      new Map(
+        report.found.map(({ entry, passages }) => [
+          entry.path,
+          [...passages.filter((one) => !one.around), ...passages.filter((one) => one.around)].map((one) => one.text)
+        ])
+      )
+    )
     this.lookedUp.set(question, query)
     return vaultContext(report.found, {
       intro: t('chat.vaultIntro'),
@@ -1671,6 +1806,7 @@ export class ChatView extends ItemView {
     const el = this.listEl.createDiv(
       `pm-chat-turn pm-chat-turn--${turn.role}${turn.failed ? ' pm-chat-turn--failed' : ''}`
     )
+    this.turnOf.set(el, turn)
     const body = el.createDiv('pm-chat-body')
     // Said on the question itself: what the model was shown when it answered.
     if (turn.context) {

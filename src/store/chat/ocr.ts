@@ -294,6 +294,12 @@ const FURNITURE_ZONE = 3
 /** The heading a transcription opens each page with: « Page 3 sur 19 », « Page 3 of 19 ». */
 const PAGE_MARK = /^#{1,6}\s+page\s+\d+\s+(?:sur|of|\/)\s+\d+\s*$/i
 
+/** The page a line opens, when it is the heading a transcription opens each page with; null otherwise. */
+export function pageMarkNumber(line: string): number | null {
+  if (!PAGE_MARK.test(line.trim())) return null
+  return Number(/\d+/.exec(line)?.[0] ?? 0) || null
+}
+
 /** What a line is known by from page to page: its words, whatever its numbers and emphasis; null when it is no candidate. */
 function furnitureKey(line: string): string | null {
   const bare = line
