@@ -34,6 +34,10 @@ export interface NoteProposal {
   append: string
   /** The note whose transcription is to lose its pages' headers and footers; '' for none. */
   clean: string
+  /** The note a section of which is rewritten; '' for none. */
+  replace: string
+  /** The heading of that section; '' for the whole of the note's text, its properties kept. */
+  section: string
   tags: string[]
   body: string
 }
@@ -53,6 +57,12 @@ const KEYS: Record<string, keyof Omit<NoteProposal, 'body' | 'tags'> | 'tags'> =
   completer: 'append',
   nettoyer: 'clean',
   clean: 'clean',
+  'remplacer dans': 'replace',
+  remplacer: 'replace',
+  'replace in': 'replace',
+  replace: 'replace',
+  section: 'section',
+  rubrique: 'section',
   tags: 'tags',
   etiquettes: 'tags'
 }
@@ -60,7 +70,16 @@ const KEYS: Record<string, keyof Omit<NoteProposal, 'body' | 'tags'> | 'tags'> =
 /** The block, read; null when it names no note to write nor one to add to. */
 export function parseNoteProposal(source: string): NoteProposal | null {
   const lines = source.replace(/\r\n?/g, '\n').split('\n')
-  const proposal: NoteProposal = { title: '', folder: '', append: '', clean: '', tags: [], body: '' }
+  const proposal: NoteProposal = {
+    title: '',
+    folder: '',
+    append: '',
+    clean: '',
+    replace: '',
+    section: '',
+    tags: [],
+    body: ''
+  }
   const found = lines.findIndex((line) => /^-{3,}\s*$/.test(line))
   // A note to clean is all header: nothing to write, so no rule under it.
   const dashes = found < 0 && /^\s*(nettoyer|clean)\s*:/im.test(source) ? lines.length : found
@@ -84,6 +103,8 @@ export function parseNoteProposal(source: string): NoteProposal | null {
   // No title given: the note's own first heading is its title.
   if (!proposal.title) proposal.title = /^#\s+(.+)$/m.exec(proposal.body)?.[1].trim() ?? ''
   if (proposal.clean) return proposal
+  // A section rewritten may be emptied: its new text may be nothing.
+  if (proposal.replace) return proposal
   if (!proposal.body || (!proposal.title && !proposal.append)) return null
   return proposal
 }
@@ -172,4 +193,85 @@ export async function writeProposedNote(
 /** Adds the proposed text at the end of a note. */
 export async function appendProposal(app: App, target: TFile, proposal: NoteProposal): Promise<void> {
   await app.vault.process(target, (existing) => appendedContent(existing, proposal))
+}
+
+/** Where a section of a note is: its heading's line, where its text starts, and where it ends. */
+export interface SectionAt {
+  heading: string
+  /** Where its text starts: just after its heading's line. */
+  start: number
+  /** Where it ends: the next heading of its level or above, or the note's end. */
+  end: number
+}
+
+const HEADING = /^(#{1,6})\s+(.+?)\s*#*\s*$/
+
+/** The headings of a note, outside its properties and code, in order. */
+export function sectionTitles(content: string): string[] {
+  return headings(content).map((one) => one.title)
+}
+
+function headings(content: string): { at: number; end: number; level: number; title: string }[] {
+  const found: { at: number; end: number; level: number; title: string }[] = []
+  let at = 0
+  let fence = false
+  const front = /^---\r?\n[\s\S]*?\r?\n---(\r?\n|$)/.exec(content)
+  if (front) at = front[0].length
+  while (at < content.length) {
+    const next = content.indexOf('\n', at)
+    const end = next < 0 ? content.length : next + 1
+    const line = content.slice(at, next < 0 ? content.length : next)
+    if (/^\s*(```|~~~)/.test(line)) fence = !fence
+    const match = fence ? null : HEADING.exec(line)
+    if (match) found.push({ at, end, level: match[1].length, title: match[2].trim() })
+    at = end
+  }
+  return found
+}
+
+/**
+ * A section of a note, found by its heading as the model named it — case, accents and a
+ * leading « # » aside. Null when the note has none of that title, or more than one.
+ */
+export function findSection(content: string, title: string): SectionAt | null {
+  const wanted = fold(title.replace(/^#+\s*/, '').trim())
+  const all = headings(content)
+  const matches = all.filter((one) => fold(one.title) === wanted)
+  if (matches.length !== 1) return null
+  const heading = matches[0]
+  const after = all.find((one) => one.at > heading.at && one.level <= heading.level)
+  return { heading: heading.title, start: heading.end, end: after ? after.at : content.length }
+}
+
+/** Where the whole of a note's text is, its properties left out. */
+function bodyAt(content: string): { start: number; end: number } {
+  const front = /^---\r?\n[\s\S]*?\r?\n---(\r?\n|$)/.exec(content)
+  return { start: front ? front[0].length : 0, end: content.length }
+}
+
+/** A section's text — or the note's, properties aside — as it reads now; null when there is no such section. */
+export function sectionText(content: string, title: string): string | null {
+  const at = title.trim() ? findSection(content, title) : bodyAt(content)
+  return at ? content.slice(at.start, at.end).trim() : null
+}
+
+/**
+ * The note with a section's text replaced — its heading kept, a blank line around the new
+ * text — or, with no section named, all its text, its properties kept. Null when the
+ * section is not found.
+ */
+export function replaceSection(content: string, title: string, text: string): string | null {
+  const at = title.trim() ? findSection(content, title) : bodyAt(content)
+  if (!at) return null
+  const body = text.trim()
+  const before = content.slice(0, at.start)
+  // The whole text: after the properties, as the note's own.
+  if (!title.trim()) return `${before}${before && body ? '\n' : ''}${body ? `${body}\n` : ''}`
+  const rest = content.slice(at.end)
+  return `${before}${body ? `\n${body}\n` : ''}${rest ? '\n' : ''}${rest}`
+}
+
+/** Whether a section holds what the plugin keeps for itself, which a rewrite would break. */
+export function holdsKept(text: string): boolean {
+  return text.includes('%% pm-transcript')
 }

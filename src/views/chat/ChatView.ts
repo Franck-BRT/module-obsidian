@@ -958,24 +958,34 @@ export class ChatView extends ItemView {
       }
       if (!this.ocrForced.has(file.path) && !needsOcr(text, pages)) return text
     }
-    const source = await scanPages(file, bytes)
-    try {
-      const model = this.plugin.settings.llm.modelOcr.trim() || this.model
-      const read = await transcribeScan(
-        this.app,
-        this.llm,
-        model,
-        file,
-        source,
-        this.plugin.library,
-        false,
-        this.plugin.settings.ocr
-      )
-      if (read.fresh) this.renderContext()
-      return read.text
-    } finally {
-      source.close()
-    }
+    // In the library's queue, in its turn: seen there and in the status bar, and stoppable.
+    const doc = this.plugin.library.docs().find((one) => one.file === file.path)
+    const read = await this.plugin.scans.read(
+      doc ? doc.record : `file:${file.path}`,
+      doc ? doc.title : file.name,
+      t('chat.ocrBusy', { name: file.name }),
+      async (progress, stopped) => {
+        const source = await scanPages(file, bytes)
+        try {
+          const model = this.plugin.settings.llm.modelOcr.trim() || this.model
+          return await transcribeScan(
+            this.app,
+            this.llm,
+            model,
+            file,
+            source,
+            this.plugin.library,
+            false,
+            this.plugin.settings.ocr,
+            { page: progress, stopped }
+          )
+        } finally {
+          source.close()
+        }
+      }
+    )
+    if (read.fresh) this.renderContext()
+    return read.text
   }
 
   /**

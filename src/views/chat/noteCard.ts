@@ -3,8 +3,12 @@ import type PMPlugin from '../../main'
 import {
   appendProposal,
   appendTarget,
+  holdsKept,
   holdsProposal,
   noteNamed,
+  replaceSection,
+  sectionText,
+  sectionTitles,
   NOTE_LANGUAGE,
   parseNoteProposal,
   proposalFolder,
@@ -13,6 +17,7 @@ import {
   type NoteProposal
 } from '../../store/chat/noteProposal'
 import { cleanTranscriptIn } from '../../store/chat/ocr'
+import { diffWords } from '../../store/requirements/reqDiff'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 
@@ -81,6 +86,10 @@ class NoteCard extends MarkdownRenderChild {
     }
     if (proposal.clean) {
       await this.drawClean(proposal.clean, generation)
+      return
+    }
+    if (proposal.replace) {
+      await this.drawReplace(proposal, generation)
       return
     }
     const fallback = notesFallback(this.plugin, this.sourcePath)
@@ -173,6 +182,117 @@ class NoteCard extends MarkdownRenderChild {
         } finally {
           await this.draw()
         }
+      })
+    )
+  }
+
+  /**
+   * A section of a note to rewrite: its text now and as proposed, the words that change
+   * marked, and a button that rewrites it — then the way to take it back, while the
+   * section still reads as it was written.
+   */
+  private async drawReplace(proposal: NoteProposal, generation: number): Promise<void> {
+    const app = this.plugin.app
+    const target = noteNamed(app, proposal.replace, this.sourcePath)
+    const content = target ? await app.vault.cachedRead(target) : ''
+    await this.plugin.noteUndo.ready()
+    if (generation !== this.generation) return
+    this.containerEl.empty()
+    const card = this.containerEl.createDiv('pm-change pm-note')
+    const where = proposal.section.trim() ? ` › ${proposal.section.trim()}` : ''
+    this.head(card, 'replace', t('chat.note.replaceKind'), `${target?.basename ?? proposal.replace}${where}`)
+    const problem = (text: string): void => {
+      card.addClass('pm-change--problem')
+      const foot = card.createDiv('pm-change-foot')
+      setIcon(foot.createSpan({ cls: 'pm-change-state-icon' }), 'circle-alert')
+      foot.createSpan({ cls: 'pm-change-problem', text })
+    }
+    if (!target) {
+      problem(t('chat.note.noTarget', { name: proposal.replace }))
+      return
+    }
+    const current = sectionText(content, proposal.section)
+    if (current === null) {
+      problem(
+        t('chat.note.noSection', {
+          section: proposal.section,
+          list: sectionTitles(content).join(', ') || '—'
+        })
+      )
+      return
+    }
+    if (holdsKept(current)) {
+      problem(t('chat.note.keptSection'))
+      return
+    }
+    const proposed = proposal.body.trim()
+    const same = (a: string, b: string): boolean => a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim()
+    const done = same(current, proposed)
+    // What changes, marked: removed struck, added underlined.
+    const diff = card.createDiv('pm-change-diff pm-req-diff pm-note-replace-diff')
+    if (done) diff.createSpan({ text: proposed || t('chat.note.emptySection') })
+    else {
+      for (const part of diffWords(current, proposed)) {
+        if (part.kind === 'same') diff.createSpan({ text: part.text })
+        else diff.createSpan({ cls: `pm-req-diff-${part.kind}`, text: part.text })
+      }
+    }
+    const foot = card.createDiv('pm-change-foot')
+    const key = this.source
+    const undo = this.plugin.noteUndo.get(key)
+    if (done) {
+      card.addClass('pm-change--done')
+      setIcon(foot.createSpan({ cls: 'pm-change-state-icon' }), 'check')
+      foot.createSpan({ cls: 'pm-change-state', text: t('chat.note.replaced') })
+      const open = foot.createEl('a', { cls: 'pm-note-open', href: '#', text: t('chat.note.open') })
+      open.addEventListener('click', (event) => {
+        event.preventDefault()
+        void app.workspace.getLeaf('tab').openFile(target)
+      })
+      if (undo && undo.path === target.path) {
+        const back = foot.createEl('button', { text: t('chat.change.undo') })
+        back.addEventListener(
+          'click',
+          safeAsync(async () => {
+            back.disabled = true
+            let restored = false
+            await app.vault.process(target, (text) => {
+              // Only over what was written: a section changed since is the reader's.
+              const now = sectionText(text, undo.section)
+              if (now === null || !same(now, undo.after)) return text
+              const back = replaceSection(text, undo.section, undo.before)
+              restored = back !== null
+              return back ?? text
+            })
+            if (restored) await this.plugin.noteUndo.delete(key)
+            new Notice(restored ? t('chat.note.restored', { name: target.basename }) : t('chat.note.changedSince'))
+            await this.draw()
+          })
+        )
+      }
+      return
+    }
+    const button = foot.createEl('button', { cls: 'mod-cta', text: t('chat.note.replace') })
+    button.addEventListener(
+      'click',
+      safeAsync(async () => {
+        button.disabled = true
+        let written = false
+        let before = ''
+        await app.vault.process(target, (text) => {
+          const now = sectionText(text, proposal.section)
+          if (now === null) return text
+          const next = replaceSection(text, proposal.section, proposed)
+          if (next === null) return text
+          before = now
+          written = true
+          return next
+        })
+        if (written) {
+          await this.plugin.noteUndo.set(key, { path: target.path, section: proposal.section, before, after: proposed })
+          new Notice(t('chat.note.replacedIn', { name: target.basename }))
+        }
+        await this.draw()
       })
     )
   }

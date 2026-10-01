@@ -92,4 +92,35 @@ describe('the scans being read', () => {
     queue.dismiss()
     expect(queue.last).toBeNull()
   })
+
+  it('reads one document for someone waiting on it, in its turn, and hands back what it says', async () => {
+    const queue = new ScanQueue()
+    const pages = gate()
+    const library = queue.add([job('a', 1, pages)])
+    const chat = queue.read('file:b.pdf', 'b.pdf', 'occupé', async (progress) => {
+      progress(1, 1)
+      await pages.open()
+      return 'texte de b'
+    })
+    expect(queue.stateOf('file:b.pdf')).toBe('waiting')
+    // The same document asked for again meanwhile: refused, said why.
+    await expect(queue.read('a', 'Doc a', 'déjà en lecture', () => Promise.resolve(''))).rejects.toThrow(
+      'déjà en lecture'
+    )
+    await pages.next()
+    await pages.next()
+    await expect(chat).resolves.toBe('texte de b')
+    await library
+  })
+
+  it('tells someone waiting that their document will not be read, when the queue is stopped', async () => {
+    const queue = new ScanQueue()
+    const pages = gate()
+    const running = queue.add([job('a', 3, pages)])
+    const chat = queue.read('file:b.pdf', 'b.pdf', 'occupé', () => Promise.resolve('jamais'))
+    queue.stop()
+    await expect(chat).rejects.toBeInstanceOf(ScanStopped)
+    await pages.next()
+    await running
+  })
 })

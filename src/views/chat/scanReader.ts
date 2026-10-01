@@ -105,7 +105,14 @@ export async function transcribeScan(
   /** Which of the steps of a reading to take. */
   options: OcrSettings = DEFAULT_OCR_SETTINGS,
   /** Who follows the reading: told each page, and asked between pages whether to stop. */
-  watch: { page?: (page: number, total: number) => void; stopped?: () => boolean } = {}
+  watch: {
+    page?: (page: number, total: number) => void
+    stopped?: () => boolean
+    /** The pages read already by a reading cut short. */
+    resume?: string[]
+    /** Each page once read, with all read so far. */
+    onPart?: (parts: string[], page: number, total: number) => Promise<void> | void
+  } = {}
 ): Promise<{ text: string; fresh: boolean }> {
   const kept = again ? null : await keptTranscript(app, file, records)
   if (kept) return { text: kept, fresh: false }
@@ -135,7 +142,9 @@ export async function transcribeScan(
         attempts: options.retry ? 3 : 1,
         check: options.check,
         layerText: options.layerText,
-        ...(watch.stopped ? { stopped: watch.stopped } : {})
+        ...(watch.stopped ? { stopped: watch.stopped } : {}),
+        ...(watch.resume?.length ? { resume: watch.resume } : {}),
+        ...(watch.onPart ? { onPart: watch.onPart } : {})
       }
     )
     // Nothing read at all is a model that does not see, most likely: said as such.

@@ -183,6 +183,33 @@ describe('transcribing a whole document', () => {
     expect(once.failed).toBe(1)
   })
 
+  it('goes on from the page after those read before, telling each page read with all so far', async () => {
+    const asked: number[] = []
+    const kept: number[] = []
+    const out = await transcribe(
+      source(4),
+      (_image, page) => {
+        asked.push(page)
+        return Promise.resolve(`p${page}`)
+      },
+      WORDS,
+      () => {},
+      undefined,
+      {
+        ...noWait,
+        resume: ['## Page 1/4\n\np1', '## Page 2/4\n\np2'],
+        onPart: (parts) => {
+          kept.push(parts.length)
+        }
+      }
+    )
+    expect(asked).toEqual([3, 4])
+    expect(kept).toEqual([3, 4])
+    expect(out.text).toBe(
+      ['## Page 1/4\n\np1', '## Page 2/4\n\np2', '## Page 3/4\n\np3', '## Page 4/4\n\np4'].join('\n\n')
+    )
+  })
+
   it('stops between pages when asked, as a reading stopped', async () => {
     let read = 0
     let stop = false

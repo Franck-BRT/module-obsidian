@@ -872,7 +872,7 @@ a.pm-docs-clear-filters {
   color: var(--text-warning);
 }
 
-.pm-docs-scan-strip button {
+.pm-docs-scan-strip button:first-of-type {
   margin-left: auto;
 }
 
@@ -880,4 +880,10 @@ a.pm-docs-clear-filters {
 .pm-docs-badge.is-waiting {
   color: var(--text-accent);
   border-color: var(--text-accent);
+}
+
+.pm-scan-resume-row {
+  display: flex;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-2);
 }

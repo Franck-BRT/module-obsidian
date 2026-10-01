@@ -1417,6 +1417,7 @@ export const en = {
     'Here is page {page} of {total} of a document. A first transcription of this page was incomplete: paragraphs, columns or lists were missing. Now transcribe ALL the text on the page, without exception, from top to bottom, the left column whole then the right one, headings, lists, notes, captions and formulas included. Render tables in Markdown. Summarise nothing, add no comment: only the complete transcription.',
   'chat.ocrMore': 'Continue the transcription exactly where it stopped, without repeating or commenting anything.',
   'chat.ocrLayer': '[Page {page}: the reading seemed incomplete; here is the text the PDF itself holds for this page.]',
+  'chat.ocrBusy': '“{name}” is being read by the model already (see the library): ask again once it is read.',
   'chat.ocrPageFailed': '[Page {page} not read: {reason}]',
   'chat.ocrSkipped': '[{count} further page(s) not read: past the page limit.]',
   'chat.ocrNothing':
@@ -1848,6 +1849,10 @@ export const en = {
   'library.scanBadgeReading': 'Reading p. {page}/{total}',
   'library.scanBadgeStarting': 'Reading…',
   'library.scanBadgeWaiting': 'Waiting to be read',
+  'library.scanCutOne': 'Reading “{title}” was cut short at page {page} of {total}.',
+  'library.scanResume': 'Resume',
+  'library.scanDrop': 'Give up',
+  'library.scanCutMany': { one: '{count} scan reading was cut short.', other: '{count} scan readings were cut short.' },
   'library.readScansTitle': { one: 'Read {count} scan with the model?', other: 'Read {count} scans with the model?' },
   'library.readScansText':
     'Each page is sent to the configured vision model (or the chat’s model): it takes a moment a page and uses requests. The transcription is added to the document’s record, under a « Transcription » heading: the chat and the search use it, and you can correct it.',
@@ -1968,7 +1973,7 @@ export const en = {
   'chat.noteHow':
     'When the person asks you to write, create or draft a note (minutes, summary, sheet, decision…), or to add to an existing note, propose it in a block fenced by four backticks: ````pm-note then, one a line, “title: …”, “folder: …” (optional; with no folder the note goes to {folder}), “tags: a, b” (optional), a “---” line, then the note’s whole content in Markdown, and ```` to close it. To add to an existing note, put “append to: [[Note name]]” instead of the title: the content will be added at its end. The person will see the note and create it in one click; nothing is written without them. Only write this block when a note is asked for.',
   'chat.noteLimits':
-    'You write nothing in the vault yourself: you propose blocks the person applies in one click. Never say a note was changed, nor that you can do nothing: propose the block that fits. You can create a note or add text at the end of one — but never to create a Black Projects project, programme or ticket: those go through pm-change blocks; you can neither rewrite nor delete part of an existing note — say so when asked, rather than adding a corrected copy at its end. To remove the headers, footers and page numbers a transcription repeats (a document read by OCR), do not copy the transcription out: propose a ````pm-note block holding only the line “clean: [[Note name]]”; the plugin finds the lines repeated from page to page itself and removes them from the whole transcription. When the attached note is cut, say so, rather than treating the part seen as the whole.',
+    'You write nothing in the vault yourself: you propose blocks the person applies in one click. Never say a note was changed, nor that you can do nothing: propose the block that fits. You can create a note or add text at the end of one — but never to create a Black Projects project, programme or ticket: those go through pm-change blocks; to rewrite a section of an existing note — correct it, reword it, empty it —, propose a ````pm-note block with “replace in: [[Note name]]”, “section: exact title of the section” (without the #), a “---” line, then the section’s whole new text, without its heading; the person will see before and after and replace it in one click. With no “section” line, the note’s whole text is replaced: only do so for a short note you saw whole. Never add a corrected copy at the end of a note. To remove the headers, footers and page numbers a transcription repeats (a document read by OCR), do not copy the transcription out: propose a ````pm-note block holding only the line “clean: [[Note name]]”; the plugin finds the lines repeated from page to page itself and removes them from the whole transcription. When the attached note is cut, say so, rather than treating the part seen as the whole.',
   'chat.noteProjectFolders': 'Folders of the attached projects, for a note about them: {list}.',
   'chat.note.newKind': 'New note',
   'chat.note.appendKind': 'Addition to the note',
@@ -1993,6 +1998,16 @@ export const en = {
   'chat.note.cleanFound': '{count} lines repeated from page to page will be removed, across the whole transcription:',
   'chat.note.clean': 'Remove these lines',
   'chat.note.cleaned': '{count} header and footer lines removed from “{name}”.',
+  'chat.note.replaceKind': 'Rewrite',
+  'chat.note.noSection': 'No section “{section}” in the note (or several of that name). Sections: {list}.',
+  'chat.note.keptSection':
+    'This section holds a document’s transcription: it is not rewritten from the chat. Clean the transcription, or read the document again.',
+  'chat.note.emptySection': '(section emptied)',
+  'chat.note.replace': 'Replace',
+  'chat.note.replaced': 'Replaced',
+  'chat.note.replacedIn': 'Section rewritten in “{name}”.',
+  'chat.note.restored': '“{name}” is back as it was.',
+  'chat.note.changedSince': 'The section was changed since: it is left as it is.',
   'chat.note.noTarget': 'The note “{name}” cannot be found in the vault.',
   'settings.chat.notesFolder': 'Folder for notes the chat writes',
   'settings.chat.notesFolderDesc':

@@ -64,6 +64,10 @@ export interface TranscribeOptions {
   layerText?: boolean
   /** Asked before each page: true stops the reading, which then fails as stopped. */
   stopped?: () => boolean
+  /** The pages read already, by a reading cut short: taken as they are, the next one read on. */
+  resume?: string[]
+  /** Told each page once read, with all read so far: what a reading cut short resumes from. */
+  onPart?: (parts: string[], page: number, total: number) => Promise<void> | void
 }
 
 /** The letters of a text: how much of a page it holds, whatever its layout. */
@@ -103,7 +107,8 @@ export async function transcribe(
   const wait = options.wait ?? sleep
   const total = source.pages
   const shown = Math.min(total, limit)
-  const parts: string[] = []
+  // A reading cut short goes on from the page after the last it read.
+  const parts: string[] = (options.resume ?? []).slice(0, shown)
   let failed = 0
   const asked = async (image: string, page: number, insist: boolean): Promise<string> => {
     let last: unknown = null
@@ -117,7 +122,7 @@ export async function transcribe(
     }
     throw last instanceof Error ? last : new Error(String(last))
   }
-  for (let page = 1; page <= shown; page++) {
+  for (let page = parts.length + 1; page <= shown; page++) {
     if (options.stopped?.()) throw new ScanStopped()
     progress(page, shown)
     let body: string
@@ -137,6 +142,7 @@ export async function transcribe(
       body = words.failed(page, error instanceof Error ? error.message : String(error))
     }
     parts.push(total > 1 ? `## ${words.page(page, total)}\n\n${body}` : body)
+    await options.onPart?.([...parts], page, shown)
   }
   if (total > shown) parts.push(words.skipped(total - shown))
   return { text: parts.join('\n\n'), read: shown - failed, failed }

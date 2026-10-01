@@ -816,3 +816,11 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
 .pm-change-move-shift.is-earlier {
   color: var(--text-success);
 }
+
+/* A section rewritten: its text as it reads, the words that change marked, kept to a scroll. */
+.pm-note-replace-diff {
+  white-space: pre-wrap;
+  max-height: 22em;
+  overflow-y: auto;
+  margin: var(--size-4-2) 0;
+}

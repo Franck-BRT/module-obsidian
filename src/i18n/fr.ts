@@ -1397,6 +1397,8 @@ export const fr: Catalog = {
   'chat.ocrMore': 'Continue la transcription exactement là où elle s’est arrêtée, sans rien répéter ni commenter.',
   'chat.ocrLayer':
     '[Page {page} : la lecture semblait incomplète ; voici le texte que porte le PDF lui-même pour cette page.]',
+  'chat.ocrBusy':
+    '« {name} » est déjà en cours de lecture par le modèle (voir la bibliothèque) : reposez la question une fois la lecture finie.',
   'chat.ocrPageFailed': '[Page {page} non lue : {reason}]',
   'chat.ocrSkipped': '[{count} page(s) suivante(s) non lue(s) : au-delà de la limite de pages.]',
   'chat.ocrNothing':
@@ -1831,6 +1833,13 @@ export const fr: Catalog = {
   'library.scanBadgeReading': 'Lecture p. {page}/{total}',
   'library.scanBadgeStarting': 'Lecture…',
   'library.scanBadgeWaiting': 'En attente de lecture',
+  'library.scanCutOne': 'La lecture de « {title} » a été interrompue à la page {page} sur {total}.',
+  'library.scanResume': 'Reprendre',
+  'library.scanDrop': 'Abandonner',
+  'library.scanCutMany': {
+    one: '{count} lecture de scan a été interrompue.',
+    other: '{count} lectures de scans ont été interrompues.'
+  },
   'library.readScansTitle': { one: 'Lire {count} scan avec le modèle ?', other: 'Lire {count} scans avec le modèle ?' },
   'library.readScansText':
     'Chaque page est envoyée au modèle de vision configuré (ou au modèle du chat) : cela prend un moment par page et consomme des requêtes. La transcription est ajoutée à la fiche du document, dans une section « Transcription » : le chat et la recherche s’en servent, et vous pouvez la corriger.',
@@ -1952,7 +1961,7 @@ export const fr: Catalog = {
   'chat.noteHow':
     'Quand la personne te demande d’écrire, de créer ou de rédiger une note (compte rendu, synthèse, fiche, décision…), ou de compléter une note existante, propose-la dans un bloc délimité par quatre accents graves : ````pm-note puis, une par ligne, « titre: … », « dossier: … » (facultatif ; sans dossier, la note va dans {folder}), « tags: a, b » (facultatif), une ligne « --- », puis le contenu complet de la note en Markdown, et enfin ```` pour fermer. Pour compléter une note existante, remplace « titre » par « ajouter à: [[Nom de la note]] » : le contenu sera ajouté à sa fin. La personne verra la note et la créera d’un clic ; rien n’est écrit sans elle. N’écris ce bloc que si on te demande une note.',
   'chat.noteLimits':
-    'Tu n’écris rien toi-même dans le coffre : tu proposes des blocs que la personne applique d’un clic. Ne dis jamais qu’une note a été modifiée, ni que tu ne peux rien faire : propose le bloc qui convient. Tu peux créer une note ou ajouter du texte à la fin d’une note — mais jamais pour créer un projet, un programme ou un ticket de Black Projects : ceux-là passent par les blocs pm-change ; tu ne peux ni réécrire ni supprimer une partie d’une note existante — dis-le si on te le demande, plutôt que d’ajouter une copie corrigée à sa fin. Pour retirer les en-têtes, pieds de page et numéros de page répétés d’une transcription (document lu par OCR), ne recopie pas la transcription : propose un bloc ````pm-note ne contenant que la ligne « nettoyer: [[Nom de la note]] » ; le plugin repère lui-même les lignes répétées de page en page et les retire de toute la transcription. Quand la note jointe est coupée, dis-le, plutôt que de traiter la partie vue comme si c’était le tout.',
+    'Tu n’écris rien toi-même dans le coffre : tu proposes des blocs que la personne applique d’un clic. Ne dis jamais qu’une note a été modifiée, ni que tu ne peux rien faire : propose le bloc qui convient. Tu peux créer une note ou ajouter du texte à la fin d’une note — mais jamais pour créer un projet, un programme ou un ticket de Black Projects : ceux-là passent par les blocs pm-change ; pour réécrire une section d’une note existante — la corriger, la reformuler, la vider —, propose un bloc ````pm-note avec « remplacer dans: [[Nom de la note]] », « section: titre exact de la section » (sans les #), une ligne « --- », puis le nouveau texte complet de la section, sans son titre ; la personne verra l’avant et l’après et remplacera d’un clic. Sans ligne « section », c’est tout le texte de la note qui est remplacé : ne le fais que pour une note courte que tu as vue en entier. N’ajoute jamais une copie corrigée à la fin d’une note. Pour retirer les en-têtes, pieds de page et numéros de page répétés d’une transcription (document lu par OCR), ne recopie pas la transcription : propose un bloc ````pm-note ne contenant que la ligne « nettoyer: [[Nom de la note]] » ; le plugin repère lui-même les lignes répétées de page en page et les retire de toute la transcription. Quand la note jointe est coupée, dis-le, plutôt que de traiter la partie vue comme si c’était le tout.',
   'chat.noteProjectFolders': 'Dossiers des projets joints, pour une note qui les concerne : {list}.',
   'chat.note.newKind': 'Nouvelle note',
   'chat.note.appendKind': 'Ajout à la note',
@@ -1977,6 +1986,16 @@ export const fr: Catalog = {
   'chat.note.cleanFound': '{count} lignes répétées de page en page seront retirées, sur toute la transcription :',
   'chat.note.clean': 'Retirer ces lignes',
   'chat.note.cleaned': '{count} lignes d’en-tête et de pied de page retirées de « {name} ».',
+  'chat.note.replaceKind': 'Réécriture',
+  'chat.note.noSection': 'Aucune section « {section} » dans la note (ou plusieurs du même nom). Sections : {list}.',
+  'chat.note.keptSection':
+    'Cette section contient la transcription d’un document : elle ne se réécrit pas depuis le chat. Utilisez le nettoyage de la transcription, ou relisez le document.',
+  'chat.note.emptySection': '(section vidée)',
+  'chat.note.replace': 'Remplacer',
+  'chat.note.replaced': 'Remplacée',
+  'chat.note.replacedIn': 'Section réécrite dans « {name} ».',
+  'chat.note.restored': '« {name} » est revenue comme avant.',
+  'chat.note.changedSince': 'La section a été modifiée depuis : elle est laissée telle quelle.',
   'chat.note.noTarget': 'La note « {name} » est introuvable dans le coffre.',
   'settings.chat.notesFolder': 'Dossier des notes écrites par le chat',
   'settings.chat.notesFolderDesc':

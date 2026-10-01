@@ -7,6 +7,10 @@ import {
   holdsProposal,
   newNoteContent,
   parseNoteProposal,
+  findSection,
+  replaceSection,
+  sectionText,
+  sectionTitles,
   safeFolder,
   writeProposedNote,
   writtenNote
@@ -27,6 +31,8 @@ describe('parseNoteProposal', () => {
       folder: 'Work/Génie civil/CR',
       append: '',
       clean: '',
+      replace: '',
+      section: '',
       tags: ['cr', 'chantier'],
       body: '# Compte rendu réunion 12\n\n- Radier décalé au 19/10.'
     })
@@ -136,5 +142,71 @@ describe('writing a proposed note', () => {
     await appendProposal(app, target, proposal)
     expect(vault.contentAt(journal.path)).toBe('# Journal\n\n## 28/09\nFerraillage.\n\n## 29/09\nBéton coulé.\n')
     expect(appendTarget(app, { ...proposal, append: '[[Nulle part]]' }, 'Chats/c.md')).toBeNull()
+  })
+})
+
+describe('a section of a note rewritten', () => {
+  const note = [
+    '---',
+    'tags: [cr]',
+    '---',
+    '# Réunion 12',
+    '',
+    '## Présents',
+    '',
+    'Anne, Paul.',
+    '',
+    '## Décisions',
+    '',
+    '- Radier décalé.',
+    '',
+    '### Détail',
+    '',
+    'Fournisseur en retard.',
+    '',
+    '```',
+    '## Pas un titre',
+    '```',
+    '',
+    '## Suite',
+    '',
+    'À voir.',
+    ''
+  ].join('\n')
+
+  it('reads the proposal: the note, the section, the new text, which may be nothing', () => {
+    expect(
+      parseNoteProposal('remplacer dans: [[Réunion 12]]\nsection: Décisions\n---\n- Radier décalé au 20/10.')
+    ).toMatchObject({
+      replace: '[[Réunion 12]]',
+      section: 'Décisions',
+      body: '- Radier décalé au 20/10.'
+    })
+    expect(parseNoteProposal('replace in: Réunion 12\nsection: Suite\n---\n')).toMatchObject({
+      replace: 'Réunion 12',
+      body: ''
+    })
+  })
+
+  it('finds a section by its heading, whatever its case and accents, down to the next one of its level', () => {
+    expect(sectionTitles(note)).toEqual(['Réunion 12', 'Présents', 'Décisions', 'Détail', 'Suite'])
+    expect(sectionText(note, 'decisions')).toBe(
+      '- Radier décalé.\n\n### Détail\n\nFournisseur en retard.\n\n```\n## Pas un titre\n```'
+    )
+    expect(sectionText(note, '## Présents')).toBe('Anne, Paul.')
+    expect(findSection(note, 'Absent')).toBeNull()
+    expect(sectionText(note, '')).toContain('# Réunion 12')
+    expect(sectionText(note, '')).not.toContain('tags:')
+  })
+
+  it('replaces the section’s text, its heading and the rest kept; or the whole text, its properties kept', () => {
+    const after = replaceSection(note, 'Décisions', '- Radier décalé au 20/10.')
+    expect(after).toContain('## Décisions\n\n- Radier décalé au 20/10.\n\n## Suite\n\nÀ voir.')
+    expect(after).not.toContain('Fournisseur')
+    expect(after?.startsWith('---\ntags: [cr]\n---\n# Réunion 12')).toBe(true)
+    expect(sectionText(after ?? '', 'Décisions')).toBe('- Radier décalé au 20/10.')
+    expect(replaceSection(note, 'Suite', '')).toMatch(/## Suite\n$/)
+    expect(replaceSection(note, '', '# Nouveau\n\nTexte.')).toBe('---\ntags: [cr]\n---\n\n# Nouveau\n\nTexte.\n')
+    expect(replaceSection(note, 'Absent', 'x')).toBeNull()
   })
 })

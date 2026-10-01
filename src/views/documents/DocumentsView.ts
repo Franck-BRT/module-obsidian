@@ -158,6 +158,8 @@ export class DocumentsView extends ItemView {
     this.register(this.plugin.libraryText.onChange(() => this.textSoon()))
     // The scans being read: the document at its page, those waiting, how the last one ended.
     this.register(this.plugin.scans.onChange(() => this.textSoon()))
+    this.register(this.plugin.scanProgress.onChange(() => this.textSoon()))
+    void this.plugin.scanProgress.ready().then(() => this.textSoon())
     this.registerInterval(window.setInterval(() => this.tickScan(), 1000))
     void this.plugin.libraryText.refresh(this.plugin.library.docs())
     void this.loadRegister()
@@ -766,6 +768,7 @@ export class DocumentsView extends ItemView {
     const scans = this.plugin.scans
     this.scanElapsedEl = null
     const current = scans.current
+    this.renderScanCut()
     if (!current && !scans.last) return
     const strip = this.bodyEl.createDiv('pm-docs-scan-strip')
     if (current) {
@@ -808,6 +811,33 @@ export class DocumentsView extends ItemView {
     const close = strip.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('common.close') } })
     setIcon(close, 'x')
     close.addEventListener('click', () => scans.dismiss())
+  }
+
+  /**
+   * The readings cut short — Obsidian closed in the middle, or the model failing — that are
+   * not going on now: each at the page it reached, with the way to go on or give up.
+   */
+  private renderScanCut(): void {
+    const cut = this.plugin.scanProgress.list().filter((entry) => !this.plugin.scans.stateOf(entry.key))
+    if (!cut.length) return
+    const strip = this.bodyEl.createDiv('pm-docs-scan-strip is-problem')
+    setIcon(strip.createSpan({ cls: 'pm-docs-scan-icon' }), 'pause')
+    strip.createSpan({
+      cls: 'pm-docs-scan-text',
+      text:
+        cut.length === 1
+          ? t('library.scanCutOne', { title: cut[0].title, page: cut[0].parts.length, total: cut[0].total })
+          : t('library.scanCutMany', { count: cut.length })
+    })
+    if (cut.length > 1) strip.setAttr('title', cut.map((entry) => entry.title).join('\n'))
+    const go = strip.createEl('button', { cls: 'mod-cta', text: t('library.scanResume') })
+    go.addEventListener('click', () => {
+      void this.plugin.resumeScans()
+    })
+    const drop = strip.createEl('button', { text: t('library.scanDrop') })
+    drop.addEventListener('click', () => {
+      void this.plugin.dropScans()
+    })
   }
 
   /** How long the page being read has taken, said each second; a long one said to be. */

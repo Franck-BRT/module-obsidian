@@ -110,8 +110,9 @@ import { askScanOptions } from './views/documents/scanOptions'
 import { proposeRegisterMatches } from './views/documents/matchRegister'
 import { followMoves } from './store/library/fileInRegister'
 import { adapterStorage, RagIndex } from './store/rag/RagIndex'
-import { UndoLog } from './store/chat/chatUndo'
+import { NOTE_UNDO_FILE, UndoLog, type NoteUndo } from './store/chat/chatUndo'
 import { ScanQueue, ScanStopped } from './store/library/ScanQueue'
+import { ScanProgress } from './store/library/scanProgress'
 import { RagIndexer } from './store/rag/RagIndexer'
 import { excludedFolders, vaultSources } from './store/rag/ragSources'
 import { pourRegisterFiles } from './views/documents/pourRegisters'
@@ -158,8 +159,12 @@ export default class PMPlugin extends Plugin {
   changeEdits = new Map<string, string>()
   /** The changes applied from the chat that can still be taken back. */
   chatUndo!: UndoLog
+  /** The rewrites of notes applied from the chat that can still be taken back. */
+  noteUndo!: UndoLog<NoteUndo>
   /** The documents being read by the model that sees, and those waiting. */
   scans = new ScanQueue()
+  /** The readings of scans cut short, page by page, to go on from. */
+  scanProgress!: ScanProgress
   index!: VaultIndex
   notifier!: Notifier
   autoArchiver!: AutoArchiver
@@ -238,9 +243,13 @@ export default class PMPlugin extends Plugin {
       }
     )
     this.ragIndex = new RagIndex(adapterStorage(this.app, '.pm-rag'))
-    this.chatUndo = new UndoLog(
-      adapterStorage(this.app, this.manifest.dir ?? `${this.app.vault.configDir}/plugins/${this.manifest.id}`)
+    const ownFolder = adapterStorage(
+      this.app,
+      this.manifest.dir ?? `${this.app.vault.configDir}/plugins/${this.manifest.id}`
     )
+    this.chatUndo = new UndoLog(ownFolder)
+    this.noteUndo = new UndoLog<NoteUndo>(ownFolder, 300, NOTE_UNDO_FILE)
+    this.scanProgress = new ScanProgress(ownFolder)
     this.ragIndexer = new RagIndexer(this.ragIndex, {
       sources: () =>
         vaultSources({
@@ -1047,6 +1056,57 @@ export default class PMPlugin extends Plugin {
     }
   }
 
+  /**
+   * The readings cut short — Obsidian closed in the middle — gone on with, from the page
+   * after the last read, with the steps they were launched with. Those whose document is
+   * gone are forgotten.
+   */
+  async resumeScans(): Promise<void> {
+    await this.scanProgress.ready()
+    const docs = new Map(this.library.docs().map((doc) => [doc.record, doc]))
+    for (const entry of this.scanProgress.list()) {
+      const doc = docs.get(entry.key)
+      if (!doc) {
+        await this.scanProgress.forget(entry.key)
+        continue
+      }
+      void this.readLibraryScans([doc], entry.again, entry.options)
+    }
+  }
+
+  /** Said once Obsidian is open: the readings cut short last time, to go on with or give up. */
+  private async offerResume(): Promise<void> {
+    await this.scanProgress.ready()
+    const cut = this.scanProgress.list()
+    if (!cut.length) return
+    const fragment = createFragment((el) => {
+      el.createDiv({
+        text:
+          cut.length === 1
+            ? t('library.scanCutOne', { title: cut[0].title, page: cut[0].parts.length, total: cut[0].total })
+            : t('library.scanCutMany', { count: cut.length })
+      })
+      const row = el.createDiv('pm-scan-resume-row')
+      const go = row.createEl('button', { cls: 'mod-cta', text: t('library.scanResume') })
+      const drop = row.createEl('button', { text: t('library.scanDrop') })
+      go.addEventListener('click', () => {
+        notice.hide()
+        void this.resumeScans()
+      })
+      drop.addEventListener('click', () => {
+        notice.hide()
+        void this.dropScans()
+      })
+    })
+    const notice = new Notice(fragment, 0)
+  }
+
+  /** The readings cut short, given up: their pages read so far forgotten. */
+  async dropScans(): Promise<void> {
+    await this.scanProgress.ready()
+    for (const entry of this.scanProgress.list()) await this.scanProgress.forget(entry.key)
+  }
+
   /** Where a new project goes, as the "new project" window puts it: beside its programme, or where projects are kept. */
   newProjectFolder(parentPath: string | null): string {
     if (!parentPath) return this.settings.projectsFolder || this.app.vault.getName()
@@ -1189,10 +1249,6 @@ export default class PMPlugin extends Plugin {
   }
 
   /**
-   * Scans read by the model that sees, one after another, so the library's search finds
-   * what they say; false when no model is set up to read them.
-   */
-  /**
    * Asks how the documents are to be read — the steps, as last chosen, kept for the next
    * time and for the chat — then reads them. False when the reader went no further.
    */
@@ -1213,6 +1269,11 @@ export default class PMPlugin extends Plugin {
     return this.readLibraryScans(docs, again, chosen)
   }
 
+  /**
+   * Scans read by the model that sees, one after another, so the library's search finds
+   * what they say; false when no model is set up to read them. Each page read is kept as
+   * it comes, so a reading cut short — Obsidian closed — goes on from the next page.
+   */
   async readLibraryScans(
     docs: LibraryDoc[],
     again = false,
@@ -1232,20 +1293,38 @@ export default class PMPlugin extends Plugin {
         title: doc.title,
         run: async (progress, stopped) => {
           try {
+            await this.scanProgress.ready()
             await this.libraryText.readScan(doc, async (file, bytes) => {
               const source = await scanPages(file, bytes)
+              const resume = this.scanProgress.resumeFrom(doc.record, file.path, file.stat.mtime)
               try {
                 return (
                   await transcribeScan(this.app, client, model, file, source, this.library, again, options, {
                     page: progress,
-                    stopped
+                    stopped,
+                    resume,
+                    onPart: (parts, _page, total) =>
+                      this.scanProgress.keep({
+                        key: doc.record,
+                        title: doc.title,
+                        file: file.path,
+                        mtime: file.stat.mtime,
+                        parts,
+                        total,
+                        options,
+                        // Going on from kept pages reads the document, whatever was kept before.
+                        again: true
+                      })
                   })
                 ).text
               } finally {
                 source.close()
               }
             })
+            await this.scanProgress.forget(doc.record)
           } catch (error) {
+            // Stopped by the reader: given up, nothing to go on from.
+            if (error instanceof ScanStopped) await this.scanProgress.forget(doc.record)
             new Notice(
               error instanceof ScanStopped
                 ? t('library.scanStopped', { title: doc.title })

@@ -13,6 +13,8 @@ export interface ScanJob {
   title: string
   /** Reads it, saying each page as it starts, and asking between pages whether to stop. */
   run: (progress: (page: number, total: number) => void, stopped: () => boolean) => Promise<void>
+  /** Told when it is dropped from the queue before its turn came. */
+  cancel?: () => void
 }
 
 export interface ScanCurrent {
@@ -91,10 +93,41 @@ export class ScanQueue {
     this.changed()
   }
 
+  /**
+   * One document read in its turn, for someone waiting on what it says — the chat, for a
+   * question: what `work` hands back, once it has. Refused at once, with `busy`, when that
+   * document is being read or waits already; stopped when the queue is.
+   */
+  read<T>(
+    key: string,
+    title: string,
+    busy: string,
+    work: (progress: (page: number, total: number) => void, stopped: () => boolean) => Promise<T>
+  ): Promise<T> {
+    if (this.stateOf(key)) return Promise.reject(new Error(busy))
+    return new Promise<T>((resolve, reject) => {
+      const job: ScanJob = {
+        key,
+        title,
+        run: async (progress, stopped) => {
+          try {
+            resolve(await work(progress, stopped))
+          } catch (error) {
+            reject(error instanceof Error ? error : new Error(String(error)))
+            throw error
+          }
+        },
+        cancel: () => reject(new ScanStopped())
+      }
+      void this.add([job])
+    })
+  }
+
   /** Stops after the page being read, and forgets the documents waiting. */
   stop(): void {
     if (!this.current && !this.waiting.length) return
     this.stopping = true
+    for (const job of this.waiting) job.cancel?.()
     this.waiting = []
     this.changed()
   }

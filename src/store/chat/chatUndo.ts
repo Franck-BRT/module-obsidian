@@ -182,14 +182,16 @@ const FILE = 'chat-undo.json'
  * them. Kept on disk, so a conversation read again tomorrow can still take one back; the
  * oldest go past a few hundred.
  */
-export class UndoLog {
-  private records = new Map<string, UndoRecord>()
+export class UndoLog<R = UndoRecord> {
+  private records = new Map<string, R>()
   private loading: Promise<void> | null = null
   private listeners = new Set<() => void>()
 
   constructor(
     private storage: UndoStorage,
-    private limit = 300
+    private limit = 300,
+    /** The file it is kept in, beside the plugin. */
+    private file = FILE
   ) {}
 
   ready(): Promise<void> {
@@ -199,19 +201,19 @@ export class UndoLog {
 
   private async load(): Promise<void> {
     try {
-      const text = await this.storage.read(FILE)
-      const saved = text ? (JSON.parse(text) as { records?: [string, UndoRecord][] }) : {}
+      const text = await this.storage.read(this.file)
+      const saved = text ? (JSON.parse(text) as { records?: [string, R][] }) : {}
       this.records = new Map(saved.records ?? [])
     } catch {
       this.records = new Map()
     }
   }
 
-  get(source: string): UndoRecord | null {
+  get(source: string): R | null {
     return this.records.get(undoKey(source)) ?? null
   }
 
-  async set(source: string, record: UndoRecord): Promise<void> {
+  async set(source: string, record: R): Promise<void> {
     await this.ready()
     const key = undoKey(source)
     this.records.delete(key)
@@ -237,6 +239,18 @@ export class UndoLog {
 
   private async save(): Promise<void> {
     for (const listener of this.listeners) listener()
-    await this.storage.write(FILE, JSON.stringify({ records: [...this.records] }))
+    await this.storage.write(this.file, JSON.stringify({ records: [...this.records] }))
   }
 }
+
+/** A note's text before and after a proposal from the chat rewrote part of it. */
+export interface NoteUndo {
+  path: string
+  /** The section, by its heading; '' for the whole text. */
+  section: string
+  before: string
+  after: string
+}
+
+/** Where the rewrites of notes that can be undone are kept. */
+export const NOTE_UNDO_FILE = 'chat-note-undo.json'
