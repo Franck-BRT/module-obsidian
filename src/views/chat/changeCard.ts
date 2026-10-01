@@ -523,6 +523,11 @@ class ChangeCard extends MarkdownRenderChild {
       candidates,
       upstream
     )
+    const description = row(t('chat.change.field.description')).createEl('textarea', {
+      cls: 'pm-change-form-text',
+      attr: { rows: 4 }
+    })
+    description.value = given('description')
     // Written by title where that names it alone — the proposal reads as written —, by id otherwise.
     const followed = (): string[] =>
       upstream.map((id) => {
@@ -549,7 +554,8 @@ class ChangeCard extends MarkdownRenderChild {
         due: due.value,
         progress: progress.value,
         assignees: [...people],
-        after: followed()
+        after: followed(),
+        description: description.value
       }
     })
     // Another project: its lots, and its lists, drawn — what was typed kept.

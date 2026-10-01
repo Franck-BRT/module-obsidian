@@ -1303,6 +1303,11 @@ export const en = {
   'chat.preset.summary': 'Summarise the note',
   'chat.preset.summaryQ': 'Summarise this note in a few points, keeping the figures, dates and decisions.',
   'chat.preset.actions': 'Actions to take',
+  'chat.preset.actionTickets': 'Actions → tickets',
+  'chat.actionTicketsPick': 'Choose the project to create this note’s tickets in.',
+  'chat.actionTicketsProjects': 'Project attached to create the tickets in: {list}.',
+  'chat.preset.actionTicketsQ':
+    'List the actions decided in this note (minutes, meeting notes) and propose for each the ticket that follows it up, with a creation block: a short title starting with a verb, the project and lot it goes in, the person in charge (assignees) and the due date (due) when the note gives them — never make one up —, and in "description" what is to be done followed by “From {note}”. Put in "why" the sentence of the note the action comes from. An action matching an existing ticket: propose to change it rather than to create one. End with the list of actions without a person in charge or a due date, to complete on their card before creating them.',
   'chat.preset.actionsQ':
     'List the actions to take in this note: what, who, by when. Point out those with no owner or no deadline.',
   'chat.preset.extract': 'Implicit requirements',
@@ -1361,7 +1366,7 @@ export const en = {
   'chat.preset.documentQ':
     'Summarise this document: what it is about, who issued it and when, what it changes or asks for, and the dates and figures to remember.',
   'chat.changeCreate':
-    'To create a ticket that does not exist yet: {"create": "title of the new ticket", "project": "exact title of the project to create it in (never a programme’s: name the one of its projects that holds the lot)", "parent": "title of the lot or ticket to place it under (optional)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["title of the ticket it follows"]}, "why": "…"}. Types: {types}. Every field of "changes" is optional; status, priority and progress may be added as for an existing ticket. Never propose to create a ticket whose title already exists in the project: a ticket listed there is always changed with the « ticket » format above, even to move its dates, set its people or what it follows. When asked to change tickets, never use « create ».',
+    'To create a ticket that does not exist yet: {"create": "title of the new ticket", "project": "exact title of the project to create it in (never a programme’s: name the one of its projects that holds the lot)", "parent": "title of the lot or ticket to place it under (optional)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["title of the ticket it follows"], "description": "what is to be done, and where it comes from"}, "why": "…"}. Types: {types}. Every field of "changes" is optional; status, priority and progress may be added as for an existing ticket. Never propose to create a ticket whose title already exists in the project: a ticket listed there is always changed with the « ticket » format above, even to move its dates, set its people or what it follows. When asked to change tickets, never use « create ».',
   'chat.change.exists':
     'A ticket of this title is already in the project, with other values: this proposal most likely meant to change it.',
   'chat.change.asModification': 'Change the existing ticket',

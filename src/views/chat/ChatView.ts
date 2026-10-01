@@ -85,6 +85,7 @@ import {
 import { chunkText } from '../../store/rag/ragChunk'
 import { noteBody } from '../../store/notes/NoteLibrary'
 import { pdfPages } from './pdfPages'
+import { noteProjects } from '../../store/chat/noteProjects'
 import {
   documentSource,
   lookUp,
@@ -1162,8 +1163,8 @@ export class ChatView extends ItemView {
     })
   }
 
-  /** The projects and collections not attached yet, the projects first. */
-  private pickProject(): void {
+  /** The projects and collections not attached yet, the projects first; `then` once one is. */
+  private pickProject(then?: () => void): void {
     const index = this.plugin.index
     const scopes: ScopeChoice[] = [
       ...index
@@ -1185,9 +1186,11 @@ export class ChatView extends ItemView {
           detail: `${t('chat.collection')} · ${ref.path}`
         }))
     ]
-    new ScopePicker(this.app, scopes, (choice) =>
-      choice.kind === 'project' ? this.attachProject(choice.path) : this.attachCollection(choice.path)
-    ).open()
+    new ScopePicker(this.app, scopes, (choice) => {
+      if (choice.kind === 'project') this.attachProject(choice.path)
+      else this.attachCollection(choice.path)
+      then?.()
+    }).open()
   }
 
   /** A collection to talk about, beside anything already attached, like a project. */
@@ -2242,6 +2245,18 @@ export class ChatView extends ItemView {
    * knows — today, the projects attached — filled in without asking.
    */
   private async askPreset(preset: ChatPrompt): Promise<void> {
+    // Tickets to make need a project to make them in: the note's own, or one picked first.
+    if (preset.tickets && !this.projects.length && !this.collections.length) {
+      const found = this.contextProjects()
+      if (!found.length) {
+        new Notice(t('chat.actionTicketsPick'), 8000)
+        this.pickProject(safeAsync(() => this.askPreset(preset)))
+        return
+      }
+      for (const path of found) this.attachProject(path)
+      const titles = found.map((path) => this.plugin.index.projectRef(path)?.title ?? path)
+      new Notice(t('chat.actionTicketsProjects', { list: titles.join(', ') }), 6000)
+    }
     const params = promptParams(preset.question)
     let values: Record<string, string> = {}
     if (params.length) {
@@ -2262,7 +2277,22 @@ export class ChatView extends ItemView {
       .join(', ')
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    await this.send(fillPrompt(preset.question, values, { today, projects }))
+    const file = this.useNote ? this.contextFile : null
+    const note = file ? `[[${file.path}|${file.basename.replace(/[[\]|]/g, ' ')}]]` : ''
+    await this.send(fillPrompt(preset.question, values, { today, projects, note }))
+  }
+
+  /** The projects the note asked about belongs to: those it names, or the one whose folder holds it. */
+  private contextProjects(): string[] {
+    const file = this.useNote ? this.contextFile : null
+    if (!file) return []
+    const cache = this.app.metadataCache
+    return noteProjects(
+      file.path,
+      cache.getFileCache(file)?.frontmatter,
+      this.plugin.index.projectRefs(),
+      (link) => cache.getFirstLinkpathDest(link, file.path)?.path ?? null
+    )
   }
 
   /** Sends what is in the box, or a ready question — which leaves the box as it was. */

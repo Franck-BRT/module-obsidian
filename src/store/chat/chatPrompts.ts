@@ -31,6 +31,11 @@ export interface ChatPrompt {
   scope: PromptScope
   /** One of the reader's, from the settings, rather than one the plugin ships. */
   own: boolean
+  /**
+   * A question that proposes tickets to make: the projects of the note it is asked about
+   * go with it, or one is asked for, the model being told how only when one is attached.
+   */
+  tickets?: boolean
 }
 
 const SCOPE_WORDS: Record<string, PromptScope> = {

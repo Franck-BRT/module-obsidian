@@ -91,7 +91,17 @@ const ACTIONS: Record<string, TicketAction> = {
 }
 
 /** What a new ticket can be given besides its title and where it goes. */
-export const CREATE_FIELDS = ['type', 'status', 'priority', 'start', 'due', 'progress', 'assignees', 'after'] as const
+export const CREATE_FIELDS = [
+  'type',
+  'status',
+  'priority',
+  'start',
+  'due',
+  'progress',
+  'assignees',
+  'after',
+  'description'
+] as const
 export type CreateField = (typeof CREATE_FIELDS)[number]
 
 export interface CreateFieldChange {
@@ -749,6 +759,13 @@ export function createChange(spec: Extract<ChangeSpec, { kind: 'create' }>, cont
         rows.push({ field, after: names.join(', ') })
         break
       }
+      case 'description':
+        // Its text whole — where it comes from, what is to be done —, said as written.
+        if (value) {
+          task.description = value
+          rows.push({ field, after: value })
+        }
+        break
       case 'after': {
         const titles = Array.isArray(raw) ? raw.map(text) : value.split(/[,;]/).map((one) => one.trim())
         const named: string[] = []

@@ -1283,6 +1283,11 @@ export const fr: Catalog = {
   'chat.preset.summary': 'Résumer la note',
   'chat.preset.summaryQ': 'Résume cette note en quelques points, en gardant les chiffres, les dates et les décisions.',
   'chat.preset.actions': 'Actions à mener',
+  'chat.preset.actionTickets': 'Actions → tickets',
+  'chat.actionTicketsPick': 'Choisissez le projet où créer les tickets de cette note.',
+  'chat.actionTicketsProjects': 'Projet joint pour y créer les tickets : {list}.',
+  'chat.preset.actionTicketsQ':
+    'Relève les actions décidées dans cette note (compte rendu, notes de réunion) et propose pour chacune le ticket qui la suit, avec un bloc de création : un titre court qui commence par un verbe, le projet et le lot où il va, le responsable (assignees) et l’échéance (due) quand la note les donne — n’en invente aucun —, et dans "description" ce qu’il y a à faire suivi de « Issu de {note} ». Mets dans "why" la phrase de la note d’où vient l’action. Une action qui correspond à un ticket existant : propose sa modification plutôt qu’une création. Termine par la liste des actions sans responsable ou sans échéance, à compléter sur leur carte avant de les créer.',
   'chat.preset.actionsQ':
     'Relève les actions à mener dans cette note, sous forme de liste : quoi, qui, pour quand. Signale celles qui n’ont pas de responsable ou pas d’échéance.',
   'chat.preset.extract': 'Exigences implicites',
@@ -1340,7 +1345,7 @@ export const fr: Catalog = {
   'chat.preset.documentQ':
     'Résume ce document : de quoi il s’agit, qui l’a émis et quand, ce qu’il change ou demande, et les dates et chiffres à retenir.',
   'chat.changeCreate':
-    'Pour créer un ticket qui n’existe pas encore : {"create": "titre du nouveau ticket", "project": "titre exact du projet où le créer (jamais celui d’un programme : nomme celui de ses projets qui contient le lot)", "parent": "titre du lot ou du ticket sous lequel le placer (facultatif)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["titre du ticket qu’il suit"]}, "why": "…"}. Types : {types}. Les champs de "changes" sont tous facultatifs ; status, priority et progress s’y ajoutent comme pour un ticket existant. Ne propose jamais de créer un ticket dont le titre existe déjà dans le projet : un ticket qui y figure se modifie toujours avec le format « ticket » ci-dessus, même pour changer ses dates, ses personnes ou ce qu’il suit. Quand on te demande de modifier des tickets, n’utilise jamais « create ».',
+    'Pour créer un ticket qui n’existe pas encore : {"create": "titre du nouveau ticket", "project": "titre exact du projet où le créer (jamais celui d’un programme : nomme celui de ses projets qui contient le lot)", "parent": "titre du lot ou du ticket sous lequel le placer (facultatif)", "changes": {"type": "…", "start": "2026-10-19", "due": "2026-11-13", "assignees": ["…"], "after": ["titre du ticket qu’il suit"], "description": "ce qu’il y a à faire, et d’où cela vient"}, "why": "…"}. Types : {types}. Les champs de "changes" sont tous facultatifs ; status, priority et progress s’y ajoutent comme pour un ticket existant. Ne propose jamais de créer un ticket dont le titre existe déjà dans le projet : un ticket qui y figure se modifie toujours avec le format « ticket » ci-dessus, même pour changer ses dates, ses personnes ou ce qu’il suit. Quand on te demande de modifier des tickets, n’utilise jamais « create ».',
   'chat.change.exists':
     'Un ticket de ce titre existe déjà dans le projet, avec d’autres valeurs : cette proposition voulait sans doute le modifier.',
   'chat.change.asModification': 'Modifier le ticket existant',

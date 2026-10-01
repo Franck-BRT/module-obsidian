@@ -300,6 +300,29 @@ describe('creating a ticket from the chat', () => {
     expect((await store.loadProjectByPath(project.filePath))?.tasks[0].subtasks).toHaveLength(2)
   })
 
+  it('writes the action a meeting decided as a ticket whose text says where it comes from', async () => {
+    const project = await store.createProject('Génie civil', 'Work')
+    await store.insertTask(project, makeTask({ title: 'Terrassements', type: 'phase', start: '' }))
+    index.build()
+    const change = spec('create', {
+      create: 'Relancer la centrale à béton',
+      project: 'Génie civil',
+      parent: 'Terrassements',
+      changes: {
+        assignees: ['Anne'],
+        due: '2026-10-10',
+        description: 'Obtenir une date de reprise des livraisons.\n\nIssu de [[CR/CR 07.md|CR 07]]'
+      },
+      why: 'Anne relance la centrale avant le 10 octobre.'
+    })
+    expect(await applyCreate(index, store, change, label)).toMatchObject({ ok: true, changed: true })
+    const reloaded = await store.loadProjectByPath(project.filePath)
+    const made = reloaded?.tasks[0].subtasks.find((task) => task.title === 'Relancer la centrale à béton')
+    expect(made).toMatchObject({ assignees: ['Anne'], due: '2026-10-10' })
+    if (made) await store.loadTaskBody(made)
+    expect(made?.description).toContain('Issu de [[CR/CR 07.md|CR 07]]')
+  })
+
   it('takes a programme named for the one of its projects that holds the lot, and creates the tickets there', async () => {
     const program = await store.createProject('COSMA - GMAO', 'Work', { program: true })
     const cosma = await store.createProject('COSMA', 'Work', { parentPath: program.filePath })

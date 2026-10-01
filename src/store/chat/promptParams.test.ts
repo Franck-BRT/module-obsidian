@@ -48,6 +48,16 @@ describe('fillPrompt', () => {
     ).toBe("Compte rendu Génie civil, Équipements depuis le 2026-09-14 jusqu'au 2026-09-28, pour Anne.")
   })
 
+  it('puts a link to the note asked about for {note}, never asking for it', () => {
+    expect(promptParams('Issu de {note}, pour {Personne:personne}.').map((one) => one.raw)).toEqual([
+      'Personne:personne'
+    ])
+    expect(fillPrompt('Issu de {note}.', {}, { ...known, note: '[[CR/CR 07.md|CR 07]]' })).toBe(
+      'Issu de [[CR/CR 07.md|CR 07]].'
+    )
+    expect(fillPrompt('Issu de {note}.', {}, known)).toBe('Issu de {note}.')
+  })
+
   // A blank with nothing to put in stays, where the reader sees it.
   it('leaves a blank with no value as it was', () => {
     expect(fillPrompt('Tâches de {Personne:personne} sur {projet}.', {}, { today: '2026-09-28', projects: '' })).toBe(

@@ -13,7 +13,8 @@ import { fold } from './chatChange'
  *
  * A blank is its label, then after a colon what it takes: a date, a person known to the
  * vault, a language of the library, one of a list, or text when nothing is said. A few
- * are filled without asking: today's date, and the projects the question is about.
+ * are filled without asking: today's date, the projects the question is about, and a
+ * link to the note it is asked about.
  */
 
 export type ParamKind = 'text' | 'date' | 'person' | 'language' | 'choice'
@@ -38,7 +39,7 @@ const KINDS: Record<string, ParamKind> = {
 }
 
 /** The blanks filled without asking, by their folded name. */
-export const AUTO_PARAMS: Record<string, 'today' | 'projects'> = {
+export const AUTO_PARAMS: Record<string, 'today' | 'projects' | 'note'> = {
   "aujourd'hui": 'today',
   'aujourd’hui': 'today',
   'date du jour': 'today',
@@ -46,7 +47,9 @@ export const AUTO_PARAMS: Record<string, 'today' | 'projects'> = {
   projet: 'projects',
   projets: 'projects',
   project: 'projects',
-  projects: 'projects'
+  projects: 'projects',
+  note: 'note',
+  'la note': 'note'
 }
 
 const BLANK = /\{([^{}\n]+)\}/g
@@ -84,7 +87,7 @@ export function promptParams(question: string): PromptParam[] {
 export function fillPrompt(
   question: string,
   values: Record<string, string>,
-  known: { today: string; projects: string }
+  known: { today: string; projects: string; note?: string }
 ): string {
   return question.replace(BLANK, (whole, raw: string) => {
     const auto = AUTO_PARAMS[fold(raw.trim())]

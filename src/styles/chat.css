@@ -786,9 +786,15 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
 }
 
 .pm-change-form input,
-.pm-change-form select {
+.pm-change-form select,
+.pm-change-form textarea {
   width: 100%;
   max-width: 28em;
+}
+
+.pm-change-form-text {
+  resize: vertical;
+  font-family: inherit;
 }
 
 .pm-change-edit-icon {
