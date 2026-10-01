@@ -37,7 +37,9 @@ export const TICKET_CHANGE_FIELDS = [
   'due',
   'progress',
   'assignees',
-  'after'
+  'after',
+  'description',
+  'parent'
 ] as const
 export type TicketChangeField = (typeof TICKET_CHANGE_FIELDS)[number]
 
@@ -54,7 +56,15 @@ export type ChangeSpec =
       description: string
       why: string
     }
-  | { kind: 'ticket'; target: string; project: string; changes: TicketFieldChange[]; why: string }
+  | {
+      kind: 'ticket'
+      target: string
+      project: string
+      changes: TicketFieldChange[]
+      /** What is to become of the ticket itself: filed away, or deleted; '' for neither. */
+      action: TicketAction
+      why: string
+    }
   | {
       kind: 'create'
       /** The new ticket's title. */
@@ -65,6 +75,20 @@ export type ChangeSpec =
       fields: CreateFieldChange[]
       why: string
     }
+
+/** What can become of a ticket as a whole: archived — filed away, its notes kept — or deleted. */
+export type TicketAction = '' | 'archive' | 'delete'
+
+/** The words a model reaches for, in either language, for what becomes of a ticket. */
+const ACTIONS: Record<string, TicketAction> = {
+  archive: 'archive',
+  archiver: 'archive',
+  archived: 'archive',
+  delete: 'delete',
+  remove: 'delete',
+  supprimer: 'delete',
+  suppression: 'delete'
+}
 
 /** What a new ticket can be given besides its title and where it goes. */
 export const CREATE_FIELDS = ['type', 'status', 'priority', 'start', 'due', 'progress', 'assignees', 'after'] as const
@@ -108,16 +132,25 @@ const FIELD_ALIASES: Record<string, string> = {
   apres: 'after',
   dependencies: 'after',
   dependances: 'after',
-  predecessors: 'after'
+  predecessors: 'after',
+  lot: 'parent',
+  sous: 'parent',
+  under: 'parent',
+  desc: 'description'
 }
 
 /** Lower case, without accents or spacing around: how two spellings of one word are compared. */
 export function fold(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim()
+  return (
+    text
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      // « œuvre » typed « oeuvre »: one word.
+      .replace(/œ/g, 'oe')
+      .replace(/æ/g, 'ae')
+      .trim()
+  )
 }
 
 function text(value: unknown): string {
@@ -196,12 +229,22 @@ export function parseChange(source: string): { spec: ChangeSpec } | { problem: C
     }
   }
   if (ticket && !requirement) {
+    // Archived or deleted, said either way: an action named, or a flag set.
+    const action: TicketAction =
+      ACTIONS[fold(text(record.action))] ??
+      (record.archive === true || record.archiver === true
+        ? 'archive'
+        : record.delete === true || record.supprimer === true
+          ? 'delete'
+          : '')
     // Several fields at once — a task moved is its start and its due together — or one.
     const many = record.changes ?? record.modifications
     const pairs: [string, unknown][] =
       many && typeof many === 'object' && !Array.isArray(many)
         ? Object.entries(many as Record<string, unknown>)
-        : [[text(record.field), record.value ?? record.valeur]]
+        : action && !text(record.field)
+          ? []
+          : [[text(record.field), record.value ?? record.valeur]]
     const changes: TicketFieldChange[] = []
     for (const [name, value] of pairs) {
       const folded = fold(name)
@@ -209,9 +252,9 @@ export function parseChange(source: string): { spec: ChangeSpec } | { problem: C
       if (!(TICKET_CHANGE_FIELDS as readonly string[]).includes(known)) return { problem: 'field' }
       changes.push({ field: known as TicketChangeField, value })
     }
-    if (!changes.length) return { problem: 'field' }
+    if (!changes.length && !action) return { problem: 'field' }
     return {
-      spec: { kind: 'ticket', target: ticket, project: text(record.project ?? record.projet), changes, why }
+      spec: { kind: 'ticket', target: ticket, project: text(record.project ?? record.projet), changes, action, why }
     }
   }
   return { problem: 'target' }
@@ -354,7 +397,20 @@ export interface TicketEdit {
   patch: Partial<Task>
   /** A date moved: what waits on this ticket may have to move with it. */
   reschedule: boolean
+  /** Put under another lot or ticket — null for the top of the project —; absent when it stays. */
+  move?: { parentId: string | null }
 }
+
+/** A ticket of the project, where it sits: what a ticket can be moved under. */
+export interface TreeTicket {
+  id: string
+  title: string
+  type: string
+  parentId: string | null
+}
+
+/** The words that say a ticket goes at the top of its project, under nothing. */
+const TOP = new Set(['', '-', '—', 'racine', 'aucun', '(aucun)', 'none', 'root', 'top'])
 
 /** One field of a ticket, as the card shows it: what it says now and what it would say. */
 export interface TicketRow {
@@ -381,11 +437,12 @@ export type TicketResolution =
 export function ticketChange(
   spec: Extract<ChangeSpec, { kind: 'ticket' }>,
   task: Task,
-  lists: { statuses: Option[]; priorities: Option[]; candidates?: TicketCandidate[] }
+  lists: { statuses: Option[]; priorities: Option[]; candidates?: TicketCandidate[]; tree?: TreeTicket[] }
 ): TicketResolution {
   const rows: TicketRow[] = []
   const patch: Partial<Task> = {}
   let reschedule = false
+  let move: TicketEdit['move']
   for (const { field, value: raw } of spec.changes) {
     const value = text(raw)
     const refuse = (problem: ValueProblem, allowed?: string[]): TicketResolution => ({
@@ -462,14 +519,42 @@ export function ticketChange(
         reschedule = true
         break
       }
+      case 'description': {
+        // The ticket's text, as written: lines and all.
+        const after = (typeof raw === 'string' ? raw : value).trim()
+        const before = task.description.trim()
+        rows.push({ field, before, after, applied: before === after })
+        patch.description = after
+        break
+      }
+      case 'parent': {
+        const tree = lists.tree ?? []
+        const here = tree.find((one) => one.id === task.id)?.parentId ?? null
+        const titleOf = (id: string | null): string => (id ? (tree.find((one) => one.id === id)?.title ?? id) : '—')
+        let parentId: string | null = null
+        if (!TOP.has(fold(value))) {
+          const named = tree.filter((one) => one.id !== task.id && fold(one.title) === fold(value))
+          if (named.length !== 1) return refuse('parent', [value])
+          // Never under itself, nor under what sits under it.
+          for (let at: string | null = named[0].id; at; at = tree.find((one) => one.id === at)?.parentId ?? null) {
+            if (at === task.id) return refuse('parent', [value])
+          }
+          parentId = named[0].id
+        }
+        rows.push({ field, before: titleOf(here), after: titleOf(parentId), applied: here === parentId })
+        if (here !== parentId) move = { parentId }
+        break
+      }
     }
   }
   // The dates as they would be once every field is taken, checked as a pair.
   const start = patch.start ?? task.start
   const due = patch.due ?? task.due
   if (start && due && start > due) return { ok: false, field: patch.due ? 'due' : 'start', problem: 'order' }
-  const applied = rows.every((row) => row.applied)
-  return { ok: true, rows, applied, change: { patch, reschedule } }
+  // Archived already, it is in place; deleted, it would not be found to say so.
+  const applied =
+    rows.every((row) => row.applied) && (spec.action === 'archive' ? !!task.archived : spec.action !== 'delete')
+  return { ok: true, rows, applied, change: { patch, reschedule, ...(move ? { move } : {}) } }
 }
 
 /** A ticket as the index knows it: enough to find it by the title the model was shown. */
@@ -800,7 +885,10 @@ export function ticketSource(spec: Extract<ChangeSpec, { kind: 'ticket' }>): str
   const record: Record<string, unknown> = {
     ticket: spec.target,
     ...(spec.project ? { project: spec.project } : {}),
-    changes: Object.fromEntries(spec.changes.map((change) => [change.field, change.value]))
+    ...(spec.changes.length
+      ? { changes: Object.fromEntries(spec.changes.map((change) => [change.field, change.value])) }
+      : {}),
+    ...(spec.action ? { action: spec.action } : {})
   }
   if (spec.why) record.why = spec.why
   return JSON.stringify(record, null, 2)
@@ -819,7 +907,7 @@ export function createAsTicket(
     .filter((change) => (TICKET_CHANGE_FIELDS as readonly string[]).includes(change.field))
     .map((change) => ({ field: change.field as TicketChangeField, value: change.value }))
   if (!changes.length) return null
-  return { kind: 'ticket', target: existing.title, project: existing.projectTitle, changes, why: spec.why }
+  return { kind: 'ticket', target: existing.title, project: existing.projectTitle, changes, action: '', why: spec.why }
 }
 
 /** How many days a ticket moves by: its end, or its start when it has no end. */

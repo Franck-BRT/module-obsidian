@@ -81,6 +81,7 @@ describe('parseChange', () => {
       target: 'Soutènement',
       project: 'Génie civil',
       changes: [{ field: 'due', value: '2026-10-10' }],
+      action: '',
       why: ''
     })
     expect(spec({ ticket: 'T', changes: { start: '2026-09-28', Échéance: '2026-10-09' } })).toMatchObject({
@@ -115,9 +116,9 @@ describe('parseChange', () => {
     expect(parseChange('["a"]')).toEqual({ problem: 'unreadable' })
     expect(parseChange('{"field": "title", "value": "X"}')).toEqual({ problem: 'target' })
     expect(parseChange('{"ticket": "T", "requirement": "R", "field": "title"}')).toEqual({ problem: 'target' })
-    // Only what the short list allows: a ticket's description is the reader's prose.
-    expect(parseChange('{"ticket": "T", "field": "description", "value": "…"}')).toEqual({ problem: 'field' })
-    expect(parseChange('{"ticket": "T", "changes": {"due": "2026-10-10", "description": "…"}}')).toEqual({
+    // Only what the short list allows.
+    expect(parseChange('{"ticket": "T", "field": "budget", "value": "…"}')).toEqual({ problem: 'field' })
+    expect(parseChange('{"ticket": "T", "changes": {"due": "2026-10-10", "budget": "…"}}')).toEqual({
       problem: 'field'
     })
     expect(parseChange('{"ticket": "T", "changes": {}}')).toEqual({ problem: 'field' })
@@ -795,6 +796,7 @@ describe('a ticket proposed as new that is there already', () => {
         { field: 'status', value: 'En cours' },
         { field: 'after', value: ['Recenser'] }
       ],
+      action: '',
       why: 'Retard.'
     })
   })
@@ -811,5 +813,80 @@ describe('how far a ticket moves', () => {
     expect(dayShift({ start: '2026-10-06', due: '2026-10-10' }, { start: '2026-10-15', due: '2026-10-19' })).toBe(9)
     expect(dayShift({ start: '2026-10-06', due: '' }, { start: '2026-10-01', due: '' })).toBe(-5)
     expect(dayShift({ start: '', due: '' }, { start: '2026-10-01', due: '' })).toBe(0)
+  })
+})
+
+describe('a ticket moved, described, archived or deleted', () => {
+  const tree = [
+    { id: 'lot1', title: 'Lot 1', type: 'phase', parentId: null },
+    { id: 'lot2', title: 'Lot 2 – Gros œuvre', type: 'phase', parentId: null },
+    { id: 't', title: 'Radier', type: 'task', parentId: 'lot1' },
+    { id: 'sub', title: 'Ferraillage', type: 'subtask', parentId: 't' }
+  ]
+  const task = makeTask({ id: 't', title: 'Radier', description: 'Couler le radier.' })
+  const lists = { statuses: [], priorities: [], tree }
+  const read = (record: object) => {
+    const result = parseChange(JSON.stringify(record))
+    if (!('spec' in result) || result.spec.kind !== 'ticket') throw new Error('not read')
+    return result.spec
+  }
+
+  it('reads an action said either way, with or without fields', () => {
+    expect(read({ ticket: 'Radier', action: 'archiver' })).toMatchObject({ action: 'archive', changes: [] })
+    expect(read({ ticket: 'Radier', delete: true, why: 'Doublon.' })).toMatchObject({ action: 'delete', changes: [] })
+    expect(read({ ticket: 'Radier', changes: { lot: 'Lot 2' } }).changes).toEqual([{ field: 'parent', value: 'Lot 2' }])
+  })
+
+  it('moves a ticket under another lot, by its title, or to the top, and never under itself', () => {
+    const moved = ticketChange(read({ ticket: 'Radier', changes: { parent: 'lot 2 – gros oeuvre' } }), task, lists)
+    expect(moved).toMatchObject({
+      ok: true,
+      rows: [{ field: 'parent', before: 'Lot 1', after: 'Lot 2 – Gros œuvre', applied: false }],
+      change: { move: { parentId: 'lot2' } }
+    })
+    expect(ticketChange(read({ ticket: 'Radier', changes: { parent: 'aucun' } }), task, lists)).toMatchObject({
+      ok: true,
+      change: { move: { parentId: null } }
+    })
+    expect(ticketChange(read({ ticket: 'Radier', changes: { parent: 'Lot 1' } }), task, lists)).toMatchObject({
+      ok: true,
+      applied: true
+    })
+    expect(ticketChange(read({ ticket: 'Radier', changes: { parent: 'Ferraillage' } }), task, lists)).toMatchObject({
+      ok: false,
+      problem: 'parent'
+    })
+    expect(ticketChange(read({ ticket: 'Radier', changes: { parent: 'Lot 9' } }), task, lists)).toMatchObject({
+      ok: false,
+      problem: 'parent',
+      allowed: ['Lot 9']
+    })
+  })
+
+  it('rewrites its description, lines and all, and is in place once archived', () => {
+    expect(
+      ticketChange(
+        read({ ticket: 'Radier', changes: { description: 'Couler le radier.\n\nAttendre le béton.' } }),
+        task,
+        lists
+      )
+    ).toMatchObject({
+      ok: true,
+      rows: [{ field: 'description', before: 'Couler le radier.', after: 'Couler le radier.\n\nAttendre le béton.' }],
+      change: { patch: { description: 'Couler le radier.\n\nAttendre le béton.' } }
+    })
+    expect(ticketChange(read({ ticket: 'Radier', action: 'archive' }), task, lists)).toMatchObject({
+      ok: true,
+      applied: false
+    })
+    expect(
+      ticketChange(read({ ticket: 'Radier', action: 'archive' }), { ...task, archived: true }, lists)
+    ).toMatchObject({
+      ok: true,
+      applied: true
+    })
+    expect(ticketSource(read({ ticket: 'Radier', action: 'delete', why: 'Doublon.' }))).toBe(
+      JSON.stringify({ ticket: 'Radier', action: 'delete', why: 'Doublon.' }, null, 2)
+    )
   })
 })

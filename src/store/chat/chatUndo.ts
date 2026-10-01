@@ -23,10 +23,26 @@ export const UNDO_FIELDS = [
   'completed',
   'assignees',
   'dependencies',
-  'dependencyOptions'
+  'dependencyOptions',
+  'description',
+  'archived'
 ] as const
 export type UndoField = (typeof UNDO_FIELDS)[number]
-export type TaskState = Partial<Record<UndoField, unknown>>
+/** A ticket's fields, and where it sits: the lot or ticket it is under, null at the top. */
+export type TaskState = Partial<Record<UndoField | 'parent', unknown>>
+
+/** What is compared of a ticket: its fields, and where it sits. */
+const COMPARED: (UndoField | 'parent')[] = [...UNDO_FIELDS, 'parent']
+
+/** A ticket as it is now, and where it sits. */
+export interface CurrentTicket {
+  task: Task
+  parentId: string | null
+}
+
+function currentValue(found: CurrentTicket, field: UndoField | 'parent'): unknown {
+  return field === 'parent' ? found.parentId : found.task[field]
+}
 
 /** Project path → ticket id → its fields, copied: the live projects go on changing. */
 export type PlanSnapshot = Map<string, Map<string, { title: string; state: TaskState }>>
@@ -72,8 +88,8 @@ export function sameValue(a: unknown, b: unknown): boolean {
   return canonical(a) === canonical(b)
 }
 
-function stateOf(task: Task): TaskState {
-  const state: TaskState = {}
+function stateOf(task: Task, parentId: string | null): TaskState {
+  const state: TaskState = { parent: parentId }
   for (const field of UNDO_FIELDS) state[field] = copy(task[field])
   return state
 }
@@ -83,8 +99,8 @@ export function snapshot(projects: Project[]): PlanSnapshot {
   const plan: PlanSnapshot = new Map()
   for (const project of projects) {
     const tickets = new Map<string, { title: string; state: TaskState }>()
-    for (const { task } of flattenTasks(project.tasks)) {
-      tickets.set(task.id, { title: task.title, state: stateOf(task) })
+    for (const { task, parentId } of flattenTasks(project.tasks)) {
+      tickets.set(task.id, { title: task.title, state: stateOf(task, parentId) })
     }
     plan.set(project.filePath, tickets)
   }
@@ -104,7 +120,7 @@ export function undoRecord(before: PlanSnapshot, after: PlanSnapshot, label: str
         continue
       }
       const step: UndoStep = { project, id, title: now.title, before: {}, after: {} }
-      for (const field of UNDO_FIELDS) {
+      for (const field of COMPARED) {
         if (sameValue(then.state[field], now.state[field])) continue
         step.before[field] = then.state[field]
         step.after[field] = now.state[field]
@@ -116,8 +132,11 @@ export function undoRecord(before: PlanSnapshot, after: PlanSnapshot, label: str
 }
 
 export interface UndoPlan {
-  /** Each ticket to put back, with the fields to put back on it. */
-  restore: { project: string; id: string; patch: Partial<Task> }[]
+  /**
+   * Each ticket to put back: the fields to put back on it, and — when the change moved it,
+   * or filed it away — where it sat and whether it was archived.
+   */
+  restore: { project: string; id: string; patch: Partial<Task>; parent?: string | null; archived?: boolean }[]
   /** Tickets the change made, still as it made them: removed. */
   remove: { project: string; id: string }[]
   /** Tickets changed since, by name: left as they are. */
@@ -131,27 +150,34 @@ export interface UndoPlan {
  * whole or not at all: half of a moved task, its start back and its end not, is a third
  * plan nobody asked for.
  */
-export function undoPlan(record: UndoRecord, current: (project: string, id: string) => Task | null): UndoPlan {
+export function undoPlan(record: UndoRecord, current: (project: string, id: string) => CurrentTicket | null): UndoPlan {
   const plan: UndoPlan = { restore: [], remove: [], conflicts: [], kept: [] }
   for (const step of record.changed) {
-    const task = current(step.project, step.id)
-    if (!task) continue
-    const fields = Object.keys(step.before) as UndoField[]
-    if (fields.some((field) => !sameValue(task[field], step.after[field]))) {
-      plan.conflicts.push(task.title)
+    const found = current(step.project, step.id)
+    if (!found) continue
+    const fields = Object.keys(step.before) as (UndoField | 'parent')[]
+    if (fields.some((field) => !sameValue(currentValue(found, field), step.after[field]))) {
+      plan.conflicts.push(found.task.title)
       plan.kept.push({ project: step.project, id: step.id })
       continue
     }
     const patch: Record<string, unknown> = {}
-    for (const field of fields) patch[field] = copy(step.before[field])
-    plan.restore.push({ project: step.project, id: step.id, patch })
+    const back: UndoPlan['restore'][number] = { project: step.project, id: step.id, patch: {} }
+    for (const field of fields) {
+      if (field === 'parent') back.parent = (step.before.parent as string | null | undefined) ?? null
+      else if (field === 'archived') back.archived = step.before.archived === true
+      else patch[field] = copy(step.before[field])
+    }
+    back.patch = patch
+    plan.restore.push(back)
   }
   for (const made of record.created) {
-    const task = current(made.project, made.id)
-    if (!task) continue
-    const fields = Object.keys(made.after) as UndoField[]
-    if (fields.some((field) => !sameValue(task[field], made.after[field]))) plan.conflicts.push(task.title)
-    else plan.remove.push({ project: made.project, id: made.id })
+    const found = current(made.project, made.id)
+    if (!found) continue
+    const fields = Object.keys(made.after) as (UndoField | 'parent')[]
+    if (fields.some((field) => !sameValue(currentValue(found, field), made.after[field]))) {
+      plan.conflicts.push(found.task.title)
+    } else plan.remove.push({ project: made.project, id: made.id })
   }
   return plan
 }

@@ -51,6 +51,7 @@ import {
   type Undone
 } from '../../store/chat/applyChange'
 import { typeConfigOf } from '../../store/TicketPalette'
+import { confirmDialog } from '../../ui/ModalFactory'
 import type { ScheduleMove } from '../../store/TaskSource'
 import { fold } from '../../store/library/libraryDoc'
 import { renderPersonPicker } from '../../ui/PersonPicker'
@@ -147,6 +148,10 @@ function ticketFieldLabel(field: TicketChangeField): string {
       return t('chat.change.field.assignees')
     case 'after':
       return t('chat.change.field.after')
+    case 'description':
+      return t('chat.change.field.description')
+    case 'parent':
+      return t('chat.change.field.parent')
   }
 }
 
@@ -740,6 +745,15 @@ class ChangeCard extends MarkdownRenderChild {
   ): void {
     if ('problem' in target) {
       this.head(card, 'square-check-big', spec.target, null)
+      // Deleted — from here, most likely —: nowhere to be found is what was asked.
+      if (spec.action === 'delete' && target.problem === 'none') {
+        this.why(card, spec.why)
+        card.addClass('pm-change--done')
+        const foot = card.createDiv('pm-change-foot')
+        setIcon(foot.createSpan({ cls: 'pm-change-state-icon' }), 'check')
+        foot.createSpan({ cls: 'pm-change-state', text: t('chat.change.deletedOrGone') })
+        return
+      }
       this.problem(
         card,
         target.problem === 'none'
@@ -758,12 +772,31 @@ class ChangeCard extends MarkdownRenderChild {
     )
     const resolved = ticketChange(spec, task, target.lists)
     if (resolved.ok) {
-      for (const row of resolved.rows) this.body(card, ticketFieldLabel(row.field), row, row.field === 'title')
+      for (const row of resolved.rows) {
+        this.body(card, ticketFieldLabel(row.field), row, row.field === 'title' || row.field === 'description')
+      }
     } else this.body(card, ticketFieldLabel(resolved.field), null, false)
+    // What becomes of the ticket itself, said as plainly as a field.
+    if (spec.action) {
+      card.toggleClass('pm-change--delete', spec.action === 'delete')
+      card.createDiv({
+        cls: 'pm-change-action',
+        text: spec.action === 'archive' ? t('chat.change.actionArchive') : t('chat.change.actionDelete')
+      })
+    }
     if (moves.length) this.renderMoves(card, moves, target.project.title)
     this.why(card, spec.why)
-    this.footer(card, resolved, () => this.applyTicket(spec))
-    if (!(resolved.ok && resolved.applied)) this.editButton(card)
+    this.footer(
+      card,
+      resolved,
+      () => this.applyTicket(spec),
+      spec.action === 'delete'
+        ? { apply: t('chat.change.delete'), done: t('chat.change.done'), warning: true }
+        : spec.action === 'archive'
+          ? { apply: t('chat.change.archive'), done: t('chat.change.archived') }
+          : undefined
+    )
+    if (!(resolved.ok && resolved.applied) && spec.action !== 'delete') this.editButton(card)
   }
 
   /**
@@ -1062,7 +1095,8 @@ class ChangeCard extends MarkdownRenderChild {
       }
       return
     }
-    if (resolved.before) {
+    // In place, the value it has: no arrow from a value to itself.
+    if (resolved.before && resolved.before !== resolved.after) {
       diff.createSpan({ cls: 'pm-req-diff-removed', text: resolved.before })
       diff.createSpan({ cls: 'pm-change-arrow', text: ' → ' })
     }
@@ -1077,7 +1111,10 @@ class ChangeCard extends MarkdownRenderChild {
     card: HTMLElement,
     resolved: CardState,
     apply: () => Promise<void>,
-    words = { apply: t('chat.change.apply'), done: t('chat.change.done') }
+    words: { apply: string; done: string; warning?: boolean } = {
+      apply: t('chat.change.apply'),
+      done: t('chat.change.done')
+    }
   ): void {
     const foot = card.createDiv('pm-change-foot')
     if (!resolved.ok) {
@@ -1093,7 +1130,7 @@ class ChangeCard extends MarkdownRenderChild {
       this.undoButton(foot)
       return
     }
-    const button = foot.createEl('button', { cls: 'mod-cta', text: words.apply })
+    const button = foot.createEl('button', { cls: words.warning ? 'mod-warning' : 'mod-cta', text: words.apply })
     button.addEventListener(
       'click',
       safeAsync(async () => {
@@ -1130,6 +1167,13 @@ class ChangeCard extends MarkdownRenderChild {
   }
 
   private async applyTicket(spec: Extract<ChangeSpec, { kind: 'ticket' }>): Promise<void> {
+    // A deletion is asked twice: it cannot be undone from here.
+    if (
+      spec.action === 'delete' &&
+      !(await confirmDialog(this.plugin.app, t('chat.change.deleteConfirm', { title: spec.target })))
+    ) {
+      return
+    }
     await this.keepUndo(spec, spec.target, () => applyToTicket(this.plugin.index, this.plugin.store, spec))
   }
 

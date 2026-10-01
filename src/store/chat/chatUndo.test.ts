@@ -64,7 +64,12 @@ describe('what a change did', () => {
       ]
     }
     const tickets = new Map([a, b, c].map((task) => [task.id, task]))
-    expect(undoPlan(record, (_path, id) => tickets.get(id) ?? null)).toEqual({
+    expect(
+      undoPlan(record, (_path, id) => {
+        const task = tickets.get(id)
+        return task ? { task, parentId: null } : null
+      })
+    ).toEqual({
       restore: [{ project: 'P.md', id: a.id, patch: { due: '2026-07-03' } }],
       remove: [{ project: 'P.md', id: c.id }],
       conflicts: ['B'],

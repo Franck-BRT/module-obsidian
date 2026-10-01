@@ -1224,7 +1224,7 @@ export const en = {
   'chat.changeRequirement':
     'For a requirement: {"requirement": "identifier", "field": "…", "value": "…", "why": "…"}. Fields: text (the statement; add "lang" for a language other than the source language: {languages}), title, rationale, source, status ({statuses}), type ({types}), criticality ({criticalities}), verification ({verifications}).',
   'chat.changeTicket':
-    'To change a ticket that already exists (it is listed in the project above): {"ticket": "exact title of the ticket", "project": "title of its project", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, a single block per ticket with all its changed fields. Fields: title, status ({statuses}), priority ({priorities}), start and due (YYYY-MM-DD date), progress (number from 0 to 100), assignees (list of names), after (list of the titles of the tickets it follows, replacing its dependencies).',
+    'To change a ticket that already exists (it is listed in the project above): {"ticket": "exact title of the ticket", "project": "title of its project", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, a single block per ticket with all its changed fields. Fields: title, status ({statuses}), priority ({priorities}), start and due (YYYY-MM-DD date), progress (number from 0 to 100), assignees (list of names), after (list of the titles of the tickets it follows, replacing its dependencies), description (the ticket\'s whole text, replacing the current one), parent (exact title of the lot or ticket to move it under; "none" for the top of the project). To archive a finished or dropped ticket: {"ticket": "title", "project": "…", "action": "archive", "why": "…"}; to delete it, "action": "delete" — only when the person explicitly asks; they will confirm.',
   'chat.change.title': 'Proposal',
   'chat.change.apply': 'Apply',
   'chat.change.applying': 'Applying…',
@@ -1380,6 +1380,18 @@ export const en = {
     other: 'Rescheduling: {count} other tickets move'
   },
   'chat.change.days': { one: '{count} day', other: '{count} days' },
+  'chat.change.actionArchive': 'Archive the ticket: it leaves the plan, its note filed in the project’s archive.',
+  'chat.change.actionDelete': 'Delete the ticket: its note goes to the trash, with those of its sub-tickets.',
+  'chat.change.archive': 'Archive',
+  'chat.change.archived': 'Archived',
+  'chat.change.delete': 'Delete',
+  'chat.change.deleteConfirm':
+    'Delete the ticket “{title}” and its sub-tickets? Their notes go to the trash; a deletion is not undone from the chat.',
+  'chat.change.deletedOrGone': 'Deleted (the ticket is no longer in the plan).',
+  'chat.change.deletionsLeft': {
+    one: '{count} deletion to confirm on its card.',
+    other: '{count} deletions to confirm one by one on their cards.'
+  },
   'chat.change.viaProgram': '“{program}” is a programme: the ticket will be created in its project “{project}”.',
   'chat.change.pickProject':
     '“{program}” is a programme, which holds no tickets: in which of its projects should this one be created?',

@@ -238,6 +238,19 @@
   border-left-color: var(--color-orange);
 }
 
+/* A deletion, before it is done: told apart. */
+.pm-change--delete:not(.pm-change--done) {
+  border-left-color: var(--color-red);
+}
+
+.pm-change-action {
+  margin: var(--size-4-1) 0;
+}
+
+.pm-change--delete .pm-change-action {
+  color: var(--text-error);
+}
+
 .pm-change-head {
   display: flex;
   align-items: center;

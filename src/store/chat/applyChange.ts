@@ -16,6 +16,7 @@ import {
   type CreateContext,
   type ProjectCandidate,
   type TicketCandidate,
+  type TreeTicket,
   requirementChange,
   ticketChange,
   type ChangeSpec,
@@ -76,16 +77,16 @@ export async function applyToRequirement(
 export interface TicketTarget {
   project: Project
   task: Task
-  /** What its fields are checked against: the project's lists, and every ticket it could follow. */
-  lists: { statuses: Option[]; priorities: Option[]; candidates: TicketCandidate[] }
+  /** What its fields are checked against: the project's lists, every ticket it could follow, the project's tree. */
+  lists: { statuses: Option[]; priorities: Option[]; candidates: TicketCandidate[]; tree: TreeTicket[] }
 }
 
 /** The ticket the model named, by its title, loaded from its project as it is now. */
 /** Every ticket in the vault, archived ones left out, as a title can be looked up among. */
-function ticketCandidates(index: VaultIndex): TicketCandidate[] {
+function ticketCandidates(index: VaultIndex, archived = false): TicketCandidate[] {
   return index
     .allTaskRefs()
-    .filter((ref) => !ref.archived)
+    .filter((ref) => ref.archived === archived)
     .map((ref) => ({
       id: ref.id,
       title: ref.title,
@@ -100,18 +101,27 @@ export async function ticketTarget(
   spec: TicketSpec
 ): Promise<TicketTarget | { problem: 'none' | 'ambiguous'; count: number }> {
   const candidates = ticketCandidates(index)
-  const found = findTicket(candidates, spec.target, spec.project)
+  let found = findTicket(candidates, spec.target, spec.project)
+  // Archived since — by this very proposal, maybe —: found among the archive, to say so.
+  if (!('found' in found) && found.problem === 'none' && spec.action === 'archive') {
+    found = findTicket(ticketCandidates(index, true), spec.target, spec.project)
+  }
   if (!('found' in found)) return found
   const project = found.found.projectPath ? await store.loadProjectByPath(found.found.projectPath) : null
   const task = project ? findTaskById(project, found.found.id) : null
   if (!project || !task) return { problem: 'none', count: 0 }
+  // Its text is read only when it is shown: a change to it is checked against it.
+  if (spec.changes.some((change) => change.field === 'description')) await store.loadTaskBody(task)
   const config = store.configFor(project)
   const listed = (list: { id: string; label: string }[]): Option[] =>
     list.map((entry) => ({ id: entry.id, label: entry.label }))
+  const tree = flattenTasks(project.tasks)
+    .filter(({ task: one }) => !one.archived)
+    .map(({ task: one, parentId }) => ({ id: one.id, title: one.title, type: one.type, parentId }))
   return {
     project,
     task,
-    lists: { statuses: listed(config.statuses), priorities: listed(config.priorities), candidates }
+    lists: { statuses: listed(config.statuses), priorities: listed(config.priorities), candidates, tree }
   }
 }
 
@@ -127,8 +137,12 @@ export async function applyToTicket(index: VaultIndex, store: TaskSource, spec: 
   if (!resolved.ok) return { ok: false, problem: resolved.problem, allowed: resolved.allowed }
   if (resolved.applied) return { ok: true, name: target.task.title, changed: false }
   const name = target.task.title
-  await store.updateTask(target.project, target.task.id, resolved.change.patch)
-  if (resolved.change.reschedule) await store.scheduleAfterChange(target.project, target.task.id)
+  const { project, task } = target
+  if (Object.keys(resolved.change.patch).length) await store.updateTask(project, task.id, resolved.change.patch)
+  if (resolved.change.move) await moveTicket(store, project, task.id, resolved.change.move.parentId)
+  if (resolved.change.reschedule) await store.scheduleAfterChange(project, task.id)
+  if (spec.action === 'archive' && !task.archived) await store.archiveTask(project, task.id)
+  if (spec.action === 'delete') await store.deleteTask(project, task.id)
   return { ok: true, name, changed: true }
 }
 
@@ -410,11 +424,20 @@ export async function undoChange(store: TaskSource, record: UndoRecord): Promise
   const projects = new Map((await store.loadProjects(paths)).map((project) => [project.filePath, project]))
   const plan = undoPlan(record, (path, id) => {
     const project = projects.get(path)
-    return project ? findTaskById(project, id) : null
+    if (!project) return null
+    const found = flattenTasks(project.tasks).find(({ task }) => task.id === id)
+    return found ? { task: found.task, parentId: found.parentId } : null
   })
   for (const [path, project] of projects) {
-    const patches = new Map(plan.restore.filter((one) => one.project === path).map((one) => [one.id, one.patch]))
+    const here = plan.restore.filter((one) => one.project === path)
+    const patches = new Map(here.filter((one) => Object.keys(one.patch).length).map((one) => [one.id, one.patch]))
     if (patches.size) await store.updateTasks(project, [...patches.keys()], (task) => patches.get(task.id) ?? null)
+    // Where it sat, and whether it was filed away: as the table puts it back.
+    for (const one of here) {
+      if (one.parent !== undefined) await moveTicket(store, project, one.id, one.parent)
+      if (one.archived === false) await store.unarchiveTask(project, one.id)
+      if (one.archived === true) await store.archiveTask(project, one.id)
+    }
     const made = plan.remove.filter((one) => one.project === path).map((one) => one.id)
     if (made.length) await store.deleteTasks(project, made)
   }
@@ -491,4 +514,22 @@ export async function previewTicketChange(
   const resolved = ticketChange(spec, target.task, target.lists)
   if (!resolved.ok || resolved.applied || !resolved.change.reschedule) return []
   return store.previewSchedule(target.project, target.task.id, resolved.change.patch)
+}
+
+/**
+ * A ticket put under another — a lot, a ticket —, as a drag in the table puts it, or at
+ * the top of its project, after its last ticket there.
+ */
+export async function moveTicket(
+  store: TaskSource,
+  project: Project,
+  taskId: string,
+  parentId: string | null
+): Promise<void> {
+  if (parentId) {
+    await store.reorderTask(project, taskId, parentId, 'inside')
+    return
+  }
+  const last = [...project.tasks].reverse().find((one) => one.id !== taskId)
+  if (last) await store.reorderTask(project, taskId, last.id, 'after')
 }

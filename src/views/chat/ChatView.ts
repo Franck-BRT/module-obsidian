@@ -1970,6 +1970,7 @@ export class ChatView extends ItemView {
     let applied = 0
     let already = 0
     let refused = 0
+    let deletions = 0
     const by = this.plugin.settings.globalTeamMembers[0] || 'llm'
     for (const source of blocks) {
       const read = parseChange(source)
@@ -1984,6 +1985,11 @@ export class ChatView extends ItemView {
         done = path
           ? await applyToRequirement(this.plugin.requirements, path, spec, requirementOptions(this.plugin), by)
           : { ok: false, problem: 'none' }
+      } else if (spec.kind === 'ticket' && spec.action === 'delete') {
+        // A deletion is confirmed on its own card, never in a batch.
+        refused++
+        deletions++
+        continue
       } else if (spec.kind === 'project') {
         done = await applyProject(this.plugin.index, this.plugin.store, spec, (parent) =>
           this.plugin.newProjectFolder(parent)
@@ -2009,6 +2015,7 @@ export class ChatView extends ItemView {
       else already++
     }
     new Notice(t('chat.change.allDone', { applied, already, refused }), 10000)
+    if (deletions) new Notice(t('chat.change.deletionsLeft', { count: deletions }), 10000)
   }
 
   /** Every change of a reply that can be taken back, taken back: the last applied first. */

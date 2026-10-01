@@ -6,6 +6,7 @@ import { ProjectStore } from '../ProjectStore'
 import { RequirementStore } from '../requirements/RequirementStore'
 import { addLink, setText } from '../requirements/Requirement'
 import { findTaskById } from '../TaskIndex'
+import { flattenTasks } from '../TaskTreeOps'
 import { VaultIndex } from '../VaultIndex'
 import {
   applyCreate,
@@ -636,5 +637,98 @@ describe('creating a project or a programme from the chat', () => {
     const lost = spec('project', { newProject: 'Autre', parent: 'Inconnu' })
     expect(projectTarget(index, lost)).toEqual({ problem: 'parent', allowed: ['FDS'] })
     expect(await applyProject(index, store, lost, folderFor)).toMatchObject({ ok: false, problem: 'parent' })
+  })
+})
+
+describe('moving, describing, archiving or deleting a ticket from the chat', () => {
+  let index: VaultIndex
+  let store: ProjectStore
+  const label = (type: string): string => type
+
+  beforeEach(() => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    index = new VaultIndex(app, () => DEFAULT_SETTINGS)
+    store = new ProjectStore(app, () => DEFAULT_SETTINGS, index)
+  })
+
+  async function plan() {
+    const project = await store.createProject('Génie civil', 'Work')
+    const earth = makeTask({ title: 'Terrassement', type: 'phase' })
+    const shell = makeTask({ title: 'Gros œuvre', type: 'phase' })
+    const dig = makeTask({
+      title: 'Déblais',
+      start: '2026-07-01',
+      due: '2026-07-03',
+      description: 'Sortir les terres.'
+    })
+    const fence = makeTask({ title: 'Clôture', start: '2026-07-01', due: '2026-07-02' })
+    await store.insertTask(project, earth)
+    await store.insertTask(project, shell)
+    await store.insertTask(project, dig, earth.id)
+    await store.insertTask(project, fence)
+    index.build()
+    return { path: project.filePath, earth: earth.id, shell: shell.id, dig: dig.id, fence: fence.id }
+  }
+
+  async function where(path: string, id: string) {
+    const project = await store.loadProjectByPath(path)
+    if (!project) return null
+    const found = flattenTasks(project.tasks).find((one) => one.task.id === id)
+    if (found) await store.loadTaskBody(found.task)
+    return found ? { task: found.task, parentId: found.parentId } : null
+  }
+
+  async function apply(source: object) {
+    const change = spec('ticket', source)
+    const outcome = await applyWithUndo(index, store, change, change.target, label, () =>
+      applyToTicket(index, store, change)
+    )
+    index.build()
+    return outcome
+  }
+
+  it('moves a ticket under another lot, the name written without its ligature, and puts it back', async () => {
+    const { path, earth, shell, dig } = await plan()
+    const { done, record } = await apply({ ticket: 'Déblais', changes: { parent: 'Gros oeuvre' } })
+    expect(done).toMatchObject({ ok: true, changed: true })
+    expect((await where(path, dig))?.parentId).toBe(shell)
+    expect(await undoChange(store, record!)).toMatchObject({ restored: 1, conflicts: [] })
+    expect((await where(path, dig))?.parentId).toBe(earth)
+  })
+
+  it('moves a ticket to the top of the project, and refuses a lot under itself', async () => {
+    const { path, earth, dig } = await plan()
+    await apply({ ticket: 'Déblais', changes: { parent: 'aucun' } })
+    expect((await where(path, dig))?.parentId).toBeNull()
+    const refused = await apply({ ticket: 'Terrassement', changes: { parent: 'Terrassement' } })
+    expect(refused.done.ok).toBe(false)
+    expect((await where(path, earth))?.parentId).toBeNull()
+  })
+
+  it('rewrites a ticket’s description, and puts the old one back', async () => {
+    const { path, dig } = await plan()
+    const { record } = await apply({ ticket: 'Déblais', changes: { description: 'Sortir et trier les terres.' } })
+    expect((await where(path, dig))?.task.description).toBe('Sortir et trier les terres.')
+    expect(await undoChange(store, record!)).toMatchObject({ restored: 1, conflicts: [] })
+    expect((await where(path, dig))?.task.description).toBe('Sortir les terres.')
+  })
+
+  it('archives a ticket, says so a second time, and takes it out of the archive on undo', async () => {
+    const { path, fence } = await plan()
+    const { done, record } = await apply({ ticket: 'Clôture', action: 'archive' })
+    expect(done).toMatchObject({ ok: true, changed: true })
+    expect((await where(path, fence))?.task.archived).toBe(true)
+    const again = await apply({ ticket: 'Clôture', action: 'archive' })
+    expect(again).toMatchObject({ done: { ok: true, changed: false }, record: null })
+    expect(await undoChange(store, record!)).toMatchObject({ restored: 1, conflicts: [] })
+    expect((await where(path, fence))?.task.archived).toBeFalsy()
+  })
+
+  it('deletes a ticket', async () => {
+    const { path, fence } = await plan()
+    const { done } = await apply({ ticket: 'Clôture', action: 'delete' })
+    expect(done).toMatchObject({ ok: true, changed: true })
+    expect(await where(path, fence)).toBeNull()
   })
 })

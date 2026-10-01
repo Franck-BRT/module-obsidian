@@ -1203,7 +1203,7 @@ export const fr: Catalog = {
   'chat.changeRequirement':
     'Pour une exigence : {"requirement": "identifiant", "field": "…", "value": "…", "why": "…"}. Champs : text (l’énoncé ; ajoute "lang" pour une autre langue que la langue source : {languages}), title, rationale, source, status ({statuses}), type ({types}), criticality ({criticalities}), verification ({verifications}).',
   'chat.changeTicket':
-    'Pour modifier un ticket qui existe déjà (il figure dans le projet ci-dessus) : {"ticket": "titre exact du ticket", "project": "titre de son projet", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, un seul bloc par ticket avec tous ses champs modifiés. Champs : title, status ({statuses}), priority ({priorities}), start et due (date AAAA-MM-JJ), progress (nombre de 0 à 100), assignees (liste de noms), after (liste des titres des tickets qu’il suit, qui remplace ses dépendances).',
+    'Pour modifier un ticket qui existe déjà (il figure dans le projet ci-dessus) : {"ticket": "titre exact du ticket", "project": "titre de son projet", "changes": {"start": "2026-10-01", "due": "2026-10-15"}, "why": "…"}, un seul bloc par ticket avec tous ses champs modifiés. Champs : title, status ({statuses}), priority ({priorities}), start et due (date AAAA-MM-JJ), progress (nombre de 0 à 100), assignees (liste de noms), after (liste des titres des tickets qu’il suit, qui remplace ses dépendances), description (le texte complet du ticket, qui remplace l’actuel), parent (titre exact du lot ou du ticket sous lequel le déplacer ; « aucun » pour le haut du projet). Pour archiver un ticket terminé ou abandonné : {"ticket": "titre", "project": "…", "action": "archive", "why": "…"} ; pour le supprimer, "action": "delete" — seulement quand la personne le demande expressément ; elle confirmera.',
   'chat.change.title': 'Proposition',
   'chat.change.apply': 'Appliquer',
   'chat.change.applying': 'Application…',
@@ -1359,6 +1359,19 @@ export const fr: Catalog = {
     other: 'Replanification : {count} autres tickets décalés'
   },
   'chat.change.days': { one: '{count} j', other: '{count} j' },
+  'chat.change.actionArchive':
+    'Archiver le ticket : il quitte le planning, sa note est rangée dans les archives du projet.',
+  'chat.change.actionDelete': 'Supprimer le ticket : sa note part à la corbeille, avec celles de ses sous-tickets.',
+  'chat.change.archive': 'Archiver',
+  'chat.change.archived': 'Archivé',
+  'chat.change.delete': 'Supprimer',
+  'chat.change.deleteConfirm':
+    'Supprimer le ticket « {title} » et ses sous-tickets ? Leurs notes partent à la corbeille ; la suppression ne s’annule pas depuis le chat.',
+  'chat.change.deletedOrGone': 'Supprimé (le ticket n’est plus dans le planning).',
+  'chat.change.deletionsLeft': {
+    one: '{count} suppression à confirmer sur sa carte.',
+    other: '{count} suppressions à confirmer une à une sur leurs cartes.'
+  },
   'chat.change.viaProgram': '« {program} » est un programme : le ticket sera créé dans son projet « {project} ».',
   'chat.change.pickProject':
     '« {program} » est un programme, qui ne reçoit pas de ticket : dans lequel de ses projets créer celui-ci ?',
