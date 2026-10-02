@@ -60,6 +60,8 @@ import { DependencyPickerModal } from '../../modals/DependencyPickerModal'
 import type { Project, TaskType } from '../../types'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
+import { logTicketChange } from './historyLog'
+import { undoKey } from '../../store/chat/chatUndo'
 import { openRequirementModal } from '../requirements/RequirementModal'
 import { reqLanguages, verificationLabel } from '../requirements/reqPalette'
 
@@ -1187,6 +1189,7 @@ class ChangeCard extends MarkdownRenderChild {
   private async keepUndo(spec: ChangeSpec, name: string, apply: () => Promise<Applied>): Promise<void> {
     const { done, record } = await applyWithUndo(this.plugin.index, this.plugin.store, spec, name, typeLabel, apply)
     if (record) await this.plugin.chatUndo.set(this.source, record)
+    await logTicketChange(this.plugin, spec, name, this.source, this.sourcePath, record, done)
     this.report(done, name)
   }
 
@@ -1206,6 +1209,7 @@ class ChangeCard extends MarkdownRenderChild {
         try {
           const undone = await undoChange(this.plugin.store, record)
           await this.plugin.chatUndo.delete(this.source)
+          await this.plugin.chatHistory.markUndone(undoKey(this.source))
           reportUndone(undone, record.label)
         } finally {
           this.busy = false

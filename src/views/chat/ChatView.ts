@@ -52,7 +52,8 @@ import {
   type Applied,
   type Undone
 } from '../../store/chat/applyChange'
-import type { UndoRecord } from '../../store/chat/chatUndo'
+import { undoKey, type UndoRecord } from '../../store/chat/chatUndo'
+import { logTicketChange } from './historyLog'
 import {
   currentFiles,
   excerptFor,
@@ -1718,6 +1719,12 @@ export class ChatView extends ItemView {
       )
     }
     button('history', t('chat.history'), () => this.pickConversation())
+    // What the chat changed, in every conversation: applied, taken back, and why.
+    button(
+      'clipboard-list',
+      t('history.title'),
+      safeAsync(() => this.plugin.openChatHistory())
+    )
     button('square-pen', t('chat.new'), () => {
       this.turns = []
       this.editing = null
@@ -2187,6 +2194,15 @@ export class ChatView extends ItemView {
         )
         done = kept.done
         if (kept.record) await this.plugin.chatUndo.set(source, kept.record)
+        await logTicketChange(
+          this.plugin,
+          spec,
+          spec.kind === 'create' ? spec.title : spec.target,
+          source,
+          this.notePath ?? '',
+          kept.record,
+          kept.done
+        )
       }
       if (!done.ok) refused++
       else if (done.changed) applied++
@@ -2206,6 +2222,7 @@ export class ChatView extends ItemView {
     for (const { source, record } of kept) {
       const undone = await undoChange(this.plugin.store, record)
       await this.plugin.chatUndo.delete(source)
+      await this.plugin.chatHistory.markUndone(undoKey(source))
       total.restored += undone.restored
       total.removed += undone.removed
       for (const title of undone.conflicts) if (!total.conflicts.includes(title)) total.conflicts.push(title)

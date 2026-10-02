@@ -26,6 +26,8 @@ import { cleanTranscriptIn } from '../../store/chat/ocr'
 import { diffWords } from '../../store/requirements/reqDiff'
 import { safeAsync } from '../../utils'
 import { replaceBlock } from '../../store/chat/chatChange'
+import { undoKey } from '../../store/chat/chatUndo'
+import type { HistoryKind } from '../../store/chat/chatHistory'
 import { FolderPicker, type FolderChoice } from '../folderUi'
 import { t } from '../../i18n'
 
@@ -80,6 +82,26 @@ class NoteCard extends MarkdownRenderChild {
     if (file instanceof TFile) {
       await this.plugin.app.vault.process(file, (content) => replaceBlock(content, before, source) ?? content)
     }
+  }
+
+  /** What was written, kept in the chat's history: the note, how, and from which conversation. */
+  private async log(kind: HistoryKind, file: TFile, lines: string[], key = ''): Promise<void> {
+    await this.plugin.chatHistory.add({
+      kind,
+      label: file.basename,
+      lines,
+      why: '',
+      chat: this.sourcePath,
+      projects: [],
+      path: file.path,
+      key
+    })
+  }
+
+  /** Where a note was written, as the history says it. */
+  private folderLine(file: TFile): string {
+    const folder = file.parent && file.parent.path !== '/' ? file.parent.path : t('chat.note.vaultRoot')
+    return t('history.inFolder', { folder })
   }
 
   /** Every folder of the vault but the hidden ones, in order: where a note may go. */
@@ -378,7 +400,10 @@ class NoteCard extends MarkdownRenderChild {
               restored = back !== null
               return back ?? text
             })
-            if (restored) await this.plugin.noteUndo.delete(key)
+            if (restored) {
+              await this.plugin.noteUndo.delete(key)
+              await this.plugin.chatHistory.markUndone(undoKey(key))
+            }
             new Notice(restored ? t('chat.note.restored', { name: target.basename }) : t('chat.note.changedSince'))
             await this.draw()
           })
@@ -407,6 +432,12 @@ class NoteCard extends MarkdownRenderChild {
         })
         if (written) {
           await this.plugin.noteUndo.set(key, { path: target.path, section: proposal.section, before, after: proposed })
+          await this.log(
+            'rewrite',
+            target,
+            [proposal.section ? t('history.inSection', { section: proposal.section }) : t('history.wholeNote')],
+            undoKey(key)
+          )
           new Notice(t('chat.note.replacedIn', { name: target.basename }))
         }
         await this.draw()
@@ -426,6 +457,7 @@ class NoteCard extends MarkdownRenderChild {
               notesFallback(this.plugin, this.sourcePath),
               this.sourcePath
             )
+            await this.log('note', file, [this.folderLine(file)])
             new Notice(t('chat.note.createdAt', { path: file.path }))
           } finally {
             await this.draw()
@@ -511,7 +543,8 @@ class NoteCard extends MarkdownRenderChild {
               written = next !== null
               return next ?? text
             })
-            if (!written) new Notice(t('chat.note.noSection', { section: into.section, list: '—' }))
+            if (written) await this.log('append', target, [t('history.inSection', { section: into.section })])
+            else new Notice(t('chat.note.noSection', { section: into.section, list: '—' }))
           } finally {
             await this.draw()
           }
@@ -532,14 +565,17 @@ class NoteCard extends MarkdownRenderChild {
       safeAsync(async () => {
         button.disabled = true
         try {
-          if (proposal.append && target) await appendProposal(this.plugin.app, target, proposal)
-          else {
+          if (proposal.append && target) {
+            await appendProposal(this.plugin.app, target, proposal)
+            await this.log('append', target, [])
+          } else {
             const file = await writeProposedNote(
               this.plugin.app,
               proposal,
               notesFallback(this.plugin, this.sourcePath),
               this.sourcePath
             )
+            await this.log('note', file, [this.folderLine(file)])
             new Notice(t('chat.note.createdAt', { path: file.path }))
           }
         } catch (error) {

@@ -239,6 +239,16 @@ export class UndoLog<R = UndoRecord> {
     return this.records.get(undoKey(source)) ?? null
   }
 
+  /** The same, by the key a proposal is kept under — as the history knows it. */
+  getByKey(key: string): R | null {
+    return this.records.get(key) ?? null
+  }
+
+  async deleteByKey(key: string): Promise<void> {
+    await this.ready()
+    if (this.records.delete(key)) await this.save()
+  }
+
   async set(source: string, record: R): Promise<void> {
     await this.ready()
     const key = undoKey(source)

@@ -4,6 +4,7 @@ import { freePath } from '../DocumentStore'
 import { cleanTags } from '../library/libraryClass'
 import { fold, linkPath } from '../library/libraryDoc'
 import { ensureFolder } from '../vaultFs'
+import type { NoteUndo } from './chatUndo'
 
 /**
  * A note the model proposes to write — a meeting's minutes, a summary of a document, a
@@ -399,4 +400,23 @@ export function sectionFor(content: string, text: string): string | null {
 /** Whether a section holds what the plugin keeps for itself, which a rewrite would break. */
 export function holdsKept(text: string): boolean {
   return text.includes('%% pm-transcript')
+}
+
+/**
+ * A section rewritten from the chat put back as it read — only while it still reads as
+ * it was rewritten: changed since, it is the reader's, and left. True when put back.
+ */
+export async function restoreRewrite(app: App, undo: NoteUndo): Promise<boolean> {
+  const file = app.vault.getAbstractFileByPath(undo.path)
+  if (!(file instanceof TFile)) return false
+  const same = (a: string, b: string): boolean => a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim()
+  let restored = false
+  await app.vault.process(file, (text) => {
+    const now = sectionText(text, undo.section)
+    if (now === null || !same(now, undo.after)) return text
+    const back = replaceSection(text, undo.section, undo.before)
+    restored = back !== null
+    return back ?? text
+  })
+  return restored
 }

@@ -71,6 +71,8 @@ import { pickMessageForTicket, registerMessageFileMenu } from './views/messageTo
 import { MessageView, PM_MESSAGE_VIEW_TYPE } from './views/MessageView'
 import { RequirementsView, PM_REQUIREMENTS_VIEW_TYPE } from './views/requirements/RequirementsView'
 import { ChatView, PM_CHAT_VIEW_TYPE } from './views/chat/ChatView'
+import { ChatHistoryView, PM_CHAT_HISTORY_VIEW_TYPE } from './views/chat/ChatHistoryView'
+import { ChatHistory } from './store/chat/chatHistory'
 import { ChatNotes } from './store/chat/ChatNotes'
 import { isChatNote } from './store/chat/chatNote'
 import { RequirementStore } from './store/requirements/RequirementStore'
@@ -160,6 +162,8 @@ export default class PMPlugin extends Plugin {
   changeEdits = new Map<string, string>()
   /** The changes applied from the chat that can still be taken back. */
   chatUndo!: UndoLog
+  /** What the chat changed, applied and taken back, for the history view. */
+  chatHistory!: ChatHistory
   /** The rewrites of notes applied from the chat that can still be taken back. */
   noteUndo!: UndoLog<NoteUndo>
   /** The documents being read by the model that sees, and those waiting. */
@@ -251,6 +255,7 @@ export default class PMPlugin extends Plugin {
       this.manifest.dir ?? `${this.app.vault.configDir}/plugins/${this.manifest.id}`
     )
     this.chatUndo = new UndoLog(ownFolder)
+    this.chatHistory = new ChatHistory(ownFolder)
     this.noteUndo = new UndoLog<NoteUndo>(ownFolder, 300, NOTE_UNDO_FILE)
     this.scanProgress = new ScanProgress(ownFolder)
     this.statusPoints = new StatusSnapshots(ownFolder)
@@ -320,6 +325,7 @@ export default class PMPlugin extends Plugin {
     this.registerView(PM_MESSAGE_VIEW_TYPE, (leaf) => new MessageView(leaf, this))
     this.registerView(PM_REQUIREMENTS_VIEW_TYPE, (leaf) => new RequirementsView(leaf, this))
     this.registerView(PM_CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, this))
+    this.registerView(PM_CHAT_HISTORY_VIEW_TYPE, (leaf) => new ChatHistoryView(leaf, this))
     this.registerView(PM_DOCUMENTS_VIEW_TYPE, (leaf) => new DocumentsView(leaf, this))
     this.registerView(PM_NOTES_VIEW_TYPE, (leaf) => new NotesView(leaf, this))
     // Claiming the extension is what stops a click handing the message back to Outlook.
@@ -419,6 +425,12 @@ export default class PMPlugin extends Plugin {
         if (!checking) void this.askAndReadScans([doc], true)
         return true
       }
+    })
+
+    this.addCommand({
+      id: 'open-chat-history',
+      name: t('command.chatHistory'),
+      callback: safeAsync(() => this.openChatHistory())
     })
 
     this.addCommand({
@@ -1069,6 +1081,14 @@ export default class PMPlugin extends Plugin {
     const existing = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]
     const leaf = existing ?? this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf('tab')
     if (!existing) await leaf.setViewState({ type: PM_CHAT_VIEW_TYPE, active: true })
+    await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /** What the chat changed, in a tab of its own: found again if it is open. */
+  async openChatHistory(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(PM_CHAT_HISTORY_VIEW_TYPE)[0]
+    const leaf = existing ?? this.app.workspace.getLeaf('tab')
+    if (!existing) await leaf.setViewState({ type: PM_CHAT_HISTORY_VIEW_TYPE, active: true })
     await this.app.workspace.revealLeaf(leaf)
   }
 

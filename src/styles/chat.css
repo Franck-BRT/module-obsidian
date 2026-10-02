@@ -874,3 +874,119 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
   overflow-y: auto;
   margin: var(--size-4-2) 0;
 }
+
+/* ---- What the chat changed ----------------------------------------------- */
+
+.pm-history {
+  padding: var(--size-4-4) var(--size-4-6);
+  max-width: 980px;
+}
+
+.pm-history-title {
+  margin: 0 0 var(--size-4-3);
+}
+
+.pm-history-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-4);
+  margin-bottom: var(--size-4-4);
+}
+
+.pm-history-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-history-day {
+  margin: var(--size-4-5) 0 var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-medium);
+  text-transform: capitalize;
+}
+
+.pm-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.pm-history-entry {
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-left: 3px solid var(--interactive-accent);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+}
+
+.pm-history-entry.is-undone {
+  border-left-color: var(--text-faint);
+  opacity: 0.7;
+}
+
+.pm-history-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.pm-history-time {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-history-icon {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.pm-history-icon svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+}
+
+.pm-history-kind {
+  font-weight: var(--font-semibold);
+}
+
+.pm-history-projects {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-history-lines {
+  margin: var(--size-4-1) 0 0;
+  padding-left: var(--size-4-5);
+  font-size: var(--font-ui-small);
+}
+
+.pm-history-why {
+  margin-top: var(--size-4-1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-style: italic;
+}
+
+.pm-history-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--size-4-3);
+  margin-top: var(--size-4-2);
+  font-size: var(--font-ui-small);
+}
+
+.pm-history-chat {
+  margin-right: auto;
+}
+
+.pm-history-undone {
+  color: var(--text-faint);
+}
