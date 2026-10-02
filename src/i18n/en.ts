@@ -1344,6 +1344,11 @@ export const en = {
   'library.compareWith': 'Compare with the previous version (“{title}”)',
   'library.newVersionOf': 'New version of…',
   'library.unlinkVersion': 'No longer link to “{title}”',
+  'library.versionAsk': '“{title}” looks like a new version of “{previous}”, already in the library. Link them?',
+  'library.versionLinkCompare': 'Link and compare',
+  'library.versionLink': 'Link only',
+  'library.versionAfter': 'new version of “{title}”',
+  'library.versionBefore': 'replaced by “{title}”',
   'library.versionLinked':
     '“{title}” is linked to its previous version “{previous}”: right-click › Compare with the previous version.',
   'chat.preset.deadlines': 'Deadlines → milestones and tasks',

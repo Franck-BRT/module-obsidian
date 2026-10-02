@@ -57,6 +57,7 @@ import {
   openTaskPicker,
   openImportModal,
   confirmDialog,
+  chooseDialog,
   promptText
 } from './ui/ModalFactory'
 import { Notifier } from './components/Notifier'
@@ -1314,14 +1315,26 @@ export default class PMPlugin extends Plugin {
         })
       )
     }
-    // Another issue of a document already there, linked to it: said, with what can be done.
-    for (const { doc, previous } of report.versions) {
-      parts.push(t('library.versionLinked', { title: doc.title, previous: previous.title }))
-    }
-    new Notice(parts.join('\n'), report.failed.length ? 0 : report.versions.length ? 12000 : 6000)
+    new Notice(parts.join('\n'), report.failed.length ? 0 : 6000)
     await this.openDocuments(answer.projects.length === 1 ? answer.projects[0] : '')
     // Read what they say, for searching; the library shows how far it has got.
     void this.libraryText.refresh(this.library.docs())
+    // Another issue of a document already there — « ind B » after « ind A »: the reader says
+    // whether it is, and may have the two compared at once.
+    for (const { doc, previous } of report.versions) {
+      const choice = await chooseDialog(
+        this.app,
+        t('library.versionAsk', { title: doc.title, previous: previous.title }),
+        [
+          { id: 'compare', label: t('library.versionLinkCompare'), primary: true },
+          { id: 'link', label: t('library.versionLink') }
+        ]
+      )
+      if (!choice) continue
+      await this.library.setPrevious(doc, previous)
+      if (choice === 'compare' && doc.file && previous.file) await this.chatCompare(previous.file, doc.file)
+      else new Notice(t('library.versionLinked', { title: doc.title, previous: previous.title }), 8000)
+    }
     // Those that look like documents a register is waiting for, offered to be filed as them.
     if (report.docs.length) await proposeRegisterMatches(this, report.docs, false)
   }

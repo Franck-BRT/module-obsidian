@@ -78,7 +78,10 @@ export interface PourReport {
   /** Documents that were already there, by their records; the projects were added to them. */
   known: string[]
   failed: { name: string; reason: string }[]
-  /** New documents found to be another issue of one already there, and that one: linked as its version. */
+  /**
+   * New documents that look like another issue of one already there — the same name, other
+   * bytes —, with that one: linked as its version once the reader says so.
+   */
   versions: { doc: LibraryDoc; previous: LibraryDoc }[]
 }
 
@@ -239,17 +242,13 @@ export class DocLibrary {
           if (known.file) byFile.set(known.file, updated)
           if (!report.known.includes(known.record)) report.known.push(known.record)
         } else {
-          let doc = await this.addNew(item, bytes, hash, options)
-          // Another issue of a document already there — « ind B » after « ind A » —: linked to it.
+          const doc = await this.addNew(item, bytes, hash, options)
+          // Another issue of a document already there — « ind B » after « ind A » —: said, to be asked.
           const before = previousVersion(doc, [...existing, ...report.docs])
           const previous = before
             ? [...existing, ...report.docs].find((one) => one.record === before.record)
             : undefined
-          if (previous) {
-            await this.setPrevious(doc, previous)
-            doc = { ...doc, previous: previous.record }
-            report.versions.push({ doc, previous })
-          }
+          if (previous) report.versions.push({ doc, previous })
           byHash.set(hash, doc)
           if (doc.file) byFile.set(doc.file, doc)
           report.added.push(doc.record)

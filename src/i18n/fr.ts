@@ -1325,8 +1325,14 @@ export const fr: Catalog = {
   'library.compareWith': 'Comparer avec la version précédente (« {title} »)',
   'library.newVersionOf': 'Nouvelle version de…',
   'library.unlinkVersion': 'Ne plus relier à « {title} »',
+  'library.versionAsk':
+    '« {title} » ressemble à une nouvelle version de « {previous} », déjà dans la bibliothèque. Les relier ?',
+  'library.versionLinkCompare': 'Relier et comparer',
+  'library.versionLink': 'Relier seulement',
+  'library.versionAfter': 'nouvelle version de « {title} »',
+  'library.versionBefore': 'remplacé par « {title} »',
   'library.versionLinked':
-    '« {title} » est relié à sa version précédente « {previous} » : clic droit › Comparer avec la version précédente.',
+    '« {title} » est relié à sa version précédente « {previous} » : clic droit › Comparer avec la version précédente pour voir ce qui a changé.',
   'chat.preset.deadlines': 'Échéances → jalons et tâches',
   'chat.busy': 'Le chat est en train de répondre : attendez la fin de la réponse, ou arrêtez-la.',
   'chat.preset.deadlinesQ':

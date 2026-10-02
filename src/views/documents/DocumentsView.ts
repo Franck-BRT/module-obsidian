@@ -419,6 +419,22 @@ export class DocumentsView extends ItemView {
     return this.plugin.libraryProjects().map((project): [string, string] => [project.path, project.title])
   }
 
+  /** Its versions, said on its line: the issue it follows, and the one that followed it. */
+  private renderVersions(meta: HTMLElement, doc: LibraryDoc): void {
+    const all = this.plugin.library.docs()
+    const before = doc.previous ? all.find((one) => one.record === doc.previous) : undefined
+    const after = all.find((one) => one.previous === doc.record)
+    if (before) {
+      meta.createSpan({ cls: 'pm-docs-version', text: t('library.versionAfter', { title: before.title }) })
+    }
+    if (after) {
+      meta.createSpan({
+        cls: 'pm-docs-version pm-docs-version--old',
+        text: t('library.versionBefore', { title: after.title })
+      })
+    }
+  }
+
   /**
    * The document a document is the new issue of, picked among the others — those known
    * by the same name first —, and linked to it as its version.
@@ -693,6 +709,7 @@ export class DocumentsView extends ItemView {
     if (doc.added) meta.createSpan({ text: t('library.addedOn', { date: formatDate(doc.added) }) })
     if (doc.lot) meta.createSpan({ text: doc.lot })
     if (doc.issuer) meta.createSpan({ text: t('library.issuedBy', { issuer: doc.issuer }) })
+    this.renderVersions(meta, doc)
     this.renderTextState(meta, doc)
 
     // Where the words searched for are in what it says.

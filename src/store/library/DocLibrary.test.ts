@@ -73,9 +73,20 @@ describe('DocLibrary', () => {
       ['CCTP lot 02 ind B', 'CCTP lot 02 ind A']
     ])
     const byTitle = (title: string) => library.docs().find((doc) => doc.title === title)
+    // Said, not done: linked only once the reader agrees.
+    expect(byTitle('CCTP lot 02 ind B')?.previous).toBeUndefined()
+    const [found] = report.versions
+    await library.setPrevious(found.doc, found.previous)
     expect(byTitle('CCTP lot 02 ind B')?.previous).toBe('Bibliothèque/CCTP lot 02 ind A.md')
     expect(byTitle('CCTP lot 02 ind A')?.previous).toBeUndefined()
-    await library.pour([outside('CCTP lot 02 ind C.pdf', 'indice C')], { projects: [GC], move: false, today: TODAY })
+    const next = await library.pour([outside('CCTP lot 02 ind C.pdf', 'indice C')], {
+      projects: [GC],
+      move: false,
+      today: TODAY
+    })
+    // The last of its line is the one it follows.
+    expect(next.versions.map((one) => one.previous.title)).toEqual(['CCTP lot 02 ind B'])
+    await library.setPrevious(next.versions[0].doc, next.versions[0].previous)
     expect(byTitle('CCTP lot 02 ind C')?.previous).toBe('Bibliothèque/CCTP lot 02 ind B.md')
     // Unlinked by hand, it follows none.
     const c = byTitle('CCTP lot 02 ind C')

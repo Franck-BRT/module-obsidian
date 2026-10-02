@@ -887,3 +887,13 @@ a.pm-docs-clear-filters {
   gap: var(--size-4-2);
   margin-top: var(--size-4-2);
 }
+
+/* A document's versions, on its line: the issue it follows, or the one that replaced it. */
+.pm-docs-version {
+  color: var(--text-accent);
+}
+
+.pm-docs-version--old {
+  color: var(--text-faint);
+  font-style: italic;
+}
