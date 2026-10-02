@@ -755,3 +755,70 @@ describe('moving, describing, archiving or deleting a ticket from the chat', () 
     expect(await where(path, fence)).toBeNull()
   })
 })
+
+describe('a risk proposed by the chat', () => {
+  it('is created weighed, kept in its note, re-weighed, and put back when undone', async () => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    const index = new VaultIndex(app, () => DEFAULT_SETTINGS)
+    const store = new ProjectStore(app, () => DEFAULT_SETTINGS, index)
+    const project = await store.createProject('Génie civil', 'Work')
+    index.build()
+    const label = (type: string): string => type
+    const create = spec('create', {
+      create: 'Retard de livraison du béton',
+      project: 'Génie civil',
+      changes: {
+        type: 'risk',
+        probability: 'probable',
+        impact: 4,
+        mitigation: 'Seconde centrale agréée',
+        assignees: ['Anne']
+      },
+      why: 'Centrale en panne deux fois ce mois.'
+    })
+    expect(await applyCreate(index, store, create, label)).toMatchObject({ ok: true, changed: true })
+    const reread = await new ProjectStore(app, () => DEFAULT_SETTINGS, index).loadProjectByPath(project.filePath)
+    const risk = reread?.tasks.find((task) => task.title === 'Retard de livraison du béton')
+    expect(risk).toMatchObject({
+      type: 'risk',
+      assignees: ['Anne'],
+      risk: { probability: 3, impact: 4, mitigation: 'Seconde centrale agréée' }
+    })
+    index.build()
+    const reweigh = spec('ticket', {
+      ticket: 'Retard de livraison du béton',
+      changes: { probability: 1, mitigation: 'Livraisons garanties par contrat' }
+    })
+    const { done, record } = await applyWithUndo(index, store, reweigh, 'Retard', label, () =>
+      applyToTicket(index, store, reweigh)
+    )
+    expect(done).toMatchObject({ ok: true, changed: true })
+    const after = (await store.loadProjectByPath(project.filePath))?.tasks.find((task) => task.type === 'risk')
+    expect(after?.risk).toEqual({ probability: 1, impact: 4, mitigation: 'Livraisons garanties par contrat' })
+    index.build()
+    expect(await undoChange(store, record!)).toMatchObject({ restored: 1, conflicts: [] })
+    const back = (await store.loadProjectByPath(project.filePath))?.tasks.find((task) => task.type === 'risk')
+    expect(back?.risk).toEqual({ probability: 3, impact: 4, mitigation: 'Seconde centrale agréée' })
+  })
+
+  it('refuses a level off the scale, saying which go, and writes nothing', async () => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    const index = new VaultIndex(app, () => DEFAULT_SETTINGS)
+    const store = new ProjectStore(app, () => DEFAULT_SETTINGS, index)
+    const project = await store.createProject('Génie civil', 'Work')
+    index.build()
+    const create = spec('create', {
+      create: 'Gel',
+      project: 'Génie civil',
+      changes: { type: 'risk', impact: 'énorme' }
+    })
+    expect(await applyCreate(index, store, create, (type) => type)).toEqual({
+      ok: false,
+      problem: 'unknown',
+      allowed: ['1', '2', '3', '4']
+    })
+    expect((await store.loadProjectByPath(project.filePath))?.tasks).toEqual([])
+  })
+})

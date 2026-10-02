@@ -1,4 +1,5 @@
 import type { PriorityConfig, Project, StatusConfig, Task } from '../../types'
+import { riskScore } from '../risk'
 import { isTerminalStatus } from '../../utils'
 import { documentOf, isDocument } from '../Document'
 import { projectMetrics } from '../Metrics'
@@ -56,6 +57,8 @@ export interface ProjectWords {
   /** A kind of ticket other than a plain task, by its name: `Jalon`, `Lot`. */
   type: (type: string) => string
   docState: (state: string) => string
+  /** A risk's weighing, on one line: its levels, its criticality, its mitigation. */
+  risk?: (probability: number, impact: number, mitigation: string) => string
   late: string
   after: string
   /** What introduces a document's reference, its revision mark and its file. */
@@ -122,6 +125,11 @@ function ticketLine(
     if (meta.reference.trim()) facts.push(`${words.reference} ${meta.reference.trim()}`)
     if (meta.issue.trim()) facts.push(`${words.issue} ${meta.issue.trim()}`)
     if (meta.file) facts.push(`${words.file} ${meta.file.slice(meta.file.lastIndexOf('/') + 1)}`)
+  }
+  if (task.type === 'risk' && words.risk) {
+    const { probability, impact } = riskScore(task)
+    const mitigation = (task.risk?.mitigation ?? '').replace(/\s+/g, ' ').trim()
+    facts.push(words.risk(probability, impact, mitigation.length > 140 ? `${mitigation.slice(0, 139)}…` : mitigation))
   }
   const status = input.statuses.find((config) => config.id === task.status)
   facts.push(status?.label ?? task.status)

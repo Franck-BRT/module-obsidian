@@ -84,6 +84,7 @@ export const TASK_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'zones',
   'impactLevel',
   'baseline',
+  'risk',
   'collapsed'
 ])
 
@@ -249,6 +250,9 @@ export function buildTaskFrontmatter(
   if (task.zones?.length) fm.zones = task.zones
   if (task.impactLevel) fm.impactLevel = task.impactLevel
   if (task.baseline) fm.baseline = { start: task.baseline.start, due: task.baseline.due }
+  if (task.risk) {
+    fm.risk = { probability: task.risk.probability, impact: task.risk.impact, mitigation: task.risk.mitigation }
+  }
   if (task.timeLogs?.length) fm.timeLogs = task.timeLogs
   if (Object.keys(task.customFields).length) fm.customFields = task.customFields
   const document = serializeDocument(task.document)

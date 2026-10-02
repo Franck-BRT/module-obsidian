@@ -1385,6 +1385,7 @@ export class ChatView extends ItemView {
           })
         )
       }
+      lines.push(t('chat.changeRisk'))
       lines.push(t('chat.changeAsk', { lot: typeConfigOf('phase').label }))
       // A planning received, read against the plan: what the whole feature is for.
       if (files) lines.push(t('chat.changePlanning'))
@@ -1526,6 +1527,8 @@ export class ChatView extends ItemView {
       summary: (figures) => t('chat.projectFigures', figures),
       type: (type) => typeConfigOf(type as TaskType).label,
       docState: (state) => docStateConfigOf(state as DocState).label,
+      risk: (probability, impact, mitigation) =>
+        t('chat.projectRisk', { probability, impact, score: probability * impact, mitigation: mitigation || '—' }),
       late: t('chat.projectLate'),
       after: t('chat.projectAfter'),
       reference: t('chat.projectReference'),

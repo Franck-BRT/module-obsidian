@@ -1,4 +1,5 @@
 import type { Task } from '../../types'
+import { readRiskLevel } from '../risk'
 import { setText, VERIFICATION_METHODS, type Requirement } from '../requirements/Requirement'
 
 /**
@@ -39,7 +40,10 @@ export const TICKET_CHANGE_FIELDS = [
   'assignees',
   'after',
   'description',
-  'parent'
+  'parent',
+  'probability',
+  'impact',
+  'mitigation'
 ] as const
 export type TicketChangeField = (typeof TICKET_CHANGE_FIELDS)[number]
 
@@ -100,7 +104,10 @@ export const CREATE_FIELDS = [
   'progress',
   'assignees',
   'after',
-  'description'
+  'description',
+  'probability',
+  'impact',
+  'mitigation'
 ] as const
 export type CreateField = (typeof CREATE_FIELDS)[number]
 
@@ -122,6 +129,9 @@ export type ChangeProblem = 'unreadable' | 'target' | 'field'
  * The names a model reaches for, beside the ones it is asked to use. It is told the
  * English ones; replying in French, it sometimes writes the French.
  */
+/** A risk's levels, as the model is told they go when it wrote one that does not. */
+const RISK_SCALE = ['1', '2', '3', '4']
+
 const FIELD_ALIASES: Record<string, string> = {
   wording: 'text',
   statement: 'text',
@@ -146,7 +156,14 @@ const FIELD_ALIASES: Record<string, string> = {
   lot: 'parent',
   sous: 'parent',
   under: 'parent',
-  desc: 'description'
+  desc: 'description',
+  probabilite: 'probability',
+  likelihood: 'probability',
+  gravite: 'impact',
+  severity: 'impact',
+  parade: 'mitigation',
+  traitement: 'mitigation',
+  'plan d action': 'mitigation'
 }
 
 /** Lower case, without accents or spacing around: how two spellings of one word are compared. */
@@ -537,6 +554,24 @@ export function ticketChange(
         patch.description = after
         break
       }
+      case 'probability':
+      case 'impact': {
+        const level = readRiskLevel(raw)
+        if (level === null) return refuse('unknown', RISK_SCALE)
+        const was = task.risk ?? { probability: 1, impact: 1, mitigation: '' }
+        const now = patch.risk ?? { ...was }
+        rows.push({ field, before: String(was[field]), after: String(level), applied: was[field] === level })
+        patch.risk = { ...now, [field]: level }
+        break
+      }
+      case 'mitigation': {
+        const after = (typeof raw === 'string' ? raw : value).trim()
+        const was = task.risk ?? { probability: 1, impact: 1, mitigation: '' }
+        const before = was.mitigation.trim()
+        rows.push({ field, before, after, applied: before === after })
+        patch.risk = { ...(patch.risk ?? { ...was }), mitigation: after }
+        break
+      }
       case 'parent': {
         const tree = lists.tree ?? []
         const here = tree.find((one) => one.id === task.id)?.parentId ?? null
@@ -759,6 +794,20 @@ export function createChange(spec: Extract<ChangeSpec, { kind: 'create' }>, cont
         rows.push({ field, after: names.join(', ') })
         break
       }
+      case 'probability':
+      case 'impact': {
+        const level = readRiskLevel(raw)
+        if (level === null) return { ok: false, problem: 'unknown', allowed: RISK_SCALE }
+        task.risk = { ...(task.risk ?? { probability: 1, impact: 1, mitigation: '' }), [field]: level }
+        rows.push({ field, after: String(level) })
+        break
+      }
+      case 'mitigation':
+        if (value) {
+          task.risk = { ...(task.risk ?? { probability: 1, impact: 1, mitigation: '' }), mitigation: value }
+          rows.push({ field, after: value })
+        }
+        break
       case 'description':
         // Its text whole — where it comes from, what is to be done —, said as written.
         if (value) {

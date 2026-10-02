@@ -1,0 +1,208 @@
+/* ---- A project's risk register: the matrix and the list ------------------ */
+
+.pm-risks {
+  padding: var(--size-4-4) var(--size-4-5);
+  overflow: auto;
+  height: 100%;
+}
+
+.pm-risks-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-4);
+  margin-bottom: var(--size-4-4);
+}
+
+.pm-risks-title {
+  margin: 0;
+}
+
+.pm-risks-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-risks-bands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+}
+
+.pm-risks-add {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  margin-left: auto;
+}
+
+.pm-risks-add-icon {
+  display: inline-flex;
+}
+
+/* A band or a criticality, in its colour: the colour an accent, the words saying it. */
+.pm-risk-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--size-4-2);
+  border: 1px solid var(--pm-risk-color);
+  border-radius: var(--radius-l);
+  color: var(--pm-risk-color);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  white-space: nowrap;
+}
+
+.pm-prop-value .pm-risk-badge {
+  margin-left: var(--size-4-2);
+}
+
+.pm-risk-badge.is-zero {
+  opacity: 0.45;
+}
+
+.pm-risks-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-6);
+  align-items: flex-start;
+}
+
+.pm-risks-matrix-wrap {
+  flex: 0 0 auto;
+}
+
+.pm-risks-matrix {
+  display: grid;
+  grid-template-columns: auto auto repeat(4, 56px);
+  grid-auto-rows: 48px;
+  gap: 4px;
+  align-items: center;
+}
+
+.pm-risks-axis {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-risks-axis--y {
+  grid-row: 1 / span 4;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-align: center;
+}
+
+.pm-risks-axis--x {
+  margin-top: var(--size-2-2);
+  text-align: center;
+  padding-left: 48px;
+}
+
+.pm-risks-level {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  text-align: center;
+}
+
+.pm-risks-matrix .pm-risks-cell,
+.pm-risks-matrix .pm-risks-cell:hover {
+  height: 100%;
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-s);
+  background: color-mix(in srgb, var(--pm-risk-color) 70%, transparent);
+  color: var(--text-on-accent);
+  font-weight: var(--font-bold);
+  font-size: var(--font-ui-medium);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.pm-risks-matrix .pm-risks-cell.is-empty {
+  background: color-mix(in srgb, var(--pm-risk-color) 18%, transparent);
+}
+
+.pm-risks-matrix .pm-risks-cell.is-chosen {
+  outline: 2px solid var(--text-normal);
+  outline-offset: 1px;
+}
+
+.pm-risks-list-wrap {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.pm-risks-narrowed {
+  display: flex;
+  gap: var(--size-4-3);
+  margin-bottom: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-risks-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.pm-risk-row {
+  display: flex;
+  gap: var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+}
+
+.pm-risk-row.is-closed {
+  opacity: 0.6;
+}
+
+.pm-risk-score {
+  flex: 0 0 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-s);
+  background: var(--pm-risk-color);
+  color: var(--text-on-accent);
+  font-weight: var(--font-bold);
+}
+
+.pm-risk-main {
+  min-width: 0;
+}
+
+.pm-risk-title {
+  font-weight: var(--font-semibold);
+}
+
+.pm-risk-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2) var(--size-4-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-risk-mitigation {
+  margin-top: var(--size-2-2);
+  font-size: var(--font-ui-small);
+}
+
+.pm-risk-mitigation.is-missing {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.pm-risks-empty {
+  padding: var(--size-4-6) 0;
+  color: var(--text-muted);
+}
+
+.pm-risks-empty-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}

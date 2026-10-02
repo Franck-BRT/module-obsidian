@@ -16,13 +16,13 @@ export type GanttWeekLabel = 'weekNumber' | 'dateRange' | 'both'
  * the saved-view reader, the default-view setting — are derived from it and cannot be
  * left a view behind.
  */
-export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'mail', 'impacts', 'dashboard'] as const
+export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'mail', 'impacts', 'risks', 'dashboard'] as const
 export type ViewMode = (typeof VIEW_MODES)[number]
 export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
 export const IMPACT_ROLES = ['both', 'emitter', 'receiver'] as const
 export const IMPACT_LEVELS = ['blocking', 'caution', 'info'] as const
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
-export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document' | 'meeting'
+export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document' | 'meeting' | 'risk'
 
 /**
  * Every kind of ticket, in the order they are offered.
@@ -38,7 +38,8 @@ const TASK_TYPE_ORDER = {
   milestone: true,
   phase: true,
   document: true,
-  meeting: true
+  meeting: true,
+  risk: true
 } satisfies Record<TaskType, true>
 
 export const TASK_TYPES = Object.keys(TASK_TYPE_ORDER) as TaskType[]
@@ -170,6 +171,17 @@ export function makeDocument(overrides: Partial<DocumentMeta> = {}): DocumentMet
   }
 }
 
+/**
+ * A risk as it is weighed: its probability and its impact, each from 1 to 4 — their
+ * product its criticality —, and the way it is countered. Who answers for it is the
+ * ticket's own assignee; whether it still stands, its status.
+ */
+export interface TaskRisk {
+  probability: number
+  impact: number
+  mitigation: string
+}
+
 /** A ticket's dates in the reference plan; '' where it had none. */
 export interface TaskBaseline {
   start: string
@@ -231,6 +243,8 @@ export interface Task {
    * Gantt draws under it, and what a slip is counted from. Absent on a ticket made since.
    */
   baseline?: TaskBaseline
+  /** Set on a ticket of type `risk`: how likely, how serious, and what is done about it. */
+  risk?: TaskRisk
   /** UI state, persisted per project in plugin settings (data.json), not in frontmatter. */
   collapsed: boolean
   createdAt: string
@@ -895,7 +909,8 @@ export const DEFAULT_TYPES: TypeConfig[] = [
   { id: 'milestone', label: 'Milestone', color: '#7e22ce', icon: 'diamond' },
   { id: 'phase', label: 'Phase', color: '#b45309', icon: 'layers' },
   { id: 'document', label: 'Document', color: '#0369a1', icon: 'file-text' },
-  { id: 'meeting', label: 'Meeting', color: '#db2777', icon: 'users' }
+  { id: 'meeting', label: 'Meeting', color: '#db2777', icon: 'users' },
+  { id: 'risk', label: 'Risk', color: '#c2410c', icon: 'shield-alert' }
 ]
 
 /**
@@ -942,7 +957,8 @@ export function seedTypes(): TypeConfig[] {
     milestone: t('task.type.milestone'),
     phase: t('task.type.phase'),
     document: t('task.type.document'),
-    meeting: t('task.type.meeting')
+    meeting: t('task.type.meeting'),
+    risk: t('task.type.risk')
   }
   return DEFAULT_TYPES.map((type) => ({ ...type, label: labels[type.id] ?? type.label }))
 }

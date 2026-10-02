@@ -60,6 +60,7 @@ import { DependencyPickerModal } from '../../modals/DependencyPickerModal'
 import type { Project, TaskType } from '../../types'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
+import { impactLabel, probabilityLabel } from '../risks/riskLabels'
 import { logTicketChange } from './historyLog'
 import { undoKey } from '../../store/chat/chatUndo'
 import { openRequirementModal } from '../requirements/RequirementModal'
@@ -154,7 +155,22 @@ function ticketFieldLabel(field: TicketChangeField): string {
       return t('chat.change.field.description')
     case 'parent':
       return t('chat.change.field.parent')
+    case 'probability':
+      return t('risk.probability')
+    case 'impact':
+      return t('risk.impact')
+    case 'mitigation':
+      return t('risk.mitigation')
   }
+}
+
+/** A risk's level as the card says it — « 3 · Probable » —; any other value as it is. */
+function levelText(field: string, value: string): string {
+  const level = Number(value)
+  if (!value || !Number.isInteger(level)) return value
+  if (field === 'probability') return `${level} · ${probabilityLabel(level)}`
+  if (field === 'impact') return `${level} · ${impactLabel(level)}`
+  return value
 }
 
 function problemText(problem: ValueProblem, allowed: string[] | undefined): string {
@@ -389,7 +405,7 @@ class ChangeCard extends MarkdownRenderChild {
       // Everything is new: a field and its value a line, rather than a before and an after.
       const grid = card.createDiv('pm-change-grid')
       for (const row of resolved.rows) {
-        this.body(grid, createFieldLabel(row.field), { before: '', after: row.after }, false)
+        this.body(grid, createFieldLabel(row.field), { before: '', after: levelText(row.field, row.after) }, false)
       }
     }
     this.why(card, spec.why)
@@ -781,7 +797,12 @@ class ChangeCard extends MarkdownRenderChild {
     const resolved = ticketChange(spec, task, target.lists)
     if (resolved.ok) {
       for (const row of resolved.rows) {
-        this.body(card, ticketFieldLabel(row.field), row, row.field === 'title' || row.field === 'description')
+        this.body(
+          card,
+          ticketFieldLabel(row.field),
+          { before: levelText(row.field, row.before), after: levelText(row.field, row.after) },
+          row.field === 'title' || row.field === 'description' || row.field === 'mitigation'
+        )
       }
     } else this.body(card, ticketFieldLabel(resolved.field), null, false)
     // What becomes of the ticket itself, said as plainly as a field.

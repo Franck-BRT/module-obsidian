@@ -148,6 +148,21 @@ function readType(raw: unknown): Task['type'] {
   return isTaskType(raw) ? raw : 'task'
 }
 
+/** A risk's weighing, as written in its note — levels kept within 1 to 4 —; none when it is not there. */
+function readRisk(raw: unknown): Task['risk'] {
+  if (!raw || typeof raw !== 'object') return undefined
+  const { probability, impact, mitigation } = raw as Record<string, unknown>
+  const level = (value: unknown): number => {
+    const number = typeof value === 'number' ? value : Number(value)
+    return Number.isFinite(number) ? Math.min(4, Math.max(1, Math.round(number))) : 1
+  }
+  return {
+    probability: level(probability),
+    impact: level(impact),
+    mitigation: typeof mitigation === 'string' ? mitigation : ''
+  }
+}
+
 /** A ticket's reference dates, as written in its note; none when they are not there. */
 function readBaseline(raw: unknown): Task['baseline'] {
   if (!raw || typeof raw !== 'object') return undefined
@@ -197,6 +212,7 @@ export function mapRawToTask(r: Record<string, unknown>, overrides?: Partial<Tas
         : {},
     document: readDocument(r.document),
     baseline: readBaseline(r.baseline),
+    risk: readRisk(r.risk),
     collapsed: r.collapsed === true,
     createdAt: (r.createdAt as string) ?? new Date().toISOString(),
     updatedAt: (r.updatedAt as string) ?? new Date().toISOString(),

@@ -24,6 +24,8 @@ import {
   type HiddenProperty
 } from '../ui/composites/properties'
 import { t } from '../i18n'
+import { RISK_LEVELS, riskBand, riskLevel, riskScore } from '../store/risk'
+import { BAND_COLOR, bandLabel, impactLabel, probabilityLabel } from '../views/risks/riskLabels'
 
 /** A copy of the option map with one predecessor left out. */
 function withoutDependency(options: Task['dependencyOptions'], id: string): NonNullable<Task['dependencyOptions']> {
@@ -185,6 +187,72 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
         return cell
       },
       'users'
+    )
+  }
+
+  // A risk is weighed: how likely, how serious — their product its criticality —, and
+  // what is done about it. Who answers for it is the ticket's own assignee.
+  if (task.type === 'risk') {
+    const weighed = (): NonNullable<Task['risk']> => (task.risk ??= { probability: 1, impact: 1, mitigation: '' })
+    const levels = (label: (level: number) => string): SelectItem[] =>
+      RISK_LEVELS.map((level) => ({ id: String(level), label: `${level} · ${label(level)}` }))
+    renderPropRow(
+      grid,
+      t('risk.probability'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        renderSelectControl({
+          container: cell,
+          value: String(riskScore(task).probability),
+          options: levels(probabilityLabel),
+          onChange: (id) => {
+            weighed().probability = riskLevel(id)
+            rerender()
+          }
+        })
+        return cell
+      },
+      'dices'
+    )
+    renderPropRow(
+      grid,
+      t('risk.impact'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        renderSelectControl({
+          container: cell,
+          value: String(riskScore(task).impact),
+          options: levels(impactLabel),
+          onChange: (id) => {
+            weighed().impact = riskLevel(id)
+            rerender()
+          }
+        })
+        const { score } = riskScore(task)
+        const band = riskBand(score)
+        const badge = cell.createSpan({ cls: 'pm-risk-badge', text: `${score} · ${bandLabel(band)}` })
+        badge.style.setProperty('--pm-risk-color', BAND_COLOR[band])
+        return cell
+      },
+      'flame'
+    )
+    renderPropRow(
+      grid,
+      t('risk.mitigation'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        renderInputControl({
+          container: cell,
+          value: task.risk?.mitigation ?? '',
+          placeholder: t('risk.mitigationPlaceholder'),
+          onChange: (value) => {
+            weighed().mitigation = value.trim()
+            rerender()
+          }
+        })
+        return cell
+      },
+      'shield-check'
     )
   }
 
