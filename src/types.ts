@@ -136,10 +136,16 @@ export interface DocVersion {
   note: string
 }
 
+/**
+ * A visa: without observations, with observations — the document goes on, the next issue
+ * takes them in —, or refused.
+ */
+export type DocVerdict = 'approved' | 'observations' | 'rejected'
+
 export interface DocApproval {
   by: string
   at: string
-  verdict: 'approved' | 'rejected'
+  verdict: DocVerdict
   note: string
 }
 

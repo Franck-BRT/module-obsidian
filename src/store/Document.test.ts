@@ -66,6 +66,13 @@ describe('approvals', () => {
     expect(meta.state).toBe('approved')
   })
 
+  it('lets a visa with observations go on as one without', () => {
+    let meta = doc({ state: 'in-review', approvers: ['Ana', 'Bo'] })
+    meta = recordApproval(meta, { by: 'Ana', at, verdict: 'observations', note: 'Fiche de visa n°3' })
+    meta = recordApproval(meta, { by: 'Bo', at, verdict: 'approved', note: '' })
+    expect(meta.state).toBe('approved')
+  })
+
   it('lets one refusal outweigh the others', () => {
     let meta = doc({ state: 'in-review', approvers: ['Ana', 'Bo'] })
     meta = recordApproval(meta, { by: 'Ana', at, verdict: 'approved', note: '' })

@@ -5,6 +5,7 @@ import { DOC_STATES } from '../types'
 import { documentOf, pendingApprovers, reopen } from '../store/Document'
 import { docStateLabel } from '../views/library/docStateLabel'
 import { depositDocument } from '../views/library/documentActions'
+import { openVisaSheet } from '../views/visa/VisaModal'
 import { renderPropRow } from '../ui/FormField'
 import { renderInputControl, renderSelectControl } from '../ui/composites/properties'
 import { renderPersonPicker } from '../ui/PersonPicker'
@@ -180,6 +181,21 @@ function renderFileRow(section: HTMLElement, ctx: DocumentPanelContext): void {
         })
       })
     )
+
+  // The file read against the specifications and requirements, its observations drafted.
+  if (meta.file) {
+    new IconButton(row)
+      .setIcon('file-search')
+      .setTooltip(t('visa.title'))
+      .onClick(
+        safeAsync(async () => {
+          await ctx.save()
+          openVisaSheet(plugin, project, task, async () => {
+            ctx.rerender()
+          })
+        })
+      )
+  }
 }
 
 function renderVersions(section: HTMLElement, ctx: DocumentPanelContext): void {

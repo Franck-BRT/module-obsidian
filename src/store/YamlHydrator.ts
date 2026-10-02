@@ -120,7 +120,12 @@ function readDocument(raw: unknown): DocumentMeta | undefined {
       ? (r.approvals as DocApproval[]).map((entry) => ({
           by: String(entry?.by ?? ''),
           at: String(entry?.at ?? ''),
-          verdict: entry?.verdict === 'rejected' ? 'rejected' : 'approved',
+          verdict:
+            entry?.verdict === 'rejected'
+              ? 'rejected'
+              : entry?.verdict === 'observations'
+                ? 'observations'
+                : 'approved',
           note: String(entry?.note ?? '')
         }))
       : [],

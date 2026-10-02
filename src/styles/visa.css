@@ -1,0 +1,177 @@
+/* ---- The assisted visa sheet ---------------------------------------------- */
+
+.pm-visa-modal {
+  width: min(860px, 94vw);
+}
+
+.pm-visa-head {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-3);
+  font-weight: var(--font-semibold);
+}
+
+.pm-visa-icon,
+.pm-visa-spinner {
+  display: inline-flex;
+  --icon-size: 16px;
+}
+
+.pm-visa-intro,
+.pm-visa-hint {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-visa-intro {
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-visa-problem {
+  margin-bottom: var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3);
+  border-radius: var(--radius-s);
+  background: color-mix(in srgb, var(--color-red, #e5534b) 14%, transparent);
+  color: var(--text-error, var(--color-red));
+  font-size: var(--font-ui-small);
+}
+
+.pm-visa-block {
+  margin-bottom: var(--size-4-4);
+}
+
+.pm-visa-label {
+  margin-bottom: var(--size-4-2);
+  font-weight: var(--font-semibold);
+  font-size: var(--font-ui-small);
+}
+
+.pm-visa-reviewer,
+.pm-visa-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-3);
+}
+
+.pm-visa-reviewer .pm-visa-label,
+.pm-visa-verdict .pm-visa-label {
+  margin: 0;
+}
+
+.pm-visa-check {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: 2px 0;
+  font-size: var(--font-ui-small);
+}
+
+.pm-visa-more {
+  margin: var(--size-4-2) 0 var(--size-4-4);
+  font-size: var(--font-ui-small);
+}
+
+.pm-visa-wait {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-8) 0;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.pm-visa-spinner {
+  animation: pm-visa-spin 1.2s linear infinite;
+}
+
+@keyframes pm-visa-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pm-visa-summary,
+.pm-visa-text {
+  width: 100%;
+  resize: vertical;
+  font-family: var(--font-text);
+  font-size: var(--font-ui-small);
+}
+
+.pm-visa-summary {
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-visa-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.pm-visa-row {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2);
+  border-left: 3px solid var(--text-faint);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+}
+
+.pm-visa-row.is-major {
+  border-left-color: var(--color-orange, #e0a458);
+}
+
+.pm-visa-row.is-blocking {
+  border-left-color: var(--color-red, #e5534b);
+}
+
+.pm-visa-number {
+  font-weight: var(--font-bold);
+  color: var(--text-muted);
+  text-align: center;
+  padding-top: 4px;
+}
+
+.pm-visa-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+}
+
+.pm-visa-row-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-3);
+  align-items: center;
+}
+
+.pm-visa-article {
+  width: 140px;
+}
+
+.pm-visa-source {
+  flex: 1;
+  min-width: 160px;
+}
+
+.pm-visa-remove {
+  display: inline-flex;
+  padding: 4px;
+  --icon-size: 14px;
+}
+
+.pm-visa-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-4);
+}
+
+.pm-library-visa-sheet {
+  font-size: var(--font-ui-smaller);
+  padding: 1px var(--size-4-2);
+  height: auto;
+}

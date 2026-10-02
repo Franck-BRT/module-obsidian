@@ -1,3 +1,5 @@
+import { openVisaSheet } from '../visa/VisaModal'
+import { explain } from '../../ui/explain'
 import { Menu, Notice, TFile, type EventRef, type TAbstractFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { DocState, FilterState, PMSettings, Project, Task } from '../../types'
@@ -496,7 +498,15 @@ export class LibraryView implements SubView {
   private renderVisas(parent: HTMLElement, task: Task, project: Project | null): void {
     const meta = documentOf(task)
     if (!meta.approvers.length) {
-      parent.createSpan({ cls: 'pm-overview-muted', text: '—' })
+      // No one named to sign: the assisted sheet still can be drafted, by whoever reviews.
+      if (project && meta.file && meta.state !== 'expected') {
+        const sheet = parent.createEl('button', { cls: 'pm-library-visa-sheet', text: t('visa.short') })
+        explain(sheet, t('visa.title'), t('tip.visa.open'))
+        sheet.addEventListener('click', (e) => {
+          e.stopPropagation()
+          openVisaSheet(this.plugin, project, task, this.onRefresh)
+        })
+      } else parent.createSpan({ cls: 'pm-overview-muted', text: '—' })
       return
     }
     for (const approver of meta.approvers) {
@@ -508,16 +518,20 @@ export class LibraryView implements SubView {
         .setColor(
           verdict?.verdict === 'approved'
             ? 'var(--color-green)'
-            : verdict
-              ? 'var(--text-error, var(--color-red))'
-              : 'var(--text-muted)'
+            : verdict?.verdict === 'observations'
+              ? 'var(--color-orange)'
+              : verdict
+                ? 'var(--text-error, var(--color-red))'
+                : 'var(--text-muted)'
         )
         .setTooltip(
           verdict
             ? [
                 verdict.verdict === 'approved'
                   ? t('doc.approvedBy', { who: displayName(approver) })
-                  : t('doc.rejectedBy', { who: displayName(approver) }),
+                  : verdict.verdict === 'observations'
+                    ? t('doc.observedBy', { who: displayName(approver) })
+                    : t('doc.rejectedBy', { who: displayName(approver) }),
                 verdict.note
               ]
                 .filter(Boolean)
@@ -534,6 +548,21 @@ export class LibraryView implements SubView {
             .setTitle(t('doc.approve'))
             .setIcon('check')
             .onClick(safeAsync(() => signOff(this.plugin, project, task, approver, 'approved', this.onRefresh)))
+        )
+        if (meta.file) {
+          menu.addItem((item) =>
+            item
+              .setTitle(t('visa.title'))
+              .setIcon('file-search')
+              .onClick(() => openVisaSheet(this.plugin, project, task, this.onRefresh, approver))
+          )
+          menu.addSeparator()
+        }
+        menu.addItem((item) =>
+          item
+            .setTitle(t('doc.approveWithComments'))
+            .setIcon('message-square-warning')
+            .onClick(safeAsync(() => signOff(this.plugin, project, task, approver, 'observations', this.onRefresh)))
         )
         menu.addItem((item) =>
           item

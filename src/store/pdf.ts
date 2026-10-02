@@ -45,6 +45,8 @@ const STYLES: Record<DocxStyle, StyleMetrics> = {
 }
 
 const LEADING = 1.32
+/** How much wider Helvetica-Bold runs than the upright widths the layout measures with. */
+const BOLD_WIDTH = 1.08
 const CELL_PAD = 4
 /** Twentieths of a point is how the document model measures a column. */
 const DXA = 20
@@ -141,8 +143,9 @@ function layLines(runs: DocxRun[], style: StyleMetrics, width: number): PdfSpan[
       flush()
       continue
     }
-    const gap = line.length && !token.glue ? space : 0
-    const size = textWidth(token.text, style.size)
+    const gap = line.length && !token.glue ? space * (token.bold ? BOLD_WIDTH : 1) : 0
+    // Bold is drawn wider than the upright metrics say: measured so, its words keep their spaces.
+    const size = textWidth(token.text, style.size) * (token.bold ? BOLD_WIDTH : 1)
     if (line.length && x + gap + size > width) flush()
     if (!line.length && size > width) {
       // One word wider than the column: cut it rather than run past the margin.

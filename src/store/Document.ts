@@ -73,7 +73,7 @@ export function pendingApprovers(meta: DocumentMeta): string[] {
  * Files one person's verdict.
  *
  * A rejection puts the document under review whoever else has signed: one refusal is
- * enough to say it is not ready. It goes to approved only once every named approver has
+ * enough to say it is not ready. A visa with observations lets it go on, as one without. It goes to approved only once every named approver has
  * approved — and a document with no approvers named is approved by the person doing it,
  * since waiting for a list nobody wrote would be waiting forever.
  */
