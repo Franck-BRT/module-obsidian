@@ -46,6 +46,10 @@ export interface LibraryDoc {
   folder: string
   /** The version it follows — the issue before it —, by its record's path; absent when none. */
   previous?: string
+  /** The document it is a translation of, by its record's path; absent when none. */
+  translationOf?: string
+  /** The language it is in, as a code — set on a translation —; absent when not known. */
+  language?: string
 }
 
 export type DocFamily = 'pdf' | 'word' | 'sheet' | 'slides' | 'image' | 'mail' | 'note' | 'other'

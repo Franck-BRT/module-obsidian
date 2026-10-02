@@ -903,9 +903,13 @@ export default class PMPlugin extends Plugin {
       const waiting = this.scans.waiting.length
       status.setText(
         [
-          current.total
-            ? t('library.scanStatus', { title: current.title, page: current.page, total: current.total })
-            : t('library.scanStatusStarting', { title: current.title }),
+          current.kind === 'translate'
+            ? current.total
+              ? t('translate.status', { title: current.title, done: current.page, total: current.total })
+              : t('translate.starting', { title: current.title })
+            : current.total
+              ? t('library.scanStatus', { title: current.title, page: current.page, total: current.total })
+              : t('library.scanStatusStarting', { title: current.title }),
           waiting ? t('library.scanWaitingCount', { count: waiting }) : ''
         ]
           .filter(Boolean)

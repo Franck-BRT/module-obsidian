@@ -740,6 +740,10 @@ export interface PMSettings {
   agendaFolder: string
   /** Whether the shipped agenda templates were written once: a template deleted stays deleted. */
   agendaSeeded: boolean
+  /** The note holding the translation glossary; '' for the default, in the reader's language. */
+  translationGlossary: string
+  /** The language documents were last translated into, as a code. */
+  translationLanguage: string
   /** Folders discovery skips, for templates and archives holding pm-project notes. */
   excludedFolders: string[]
   defaultView: ViewMode
@@ -1057,6 +1061,8 @@ export const DEFAULT_SETTINGS: PMSettings = {
   peopleFolder: 'People',
   agendaFolder: '',
   agendaSeeded: false,
+  translationGlossary: '',
+  translationLanguage: 'fr',
   excludedFolders: [],
   defaultView: 'table',
   ganttGranularity: 'week',

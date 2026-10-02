@@ -50,6 +50,8 @@ import { pourRegisterFiles } from './pourRegisters'
 import type { Project } from '../../types'
 import { knownValues } from '../../store/library/libraryClass'
 import { formatDate } from '../../dates'
+import { openTranslate } from '../translate/TranslateModal'
+import { translatable } from '../translate/translateDocs'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
 import {
@@ -433,6 +435,21 @@ export class DocumentsView extends ItemView {
         text: t('library.versionBefore', { title: after.title })
       })
     }
+    // Its translations: the one it is, and those made of it.
+    const source = doc.translationOf ? all.find((one) => one.record === doc.translationOf) : undefined
+    if (source) {
+      meta.createSpan({
+        cls: 'pm-docs-version pm-docs-translation',
+        text: t('translate.of', { lang: (doc.language ?? '').toUpperCase(), title: source.title })
+      })
+    }
+    const made = all.filter((one) => one.translationOf === doc.record)
+    if (made.length) {
+      meta.createSpan({
+        cls: 'pm-docs-version pm-docs-translation',
+        text: t('translate.into', { langs: made.map((one) => (one.language ?? '?').toUpperCase()).join(', ') })
+      })
+    }
   }
 
   /**
@@ -622,6 +639,13 @@ export class DocumentsView extends ItemView {
             await this.plugin.askAndReadScans(scans, again)
           })
         )
+    }
+    const words = picked.filter(translatable)
+    if (words.length) {
+      new ButtonComponent(bar)
+        .setButtonText(t('translate.picked', { count: words.length }))
+        .setIcon('languages')
+        .onClick(() => openTranslate(this.plugin, words))
     }
     const ticked = all.filter((doc) => this.picked.has(doc.record))
     new ButtonComponent(bar)
@@ -871,9 +895,14 @@ export class DocumentsView extends ItemView {
       setIcon(strip.createSpan({ cls: 'pm-docs-scan-icon is-running' }), 'loader')
       strip.createSpan({
         cls: 'pm-docs-scan-text',
-        text: current.total
-          ? t('library.scanReadingPage', { title: current.title, page: current.page, total: current.total })
-          : t('library.scanStatusStarting', { title: current.title })
+        text:
+          current.kind === 'translate'
+            ? current.total
+              ? t('translate.status', { title: current.title, done: current.page, total: current.total })
+              : t('translate.starting', { title: current.title })
+            : current.total
+              ? t('library.scanReadingPage', { title: current.title, page: current.page, total: current.total })
+              : t('library.scanStatusStarting', { title: current.title })
       })
       this.scanElapsedEl = strip.createSpan({ cls: 'pm-docs-scan-elapsed' })
       if (scans.waiting.length) {
@@ -898,11 +927,18 @@ export class DocumentsView extends ItemView {
     strip.toggleClass('is-problem', !last.ok)
     strip.createSpan({
       cls: 'pm-docs-scan-text',
-      text: last.ok
-        ? t('library.scanDone', { title: last.title })
-        : last.reason === 'stopped'
-          ? t('library.scanStopped', { title: last.title })
-          : t('library.scanFailed', { title: last.title, reason: last.reason ?? '' })
+      text:
+        last.kind === 'translate'
+          ? last.ok
+            ? t('translate.done', { title: last.title })
+            : last.reason === 'stopped'
+              ? t('translate.stopped', { title: last.title })
+              : t('translate.failed', { title: last.title, reason: last.reason ?? '' })
+          : last.ok
+            ? t('library.scanDone', { title: last.title })
+            : last.reason === 'stopped'
+              ? t('library.scanStopped', { title: last.title })
+              : t('library.scanFailed', { title: last.title, reason: last.reason ?? '' })
     })
     const close = strip.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('common.close') } })
     setIcon(close, 'x')
@@ -1079,6 +1115,14 @@ export class DocumentsView extends ItemView {
               await this.plugin.askAndReadScans([doc], this.plugin.libraryText.entry(doc)?.ocr === true)
             })
           )
+      )
+    }
+    if (translatable(doc)) {
+      menu.addItem((item) =>
+        item
+          .setTitle(t('translate.menu'))
+          .setIcon('languages')
+          .onClick(() => openTranslate(this.plugin, [doc]))
       )
     }
     if (doc.file) {

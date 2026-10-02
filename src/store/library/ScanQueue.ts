@@ -15,11 +15,14 @@ export interface ScanJob {
   run: (progress: (page: number, total: number) => void, stopped: () => boolean) => Promise<void>
   /** Told when it is dropped from the queue before its turn came. */
   cancel?: () => void
+  /** What the job does to the document: read it, the default, or translate it. */
+  kind?: 'translate'
 }
 
 export interface ScanCurrent {
   key: string
   title: string
+  kind?: 'translate'
   page: number
   total: number
   /** When the page being read was started, in milliseconds. */
@@ -28,6 +31,7 @@ export interface ScanCurrent {
 
 export interface ScanOutcome {
   title: string
+  kind?: 'translate'
   ok: boolean
   /** Why it failed, or that it was stopped. */
   reason?: string
@@ -65,7 +69,8 @@ export class ScanQueue {
     this.stopping = false
     while (this.waiting.length && !this.stopping) {
       const job = this.waiting.shift() as ScanJob
-      this.current = { key: job.key, title: job.title, page: 0, total: 0, since: this.now() }
+      const kind = job.kind ? { kind: job.kind } : {}
+      this.current = { key: job.key, title: job.title, ...kind, page: 0, total: 0, since: this.now() }
       this.changed()
       try {
         await job.run(
@@ -76,10 +81,13 @@ export class ScanQueue {
           },
           () => this.stopping
         )
-        this.last = this.stopping ? { title: job.title, ok: false, reason: 'stopped' } : { title: job.title, ok: true }
+        this.last = this.stopping
+          ? { title: job.title, ...kind, ok: false, reason: 'stopped' }
+          : { title: job.title, ...kind, ok: true }
       } catch (error) {
         this.last = {
           title: job.title,
+          ...kind,
           ok: false,
           reason: error instanceof ScanStopped ? 'stopped' : error instanceof Error ? error.message : String(error)
         }

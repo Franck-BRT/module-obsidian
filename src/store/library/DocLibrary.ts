@@ -185,8 +185,22 @@ export class DocLibrary {
       tags: cleanTags(stringList(fm.tags)),
       ...(typeof fm.previous === 'string' && this.resolve(fm.previous, record.path)
         ? { previous: this.resolve(fm.previous, record.path)?.path }
-        : {})
+        : {}),
+      ...(typeof fm.translationOf === 'string' && this.resolve(fm.translationOf, record.path)
+        ? { translationOf: this.resolve(fm.translationOf, record.path)?.path }
+        : {}),
+      ...(typeof fm.language === 'string' && fm.language.trim() ? { language: fm.language.trim() } : {})
     }
+  }
+
+  /** Says which document this one is the translation of, and in which language: in its record. */
+  async setTranslationOf(doc: LibraryDoc, source: LibraryDoc, language: string): Promise<void> {
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return
+    await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+      fm.translationOf = `[[${source.record.replace(/\.md$/, '')}]]`
+      fm.language = language
+    })
   }
 
   /**

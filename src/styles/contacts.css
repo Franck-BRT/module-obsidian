@@ -370,3 +370,31 @@
 .pm-agendas-none {
   margin-top: var(--size-4-3);
 }
+
+/* ---- A document translated -------------------------------------------- */
+
+.pm-translate-modal {
+  width: min(620px, 92vw);
+}
+
+.pm-translate-intro,
+.pm-translate-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-translate-note {
+  margin-top: var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3);
+  border-left: 3px solid var(--color-orange, #d97706);
+  background: var(--background-secondary);
+}
+
+.pm-translate-list {
+  margin: 0 0 var(--size-4-3);
+  font-size: var(--font-ui-small);
+}
+
+.pm-docs-translation {
+  color: var(--text-accent);
+}
