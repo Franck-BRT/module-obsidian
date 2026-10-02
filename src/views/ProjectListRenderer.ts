@@ -62,6 +62,14 @@ export function renderProjectListToolbar(ctx: ProjectListContext): void {
       void ctx.plugin.openNotes()
     })
 
+  // Who the projects deal with.
+  new ExtraButtonComponent(ctx.toolbarEl)
+    .setIcon('contact')
+    .setTooltip(t('contact.title'))
+    .onClick(() => {
+      void ctx.plugin.openContacts()
+    })
+
   // The library is a place rather than something this page makes, so it gets a button
   // of its own instead of a line in the menu below.
   new ExtraButtonComponent(ctx.toolbarEl)

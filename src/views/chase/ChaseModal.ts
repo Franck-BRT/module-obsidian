@@ -5,8 +5,10 @@ import { documentOf } from '../../store/Document'
 import { findTaskById } from '../../store/TaskIndex'
 import { flattenTasks } from '../../store/TaskTreeOps'
 import { askedBy, awaitedDocuments, chaseGroups, chaseMail, recordChase, type ChaseGroup } from '../../store/chasing'
+import { ContactBook, contactKey, readContacts } from '../../store/contacts'
 import { formatDate, today } from '../../dates'
 import { safeAsync } from '../../utils'
+import { openContactModal } from '../contacts/ContactModal'
 import { chaseWords } from './chaseWords'
 import { t } from '../../i18n'
 
@@ -18,8 +20,11 @@ interface ProjectGroup {
   group: ChaseGroup
 }
 
-/** The documents the projects still wait for past their date, gathered by who owes them. */
-export function chaseList(projects: Project[], day: string): ProjectGroup[] {
+/**
+ * The documents the projects still wait for past their date, gathered by who owes them —
+ * only those `only` keeps, when given.
+ */
+export function chaseList(projects: Project[], day: string, only?: (issuer: string) => boolean): ProjectGroup[] {
   return projects
     .filter((project) => !project.program && !project.template)
     .flatMap((project) =>
@@ -28,7 +33,9 @@ export function chaseList(projects: Project[], day: string): ProjectGroup[] {
           flattenTasks(project.tasks).map((flat) => flat.task),
           day
         )
-      ).map((group) => ({ project, group }))
+      )
+        .filter((group) => !only || only(group.issuer))
+        .map((group) => ({ project, group }))
     )
 }
 
@@ -36,13 +43,26 @@ export function chaseList(projects: Project[], day: string): ProjectGroup[] {
  * Opens the reminders for what the projects still wait for — or says there is nothing
  * to chase.
  */
-export function openChase(plugin: PMPlugin, projects: Project[], onRefresh: () => Promise<void>): void {
-  const list = chaseList(projects, today().toString())
+export function openChase(
+  plugin: PMPlugin,
+  projects: Project[],
+  onRefresh: () => Promise<void>,
+  issuer?: string
+): void {
+  // One contact's reminders: the documents whose issuer is that contact, however written.
+  const only = issuer
+    ? (() => {
+        const book = new ContactBook(readContacts(plugin.app, plugin.settings.peopleFolder))
+        const wanted = book.find(issuer)?.path ?? contactKey(issuer)
+        return (one: string): boolean => (book.find(one)?.path ?? contactKey(one)) === wanted
+      })()
+    : undefined
+  const list = chaseList(projects, today().toString(), only)
   if (!list.length) {
     new Notice(t('view.awaitedNone'))
     return
   }
-  new ChaseModal(plugin, projects, list, onRefresh).open()
+  new ChaseModal(plugin, projects, list, onRefresh, only).open()
 }
 
 /**
@@ -59,7 +79,8 @@ class ChaseModal extends Modal {
     private plugin: PMPlugin,
     private projects: Project[],
     private list: ProjectGroup[],
-    private onRefresh: () => Promise<void>
+    private onRefresh: () => Promise<void>,
+    private only?: (issuer: string) => boolean
   ) {
     super(plugin.app)
     this.asked = askedBy(today().toString(), DEFAULT_DELAY)
@@ -134,6 +155,27 @@ class ChaseModal extends Modal {
       })
     }
     if (!group.issuer) el.createDiv({ cls: 'pm-chase-hint', text: t('chase.noIssuerHint') })
+    // Who it goes to: the issuer's contact, its mail or its people's.
+    const book = new ContactBook(readContacts(this.app, this.plugin.settings.peopleFolder))
+    const to = group.issuer ? book.emailsFor(group.issuer) : []
+    if (group.issuer) {
+      const line = el.createDiv('pm-chase-to')
+      if (to.length) line.setText(t('chase.to', { to: to.join(', ') }))
+      else {
+        const known = book.find(group.issuer)
+        line.createSpan({ cls: 'pm-chase-hint', text: known ? t('chase.noMail') : t('chase.noContact') })
+        const fix = line.createEl('a', { href: '#', text: known ? t('chase.addMail') : t('chase.makeContact') })
+        fix.addEventListener('click', (event) => {
+          event.preventDefault()
+          openContactModal(this.plugin, {
+            contact: known ?? undefined,
+            name: group.issuer.replace(/^\[\[|\]\]$/g, '').replace(/^.*\|/, ''),
+            kind: 'company',
+            onDone: () => this.render()
+          })
+        })
+      }
+    }
 
     const list = el.createEl('ul', { cls: 'pm-chase-items' })
     for (const item of group.items) {
@@ -170,7 +212,9 @@ class ChaseModal extends Modal {
       if (this.note) await this.noteChase(project, group)
     })
     button('mail', t('chase.openMail'), async () => {
-      window.open(`mailto:?subject=${encodeURIComponent(mail.subject)}&body=${encodeURIComponent(mail.body)}`)
+      window.open(
+        `mailto:${to.map((one) => one.replace(/[?&#\s,]/g, '')).join(',')}?subject=${encodeURIComponent(mail.subject)}&body=${encodeURIComponent(mail.body)}`
+      )
       if (this.note) await this.noteChase(project, group)
     })
     const noted = button('calendar-check', t('chase.noteNow'), () => this.noteChase(project, group))
@@ -190,7 +234,7 @@ class ChaseModal extends Modal {
     }
     await this.onRefresh()
     new Notice(t('chase.noted', { count: group.items.length }))
-    this.list = chaseList(this.projects, day)
+    this.list = chaseList(this.projects, day, this.only)
     this.render()
   }
 }

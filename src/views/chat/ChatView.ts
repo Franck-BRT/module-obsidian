@@ -91,6 +91,7 @@ import { asksForDeadlines, deadlinesBlock } from '../../store/chat/deadlines'
 import { asksForChase, awaitedDocuments, chaseBlock, chaseGroups } from '../../store/chasing'
 import { flattenTasks } from '../../store/TaskTreeOps'
 import { chaseBlockWords } from '../chase/chaseWords'
+import { ContactBook, readContacts } from '../../store/contacts'
 import { asksForComparison, changesBlock, documentChanges } from '../../store/library/docDiff'
 import { noteProjects } from '../../store/chat/noteProjects'
 import {
@@ -1425,7 +1426,7 @@ export class ChatView extends ItemView {
           )
         )
       })),
-      chaseBlockWords()
+      chaseBlockWords(new ContactBook(readContacts(this.app, this.plugin.settings.peopleFolder)))
     )
   }
 

@@ -74,6 +74,7 @@ import { MessageView, PM_MESSAGE_VIEW_TYPE } from './views/MessageView'
 import { RequirementsView, PM_REQUIREMENTS_VIEW_TYPE } from './views/requirements/RequirementsView'
 import { ChatView, PM_CHAT_VIEW_TYPE } from './views/chat/ChatView'
 import { ChatHistoryView, PM_CHAT_HISTORY_VIEW_TYPE } from './views/chat/ChatHistoryView'
+import { ContactsView, PM_CONTACTS_VIEW_TYPE } from './views/contacts/ContactsView'
 import { ChatHistory } from './store/chat/chatHistory'
 import { ChatNotes } from './store/chat/ChatNotes'
 import { isChatNote } from './store/chat/chatNote'
@@ -328,6 +329,7 @@ export default class PMPlugin extends Plugin {
     this.registerView(PM_REQUIREMENTS_VIEW_TYPE, (leaf) => new RequirementsView(leaf, this))
     this.registerView(PM_CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, this))
     this.registerView(PM_CHAT_HISTORY_VIEW_TYPE, (leaf) => new ChatHistoryView(leaf, this))
+    this.registerView(PM_CONTACTS_VIEW_TYPE, (leaf) => new ContactsView(leaf, this))
     this.registerView(PM_DOCUMENTS_VIEW_TYPE, (leaf) => new DocumentsView(leaf, this))
     this.registerView(PM_NOTES_VIEW_TYPE, (leaf) => new NotesView(leaf, this))
     // Claiming the extension is what stops a click handing the message back to Outlook.
@@ -426,6 +428,15 @@ export default class PMPlugin extends Plugin {
         if (!doc?.file) return false
         if (!checking) void this.askAndReadScans([doc], true)
         return true
+      }
+    })
+
+    this.addCommand({
+      id: 'open-contacts',
+      name: t('command.contacts'),
+      callback: () => {
+        const project = this.app.workspace.getActiveViewOfType(ProjectView)?.projectScope?.primary
+        void this.openContacts(project?.filePath ?? '')
       }
     })
 
@@ -1105,6 +1116,14 @@ export default class PMPlugin extends Plugin {
     const existing = this.app.workspace.getLeavesOfType(PM_CHAT_HISTORY_VIEW_TYPE)[0]
     const leaf = existing ?? this.app.workspace.getLeaf('tab')
     if (!existing) await leaf.setViewState({ type: PM_CHAT_HISTORY_VIEW_TYPE, active: true })
+    await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /** Who the projects deal with, in a tab of its own, narrowed to one project when opened from it. */
+  async openContacts(project = ''): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(PM_CONTACTS_VIEW_TYPE)[0]
+    const leaf = existing ?? this.app.workspace.getLeaf('tab')
+    await leaf.setViewState({ type: PM_CONTACTS_VIEW_TYPE, state: { project }, active: true })
     await this.app.workspace.revealLeaf(leaf)
   }
 

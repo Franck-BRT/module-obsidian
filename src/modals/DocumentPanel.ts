@@ -12,6 +12,7 @@ import { Chip } from '../ui/primitives/Chip'
 import { IconButton } from '../ui/primitives/IconButton'
 import { collectAllAssignees } from '../store/TaskTreeOps'
 import { displayName, safeAsync } from '../utils'
+import { ContactBook, readContacts } from '../store/contacts'
 import { t } from '../i18n'
 
 export interface DocumentPanelContext {
@@ -77,6 +78,16 @@ export function renderDocumentPanel(container: HTMLElement, ctx: DocumentPanelCo
             rerender()
           }
         })
+        // Who sends or receives it: the contacts offered, companies first.
+        const input = cell.querySelector('input')
+        if (input && (key === 'issuer' || key === 'recipient')) {
+          const id = `pm-doc-${key}-contacts`
+          const list = cell.createEl('datalist', { attr: { id } })
+          for (const name of new ContactBook(readContacts(plugin.app, plugin.settings.peopleFolder)).names()) {
+            list.createEl('option', { value: name })
+          }
+          input.setAttr('list', id)
+        }
         return cell
       },
       icon

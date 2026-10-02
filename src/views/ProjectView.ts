@@ -559,6 +559,10 @@ export class ProjectView extends ItemView {
         .setIcon('notebook-pen')
         .setTooltip(t('notes.ofProject'))
         .onClick(safeAsync(() => this.plugin.openNotes(primary.filePath)))
+      new ExtraButtonComponent(right)
+        .setIcon('contact')
+        .setTooltip(t('contact.ofProject'))
+        .onClick(safeAsync(() => this.plugin.openContacts(primary.filePath)))
     }
     const spec = this.spec
     if (spec?.kind === 'collection') {

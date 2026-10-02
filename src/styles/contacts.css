@@ -1,0 +1,195 @@
+/* ---- Contacts: the companies and people the projects deal with ------------ */
+
+.pm-contacts {
+  padding: var(--size-4-4) var(--size-4-5);
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.pm-contacts-head {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-3);
+}
+
+.pm-contacts-title {
+  margin: 0;
+  flex: 1;
+}
+
+.pm-contacts-head button,
+.pm-contact-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-3);
+}
+
+.pm-contacts-icon,
+.pm-contact-icon {
+  display: inline-flex;
+  --icon-size: 16px;
+}
+
+.pm-contacts-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  margin: var(--size-4-3) 0 var(--size-4-4);
+}
+
+.pm-contacts-search {
+  flex: 1 1 240px;
+}
+
+.pm-contacts-group {
+  margin-bottom: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  overflow: hidden;
+}
+
+.pm-contacts-members {
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
+.pm-contacts-members .pm-contact {
+  padding-left: var(--size-4-8);
+}
+
+.pm-contact {
+  padding: var(--size-4-2) var(--size-4-3);
+}
+
+.pm-contact + .pm-contact {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.pm-contact-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-3);
+  flex-wrap: wrap;
+}
+
+.pm-contact--company > .pm-contact-row .pm-contact-name {
+  font-weight: var(--font-semibold);
+}
+
+.pm-contact-main {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.pm-contact-line {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-contact-reach {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2) var(--size-4-3);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-contact-missing {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.pm-contact-lot {
+  padding: 0 var(--size-4-2);
+  border-radius: var(--radius-l);
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+}
+
+.pm-contact-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-3);
+}
+
+.pm-contact-stat {
+  padding: 1px var(--size-4-2);
+  border-radius: var(--radius-l);
+  background: var(--background-modifier-hover);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+.pm-contact-stat.is-bad {
+  background: color-mix(in srgb, var(--text-error, var(--color-red)) 14%, transparent);
+  color: var(--text-error, var(--color-red));
+}
+
+.pm-contact-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-3);
+}
+
+.pm-contact-details {
+  margin: var(--size-4-2) 0 var(--size-2-2) var(--size-4-8);
+  font-size: var(--font-ui-small);
+}
+
+.pm-contact-details-title {
+  margin-top: var(--size-2-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+}
+
+.pm-contact-item {
+  display: flex;
+  gap: var(--size-4-3);
+  padding: 2px 0;
+}
+
+.pm-contact-item-project {
+  color: var(--text-muted);
+}
+
+.pm-contact-item-due {
+  margin-left: auto;
+  color: var(--text-muted);
+}
+
+.pm-contact-item.is-late .pm-contact-item-due {
+  color: var(--text-error, var(--color-red));
+}
+
+.pm-contacts-subtitle {
+  margin: var(--size-4-5) 0 var(--size-4-2);
+  font-size: var(--font-ui-medium);
+}
+
+.pm-contacts-hint {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-bottom: var(--size-4-2);
+}
+
+.pm-contacts-unknown-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-3);
+  padding: var(--size-2-3) 0;
+}
+
+.pm-contacts-unknown-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-right: auto;
+}
+
+.pm-chase-to {
+  margin-top: var(--size-2-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  display: flex;
+  gap: var(--size-4-2);
+}

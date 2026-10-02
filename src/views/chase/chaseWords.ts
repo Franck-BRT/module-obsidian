@@ -1,4 +1,5 @@
 import type { ChaseBlockWords, ChaseWords } from '../../store/chasing'
+import type { ContactBook } from '../../store/contacts'
 import { formatDateLetter } from '../../dates'
 import { t } from '../../i18n'
 
@@ -25,12 +26,19 @@ export function chaseWords(): ChaseWords {
   }
 }
 
-/** The list's words, as the model is given it. */
-export function chaseBlockWords(): ChaseBlockWords {
+/**
+ * The list's words, as the model is given it — with, when the contacts are known, the
+ * person to address at each issuer.
+ */
+export function chaseBlockWords(book?: ContactBook): ChaseBlockWords {
   return {
     intro: t('chat.chaseIntro'),
     project: (title) => t('chat.chaseProject', { title }),
-    issuer: (name) => t('chat.chaseIssuer', { name }),
+    issuer: (name) => {
+      const person = book?.personFor(name)
+      const who = person ? [person.name, person.role].filter(Boolean).join(', ') : ''
+      return who ? t('chat.chaseIssuerContact', { name, contact: who }) : t('chat.chaseIssuer', { name })
+    },
     unnamed: t('chat.chaseUnnamed'),
     late: (days) => t('chat.chaseLate', { count: days }),
     chased: (dates) => t('chat.chaseChased', { dates }),
