@@ -24,6 +24,12 @@ export function formatDate(iso: string): string {
   return d ? d.toLocaleString(dateLocale(), { year: 'numeric', month: 'short', day: 'numeric' }) : ''
 }
 
+/** "June 15, 2026", as a letter writes it, or '' when empty or invalid. */
+export function formatDateLetter(iso: string): string {
+  const d = parsePlainDate(iso)
+  return d ? d.toLocaleString(dateLocale(), { year: 'numeric', month: 'long', day: 'numeric' }) : ''
+}
+
 /** "Mar 28", or '' when empty or invalid. */
 export function formatDateShort(iso: string): string {
   const d = parsePlainDate(iso)

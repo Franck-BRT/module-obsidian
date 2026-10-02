@@ -88,6 +88,9 @@ import { chunkText } from '../../store/rag/ragChunk'
 import { noteBody } from '../../store/notes/NoteLibrary'
 import { pdfPages } from './pdfPages'
 import { asksForDeadlines, deadlinesBlock } from '../../store/chat/deadlines'
+import { asksForChase, awaitedDocuments, chaseBlock, chaseGroups } from '../../store/chasing'
+import { flattenTasks } from '../../store/TaskTreeOps'
+import { chaseBlockWords } from '../chase/chaseWords'
 import { asksForComparison, changesBlock, documentChanges } from '../../store/library/docDiff'
 import { noteProjects } from '../../store/chat/noteProjects'
 import {
@@ -1399,6 +1402,33 @@ export class ChatView extends ItemView {
    * out from the plan and the photograph of it taken at the last point. This one is
    * photographed in turn, for the next.
    */
+  /** The documents the projects asked about still wait for past their date, by who owes them. */
+  private async chaseContext(paths: string[]): Promise<string> {
+    const index = this.plugin.index
+    const all = new Set<string>()
+    for (const path of paths) {
+      const ref = index.projectRef(path)
+      if (!ref || ref.template) continue
+      if (!ref.program) all.add(path)
+      for (const below of index.descendantRefs(path)) if (!below.program && !below.template) all.add(below.path)
+    }
+    if (!all.size) return ''
+    const projects = await this.plugin.store.loadProjects([...all])
+    const day = today().toString()
+    return chaseBlock(
+      projects.map((one) => ({
+        title: one.title,
+        groups: chaseGroups(
+          awaitedDocuments(
+            flattenTasks(one.tasks).map((flat) => flat.task),
+            day
+          )
+        )
+      })),
+      chaseBlockWords()
+    )
+  }
+
   private async statusBlock(paths: string[]): Promise<string> {
     const index = this.plugin.index
     const all = new Set<string>()
@@ -2379,15 +2409,23 @@ export class ChatView extends ItemView {
   }
 
   /**
-   * One of the ready questions asked about documents, in a conversation of its own:
-   * nothing said before, nothing else attached — no other file, project, skill, nor the
-   * open note —, only them and, then, their projects.
+   * The reminders for what the projects still wait for, written by the model in a
+   * conversation of its own, with only those projects attached; `asked` the date the
+   * documents are asked for.
    */
-  private async askFresh(paths: string[], question: string): Promise<void> {
+  async askChase(paths: string[], asked: string): Promise<void> {
     if (this.pending) {
       new Notice(t('chat.busy'))
       return
     }
+    this.clearForFresh()
+    for (const path of paths) this.attachProject(path)
+    this.render()
+    await this.send(t('chat.chaseAsk', { date: asked }))
+  }
+
+  /** Nothing said before, nothing attached: a conversation started from a ready question. */
+  private clearForFresh(): void {
     this.newConversation()
     this.files = []
     this.projects = []
@@ -2397,6 +2435,19 @@ export class ChatView extends ItemView {
     this.selection = null
     this.useNote = false
     this.searchLibrary = false
+  }
+
+  /**
+   * One of the ready questions asked about documents, in a conversation of its own:
+   * nothing said before, nothing else attached — no other file, project, skill, nor the
+   * open note —, only them and, then, their projects.
+   */
+  private async askFresh(paths: string[], question: string): Promise<void> {
+    if (this.pending) {
+      new Notice(t('chat.busy'))
+      return
+    }
+    this.clearForFresh()
     this.render()
     this.attachFiles(paths)
     const preset = builtinPrompts().find((one) => one.question === question)
@@ -2554,6 +2605,8 @@ export class ChatView extends ItemView {
         : []
       // A status point asked for: its facts worked out here, against the plan at the last one.
       const status = project && asksForStatus(asked) ? await this.statusBlock(currentProjects(this.turns)) : ''
+      // Reminders asked for: the documents still awaited past their date, found by the plugin.
+      const chase = project && asksForChase(asked) ? await this.chaseContext(currentProjects(this.turns)) : ''
       // Deadlines asked for: every date and delay the documents write, found by the plugin,
       // so the model misses none and makes none up.
       const dated = [
@@ -2607,6 +2660,7 @@ export class ChatView extends ItemView {
             systemFor(budget),
             project?.text,
             status,
+            chase,
             block,
             this.filesText(attached, fileBudget, asked, !told),
             comparison,

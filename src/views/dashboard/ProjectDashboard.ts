@@ -17,6 +17,7 @@ import { docStateLabel } from '../library/docStateLabel'
 import { RISK_LEVELS, riskBand, type RiskBand } from '../../store/risk'
 import { BAND_COLOR, bandLabel, impactLabel, probabilityLabel } from '../risks/riskLabels'
 import { focusRiskCell } from '../risks/RisksView'
+import { openChase } from '../chase/ChaseModal'
 import type { SubView } from '../SubView'
 import { barList, burnChart, progressRing } from './charts'
 import { writeStatusReport } from './statusReport'
@@ -485,11 +486,16 @@ export class ProjectDashboard implements SubView {
       }))
     )
     if (m.documents.late) {
-      new Chip(body.createDiv('pm-kpi-chips'))
+      const chips = body.createDiv('pm-kpi-chips')
+      new Chip(chips)
         .setLabel(t('kpi.lateDocs', { count: m.documents.late }))
         .setLeadingIcon('alarm-clock')
         .setVariant('solid')
         .setColor('var(--text-error, var(--color-red))')
+      new ChipButton(chips)
+        .setLabel(t('chase.button'))
+        .setShape('pill')
+        .onClick(() => openChase(this.plugin, this.scope.projects, this.onRefresh))
     }
   }
 

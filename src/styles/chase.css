@@ -1,0 +1,141 @@
+/* ---- Chasing awaited documents: one reminder per issuer ------------------- */
+
+.pm-chase-modal {
+  width: min(760px, 92vw);
+}
+
+.pm-chase-intro {
+  color: var(--text-muted);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-chase-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2) var(--size-4-6);
+  align-items: center;
+  margin-bottom: var(--size-4-4);
+  font-size: var(--font-ui-small);
+}
+
+.pm-chase-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.pm-chase-group {
+  padding: var(--size-4-3) var(--size-4-4);
+  margin-bottom: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.pm-chase-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.pm-chase-icon {
+  display: inline-flex;
+  --icon-size: 15px;
+}
+
+.pm-chase-issuer {
+  font-weight: var(--font-semibold);
+}
+
+.pm-chase-project {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-chase-chased {
+  margin-left: auto;
+  padding: 1px var(--size-4-2);
+  border-radius: var(--radius-l);
+  background: color-mix(in srgb, var(--color-orange, #b8a06b) 16%, transparent);
+  color: var(--color-orange, #b8a06b);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-chase-chased.is-today {
+  background: color-mix(in srgb, var(--color-green, #79b58d) 16%, transparent);
+  color: var(--color-green, #79b58d);
+}
+
+.pm-chase-hint {
+  margin-top: var(--size-2-2);
+  color: var(--text-warning, var(--color-orange));
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-chase-items {
+  margin: var(--size-4-2) 0;
+  padding-left: var(--size-4-5);
+}
+
+.pm-chase-items li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2) var(--size-4-3);
+  font-size: var(--font-ui-small);
+}
+
+.pm-chase-late {
+  color: var(--text-error, var(--color-red));
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-chase-preview {
+  margin-bottom: var(--size-4-2);
+  font-size: var(--font-ui-small);
+}
+
+.pm-chase-preview summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.pm-chase-subject {
+  margin-top: var(--size-4-2);
+  font-weight: var(--font-semibold);
+}
+
+.pm-chase-body {
+  margin: var(--size-2-2) 0 0;
+  padding: var(--size-4-2) var(--size-4-3);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  white-space: pre-wrap;
+  font-family: var(--font-text);
+  font-size: var(--font-ui-small);
+}
+
+.pm-chase-actions,
+.pm-chase-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+}
+
+.pm-chase-actions button,
+.pm-chase-foot button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-3);
+}
+
+.pm-chase-foot {
+  justify-content: flex-end;
+  margin-top: var(--size-4-4);
+}
+
+.pm-library-chased {
+  color: var(--color-orange, #b8a06b);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}

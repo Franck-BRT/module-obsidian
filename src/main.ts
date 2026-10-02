@@ -41,6 +41,7 @@ import {
 } from './store'
 import type { FormerSettings, ProjectRef, TaskSource } from './store'
 import { PMSettingTab } from './settings'
+import { openChase } from './views/chase/ChaseModal'
 import { ProjectView, PM_PROJECT_VIEW_TYPE } from './views/ProjectView'
 import { ProjectOverviewView, PM_PROJECT_OVERVIEW_VIEW_TYPE } from './views/ProjectOverviewView'
 import { ProjectEditView, PM_PROJECT_EDIT_VIEW_TYPE } from './views/ProjectEditView'
@@ -545,6 +546,20 @@ export default class PMPlugin extends Plugin {
       name: t('command.redo'),
       callback: () => {
         void this.redoLastAction()
+      }
+    })
+
+    this.addCommand({
+      id: 'chase-documents',
+      name: t('command.chaseDocuments'),
+      callback: () => {
+        const view = this.app.workspace.getActiveViewOfType(ProjectView)
+        const scope = view?.projectScope
+        if (!view || !scope) {
+          this.showNotice(t('chase.openProject'))
+          return
+        }
+        openChase(this, scope.projects, () => view.refreshProject())
       }
     })
 
@@ -1543,6 +1558,14 @@ export default class PMPlugin extends Plugin {
     await this.openChat()
     const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
     if (view instanceof ChatView) await view.askDeadlines(paths)
+  }
+
+  /** The chat, opened on projects to write the reminders for what they still wait for. */
+  async chatChase(paths: string[], asked: string): Promise<void> {
+    if (!paths.length) return
+    await this.openChat()
+    const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
+    if (view instanceof ChatView) await view.askChase(paths, asked)
   }
 
   /** The chat, opened on two versions of a document — the one before first — to say what changed. */

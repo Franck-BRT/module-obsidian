@@ -296,6 +296,7 @@ function serializeDocument(meta: DocumentMeta | undefined): Record<string, unkno
   if (meta.approvers.length) out.approvers = meta.approvers
   if (meta.approvals.length) out.approvals = meta.approvals
   if (meta.versions.length) out.versions = meta.versions
+  if (meta.chases?.length) out.chases = meta.chases
   return out
 }
 

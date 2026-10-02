@@ -128,6 +128,13 @@ function renderCard(grid: HTMLElement, task: Task, state: DocState, ctx: CardsCo
       cls: late ? 'pm-doc-card-due pm-library-late' : 'pm-doc-card-due',
       text: formatDateShort(task.due)
     })
+    const chases = meta.chases ?? []
+    if (late && chases.length) {
+      foot.createSpan({
+        cls: 'pm-library-chased',
+        text: t('chase.chasedShort', { count: chases.length, date: formatDateShort(chases[chases.length - 1]) })
+      })
+    }
   }
   if (meta.issuer) foot.createSpan({ cls: 'pm-doc-card-issuer', text: displayName(meta.issuer) })
 }

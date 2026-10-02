@@ -30,6 +30,7 @@ export function builtinPrompts(): ChatPrompt[] {
     prompt('project', t('chat.preset.person'), t('chat.preset.personQ')),
     prompt('project', t('chat.preset.risks'), t('chat.preset.risksQ')),
     prompt('project', t('chat.preset.riskRegister'), t('chat.preset.riskRegisterQ')),
+    prompt('project', t('chat.preset.chase'), t('chat.preset.chaseQ')),
     prompt('project', t('chat.preset.load'), t('chat.preset.loadQ')),
     prompt('requirements', t('chat.preset.verifiable'), t('chat.preset.verifiableQ')),
     prompt('requirements', t('chat.preset.coherence'), t('chat.preset.coherenceQ')),

@@ -152,6 +152,8 @@ export interface DocumentMeta {
   approvers: string[]
   approvals: DocApproval[]
   versions: DocVersion[]
+  /** The days it was chased on while expected, YYYY-MM-DD, the latest last. */
+  chases?: string[]
 }
 
 export function makeDocument(overrides: Partial<DocumentMeta> = {}): DocumentMeta {

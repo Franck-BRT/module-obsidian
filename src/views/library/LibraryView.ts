@@ -15,6 +15,7 @@ import { ChipButton } from '../../ui/primitives/ChipButton'
 import { SegmentedControl } from '../../ui/primitives/SegmentedControl'
 import { renderDocumentCards } from './LibraryCards'
 import { SUBVIEW_CLASS } from '../subviewClasses'
+import { openChase } from '../chase/ChaseModal'
 import { t } from '../../i18n'
 import { docStateLabel } from './docStateLabel'
 import { docStateConfigOf } from '../../store/TicketPalette'
@@ -235,6 +236,11 @@ export class LibraryView implements SubView {
         .setVariant('solid')
         .setColor('var(--text-error, var(--color-red))')
         .setTooltip(`${t('view.awaitedDocs')}\n${late.map((task) => task.title).join('\n')}`)
+      // What is late is chased from here: a reminder for each who owes some.
+      new ChipButton(right)
+        .setLabel(t('chase.button'))
+        .setShape('pill')
+        .onClick(() => openChase(this.plugin, this.scope.projects, this.onRefresh))
     }
     this.renderOrphanChip(right)
     // A document already in the library, followed here without being copied.
@@ -431,6 +437,13 @@ export class LibraryView implements SubView {
       text: task.due ? formatDateShort(task.due) : '—'
     })
     if (late) dueCell.setAttr('aria-label', t('doc.awaitedSince', { date: formatDateShort(task.due) }))
+    const chases = meta.chases ?? []
+    if (late && chases.length) {
+      dueCell.createDiv({
+        cls: 'pm-library-chased',
+        text: t('chase.chasedShort', { count: chases.length, date: formatDateShort(chases[chases.length - 1]) })
+      })
+    }
 
     row.createEl('td', { cls: 'pm-table-cell', text: meta.issuer ? displayName(meta.issuer) : '—' })
 

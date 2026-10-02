@@ -100,6 +100,11 @@ function readDocument(raw: unknown): DocumentMeta | undefined {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
   const r = raw as Record<string, unknown>
   const state = DOC_STATES.find((known: string) => known === r.state) ?? 'expected'
+  // Dates written by hand may come back as dates rather than text.
+  const chases = (Array.isArray(r.chases) ? (r.chases as unknown[]) : [])
+    .map((day) => (day instanceof Date ? day.toISOString() : typeof day === 'string' ? day : '').slice(0, 10))
+    .filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day))
+    .sort()
   return makeDocument({
     state,
     file: typeof r.file === 'string' ? r.file : '',
@@ -128,7 +133,8 @@ function readDocument(raw: unknown): DocumentMeta | undefined {
             note: String(entry?.note ?? '')
           }))
           .sort((a, b) => a.version - b.version)
-      : []
+      : [],
+    ...(chases.length ? { chases } : {})
   })
 }
 
