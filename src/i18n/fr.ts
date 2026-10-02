@@ -2058,6 +2058,8 @@ export const fr: Catalog = {
   'chat.note.appendIn': 'Ajouter dans « {section} »',
   'chat.note.appendAtEnd': 'Ajouter à la fin',
   'chat.note.chooseFolder': 'Changer de dossier…',
+  'chat.note.folderLabel': 'Dossier',
+  'chat.note.newFolder': 'nouveau dossier, créé avec la note',
   'chat.note.otherFolder': 'La créer dans un autre dossier…',
   'chat.note.vaultRoot': '(racine du coffre)',
   'chat.note.folderPlaceholder': 'Dossier où créer la note…',

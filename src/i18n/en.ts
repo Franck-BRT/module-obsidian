@@ -2068,6 +2068,8 @@ export const en = {
   'chat.note.appendIn': 'Add to “{section}”',
   'chat.note.appendAtEnd': 'Add at the end',
   'chat.note.chooseFolder': 'Change folder…',
+  'chat.note.folderLabel': 'Folder',
+  'chat.note.newFolder': 'new folder, made with the note',
   'chat.note.otherFolder': 'Create it in another folder…',
   'chat.note.vaultRoot': '(vault root)',
   'chat.note.folderPlaceholder': 'Folder to create the note in…',

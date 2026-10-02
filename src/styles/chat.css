@@ -683,6 +683,33 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
   margin-left: var(--size-4-2);
 }
 
+/* Where a proposed note goes: a field, as on a ticket's card. */
+.pm-note-folder-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin: var(--size-4-2) 0 var(--size-2-1);
+}
+
+.pm-note-folder-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-note-folder-pick {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-note-folder-new {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-style: italic;
+}
+
 .pm-note-preview {
   position: relative;
   max-height: 9em;

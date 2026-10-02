@@ -193,22 +193,27 @@ class NoteCard extends MarkdownRenderChild {
     } else {
       this.head(card, 'file-plus', t('chat.note.newKind'), proposal.title)
       const folder = proposalFolder(proposal, fallback)
-      const where = card.createDiv({
-        cls: 'pm-note-where',
-        text: [
-          folder ? t('chat.note.in', { folder }) : t('chat.note.atRoot'),
-          proposal.tags.map((tag) => `#${tag}`).join(' ')
-        ]
-          .filter(Boolean)
-          .join(' · ')
-      })
-      // Where it goes, the reader's to choose before it is written.
-      if (!done) {
-        const change = where.createEl('a', { cls: 'pm-note-folder', href: '#', text: t('chat.note.chooseFolder') })
-        change.addEventListener('click', (event) => {
-          event.preventDefault()
-          this.chooseFolder()
+      const tags = proposal.tags.map((tag) => `#${tag}`).join(' ')
+      if (done) {
+        card.createDiv({
+          cls: 'pm-note-where',
+          text: [folder ? t('chat.note.in', { folder }) : t('chat.note.atRoot'), tags].filter(Boolean).join(' · ')
         })
+      } else {
+        // Where it goes, the reader's to choose before it is written: a field, as on a ticket's card.
+        const row = card.createDiv('pm-note-folder-row')
+        row.createSpan({ cls: 'pm-note-folder-label', text: t('chat.note.folderLabel') })
+        const pick = row.createEl('button', {
+          cls: 'dropdown pm-note-folder-pick',
+          text: folder || t('chat.note.vaultRoot'),
+          attr: { 'aria-label': t('chat.note.chooseFolder') }
+        })
+        pick.addEventListener('click', () => this.chooseFolder())
+        // A folder the model named that is not there yet: made with the note, said beforehand.
+        if (folder && !(this.plugin.app.vault.getAbstractFileByPath(folder) instanceof TFolder)) {
+          row.createSpan({ cls: 'pm-note-folder-new', text: t('chat.note.newFolder') })
+        }
+        if (tags) card.createDiv({ cls: 'pm-note-where', text: tags })
       }
     }
     await this.preview(card, proposal)
