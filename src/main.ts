@@ -42,6 +42,7 @@ import {
 import type { FormerSettings, ProjectRef, TaskSource } from './store'
 import { PMSettingTab } from './settings'
 import { openChase } from './views/chase/ChaseModal'
+import { configureExplain } from './ui/explain'
 import { openAgendas } from './views/agenda/AgendasModal'
 import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
 import { ProjectView, PM_PROJECT_VIEW_TYPE } from './views/ProjectView'
@@ -214,6 +215,7 @@ export default class PMPlugin extends Plugin {
 
   async onload(): Promise<void> {
     await this.loadSettings()
+    this.applyTooltips()
     this.index = new VaultIndex(this.app, () => this.settings)
     this.radar = new ZoneRadar(this)
     setImpactLookup(this.radar)
@@ -1896,10 +1898,16 @@ export default class PMPlugin extends Plugin {
     await this.persistCollapsedState(project)
   }
 
+  /** The buttons' explanations, on or off, and how long they wait. */
+  private applyTooltips(): void {
+    configureExplain({ enabled: this.settings.tooltips, delay: Number(this.settings.tooltipDelay) || 1000 })
+  }
+
   async saveSettings(): Promise<void> {
     // The language setting can change here, and everything already on screen was
     // built with the old one.
     setLocale(this.settings.language)
+    this.applyTooltips()
     this.applyTicketAppearance()
     // A zone renamed, added or deleted changes which crossings exist and what they read as.
     this.radar.invalidate()

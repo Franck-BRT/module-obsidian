@@ -114,7 +114,7 @@ export class FilterRow {
 
   private renderDueDateButton(notify: () => void): void {
     const { filter } = this.props
-    const btn = new ChipButton(this.el)
+    const btn = new ChipButton(this.el).explain(t('tip.header.dueTitle'), t('tip.header.due'))
     const updateLabel = () => {
       const current = filter.dueDateFilter
       btn
@@ -143,7 +143,10 @@ export class FilterRow {
 
   private renderArchivedButton(notify: () => void): void {
     const { filter } = this.props
-    const btn = new ChipButton(this.el).setLabel(t('common.archived')).setActive(filter.showArchived)
+    const btn = new ChipButton(this.el)
+      .setLabel(t('common.archived'))
+      .setActive(filter.showArchived)
+      .explain(t('common.archived'), t('tip.header.archived'))
     btn.onClick(() => {
       filter.showArchived = !filter.showArchived
       btn.setActive(filter.showArchived)
@@ -157,9 +160,12 @@ export class FilterRow {
       this.clearBtn = null
       return
     }
-    this.clearBtn = new ChipButton(this.el).setLabel(t('project.clearFilters', { count })).onClick(() => {
-      this.props.onClear()
-    })
+    this.clearBtn = new ChipButton(this.el)
+      .setLabel(t('project.clearFilters', { count }))
+      .explain(t('project.clearFilters', { count }), t('tip.header.clear'))
+      .onClick(() => {
+        this.props.onClear()
+      })
   }
 
   refreshClearButton(): void {

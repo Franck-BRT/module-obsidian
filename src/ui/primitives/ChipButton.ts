@@ -1,4 +1,5 @@
 import { ButtonComponent } from 'obsidian'
+import { explain } from '../explain'
 
 export class ChipButton {
   el: HTMLButtonElement
@@ -22,6 +23,12 @@ export class ChipButton {
 
   setShape(shape: 'rounded' | 'pill'): this {
     this.el.toggleClass('pm-chip-btn--pill', shape === 'pill')
+    return this
+  }
+
+  /** Its name and what it does, said when it is hovered a moment. */
+  explain(title: string, help = ''): this {
+    explain(this.el, title, help)
     return this
   }
 

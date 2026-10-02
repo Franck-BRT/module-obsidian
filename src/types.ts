@@ -744,6 +744,10 @@ export interface PMSettings {
   translationGlossary: string
   /** The language documents were last translated into, as a code. */
   translationLanguage: string
+  /** Whether a button hovered for a moment explains itself. */
+  tooltips: boolean
+  /** How long, in milliseconds, before it does: '500', '1000' or '2000'. */
+  tooltipDelay: string
   /** Folders discovery skips, for templates and archives holding pm-project notes. */
   excludedFolders: string[]
   defaultView: ViewMode
@@ -1063,6 +1067,8 @@ export const DEFAULT_SETTINGS: PMSettings = {
   agendaSeeded: false,
   translationGlossary: '',
   translationLanguage: 'fr',
+  tooltips: true,
+  tooltipDelay: '1000',
   excludedFolders: [],
   defaultView: 'table',
   ganttGranularity: 'week',

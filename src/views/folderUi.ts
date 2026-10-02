@@ -2,6 +2,7 @@ import { setIcon, SuggestModal, type App } from 'obsidian'
 import { AT_ROOT } from '../store/folderFilter'
 import { parentOf } from '../store/libraryFolders'
 import { t } from '../i18n'
+import { explain } from '../ui/explain'
 
 /** A folder of a library chosen: one it has — '' for its root —, or a new one named. */
 export type FolderChoice = { kind: 'folder'; path: string } | { kind: 'new'; name: string }
@@ -136,6 +137,7 @@ export function renderFolderStrip(parent: HTMLElement, strip: FolderStrip): void
       strip.open(folder || AT_ROOT)
     })
     dropTarget(link, (paths) => strip.drop(paths, folder))
+    explain(link, label, t('tip.folder.crumb'))
     return link
   }
   setIcon(el.createSpan({ cls: 'pm-folder-strip-icon' }), 'folder-tree')
@@ -151,12 +153,14 @@ export function renderFolderStrip(parent: HTMLElement, strip: FolderStrip): void
       attr: { 'aria-label': t('folders.rename', { folder: current }) }
     })
     setIcon(rename, 'pencil')
+    explain(rename, t('folders.rename', { folder: current }), t('tip.folder.rename'))
     rename.addEventListener('click', () => strip.rename(current))
     const remove = el.createEl('button', {
       cls: 'clickable-icon pm-folder-action',
       attr: { 'aria-label': t('folders.delete', { folder: current }) }
     })
     setIcon(remove, 'folder-x')
+    explain(remove, t('folders.delete', { folder: current }), t('tip.folder.remove'))
     remove.addEventListener('click', () => strip.remove(current))
   }
   // The folders the one shown holds — at the root, the library's first ones.
@@ -171,5 +175,6 @@ export function renderFolderStrip(parent: HTMLElement, strip: FolderStrip): void
       strip.open(folder)
     })
     dropTarget(chip, (paths) => strip.drop(paths, folder))
+    explain(chip, folder.slice(folder.lastIndexOf('/') + 1), t('tip.folder.chip'))
   }
 }

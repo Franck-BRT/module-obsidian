@@ -52,6 +52,7 @@ import { knownValues } from '../../store/library/libraryClass'
 import { formatDate } from '../../dates'
 import { openTranslate } from '../translate/TranslateModal'
 import { translatable } from '../translate/translateDocs'
+import { explain } from '../../ui/explain'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
 import {
@@ -239,15 +240,17 @@ export class DocumentsView extends ItemView {
     // Nothing to search or filter until something has been poured in.
     this.filtersEl.toggleClass('is-hidden', !count)
     const right = this.toolbarEl.createDiv('pm-toolbar-right')
-    new ButtonComponent(right)
+    const folder = new ButtonComponent(right)
       .setButtonText(t('folders.newFolder'))
       .setIcon('folder-plus')
       .onClick(safeAsync(() => this.newFolder()))
-    new ButtonComponent(right)
+    explain(folder.buttonEl, t('folders.newFolder'), t('tip.library.newFolder'))
+    const pour = new ButtonComponent(right)
       .setButtonText(t('library.pour'))
       .setIcon('upload')
       .setCta()
       .onClick(() => this.pickFromComputer())
+    explain(pour.buttonEl, t('library.pour'), t('tip.library.pour'))
   }
 
   private renderFilters(): void {
@@ -343,6 +346,7 @@ export class DocumentsView extends ItemView {
       this.moreFilters = !this.moreFilters
       this.renderFilters()
     })
+    explain(toggle, t('library.moreFilters'), t('tip.library.moreFilters'))
     if (!this.moreFilters) return
     const more = main.createDiv('pm-docs-filters-more')
     select(
@@ -598,7 +602,8 @@ export class DocumentsView extends ItemView {
     const picked = all.filter((doc) => this.picked.has(doc.record) && doc.file)
     const bar = this.bodyEl.createDiv('pm-docs-picked')
     bar.createSpan({ cls: 'pm-docs-picked-count', text: t('library.picked', { count: picked.length }) })
-    new ButtonComponent(bar)
+    const tipped = (button: ButtonComponent, title: string, help: string): void => explain(button.buttonEl, title, help)
+    const ask = new ButtonComponent(bar)
       .setButtonText(t('library.askChat'))
       .setIcon('messages-square')
       .setCta()
@@ -607,15 +612,24 @@ export class DocumentsView extends ItemView {
           await this.plugin.chatAboutDocuments(picked.map((doc) => doc.file))
         })
       )
-    new ButtonComponent(bar)
-      .setButtonText(t('library.classify'))
-      .setIcon('tags')
-      .onClick(safeAsync(() => this.plugin.classifyDocuments(all.filter((doc) => this.picked.has(doc.record)))))
-    new ButtonComponent(bar)
-      .setButtonText(t('folders.moveTo'))
-      .setIcon('folder-input')
-      .onClick(() => this.moveToFolder(all.filter((doc) => this.picked.has(doc.record))))
-    new ButtonComponent(bar)
+    tipped(ask, t('library.askChat'), t('tip.library.askChat'))
+    tipped(
+      new ButtonComponent(bar)
+        .setButtonText(t('library.classify'))
+        .setIcon('tags')
+        .onClick(safeAsync(() => this.plugin.classifyDocuments(all.filter((doc) => this.picked.has(doc.record))))),
+      t('library.classify'),
+      t('tip.library.classify')
+    )
+    tipped(
+      new ButtonComponent(bar)
+        .setButtonText(t('folders.moveTo'))
+        .setIcon('folder-input')
+        .onClick(() => this.moveToFolder(all.filter((doc) => this.picked.has(doc.record)))),
+      t('folders.moveTo'),
+      t('tip.library.moveTo')
+    )
+    const match = new ButtonComponent(bar)
       .setButtonText(t('library.matchPicked'))
       .setIcon('clipboard-list')
       .onClick(
@@ -624,13 +638,14 @@ export class DocumentsView extends ItemView {
           await this.loadRegister()
         })
       )
+    tipped(match, t('library.matchPicked'), t('tip.library.match'))
     // The scans among them — a PDF or an image — read by the model; those it read already, read again.
     const scans = picked.filter((doc) => {
       const family = familyOf(doc.file || doc.title)
       return family === 'pdf' || family === 'image'
     })
     if (scans.length) {
-      new ButtonComponent(bar)
+      const read = new ButtonComponent(bar)
         .setButtonText(t('library.readPicked', { count: scans.length }))
         .setIcon('scan-text')
         .onClick(
@@ -639,24 +654,37 @@ export class DocumentsView extends ItemView {
             await this.plugin.askAndReadScans(scans, again)
           })
         )
+      tipped(read, t('library.readPicked', { count: scans.length }), t('tip.library.read'))
     }
     const words = picked.filter(translatable)
     if (words.length) {
-      new ButtonComponent(bar)
-        .setButtonText(t('translate.picked', { count: words.length }))
-        .setIcon('languages')
-        .onClick(() => openTranslate(this.plugin, words))
+      tipped(
+        new ButtonComponent(bar)
+          .setButtonText(t('translate.picked', { count: words.length }))
+          .setIcon('languages')
+          .onClick(() => openTranslate(this.plugin, words)),
+        t('translate.picked', { count: words.length }),
+        t('tip.library.translate')
+      )
     }
     const ticked = all.filter((doc) => this.picked.has(doc.record))
-    new ButtonComponent(bar)
-      .setButtonText(t('library.removePicked'))
-      .setIcon('trash-2')
-      .setDestructive()
-      .onClick(() => this.confirmRemoveMany(ticked))
-    new ButtonComponent(bar).setButtonText(t('library.unpick')).onClick(() => {
-      this.picked.clear()
-      this.renderBody()
-    })
+    tipped(
+      new ButtonComponent(bar)
+        .setButtonText(t('library.removePicked'))
+        .setIcon('trash-2')
+        .setDestructive()
+        .onClick(() => this.confirmRemoveMany(ticked)),
+      t('library.removePicked'),
+      t('tip.library.remove')
+    )
+    tipped(
+      new ButtonComponent(bar).setButtonText(t('library.unpick')).onClick(() => {
+        this.picked.clear()
+        this.renderBody()
+      }),
+      t('library.unpick'),
+      t('tip.library.unpick')
+    )
   }
 
   /** The documents ticked, removed from the library once the reader says so. */
@@ -710,7 +738,7 @@ export class DocumentsView extends ItemView {
         href: '#',
         text: t('library.scansWaiting', { count: scans.length })
       })
-      link.setAttr('title', t('library.readScansHint'))
+      explain(link, t('library.scansWaiting', { count: scans.length }), t('library.readScansHint'))
       link.addEventListener('click', (event) => {
         event.preventDefault()
         this.confirmReadScans(scans)
@@ -727,11 +755,12 @@ export class DocumentsView extends ItemView {
     setIcon(empty.createDiv('pm-docs-empty-icon'), 'library-big')
     empty.createDiv({ cls: 'pm-docs-empty-title', text: t('library.emptyTitle') })
     empty.createDiv({ cls: 'pm-docs-empty-text', text: t('library.emptyText') })
-    new ButtonComponent(empty)
+    const pour = new ButtonComponent(empty)
       .setButtonText(t('library.pour'))
       .setIcon('upload')
       .setCta()
       .onClick(() => this.pickFromComputer())
+    explain(pour.buttonEl, t('library.pour'), t('tip.library.pour'))
   }
 
   private renderRow(list: HTMLElement, doc: LibraryDoc): void {
@@ -807,11 +836,8 @@ export class DocumentsView extends ItemView {
     const chips = main.createDiv('pm-docs-projects')
     if (!doc.projects.length) chips.createSpan({ cls: 'pm-docs-chip is-none', text: t('library.noProject') })
     for (const path of doc.projects) {
-      const chip = chips.createEl('button', {
-        cls: 'pm-docs-chip',
-        text: this.projectTitle(path),
-        attr: { title: t('library.filterOn', { project: this.projectTitle(path) }) }
-      })
+      const chip = chips.createEl('button', { cls: 'pm-docs-chip', text: this.projectTitle(path) })
+      explain(chip, this.projectTitle(path), t('library.filterOn', { project: this.projectTitle(path) }))
       chip.addEventListener('click', () => {
         this.query = { ...this.query, project: path }
         this.shown = PAGE
@@ -821,11 +847,8 @@ export class DocumentsView extends ItemView {
     }
     // Its tags, each one a filter.
     for (const tag of doc.tags) {
-      const chip = chips.createEl('button', {
-        cls: 'pm-docs-chip pm-docs-tag',
-        text: `#${tag}`,
-        attr: { title: t('library.filterTag', { tag }) }
-      })
+      const chip = chips.createEl('button', { cls: 'pm-docs-chip pm-docs-tag', text: `#${tag}` })
+      explain(chip, `#${tag}`, t('library.filterTag', { tag }))
       chip.addEventListener('click', () => {
         this.query = { ...this.query, tag }
         this.shown = PAGE
@@ -835,14 +858,13 @@ export class DocumentsView extends ItemView {
     }
 
     const actions = row.createDiv('pm-docs-actions')
-    new ExtraButtonComponent(actions)
+    const projects = new ExtraButtonComponent(actions)
       .setIcon('folder-kanban')
-      .setTooltip(t('library.editProjects'))
       .onClick(safeAsync(() => this.editProjects(doc)))
-    new ExtraButtonComponent(actions)
-      .setIcon('more-vertical')
-      .setTooltip(t('library.more'))
-      .extraSettingsEl.addEventListener('click', (event) => this.showMenu(doc, event))
+    explain(projects.extraSettingsEl, t('library.editProjects'), t('tip.library.projects'))
+    const more = new ExtraButtonComponent(actions).setIcon('more-vertical')
+    more.extraSettingsEl.addEventListener('click', (event) => this.showMenu(doc, event))
+    explain(more.extraSettingsEl, t('library.more'), t('tip.library.more'))
   }
 
   /**
@@ -868,9 +890,9 @@ export class DocumentsView extends ItemView {
             t('library.registerOld', { version: entry.version })
           ]
       const chip = line.createEl('button', {
-        cls: `pm-docs-reg${entry.current ? '' : ' is-old'} pm-docs-reg--${meta.state}`,
-        attr: { title: t('library.registerOpen', { title: entry.task.title }) }
+        cls: `pm-docs-reg${entry.current ? '' : ' is-old'} pm-docs-reg--${meta.state}`
       })
+      explain(chip, entry.task.title, t('library.registerOpen', { title: entry.task.title }))
       setIcon(chip.createSpan('pm-docs-reg-icon'), 'clipboard-list')
       chip.createSpan({ text: text.filter(Boolean).join(' · ') })
       chip.addEventListener('click', () =>
@@ -913,6 +935,7 @@ export class DocumentsView extends ItemView {
         })
       }
       const stop = strip.createEl('button', { cls: 'mod-warning', text: t('library.scanStop') })
+      explain(stop, t('library.scanStop'), t('tip.library.scanStop'))
       stop.addEventListener('click', () => {
         scans.stop()
         stop.disabled = true
@@ -963,10 +986,12 @@ export class DocumentsView extends ItemView {
     })
     if (cut.length > 1) strip.setAttr('title', cut.map((entry) => entry.title).join('\n'))
     const go = strip.createEl('button', { cls: 'mod-cta', text: t('library.scanResume') })
+    explain(go, t('library.scanResume'), t('tip.library.scanResume'))
     go.addEventListener('click', () => {
       void this.plugin.resumeScans()
     })
     const drop = strip.createEl('button', { text: t('library.scanDrop') })
+    explain(drop, t('library.scanDrop'), t('tip.library.scanDrop'))
     drop.addEventListener('click', () => {
       void this.plugin.dropScans()
     })
@@ -1004,7 +1029,7 @@ export class DocumentsView extends ItemView {
     if (!entry || entry.state === 'ok') return
     if (entry.state === 'scan') {
       const badge = meta.createEl('a', { cls: 'pm-docs-badge is-scan', href: '#', text: t('library.scanBadge') })
-      badge.setAttr('title', t('library.scanBadgeHint'))
+      explain(badge, t('library.scanBadge'), t('library.scanBadgeHint'))
       badge.addEventListener('click', (event) => {
         event.preventDefault()
         void this.plugin.askAndReadScans([doc])

@@ -1,6 +1,7 @@
 import { ButtonComponent, Menu } from 'obsidian'
 import type { FilterState, SavedView } from '../../../types'
 import { ChipButton } from '../../primitives/ChipButton'
+import { explain } from '../../explain'
 import { isFilterActive } from '../../../store/TaskFilter'
 import { safeAsync } from '../../../utils'
 import { t } from '../../../i18n'
@@ -68,6 +69,7 @@ export class PrimaryRow {
     new ChipButton(wrap)
       .setLabel(t('common.all'))
       .setShape('pill')
+      .explain(t('common.all'), t('tip.header.allViews'))
       .setActive(!this.props.activeSavedViewId)
       .onClick(() => {
         this.props.onSavedViewSelect(null)
@@ -82,6 +84,7 @@ export class PrimaryRow {
     new ChipButton(parent)
       .setLabel(sv.name)
       .setShape('pill')
+      .explain(sv.name, t('tip.header.savedView'))
       .setActive(this.props.activeSavedViewId === sv.id)
       .onClick(() => {
         this.props.onSavedViewSelect(sv.id)
@@ -108,7 +111,8 @@ export class PrimaryRow {
   private renderSaveViewAction(parent: HTMLElement): void {
     if (!isFilterActive(this.props.filter) && !this.props.filter.showArchived) return
 
-    const saveBtn = new ButtonComponent(parent).setButtonText('+ save view')
+    const saveBtn = new ButtonComponent(parent).setButtonText(t('project.saveView'))
+    explain(saveBtn.buttonEl, t('project.saveView'), t('tip.header.saveView'))
     saveBtn.onClick(() => this.beginInlineSave(parent, saveBtn))
   }
 
@@ -159,7 +163,7 @@ export class PrimaryRow {
       .setLabel(t('project.filter'))
       .setShape('pill')
       .setActive(isFilterRowVisible)
-      .setAriaLabel(t('filter.toggleRow'))
+      .explain(t('filter.toggleRow'), t('tip.header.filter'))
       .onClick(() => {
         this.props.onToggleFilterRow()
       })

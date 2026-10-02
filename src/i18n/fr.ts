@@ -351,6 +351,79 @@ export const fr: Catalog = {
   'translate.lang.nl': 'Néerlandais',
   'translate.glossaryTemplate':
     '---\ntype: glossaire\n---\n# Glossaire de traduction\n\n> Les termes que le modèle doit traduire d’une façon imposée, une ligne par terme : « - terme source → traduction », ou une ligne d’un tableau. Un terme seul reste tel quel. Sous un titre nommant une langue (« Vers le français »), les termes ne servent que vers cette langue.\n\n> Termes à garder tels quels, pour toutes les langues :\n- CNES\n- ECSS\n\n## Vers le français\n| Anglais | Français |\n| --- | --- |\n| shall | doit |\n| should | devrait |\n| contractor | titulaire |\n\n## Vers l’anglais\n- titulaire → contractor\n',
+  'settings.tooltips.name': 'Infobulles des boutons',
+  'settings.tooltips.desc': 'Un bouton survolé un instant affiche son nom et une courte explication.',
+  'settings.tooltipDelay.name': 'Délai des infobulles',
+  'settings.tooltipDelay.desc': 'Le temps de survol avant que l’infobulle apparaisse.',
+  'settings.tooltipDelay.half': '0,5 seconde',
+  'settings.tooltipDelay.one': '1 seconde',
+  'settings.tooltipDelay.two': '2 secondes',
+  'project.saveView': '+ Enregistrer la vue',
+  'tip.project.page': 'Ouvre la page du projet : description, équipe, jalons, liens et sous-projets.',
+  'tip.project.scope':
+    'Choisis ce que la vue montre : ce projet seul, avec ses sous-projets, tout son dossier, ou tous les projets.',
+  'tip.project.addTicket': 'Crée une tâche, un jalon, une réunion, un document attendu ou un risque dans ce projet.',
+  'tip.project.chat':
+    'Ouvre le chat avec ce projet joint : le modèle connaît ses tickets, ses dates, ses retards et peut proposer des modifications à valider.',
+  'tip.project.chatCollection':
+    'Ouvre le chat avec cette collection jointe : le modèle connaît les tickets de tous ses projets.',
+  'tip.project.library':
+    'Ouvre la bibliothèque de documents, filtrée sur ce projet : verser, classer, lire, traduire, interroger.',
+  'tip.project.notes': 'Ouvre la bibliothèque de notes, filtrée sur ce projet.',
+  'tip.project.contacts':
+    'Les entreprises et personnes du projet : coordonnées, tickets tenus, documents dus et retards, relances.',
+  'tip.project.agendas':
+    'Prépare un ordre du jour depuis un modèle, et retrouve ceux à venir, en préparation ou déroulés.',
+  'tip.project.settings': 'Nom, icône, dossier, équipe, statuts, priorités et champs propres à ce projet.',
+  'tip.view.table':
+    'Les tickets en lignes : trier, filtrer, modifier directement dans les cellules, réorganiser par glisser-déposer.',
+  'tip.view.gantt': 'Le planning dans le temps : barres, dépendances, jalons, référence figée et décalages.',
+  'tip.view.kanban': 'Les tickets en colonnes par statut, à faire glisser d’une colonne à l’autre.',
+  'tip.view.library':
+    'Le registre documentaire du projet : documents attendus, reçus, en revue, visas, versions et relances.',
+  'tip.view.mail': 'Les courriels déposés dans le projet, à lire et à transformer en tickets.',
+  'tip.view.impacts': 'Les tickets qui occupent une même zone en même temps, pour repérer les conflits.',
+  'tip.view.risks': 'Le registre des risques : matrice probabilité × impact, criticité, responsables et parades.',
+  'tip.view.dashboard':
+    'L’état du projet en un coup d’œil : avancement, retards, jalons, lots, charge, risques et documents.',
+  'tip.header.allViews': 'Montre tous les tickets, sans vue enregistrée.',
+  'tip.header.savedView':
+    'Applique les filtres enregistrés sous ce nom. Clic droit : mettre à jour ou supprimer la vue.',
+  'tip.header.saveView': 'Enregistre les filtres actuels sous un nom, pour les retrouver en un clic.',
+  'tip.header.filter': 'Affiche les filtres : statut, priorité, assigné, étiquette, échéance et archivés.',
+  'tip.header.dueTitle': 'Échéance',
+  'tip.header.due': 'Ne montre que les tickets en retard, de la semaine, du mois, ou sans date.',
+  'tip.header.archived': 'Montre aussi les tickets archivés.',
+  'tip.header.clear': 'Retire tous les filtres actifs.',
+  'tip.library.newFolder':
+    'Crée un dossier dans la bibliothèque ; on y range les documents en les faisant glisser dessus.',
+  'tip.library.pour':
+    'Ajoute des fichiers de ton ordinateur : ils sont copiés dans la bibliothèque, classés d’après leur nom et lus pour la recherche. Tu peux aussi les faire glisser dans la liste.',
+  'tip.library.moreFilters': 'Affiche les autres filtres : catégorie, lot, émetteur, étiquette et type de fichier.',
+  'tip.library.askChat': 'Ouvre le chat avec les documents cochés joints, pour poser une question sur leur contenu.',
+  'tip.library.classify':
+    'Propose une catégorie, un lot, un émetteur et des étiquettes pour les documents cochés, d’après leur nom et leur contenu.',
+  'tip.library.moveTo': 'Range les documents cochés dans un dossier de la bibliothèque, existant ou nouveau.',
+  'tip.library.match':
+    'Cherche, dans les registres documentaires des projets, le document attendu auquel chaque document coché correspond, pour l’y rattacher.',
+  'tip.library.read':
+    'Fait lire par le modèle les PDF et images cochés (scans), pour que la recherche et le chat trouvent leur texte. Ceux déjà lus sont relus.',
+  'tip.library.translate':
+    'Traduit les documents Word cochés dans la langue choisie, mise en forme conservée ; la traduction est versée à côté de l’original.',
+  'tip.library.remove':
+    'Retire les documents cochés de la bibliothèque, après confirmation : fiches et fichiers conservés par la bibliothèque vont à la corbeille.',
+  'tip.library.unpick': 'Décoche tous les documents.',
+  'tip.library.projects': 'Choisis les projets auxquels ce document est rattaché.',
+  'tip.library.more':
+    'Toutes les actions sur ce document : ouvrir, classer, déplacer, lire, traduire, comparer les versions, retirer…',
+  'tip.library.scanStop':
+    'Arrête la lecture en cours à la fin de la page lue ; les documents en attente sont retirés de la file.',
+  'tip.library.scanResume': 'Reprend les lectures interrompues là où elles s’étaient arrêtées.',
+  'tip.library.scanDrop': 'Abandonne les lectures interrompues ; les pages déjà lues sont oubliées.',
+  'tip.folder.crumb': 'Affiche le contenu de ce dossier. Fais glisser des documents dessus pour les y ranger.',
+  'tip.folder.chip': 'Ouvre ce dossier. Fais glisser des documents dessus pour les y ranger.',
+  'tip.folder.rename': 'Renomme ce dossier ; les liens vers ses documents suivent.',
+  'tip.folder.remove': 'Supprime ce dossier ; ses documents remontent dans le dossier parent.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

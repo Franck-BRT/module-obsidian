@@ -89,6 +89,24 @@ export class PMSettingTab extends PluginSettingTab {
             }
           },
           {
+            name: t('settings.tooltips.name'),
+            desc: t('settings.tooltips.desc'),
+            control: { type: 'toggle', key: 'tooltips' }
+          },
+          {
+            name: t('settings.tooltipDelay.name'),
+            desc: t('settings.tooltipDelay.desc'),
+            control: {
+              type: 'dropdown',
+              key: 'tooltipDelay',
+              options: {
+                '500': t('settings.tooltipDelay.half'),
+                '1000': t('settings.tooltipDelay.one'),
+                '2000': t('settings.tooltipDelay.two')
+              }
+            }
+          },
+          {
             name: t('settings.projectsFolder.name'),
             desc: t('settings.projectsFolder.desc'),
             aliases: searchAliases('settings.aliases.projectsFolder'),

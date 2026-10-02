@@ -46,6 +46,7 @@ import { ensureProjectFolders, projectInboxFolder } from '../store/vaultFs'
 import { DOCS_FOLDER_NAME } from '../store/DocumentStore'
 import { emailToMarkdown } from '../store/email'
 import { openAgendas } from './agenda/AgendasModal'
+import { explain } from '../ui/explain'
 import { t } from '../i18n'
 
 export const PM_PROJECT_VIEW_TYPE = 'pm-project'
@@ -497,6 +498,7 @@ export class ProjectView extends ItemView {
       })
       renderGlyph(iconEl, { icon: primary.icon, color: primary.color })
       iconEl.addEventListener('click', openOverview)
+      explain(iconEl, t('project.openPage'), t('tip.project.page'))
     }
 
     const titleEl = left.createEl('h2', { text: scope.label(), cls: 'pm-toolbar-title' })
@@ -507,19 +509,20 @@ export class ProjectView extends ItemView {
       titleEl.addClass('pm-toolbar-title--link')
       titleEl.setAttrs({ 'aria-label': t('project.openPage'), role: 'button', tabindex: '0' })
       titleEl.addEventListener('click', openOverview)
+      explain(titleEl, t('project.openPage'), t('tip.project.page'))
     }
     this.renderScopeSwitcher(left)
 
     new ViewSwitcher<ViewMode>(this.toolbarEl, {
       options: [
-        { id: 'table', icon: 'table', label: t('common.table') },
-        { id: 'gantt', icon: 'git-fork', label: t('common.gantt') },
-        { id: 'kanban', icon: 'layout-dashboard', label: t('common.board') },
-        { id: 'library', icon: 'library', label: t('view.library') },
-        { id: 'mail', icon: 'mail', label: t('view.mail') },
-        { id: 'impacts', icon: 'triangle-alert', label: t('view.impacts') },
-        { id: 'risks', icon: 'shield-alert', label: t('view.risks') },
-        { id: 'dashboard', icon: 'gauge', label: t('kpi.title') }
+        { id: 'table', icon: 'table', label: t('common.table'), help: t('tip.view.table') },
+        { id: 'gantt', icon: 'git-fork', label: t('common.gantt'), help: t('tip.view.gantt') },
+        { id: 'kanban', icon: 'layout-dashboard', label: t('common.board'), help: t('tip.view.kanban') },
+        { id: 'library', icon: 'library', label: t('view.library'), help: t('tip.view.library') },
+        { id: 'mail', icon: 'mail', label: t('view.mail'), help: t('tip.view.mail') },
+        { id: 'impacts', icon: 'triangle-alert', label: t('view.impacts'), help: t('tip.view.impacts') },
+        { id: 'risks', icon: 'shield-alert', label: t('view.risks'), help: t('tip.view.risks') },
+        { id: 'dashboard', icon: 'gauge', label: t('kpi.title'), help: t('tip.view.dashboard') }
       ],
       active: this.currentView,
       onChange: (mode) => {
@@ -534,10 +537,11 @@ export class ProjectView extends ItemView {
     if (scope.canAddTask) {
       // One button that asks what kind, rather than one per kind: the tool makes five and
       // only two of them ever had a place here.
-      new ButtonComponent(right)
+      const add = new ButtonComponent(right)
         .setButtonText(t('task.addTicket'))
         .setCta()
         .onClick((e) => showAddTicketMenu(e, (type) => this.addTask(e, { type })))
+      explain(add.buttonEl, t('task.addTicket'), t('tip.project.addTicket'))
 
       // Its own slot, because this is the one control in the toolbar that changes without
       // anything in the project changing: the folder is filled from outside the plugin.
@@ -548,42 +552,51 @@ export class ProjectView extends ItemView {
     // A project or a programme, not a folder or a collection: what is attached to the chat
     // is a project, so the button is only where one is being looked at.
     if (this.spec?.kind === 'project' || this.spec?.kind === 'subtree') {
-      new ExtraButtonComponent(right)
-        .setIcon('messages-square')
-        .setTooltip(t('chat.projectAbout'))
-        .onClick(safeAsync(() => this.plugin.chatAboutProject(primary.filePath)))
-      new ExtraButtonComponent(right)
-        .setIcon('library-big')
-        .setTooltip(t('library.ofProject'))
-        .onClick(safeAsync(() => this.plugin.openDocuments(primary.filePath)))
-      new ExtraButtonComponent(right)
-        .setIcon('notebook-pen')
-        .setTooltip(t('notes.ofProject'))
-        .onClick(safeAsync(() => this.plugin.openNotes(primary.filePath)))
-      new ExtraButtonComponent(right)
-        .setIcon('contact')
-        .setTooltip(t('contact.ofProject'))
-        .onClick(safeAsync(() => this.plugin.openContacts(primary.filePath)))
+      const icon = (name: string, title: string, help: string, run: () => void): void => {
+        const button = new ExtraButtonComponent(right).setIcon(name).onClick(run)
+        explain(button.extraSettingsEl, title, help)
+      }
+      icon(
+        'messages-square',
+        t('chat.projectAbout'),
+        t('tip.project.chat'),
+        safeAsync(() => this.plugin.chatAboutProject(primary.filePath))
+      )
+      icon(
+        'library-big',
+        t('library.ofProject'),
+        t('tip.project.library'),
+        safeAsync(() => this.plugin.openDocuments(primary.filePath))
+      )
+      icon(
+        'notebook-pen',
+        t('notes.ofProject'),
+        t('tip.project.notes'),
+        safeAsync(() => this.plugin.openNotes(primary.filePath))
+      )
+      icon(
+        'contact',
+        t('contact.ofProject'),
+        t('tip.project.contacts'),
+        safeAsync(() => this.plugin.openContacts(primary.filePath))
+      )
       if (this.spec.kind === 'project') {
-        new ExtraButtonComponent(right)
-          .setIcon('list-ordered')
-          .setTooltip(t('agendas.manage'))
-          .onClick(() => openAgendas(this.plugin, primary))
+        icon('list-ordered', t('agendas.manage'), t('tip.project.agendas'), () => openAgendas(this.plugin, primary))
       }
     }
     const spec = this.spec
     if (spec?.kind === 'collection') {
-      new ExtraButtonComponent(right)
+      const chat = new ExtraButtonComponent(right)
         .setIcon('messages-square')
-        .setTooltip(t('chat.collectionAbout'))
         .onClick(safeAsync(() => this.plugin.chatAboutCollection(spec.path)))
+      explain(chat.extraSettingsEl, t('chat.collectionAbout'), t('tip.project.chatCollection'))
     }
 
     if (!scope.isMulti) {
-      new ExtraButtonComponent(right)
+      const settings = new ExtraButtonComponent(right)
         .setIcon('settings')
-        .setTooltip(t('project.settings'))
         .onClick(safeAsync(() => this.plugin.router.openProjectEdit(primary.filePath)))
+      explain(settings.extraSettingsEl, t('project.settings'), t('tip.project.settings'))
     }
   }
 
@@ -630,10 +643,10 @@ export class ProjectView extends ItemView {
     if (!primary) return
     const waiting = inboxFiles(this.app, primary).length
     if (!waiting) return
-    new ButtonComponent(slot)
+    const file = new ButtonComponent(slot)
       .setButtonText(t('inbox.file', { count: waiting }))
-      .setTooltip(t('inbox.tooltip'))
       .onClick(safeAsync(() => this.fileInbox()))
+    explain(file.buttonEl, t('inbox.file', { count: waiting }), t('inbox.tooltip'))
   }
 
   /** A drop of ten files reports ten times; the button is drawn once. */
@@ -785,7 +798,7 @@ export class ProjectView extends ItemView {
     new ChipButton(parent)
       .setLabel(current?.label ?? t('project.thisProject'))
       .setShape('pill')
-      .setAriaLabel(t('view.changeScope'))
+      .explain(t('view.changeScope'), t('tip.project.scope'))
       .onClick((e) => {
         const menu = new Menu()
         for (const option of options) {
