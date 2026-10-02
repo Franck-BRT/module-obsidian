@@ -5,6 +5,7 @@ import { isPhase, phaseSpan } from './Phase'
 import { documentOf, isDocument } from './Document'
 import { docStateConfigOf } from './TicketPalette'
 import { totalLoggedHours } from './TaskTreeOps'
+import { isRisk, orderRisks, riskBand, riskMatrix, riskScore, type RiskBand } from './risk'
 
 /** One class of a breakdown: what it is, how many, and the colour it already wears. */
 export interface MetricSlice {
@@ -65,6 +66,37 @@ export interface MetricsHealth {
   late: number
   overrunningPhases: number
   lateDocs: number
+  /** Open risks in the critical band. */
+  criticalRisks: number
+}
+
+/** One open risk as the dashboard lists it. */
+export interface RiskMark {
+  id: string
+  title: string
+  probability: number
+  impact: number
+  score: number
+  band: RiskBand
+  assignees: string[]
+  mitigation: string
+  /** Its review date, its due date; '' when none. */
+  review: string
+}
+
+export interface RiskSummary {
+  open: number
+  closed: number
+  /** Open risks in each band. */
+  byBand: Record<RiskBand, number>
+  /** Open risks by probability then impact, 1 to 4. */
+  matrix: number[][]
+  /** The most critical open risks, the worst first. */
+  top: RiskMark[]
+  /** Open risks with no mitigation written. */
+  unmitigated: number
+  /** Open risks whose review date has passed. */
+  reviewLate: number
 }
 
 export interface ProjectMetrics {
@@ -82,6 +114,7 @@ export interface ProjectMetrics {
   phases: PhaseProgress[]
   milestones: MilestoneMark[]
   documents: { total: number; awaited: number; late: number; byState: MetricSlice[] }
+  risks: RiskSummary
   time: { logged: number; estimate: number }
   burn: BurnCurve
   span: { start: string; due: string }
@@ -100,6 +133,8 @@ export interface MetricsInput {
   soonDays?: number
   /** At most this many points on the curve; the step widens until they fit. */
   maxPoints?: number
+  /** At most this many risks in `risks.top`. */
+  topRisks?: number
 }
 
 /** Adds days to a YYYY-MM-DD without a Date object, which would drag a timezone in. */
@@ -121,7 +156,9 @@ function daysBetween(from: string, to: string): number {
  * A lot is never counted as a ticket: it holds work rather than being work, exactly as
  * every view already treats it. Documents are ordinary tickets and are counted with the
  * rest — they are work someone owes — and then broken out again, because what a
- * document is waiting for is not what a task is waiting for.
+ * document is waiting for is not what a task is waiting for. A risk is not work at all —
+ * its date is when it is reviewed, not when something is owed —, so it is counted in
+ * `risks` only, and an open critical one puts the project at risk.
  */
 export function projectMetrics(input: MetricsInput): ProjectMetrics {
   const { tasks, statuses, priorities, today } = input
@@ -129,7 +166,7 @@ export function projectMetrics(input: MetricsInput): ProjectMetrics {
   const soonDays = input.soonDays ?? 7
   const horizon = addDays(today, soonDays)
 
-  const work = tasks.filter((task) => !isPhase(task))
+  const work = tasks.filter((task) => !isPhase(task) && !isRisk(task))
   const isDone = (task: Task): boolean => isTerminalStatus(task.status, statuses)
 
   let done = 0
@@ -221,8 +258,12 @@ export function projectMetrics(input: MetricsInput): ProjectMetrics {
     })
     .sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'))
 
+  const risks = riskSummary(tasks.filter(isRisk), isDone, today, input.topRisks ?? 5)
+
   const overrunningPhases = phases.filter((phase) => phase.overruns).length
-  const level: MetricsHealth['level'] = late > 0 ? 'late' : overrunningPhases || lateDocs ? 'at-risk' : 'on-track'
+  const criticalRisks = risks.byBand.critical
+  const level: MetricsHealth['level'] =
+    late > 0 ? 'late' : overrunningPhases || lateDocs || criticalRisks ? 'at-risk' : 'on-track'
 
   return {
     total: work.length,
@@ -252,10 +293,42 @@ export function projectMetrics(input: MetricsInput): ProjectMetrics {
         count: docStateCount.get(state) ?? 0
       })).filter((slice) => slice.count > 0)
     },
+    risks,
     time: { logged: Math.round(logged * 10) / 10, estimate: Math.round(estimate * 10) / 10 },
     burn: burnCurve(work, statuses, today, input.maxPoints ?? 24),
     span: { start, due },
-    health: { level, late, overrunningPhases, lateDocs }
+    health: { level, late, overrunningPhases, lateDocs, criticalRisks }
+  }
+}
+
+/** The risks of a project summed up: the open ones by band and cell, the worst named. */
+export function riskSummary(risks: Task[], isDone: (task: Task) => boolean, today: string, keep = 5): RiskSummary {
+  const open = risks.filter((risk) => !isDone(risk))
+  const byBand: Record<RiskBand, number> = { low: 0, medium: 0, high: 0, critical: 0 }
+  for (const risk of open) byBand[riskBand(riskScore(risk).score)] += 1
+  return {
+    open: open.length,
+    closed: risks.length - open.length,
+    byBand,
+    matrix: riskMatrix(open),
+    top: orderRisks(open, () => true)
+      .slice(0, keep)
+      .map((risk) => {
+        const { probability, impact, score } = riskScore(risk)
+        return {
+          id: risk.id,
+          title: risk.title,
+          probability,
+          impact,
+          score,
+          band: riskBand(score),
+          assignees: risk.assignees,
+          mitigation: risk.risk?.mitigation.trim() ?? '',
+          review: risk.due
+        }
+      }),
+    unmitigated: open.filter((risk) => !risk.risk?.mitigation.trim()).length,
+    reviewLate: open.filter((risk) => !!risk.due && risk.due < today).length
   }
 }
 

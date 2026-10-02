@@ -207,3 +207,46 @@ describe('walking dates without a timezone', () => {
     expect(addDays('2026-03-10', -10)).toBe('2026-02-28')
   })
 })
+
+describe('the risks of a project', () => {
+  const risk = (title: string, probability: number, impact: number, over: Partial<Task> = {}): Task =>
+    task(title, { type: 'risk', risk: { probability, impact, mitigation: '' }, ...over })
+
+  it('keeps risks out of the work: neither counted, nor late, nor on anyone’s load', () => {
+    const m = metrics([task('a'), risk('Retard fournisseur', 2, 2, { due: '2026-03-01', assignees: ['Alice'] })])
+    expect(m.total).toBe(1)
+    expect(m.late).toBe(0)
+    expect(m.byAssignee.map((row) => row.name)).toEqual([''])
+    expect(m.risks.open).toBe(1)
+    expect(m.risks.reviewLate).toBe(1)
+  })
+
+  it('sums the open risks by band and cell, the worst named first, the closed ones aside', () => {
+    const m = metrics([
+      risk('faible', 1, 2),
+      risk('critique', 4, 4, { risk: { probability: 4, impact: 4, mitigation: 'Double source' } }),
+      risk('élevé', 3, 3),
+      risk('clos', 4, 4, { status: 'done' })
+    ])
+    expect(m.risks.open).toBe(3)
+    expect(m.risks.closed).toBe(1)
+    expect(m.risks.byBand).toEqual({ low: 1, medium: 0, high: 1, critical: 1 })
+    expect(m.risks.matrix[3][3]).toBe(1)
+    expect(m.risks.matrix[0][1]).toBe(1)
+    expect(m.risks.top.map((one) => one.title)).toEqual(['critique', 'élevé', 'faible'])
+    expect(m.risks.top[0]).toMatchObject({ score: 16, band: 'critical', mitigation: 'Double source' })
+    expect(m.risks.unmitigated).toBe(2)
+  })
+
+  it('puts a project with an open critical risk at risk, never late on its account', () => {
+    const m = metrics([task('a', { due: '2026-06-01' }), risk('critique', 3, 4)])
+    expect(m.health.level).toBe('at-risk')
+    expect(m.health.criticalRisks).toBe(1)
+    expect(metrics([risk('critique', 3, 4, { status: 'done' })]).health.level).toBe('on-track')
+  })
+
+  it('names only as many risks as asked', () => {
+    const many = [1, 2, 3, 4].map((n) => risk(`r${n}`, n, n))
+    expect(metrics(many, { topRisks: 2 }).risks.top.map((one) => one.title)).toEqual(['r4', 'r3'])
+  })
+})

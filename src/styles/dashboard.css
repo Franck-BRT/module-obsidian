@@ -519,3 +519,108 @@
     break-inside: avoid;
   }
 }
+
+/* The risks: a small matrix whose cells open the register, the worst risks beside it. */
+.pm-kpi-risks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: flex-start;
+}
+.pm-kpi-riskmatrix {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pm-kpi-riskgrid {
+  display: grid;
+  grid-template-columns: 16px repeat(4, 38px);
+  grid-auto-rows: 32px;
+  gap: 3px;
+  align-items: center;
+}
+.pm-kpi-risklevel {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  text-align: center;
+}
+.pm-kpi-riskcell {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-s);
+  background: color-mix(in srgb, var(--pm-risk-color) 70%, transparent);
+  color: var(--text-on-accent);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+.pm-kpi-riskcell:hover,
+.pm-kpi-riskcell:focus-visible {
+  outline: 2px solid var(--text-normal);
+  outline-offset: 1px;
+}
+.pm-kpi-riskcell.is-empty {
+  background: color-mix(in srgb, var(--pm-risk-color) 18%, transparent);
+  cursor: default;
+  outline: none;
+}
+.pm-kpi-riskaxes {
+  padding-left: 19px;
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+}
+.pm-kpi-riskside {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pm-kpi-risklist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pm-kpi-risk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  font-size: var(--font-smallest);
+  min-width: 0;
+}
+.pm-kpi-risk:hover,
+.pm-kpi-risk:focus-visible {
+  background: var(--background-modifier-hover);
+}
+.pm-kpi-risk-score {
+  flex: 0 0 26px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-s);
+  background: var(--pm-risk-color);
+  color: var(--text-on-accent);
+  font-weight: var(--font-bold);
+}
+.pm-kpi-risk-title {
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-kpi-risk-warn {
+  display: inline-flex;
+  --icon-size: 13px;
+  color: var(--color-orange, #b8a06b);
+}
+.pm-kpi-risk-owner {
+  margin-left: auto;
+  color: var(--text-muted);
+  white-space: nowrap;
+}

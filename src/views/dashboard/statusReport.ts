@@ -3,7 +3,8 @@ import type PMPlugin from '../../main'
 import type { Project } from '../../types'
 import type { ProjectMetrics } from '../../store/Metrics'
 import { ensureFolder, folderOf } from '../../store/vaultFs'
-import { sanitizeFileName } from '../../utils'
+import { displayName, sanitizeFileName } from '../../utils'
+import { bandLabel, impactLabel, probabilityLabel } from '../risks/riskLabels'
 import { formatDate, formatDateShort, today } from '../../dates'
 import { t } from '../../i18n'
 
@@ -43,6 +44,11 @@ export async function writeStatusReport(plugin: PMPlugin, project: Project, m: P
     `| ${t('kpi.undated')} | ${m.undated} |`,
     `| ${t('kpi.hours')} | ${m.time.logged} / ${m.time.estimate} |`,
     `| ${t('kpi.awaitedDocs')} | ${m.documents.awaited}${m.documents.late ? ` (${m.documents.late} ⚠)` : ''} |`,
+    ...(m.risks.open + m.risks.closed
+      ? [
+          `| ${t('kpi.risks')} | ${m.risks.open}${m.risks.byBand.critical ? ` (${m.risks.byBand.critical} ${bandLabel('critical')})` : ''} |`
+        ]
+      : []),
     `| ${t('kpi.window')} | ${span} |`,
     ''
   ]
@@ -79,6 +85,26 @@ export async function writeStatusReport(plugin: PMPlugin, project: Project, m: P
       lines.push(
         `| ${milestone.title} | ${milestone.date ? formatDateShort(milestone.date) : '—'} | ${t(`kpi.milestone.${milestone.state}`)} |`
       )
+    }
+    lines.push('')
+  }
+
+  if (m.risks.top.length) {
+    section(lines, t('kpi.risks'), [
+      `| ${t('task.type.risk')} | ${t('risk.probability')} | ${t('risk.impact')} | ${t('risk.score')} | ${t('task.assignees')} | ${t('risk.mitigation')} | ${t('risk.review')} |`,
+      '| --- | --- | --- | --- | --- | --- | --- |'
+    ])
+    for (const risk of m.risks.top) {
+      const cells = [
+        risk.title,
+        `${risk.probability} · ${probabilityLabel(risk.probability)}`,
+        `${risk.impact} · ${impactLabel(risk.impact)}`,
+        `**${risk.score}** · ${bandLabel(risk.band)}`,
+        risk.assignees.map(displayName).join(', ') || '—',
+        risk.mitigation || '—',
+        risk.review ? formatDateShort(risk.review) : '—'
+      ]
+      lines.push(`| ${cells.map((cell) => cell.replace(/\|/g, '\\|').replace(/\n+/g, ' ')).join(' | ')} |`)
     }
     lines.push('')
   }

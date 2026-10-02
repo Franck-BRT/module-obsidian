@@ -11,6 +11,14 @@ import type { SubView } from '../SubView'
 import { BAND_COLOR, bandLabel, impactLabel, probabilityLabel } from './riskLabels'
 import { t } from '../../i18n'
 
+/** A cell the next register opened is narrowed to, set by a view that sends the reader there. */
+let pendingCell: { probability: number; impact: number } | null = null
+
+/** Narrows the next register opened to one cell of its matrix: the dashboard's matrix, clicked. */
+export function focusRiskCell(cell: { probability: number; impact: number }): void {
+  pendingCell = cell
+}
+
 /**
  * A project's risks as a register: the 4 × 4 matrix of their probability and impact, each
  * cell coloured by its criticality and counting the risks still open in it, and beside it
@@ -27,7 +35,10 @@ export class RisksView implements SubView {
     private plugin: PMPlugin,
     private onRefresh: () => Promise<void>,
     private filter: FilterState
-  ) {}
+  ) {
+    this.cell = pendingCell
+    pendingCell = null
+  }
 
   render(): void {
     this.container.empty()

@@ -9,11 +9,14 @@ import { projectMetrics, type MetricSlice, type ProjectMetrics } from '../../sto
 import { isPhase } from '../../store/Phase'
 import { findTaskById } from '../../store/TaskIndex'
 import { today, formatDateShort } from '../../dates'
-import { makeActivatable, safeAsync } from '../../utils'
+import { displayName, makeActivatable, safeAsync } from '../../utils'
 import { openProjectCreate, openTaskModal } from '../../ui/ModalFactory'
 import { Chip } from '../../ui/primitives/Chip'
 import { ChipButton } from '../../ui/primitives/ChipButton'
 import { docStateLabel } from '../library/docStateLabel'
+import { RISK_LEVELS, riskBand, type RiskBand } from '../../store/risk'
+import { BAND_COLOR, bandLabel, impactLabel, probabilityLabel } from '../risks/riskLabels'
+import { focusRiskCell } from '../risks/RisksView'
 import type { SubView } from '../SubView'
 import { barList, burnChart, progressRing } from './charts'
 import { writeStatusReport } from './statusReport'
@@ -24,6 +27,9 @@ import { t } from '../../i18n'
 export type DrillHandler = (patch: Partial<FilterState>, view: ViewMode) => void
 
 const HEALTH_ICON = { 'on-track': 'circle-check', 'at-risk': 'triangle-alert', late: 'circle-alert' } as const
+
+/** The risks named on the card, the worst first; the register holds the rest. */
+const RISKS_SHOWN = 5
 
 /**
  * The project at a glance: where it stands, what is late, and what it adds up to.
@@ -57,7 +63,9 @@ export class ProjectDashboard implements SubView {
       statuses: config.statuses,
       priorities: config.priorities,
       today: today().toString(),
-      keyOf: personKeyer(this.plugin.app)
+      keyOf: personKeyer(this.plugin.app),
+      // Every open risk, for the status report; the card names the first few.
+      topRisks: Number.MAX_SAFE_INTEGER
     })
 
     const page = this.container.createDiv('pm-kpi-page')
@@ -66,6 +74,7 @@ export class ProjectDashboard implements SubView {
     const grid = page.createDiv('pm-kpi-grid')
     this.renderProjects(grid)
     this.renderBurn(grid, this.metrics)
+    this.renderRisks(grid, this.metrics)
     this.renderStatuses(grid, this.metrics)
     this.renderPhases(grid, this.metrics)
     this.renderPeople(grid, this.metrics)
@@ -128,6 +137,7 @@ export class ProjectDashboard implements SubView {
     if (m.health.late) return t('kpi.whyLate', { count: m.health.late })
     if (m.health.overrunningPhases) return t('kpi.whyOverrun', { count: m.health.overrunningPhases })
     if (m.health.lateDocs) return t('kpi.whyDocs', { count: m.health.lateDocs })
+    if (m.health.criticalRisks) return t('kpi.whyRisks', { count: m.health.criticalRisks })
     return t('kpi.whyFine', { count: m.open })
   }
 
@@ -152,6 +162,11 @@ export class ProjectDashboard implements SubView {
     this.tile(tiles, t('kpi.awaitedDocs'), m.documents.awaited, 'file-clock', m.documents.late ? 'bad' : 'plain', () =>
       this.drill(makeDefaultFilter(), 'library')
     )
+    if (m.risks.open + m.risks.closed) {
+      this.tile(tiles, t('kpi.risks'), m.risks.open, 'shield-alert', m.risks.byBand.critical ? 'bad' : 'plain', () =>
+        this.drill(makeDefaultFilter(), 'risks')
+      )
+    }
     this.tile(tiles, t('kpi.hours'), m.time.logged, 'clock', 'plain')
   }
 
@@ -272,6 +287,97 @@ export class ProjectDashboard implements SubView {
       const track = row.createDiv('pm-kpi-bar-track')
       track.createDiv('pm-kpi-bar-fill').setCssProps({ '--pm-kpi-share': `${m.progress}%` })
     }
+  }
+
+  /**
+   * The open risks at a glance: the matrix, small, whose cells open the register narrowed
+   * to them, and beside it the worst risks by name — who answers for each, and whether
+   * anything counters it yet. Absent from a project that has never recorded a risk.
+   */
+  private renderRisks(parent: HTMLElement, m: ProjectMetrics): void {
+    const risks = m.risks
+    if (!risks.open && !risks.closed) return
+    const body = this.card(parent, t('kpi.risksTitle'), true)
+    const openRegister = (): void => this.drill(makeDefaultFilter(), 'risks')
+    if (!risks.open) {
+      body.createDiv({ cls: 'pm-kpi-empty', text: t('kpi.risksNoneOpen', { count: risks.closed }) })
+      new ChipButton(body.createDiv('pm-kpi-chips')).setLabel(t('kpi.risksOpen')).setShape('pill').onClick(openRegister)
+      return
+    }
+    const layout = body.createDiv('pm-kpi-risks')
+    const matrix = layout.createDiv('pm-kpi-riskmatrix')
+    const grid = matrix.createDiv('pm-kpi-riskgrid')
+    for (const probability of [...RISK_LEVELS].reverse()) {
+      grid.createDiv({
+        cls: 'pm-kpi-risklevel',
+        text: String(probability),
+        attr: { title: probabilityLabel(probability) }
+      })
+      for (const impact of RISK_LEVELS) {
+        const count = risks.matrix[probability - 1][impact - 1]
+        const band = riskBand(probability * impact)
+        const cell = grid.createDiv({
+          cls: `pm-kpi-riskcell${count ? '' : ' is-empty'}`,
+          text: count ? String(count) : '',
+          attr: { title: `${probabilityLabel(probability)} × ${impactLabel(impact)} · ${bandLabel(band)}` }
+        })
+        cell.style.setProperty('--pm-risk-color', BAND_COLOR[band])
+        if (count) {
+          makeActivatable(cell, () => {
+            focusRiskCell({ probability, impact })
+            openRegister()
+          })
+        }
+      }
+    }
+    grid.createDiv()
+    for (const impact of RISK_LEVELS) {
+      grid.createDiv({ cls: 'pm-kpi-risklevel', text: String(impact), attr: { title: impactLabel(impact) } })
+    }
+    matrix.createDiv({ cls: 'pm-kpi-riskaxes', text: `${t('risk.probability')} ↑ · ${t('risk.impact')} →` })
+
+    const side = layout.createDiv('pm-kpi-riskside')
+    const bands = side.createDiv('pm-kpi-chips')
+    for (const band of ['critical', 'high', 'medium', 'low'] as RiskBand[]) {
+      const chip = bands.createSpan({ cls: 'pm-risk-badge', text: `${risks.byBand[band]} · ${bandLabel(band)}` })
+      chip.style.setProperty('--pm-risk-color', BAND_COLOR[band])
+      chip.toggleClass('is-zero', risks.byBand[band] === 0)
+    }
+    const list = side.createDiv('pm-kpi-risklist')
+    for (const risk of risks.top.slice(0, RISKS_SHOWN)) {
+      const row = list.createDiv('pm-kpi-risk')
+      makeActivatable(row, () => this.openTask(risk.id))
+      const score = row.createSpan({ cls: 'pm-kpi-risk-score', text: String(risk.score) })
+      score.style.setProperty('--pm-risk-color', BAND_COLOR[risk.band])
+      score.setAttr('title', bandLabel(risk.band))
+      row.createSpan({ cls: 'pm-kpi-risk-title', text: risk.title })
+      if (!risk.mitigation) {
+        setIcon(row.createSpan({ cls: 'pm-kpi-risk-warn', attr: { title: t('risk.noMitigation') } }), 'shield-off')
+      }
+      row.createSpan({
+        cls: 'pm-kpi-risk-owner',
+        text: risk.assignees.length ? risk.assignees.map(displayName).join(', ') : t('kpi.unassigned')
+      })
+    }
+    if (risks.open > RISKS_SHOWN) {
+      list.createDiv({ cls: 'pm-kpi-note', text: t('kpi.risksMore', { count: risks.open - RISKS_SHOWN }) })
+    }
+    const foot = side.createDiv('pm-kpi-chips')
+    if (risks.unmitigated) {
+      new Chip(foot)
+        .setLabel(t('kpi.risksUnmitigated', { count: risks.unmitigated }))
+        .setLeadingIcon('shield-off')
+        .setVariant('solid')
+        .setColor('var(--color-orange, #b8a06b)')
+    }
+    if (risks.reviewLate) {
+      new Chip(foot)
+        .setLabel(t('kpi.risksReviewLate', { count: risks.reviewLate }))
+        .setLeadingIcon('alarm-clock')
+        .setVariant('solid')
+        .setColor('var(--text-error, var(--color-red))')
+    }
+    new ChipButton(foot).setLabel(t('kpi.risksOpen')).setShape('pill').onClick(openRegister)
   }
 
   private renderStatuses(parent: HTMLElement, m: ProjectMetrics): void {
