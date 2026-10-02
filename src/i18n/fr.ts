@@ -2213,6 +2213,24 @@ export const fr: Catalog = {
     '{count} documents joints sont longs : chacun est envoyé par son début et les passages qui parlent de la question, environ {share} caractères chacun.',
   'library.askChat': 'Demander au chat',
   'library.picked': { one: '{count} document coché', other: '{count} documents cochés' },
+  'library.readPicked': { one: 'Lire {count} scan avec le modèle', other: 'Lire les {count} scans avec le modèle' },
+  'library.removePicked': 'Supprimer',
+  'library.removeManyTitle': {
+    one: 'Retirer {count} document de la bibliothèque ?',
+    other: 'Retirer {count} documents de la bibliothèque ?'
+  },
+  'library.removeManyFiles': {
+    one: '{count} fiche et le fichier que la bibliothèque conserve iront à la corbeille.',
+    other: '{count} fiches et les fichiers que la bibliothèque conserve iront à la corbeille.'
+  },
+  'library.removeManyRecords': {
+    one: '{count} fiche ira à la corbeille, son fichier restant où il est dans le coffre.',
+    other: '{count} fiches iront à la corbeille, leurs fichiers restant où ils sont dans le coffre.'
+  },
+  'library.removedMany': {
+    one: '{count} document retiré de la bibliothèque.',
+    other: '{count} documents retirés de la bibliothèque.'
+  },
   'library.unpick': 'Tout décocher',
   'library.pickAll': 'Cocher tous les documents affichés',
   'library.pickOne': 'Cocher « {title} »',

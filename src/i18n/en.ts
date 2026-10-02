@@ -2222,6 +2222,24 @@ export const en = {
     '{count} attached documents are long: each is sent by its start and the passages about the question, about {share} characters each.',
   'library.askChat': 'Ask the chat',
   'library.picked': { one: '{count} document ticked', other: '{count} documents ticked' },
+  'library.readPicked': { one: 'Read {count} scan with the model', other: 'Read the {count} scans with the model' },
+  'library.removePicked': 'Delete',
+  'library.removeManyTitle': {
+    one: 'Remove {count} document from the library?',
+    other: 'Remove {count} documents from the library?'
+  },
+  'library.removeManyFiles': {
+    one: '{count} record and the file the library keeps will go to the trash.',
+    other: '{count} records and the files the library keeps will go to the trash.'
+  },
+  'library.removeManyRecords': {
+    one: '{count} record will go to the trash, its file staying where it is in the vault.',
+    other: '{count} records will go to the trash, their files staying where they are in the vault.'
+  },
+  'library.removedMany': {
+    one: '{count} document removed from the library.',
+    other: '{count} documents removed from the library.'
+  },
   'library.unpick': 'Untick all',
   'library.pickAll': 'Tick every document shown',
   'library.pickOne': 'Tick “{title}”',

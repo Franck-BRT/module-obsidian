@@ -607,10 +607,62 @@ export class DocumentsView extends ItemView {
           await this.loadRegister()
         })
       )
+    // The scans among them — a PDF or an image — read by the model; those it read already, read again.
+    const scans = picked.filter((doc) => {
+      const family = familyOf(doc.file || doc.title)
+      return family === 'pdf' || family === 'image'
+    })
+    if (scans.length) {
+      new ButtonComponent(bar)
+        .setButtonText(t('library.readPicked', { count: scans.length }))
+        .setIcon('scan-text')
+        .onClick(
+          safeAsync(async () => {
+            const again = scans.some((doc) => this.plugin.libraryText.entry(doc)?.ocr === true)
+            await this.plugin.askAndReadScans(scans, again)
+          })
+        )
+    }
+    const ticked = all.filter((doc) => this.picked.has(doc.record))
+    new ButtonComponent(bar)
+      .setButtonText(t('library.removePicked'))
+      .setIcon('trash-2')
+      .setDestructive()
+      .onClick(() => this.confirmRemoveMany(ticked))
     new ButtonComponent(bar).setButtonText(t('library.unpick')).onClick(() => {
       this.picked.clear()
       this.renderBody()
     })
+  }
+
+  /** The documents ticked, removed from the library once the reader says so. */
+  private confirmRemoveMany(docs: LibraryDoc[]): void {
+    if (!docs.length) return
+    if (docs.length === 1) {
+      this.confirmRemove(docs[0])
+      return
+    }
+    const kept = docs.filter((doc) => this.plugin.library.holdsFile(doc)).length
+    new ConfirmModal(
+      this.plugin,
+      t('library.removeManyTitle', { count: docs.length }),
+      [
+        kept ? t('library.removeManyFiles', { count: kept }) : '',
+        docs.length - kept ? t('library.removeManyRecords', { count: docs.length - kept }) : ''
+      ]
+        .filter(Boolean)
+        .join(' '),
+      t('library.remove'),
+      true,
+      async () => {
+        for (const doc of docs) {
+          await this.plugin.library.remove(doc)
+          this.picked.delete(doc.record)
+        }
+        new Notice(t('library.removedMany', { count: docs.length }))
+        this.renderBody()
+      }
+    ).open()
   }
 
   /** How far the reading of what the documents say has got, and the scans left to read. */

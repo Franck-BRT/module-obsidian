@@ -1415,11 +1415,12 @@ export default class PMPlugin extends Plugin {
     if (!docs.length) return false
     const chosen = await askScanOptions(
       this.app,
-      again
+      // One document read again is named; several are counted, read again or not.
+      again && docs.length === 1
         ? t('library.rereadScanTitle', { title: docs[0].title })
         : t('library.readScansTitle', { count: docs.length }),
       t('library.readScansText'),
-      again ? t('library.rereadScan') : t('library.readScans'),
+      again && docs.length === 1 ? t('library.rereadScan') : t('library.readScans'),
       this.settings.ocr
     )
     if (!chosen) return false
