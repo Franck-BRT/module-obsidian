@@ -214,3 +214,78 @@ describe('a PowerPoint deck translated', () => {
     expect(entries.map((entry) => entry.name)).toEqual((await unzip(source)).map((entry) => entry.name))
   })
 })
+
+describe('an Excel cell’s text', () => {
+  it('is read from a shared string, plain or in runs, its phonetic reading left out', async () => {
+    const { scanParagraphs: scan } = await import('./docxTranslate')
+    const xml =
+      '<sst><si><t>Due date</t></si><si><r><rPr><b/></rPr><t>Note:</t></r><r><t xml:space="preserve"> to check\nagain</t></r></si>' +
+      '<si><t>日付</t><rPh sb="0" eb="2"><t>ヒヅケ</t></rPh></si></sst>'
+    expect(scan(xml, 'sheet').map(paragraphText)).toEqual(['Due date', 'Note: to check\nagain', '日付'])
+  })
+
+  it('is written back into its longest text, the others emptied, its line breaks kept', async () => {
+    const { scanParagraphs: scan, rewriteParagraphs: rewrite } = await import('./docxTranslate')
+    const xml =
+      '<sst><si><r><rPr><b/></rPr><t>Note:</t></r><r><t xml:space="preserve"> to check again</t></r></si></sst>'
+    const out = rewrite(xml, scan(xml, 'sheet'), () => 'Remarque : à revoir\n& recontrôler', 'sheet')
+    expect(out).toBe(
+      '<sst><si><r><rPr><b/></rPr><t/></r><r><t xml:space="preserve">Remarque : à revoir\n&amp; recontrôler</t></r></si></sst>'
+    )
+  })
+
+  it('knows the texts the formulas, validation lists and conditional formats compare with', async () => {
+    const { formulaLiterals } = await import('./docxTranslate')
+    const sheet =
+      '<sheetData><row r="2"><c r="C2"><f>IF(B2="Done","OK",IF(B2="Late","Chase",""))</f><v>OK</v></c></row></sheetData>' +
+      '<conditionalFormatting><cfRule type="expression"><formula>$B2="Late"</formula></cfRule></conditionalFormatting>' +
+      '<dataValidations><dataValidation type="list"><formula1>"Done,In progress,Late"</formula1></dataValidation></dataValidations>'
+    expect([...formulaLiterals(sheet)].sort()).toEqual([
+      'Chase',
+      'Done',
+      'Done,In progress,Late',
+      'In progress',
+      'Late',
+      'OK'
+    ])
+  })
+})
+
+describe('an Excel workbook translated', () => {
+  it('translates its cells but those its formulas compare with, every part kept', async () => {
+    const { zip, utf8 } = await import('../zip')
+    const parts = {
+      '[Content_Types].xml': '<Types/>',
+      'xl/workbook.xml': '<workbook><sheets><sheet name="Planning" sheetId="1"/></sheets></workbook>',
+      'xl/sharedStrings.xml':
+        '<sst><si><t>Task</t></si><si><t>Status</t></si><si><t>Done</t></si><si><t>Pour the slab</t></si></sst>',
+      'xl/worksheets/sheet1.xml':
+        '<worksheet><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>' +
+        '<row r="2"><c r="A2" t="s"><v>3</v></c><c r="B2" t="s"><v>2</v></c><c r="C2"><f>IF(B2="Done",1,0)</f><v>1</v></c>' +
+        '<c r="D2" t="inlineStr"><is><t>Checked on site</t></is></c></row></sheetData></worksheet>',
+      'xl/comments1.xml':
+        '<comments><commentList><comment ref="A2"><text><r><t>Weather dependent</t></r></text></comment></commentList></comments>'
+    }
+    const source = zip(Object.entries(parts).map(([name, xml]) => ({ name, data: utf8(xml) })))
+    const opened = await openDocxForTranslation(source, 'fr')
+    expect(opened.texts).toEqual(['Task', 'Status', 'Pour the slab', 'Checked on site', 'Weather dependent'])
+    expect(opened.kept).toEqual(['Done'])
+    const french: Record<string, string> = {
+      Task: 'Tâche',
+      Status: 'Statut',
+      Done: 'Fait',
+      'Pour the slab': 'Couler la dalle',
+      'Checked on site': 'Vérifié sur site',
+      'Weather dependent': 'Selon la météo'
+    }
+    const out = await unzip(opened.build((text) => french[text]))
+    const read = (name: string): string => new TextDecoder().decode(out.find((entry) => entry.name === name)?.data)
+    expect(read('xl/sharedStrings.xml')).toBe(
+      '<sst><si><t xml:space="preserve">Tâche</t></si><si><t xml:space="preserve">Statut</t></si><si><t>Done</t></si><si><t xml:space="preserve">Couler la dalle</t></si></sst>'
+    )
+    expect(read('xl/worksheets/sheet1.xml')).toContain('<is><t xml:space="preserve">Vérifié sur site</t></is>')
+    expect(read('xl/worksheets/sheet1.xml')).toContain('<f>IF(B2="Done",1,0)</f>')
+    expect(read('xl/comments1.xml')).toContain('Selon la météo')
+    expect(read('xl/workbook.xml')).toContain('name="Planning"')
+  })
+})

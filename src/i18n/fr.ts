@@ -319,20 +319,17 @@ export const fr: Catalog = {
   'agendas.delete': 'Supprimer l’ordre du jour',
   'agendas.deleteConfirm': 'Mettre l’ordre du jour « {name} » à la corbeille ?',
   'translate.menu': 'Traduire…',
-  'translate.picked': {
-    one: 'Traduire {count} document Word ou PowerPoint',
-    other: 'Traduire les {count} documents Word ou PowerPoint'
-  },
+  'translate.picked': { one: 'Traduire {count} document Office', other: 'Traduire les {count} documents Office' },
   'translate.titleOne': 'Traduire « {title} »',
   'translate.titleMany': { one: 'Traduire {count} document', other: 'Traduire {count} documents' },
   'translate.intro':
-    'Le document est traduit par le modèle, paragraphe par paragraphe, dans le fichier lui-même : styles, tableaux, images, mises en page, en-têtes, pieds de page et notes de l’orateur sont conservés. La traduction est versée dans la bibliothèque, à côté de l’original.',
+    'Le document est traduit par le modèle, paragraphe par paragraphe ou cellule par cellule, dans le fichier lui-même : styles, tableaux, images, mises en page, notes, formules et graphiques sont conservés. La traduction est versée dans la bibliothèque, à côté de l’original.',
   'translate.language': 'Traduire en',
   'translate.useGlossary': 'Utiliser le glossaire',
   'translate.glossaryDesc': 'Les termes imposés de la note « {path} ».',
   'translate.openGlossary': 'Ouvrir le glossaire',
   'translate.limits':
-    'À savoir : un mot en gras ou en italique au milieu d’une phrase peut perdre sa mise en forme ; le texte dans les images n’est pas traduit ; dans Word, le sommaire et les renvois se mettent à jour avec F9 ; dans PowerPoint, un texte traduit plus long peut déborder de sa zone.',
+    'À savoir : un mot en gras ou en italique au milieu d’une phrase peut perdre sa mise en forme ; le texte dans les images n’est pas traduit ; dans Word, le sommaire et les renvois se mettent à jour avec F9 ; dans PowerPoint, un texte traduit plus long peut déborder de sa zone ; dans Excel, les noms d’onglets ne sont pas traduits, et les textes utilisés par une formule, une liste déroulante ou une mise en forme conditionnelle restent tels quels pour que le classeur continue de fonctionner.',
   'translate.go': 'Traduire',
   'translate.noModel':
     'Aucun modèle n’est configuré pour traduire : renseigne le modèle de traduction (ou de texte) dans les réglages du modèle de langage.',
@@ -412,7 +409,7 @@ export const fr: Catalog = {
   'tip.library.read':
     'Fait lire par le modèle les PDF et images cochés (scans), pour que la recherche et le chat trouvent leur texte. Ceux déjà lus sont relus.',
   'tip.library.translate':
-    'Traduit les documents Word et PowerPoint cochés dans la langue choisie, mise en forme conservée ; la traduction est versée à côté de l’original.',
+    'Traduit les documents Word, PowerPoint et Excel cochés dans la langue choisie, mise en forme conservée ; la traduction est versée à côté de l’original.',
   'tip.library.remove':
     'Retire les documents cochés de la bibliothèque, après confirmation : fiches et fichiers conservés par la bibliothèque vont à la corbeille.',
   'tip.library.unpick': 'Décoche tous les documents.',
@@ -610,6 +607,11 @@ export const fr: Catalog = {
   'tip.editor.more': 'Autres actions sur ce ticket : l’ouvrir dans un onglet ou comme note, le désarchiver.',
   'tip.project.collection':
     'Cette vue rassemble des tickets de plusieurs projets. Clique pour enregistrer ses filtres comme règle, ou retirer la règle.',
+  'translate.kept': {
+    one: '{count} texte du classeur est resté tel quel, parce qu’une formule ou une liste l’utilise : {list}',
+    other:
+      '{count} textes du classeur sont restés tels quels, parce que des formules ou des listes les utilisent : {list}'
+  },
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

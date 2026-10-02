@@ -14,9 +14,9 @@ import { ensureFolder, folderOf } from '../../store/vaultFs'
 import { today } from '../../dates'
 import { t } from '../../i18n'
 
-/** The documents that can be translated: Word documents and PowerPoint decks, for now. */
+/** The documents that can be translated: Word documents, PowerPoint decks and Excel workbooks. */
 export function translatable(doc: LibraryDoc): boolean {
-  return !!doc.file && /\.(docx|pptx)$/i.test(doc.file)
+  return !!doc.file && /\.(docx|pptx|xlsx)$/i.test(doc.file)
 }
 
 /** The glossary note's path. */
@@ -100,6 +100,13 @@ export async function translateDocuments(
           const made = report.docs[0] ?? plugin.library.docs().find((one) => one.record === report.known[0])
           if (made) await plugin.library.setTranslationOf(made, doc, language)
           new Notice(t('translate.written', { title: doc.title, name: translatedName(doc.file, language) }), 8000)
+          // Texts the workbook's formulas compare with, left as they were: said, so none is a surprise.
+          if (opened.kept.length) {
+            new Notice(
+              t('translate.kept', { count: opened.kept.length, list: opened.kept.slice(0, 8).join(', ') }),
+              15000
+            )
+          }
         } catch (error) {
           if (error instanceof TranslationStopped) new Notice(t('translate.stopped', { title: doc.title }))
           else {

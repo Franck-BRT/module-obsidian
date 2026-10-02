@@ -16,9 +16,15 @@ import { utf8, zip, type ZipEntry } from '../zip'
  * DrawingML (`a:p`, `a:r`, `a:t`): the same shape, told apart by a dialect. In DrawingML
  * a run must hold its text and a line break stands between runs, so the run that takes
  * the translation is written again whole, and the runs emptied are taken out.
+ *
+ * Excel keeps a cell's text as SpreadsheetML: a shared string (`si`), an inline string
+ * (`is`) or a comment's text (`text`), made of runs (`r`) or of a text alone (`t`), its
+ * line breaks in the text itself. A text a formula, a validation list or a conditional
+ * format names between quotes is left as it is: translated, the formula would no longer
+ * find it.
  */
 
-export type Dialect = 'word' | 'drawing'
+export type Dialect = 'word' | 'drawing' | 'sheet'
 
 /** A piece of a paragraph's text, where it stands in the part's XML. */
 interface Piece {
@@ -37,6 +43,13 @@ export interface DocxParagraph {
 /** The parts of a Word document that hold text a reader reads. */
 export function isTextPart(name: string): boolean {
   return /^word\/(document|header\d*|footer\d*|footnotes|endnotes)\.xml$/.test(name)
+}
+
+/** The parts of an Excel workbook that hold text a reader reads, and how each writes it. */
+export function workbookPart(name: string): Dialect | null {
+  if (/^xl\/(sharedStrings|worksheets\/sheet\d+|comments\d+|comments\/comment\d+)\.xml$/.test(name)) return 'sheet'
+  if (/^xl\/(drawings\/drawing\d+|charts\/chart\d+)\.xml$/.test(name)) return 'drawing'
+  return null
 }
 
 /** The parts of a PowerPoint deck that hold text a reader reads: slides, notes, diagrams, charts. */
@@ -67,8 +80,12 @@ function attribute(attributes: string, name: string): string {
 /** The element names of a dialect. */
 const NAMES = {
   word: { p: 'w:p', r: 'w:r', t: 'w:t' },
-  drawing: { p: 'a:p', r: 'a:r', t: 'a:t' }
+  drawing: { p: 'a:p', r: 'a:r', t: 'a:t' },
+  sheet: { p: 'si', r: 'r', t: 't' }
 }
+
+/** SpreadsheetML's paragraphs: a shared string, an inline string, a comment's text. */
+const SHEET_PARAGRAPHS = new Set(['si', 'is', 'text'])
 
 /**
  * The paragraphs of a part, each with the pieces of its own text — a paragraph inside a
@@ -85,11 +102,19 @@ export function scanParagraphs(xml: string, dialect: Dialect = 'word'): DocxPara
   let text: { start: number; from: number } | null = null
   let run: { start: number; pieces: Piece[] } | null = null
   let lineBreak: { start: number } | null = null
+  /** SpreadsheetML: inside a phonetic reading, which is no text of the cell's. */
+  let phonetic = 0
   for (const found of xml.matchAll(TAG)) {
-    const [whole, closing, name, attributes, selfClosing] = found
+    const [whole, closing, rawName, attributes, selfClosing] = found
     const at = found.index ?? 0
     const paragraph = open[open.length - 1]
-    const collecting = !!paragraph && runs > 0 && !fields.length
+    // A cell's text may stand alone, outside any run.
+    const collecting = !!paragraph && (runs > 0 || dialect === 'sheet') && !fields.length && !phonetic
+    const name = dialect === 'sheet' && SHEET_PARAGRAPHS.has(rawName) ? names.p : rawName
+    if (dialect === 'sheet' && name === 'rPh' && !selfClosing) {
+      phonetic += closing ? -1 : 1
+      continue
+    }
     switch (name) {
       case names.p:
         if (selfClosing) break
@@ -230,6 +255,15 @@ export function rewriteParagraphs(
     const target = texts.reduce((best, piece) => (piece.text.length > best.text.length ? piece : best), texts[0])
     const whole = lead + translation + tail
     for (const piece of paragraph.pieces) {
+      if (dialect === 'sheet') {
+        // A run must keep a text: the others are emptied, not taken out.
+        edits.push({
+          start: piece.start,
+          end: piece.end,
+          text: piece === target ? `<t xml:space="preserve">${escapeXml(whole)}</t>` : '<t/>'
+        })
+        continue
+      }
       if (dialect === 'word') {
         edits.push({ start: piece.start, end: piece.end, text: piece === target ? wordRunContent(whole) : '' })
         continue
@@ -275,56 +309,105 @@ export function setDrawingLanguage(xml: string, language: string): string {
   return xml.replace(/(<a:(?:rPr|endParaRPr|defRPr)\b[^>]*?\slang=")([^"]*)(")/g, `$1${language}$3`)
 }
 
+/**
+ * The texts a workbook's formulas, validation lists and conditional formats name between
+ * quotes: those cells' values are compared with, and must keep.
+ */
+export function formulaLiterals(xml: string): Set<string> {
+  const out = new Set<string>()
+  for (const found of xml.matchAll(/<(f|formula1?|formula2)\b[^>]*>([\s\S]*?)<\/\1>/g)) {
+    const formula = decodeXml(found[2])
+    for (const literal of formula.matchAll(/"((?:[^"]|"")*)"/g)) {
+      const value = literal[1].replace(/""/g, '"')
+      out.add(value.trim())
+      // A validation list: « "Yes,No,Maybe" », each choice a value of its own.
+      if (found[1] === 'formula1') for (const choice of value.split(',')) out.add(choice.trim())
+    }
+  }
+  out.delete('')
+  return out
+}
+
 export interface DocxTranslation {
   /** The texts to translate, each once, in the order they come. */
   texts: string[]
+  /** A workbook's cell texts its formulas compare with, left as they are. */
+  kept: string[]
   /** The document rebuilt, each text replaced by what `translated` gives for it. */
   build: (translated: (text: string) => string | undefined) => Uint8Array
 }
 
 /**
- * An Office document opened for translation — a Word document or a PowerPoint deck —:
+ * An Office document opened for translation — a Word document, a PowerPoint deck or an
+ * Excel workbook —:
  * what it says, and how to write it back translated.
  */
 export async function openDocxForTranslation(bytes: Uint8Array, language: string): Promise<DocxTranslation> {
   const entries = await unzip(bytes)
-  const isWord = entries.some((entry) => entry.name === 'word/document.xml')
-  const isDeck = entries.some((entry) => entry.name === 'ppt/presentation.xml')
-  if (!isWord && !isDeck) throw new Error('not a Word document nor a PowerPoint deck')
-  const dialect: Dialect = isWord ? 'word' : 'drawing'
-  const holdsText = isWord ? isTextPart : isSlidePart
+  const has = (name: string): boolean => entries.some((entry) => entry.name === name)
+  const kind = has('word/document.xml')
+    ? 'word'
+    : has('ppt/presentation.xml')
+      ? 'deck'
+      : has('xl/workbook.xml')
+        ? 'book'
+        : null
+  if (!kind) throw new Error('not a Word document, a PowerPoint deck nor an Excel workbook')
+  const dialectOf = (name: string): Dialect | null => {
+    if (kind === 'word') return isTextPart(name) ? 'word' : null
+    if (kind === 'deck') return isSlidePart(name) ? 'drawing' : null
+    return workbookPart(name)
+  }
   const decoder = new TextDecoder()
-  const parts = entries
-    .filter((entry) => holdsText(entry.name))
-    .map((entry) => {
-      const xml = decoder.decode(entry.data)
-      return { name: entry.name, xml, paragraphs: scanParagraphs(xml, dialect) }
-    })
+  const parts = entries.flatMap((entry) => {
+    const dialect = dialectOf(entry.name)
+    if (!dialect) return []
+    const xml = decoder.decode(entry.data)
+    return [{ name: entry.name, xml, dialect, paragraphs: scanParagraphs(xml, dialect) }]
+  })
+  // A workbook's texts its formulas compare with stay as they are.
+  const kept = new Set<string>()
+  if (kind === 'book') {
+    for (const entry of entries) {
+      if (/^xl\/worksheets\/sheet\d+\.xml$/.test(entry.name)) {
+        for (const literal of formulaLiterals(decoder.decode(entry.data))) kept.add(literal)
+      }
+    }
+  }
   const texts: string[] = []
+  const held: string[] = []
   const seen = new Set<string>()
   for (const part of parts) {
     for (const paragraph of part.paragraphs) {
       const text = paragraphText(paragraph).trim()
       if (!text || !worthTranslating(text) || seen.has(text)) continue
       seen.add(text)
-      texts.push(text)
+      if (kept.has(text)) held.push(text)
+      else texts.push(text)
     }
   }
   const tag = wordLanguage(language)
-  const setLanguage = isWord ? setProofingLanguage : setDrawingLanguage
   return {
     texts,
+    kept: held,
     build: (translated) => {
+      const keep = (text: string): string | undefined => (kept.has(text) ? undefined : translated(text))
       const rewritten = new Map(
-        parts.map((part) => [
-          part.name,
-          setLanguage(rewriteParagraphs(part.xml, part.paragraphs, translated, dialect), tag)
-        ])
+        parts.map((part) => {
+          const xml = rewriteParagraphs(part.xml, part.paragraphs, keep, part.dialect)
+          const language =
+            part.dialect === 'word'
+              ? setProofingLanguage(xml, tag)
+              : part.dialect === 'drawing'
+                ? setDrawingLanguage(xml, tag)
+                : xml
+          return [part.name, language]
+        })
       )
       const out: ZipEntry[] = entries.map((entry) => {
         const xml = rewritten.get(entry.name)
         if (xml !== undefined) return { name: entry.name, data: utf8(xml) }
-        if (isWord && entry.name === 'word/styles.xml') {
+        if (kind === 'word' && entry.name === 'word/styles.xml') {
           return { name: entry.name, data: utf8(setProofingLanguage(decoder.decode(entry.data), tag)) }
         }
         return entry

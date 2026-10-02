@@ -323,20 +323,17 @@ export const en = {
   'agendas.delete': 'Delete the agenda',
   'agendas.deleteConfirm': 'Move the « {name} » agenda to the trash?',
   'translate.menu': 'Translate…',
-  'translate.picked': {
-    one: 'Translate {count} Word or PowerPoint document',
-    other: 'Translate the {count} Word or PowerPoint documents'
-  },
+  'translate.picked': { one: 'Translate {count} Office document', other: 'Translate the {count} Office documents' },
   'translate.titleOne': 'Translate « {title} »',
   'translate.titleMany': { one: 'Translate {count} document', other: 'Translate {count} documents' },
   'translate.intro':
-    'The document is translated by the model, paragraph by paragraph, in the file itself: styles, tables, images, layouts, headers, footers and speaker notes are kept. The translation is poured into the library, beside the original.',
+    'The document is translated by the model, paragraph by paragraph or cell by cell, in the file itself: styles, tables, images, layouts, notes, formulas and charts are kept. The translation is poured into the library, beside the original.',
   'translate.language': 'Translate into',
   'translate.useGlossary': 'Use the glossary',
   'translate.glossaryDesc': 'The terms imposed by the « {path} » note.',
   'translate.openGlossary': 'Open the glossary',
   'translate.limits':
-    'Good to know: a bold or italic word in the middle of a sentence may lose its formatting; text inside images is not translated; in Word, the table of contents and cross-references update with F9; in PowerPoint, a longer translated text may overflow its box.',
+    'Good to know: a bold or italic word in the middle of a sentence may lose its formatting; text inside images is not translated; in Word, the table of contents and cross-references update with F9; in PowerPoint, a longer translated text may overflow its box; in Excel, sheet names are not translated, and texts a formula, a drop-down list or a conditional format uses stay as they are so the workbook keeps working.',
   'translate.go': 'Translate',
   'translate.noModel':
     'No model is set up to translate: fill in the translation (or text) model in the language model settings.',
@@ -410,7 +407,7 @@ export const en = {
   'tip.library.read':
     'Has the model read the ticked PDFs and images (scans), so the search and the chat find their text. Those read already are read again.',
   'tip.library.translate':
-    'Translates the ticked Word and PowerPoint documents into the chosen language, formatting kept; the translation is poured beside the original.',
+    'Translates the ticked Word, PowerPoint and Excel documents into the chosen language, formatting kept; the translation is poured beside the original.',
   'tip.library.remove':
     'Removes the ticked documents from the library once confirmed: records and the files the library keeps go to the trash.',
   'tip.library.unpick': 'Unticks every document.',
@@ -587,6 +584,10 @@ export const en = {
   'tip.editor.more': 'Other actions on this ticket: open it in a tab or as a note, unarchive it.',
   'tip.project.collection':
     'This view gathers tickets from several projects. Click to save its filters as a rule, or remove the rule.',
+  'translate.kept': {
+    one: '{count} text of the workbook was kept as it is, as a formula or a list uses it: {list}',
+    other: '{count} texts of the workbook were kept as they are, as formulas or lists use them: {list}'
+  },
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',
