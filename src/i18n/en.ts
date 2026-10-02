@@ -1330,6 +1330,7 @@ export const en = {
   'chat.preset.actions': 'Actions to take',
   'chat.preset.actionTickets': 'Actions → tickets',
   'chat.preset.deadlines': 'Deadlines → milestones',
+  'chat.busy': 'The chat is answering: wait for the reply to end, or stop it.',
   'chat.preset.deadlinesQ':
     'List the deadlines this document sets ({files}): delivery dates, meetings, starts, receptions, delays. For each, give the date, what is due and by whom, with the document’s sentence. Then propose for each a milestone to create, with a creation block: type milestone, due = the date, the fitting project and lot, and in "description" the original sentence followed by “Source:” and the document’s link. When an existing ticket already matches the deadline, propose to change its date rather than to create one. For a relative delay (“within 15 days”), work the date out only when the document gives where it runs from, and say how; otherwise point it out without proposing a milestone. Never propose a date the document does not hold.',
   'chat.deadlinesIntro':

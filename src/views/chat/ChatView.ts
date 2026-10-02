@@ -1727,13 +1727,7 @@ export class ChatView extends ItemView {
       safeAsync(() => this.plugin.openChatHistory())
     )
     button('square-pen', t('chat.new'), () => {
-      this.turns = []
-      this.editing = null
-      this.follows = null
-      this.branched = false
-      this.notePath = null
-      this.saved = new WeakSet()
-      this.app.workspace.requestSaveLayout()
+      this.newConversation()
       this.render()
     })
 
@@ -2352,11 +2346,37 @@ export class ChatView extends ItemView {
     })
   }
 
+  /** A conversation started anew: nothing said yet, kept in no note. */
+  private newConversation(): void {
+    this.turns = []
+    this.editing = null
+    this.follows = null
+    this.branched = false
+    this.notePath = null
+    this.saved = new WeakSet()
+    this.app.workspace.requestSaveLayout()
+  }
+
   /**
-   * The documents given, attached, and their deadlines asked for at once — from the
-   * library's menu: the question that finds them and proposes them as milestones.
+   * The documents given, their deadlines asked for at once — from the library's menu —, in
+   * a conversation of their own: nothing said before, nothing else attached — no other
+   * file, project, skill, nor the open note —, only them and, then, their projects.
    */
   async askDeadlines(paths: string[]): Promise<void> {
+    if (this.pending) {
+      new Notice(t('chat.busy'))
+      return
+    }
+    this.newConversation()
+    this.files = []
+    this.projects = []
+    this.collections = []
+    this.skills = []
+    this.attached = []
+    this.selection = null
+    this.useNote = false
+    this.searchLibrary = false
+    this.render()
     this.attachFiles(paths)
     const preset = builtinPrompts().find((one) => one.question === t('chat.preset.deadlinesQ'))
     if (preset) await this.askPreset(preset)
