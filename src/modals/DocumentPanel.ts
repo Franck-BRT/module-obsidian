@@ -6,6 +6,10 @@ import { documentOf, pendingApprovers, reopen } from '../store/Document'
 import { docStateLabel } from '../views/library/docStateLabel'
 import { depositDocument } from '../views/library/documentActions'
 import { openVisaSheet } from '../views/visa/VisaModal'
+import { documentSheets } from '../views/visa/visaRun'
+import { verdictLabel } from '../views/visa/visaDocument'
+import { readVerdict } from '../store/visa/visaSheet'
+import { formatDate } from '../dates'
 import { renderPropRow } from '../ui/FormField'
 import { renderInputControl, renderSelectControl } from '../ui/composites/properties'
 import { renderPersonPicker } from '../ui/PersonPicker'
@@ -134,6 +138,7 @@ export function renderDocumentPanel(container: HTMLElement, ctx: DocumentPanelCo
 
   renderFileRow(section, ctx)
   renderVersions(section, ctx)
+  renderSheets(section, ctx)
 
   const waiting = pendingApprovers(meta)
   if (meta.approvers.length && waiting.length) {
@@ -195,6 +200,37 @@ function renderFileRow(section: HTMLElement, ctx: DocumentPanelContext): void {
           })
         })
       )
+  }
+}
+
+/** Its visa sheets, issue by issue: the verdict, and what is still open from one to the next. */
+function renderSheets(section: HTMLElement, ctx: DocumentPanelContext): void {
+  const sheets = documentSheets(ctx.plugin, ctx.task)
+  if (!sheets.length) return
+  const list = section.createDiv('pm-doc-sheets')
+  list.createDiv({ cls: 'pm-modal-section-title', text: t('visa.sheets') })
+  for (const sheet of [...sheets].reverse()) {
+    const line = list.createDiv('pm-doc-sheet')
+    const link = line.createEl('a', {
+      href: '#',
+      text: [sheet.issue ? t('chase.mail.issue', { issue: sheet.issue }) : '', formatDate(sheet.date)]
+        .filter(Boolean)
+        .join(' — ')
+    })
+    link.addEventListener(
+      'click',
+      safeAsync(async (event: MouseEvent) => {
+        event.preventDefault()
+        await ctx.plugin.app.workspace.openLinkText(sheet.path, '', 'tab')
+      })
+    )
+    const verdict = readVerdict(sheet.verdict)
+    if (verdict) line.createSpan({ text: verdictLabel(verdict) })
+    if (sheet.reviewer) line.createSpan({ text: displayName(sheet.reviewer) })
+    line.createSpan({
+      cls: sheet.open.length ? 'pm-doc-sheet-open' : '',
+      text: t('visa.openCount', { count: sheet.open.length })
+    })
   }
 }
 

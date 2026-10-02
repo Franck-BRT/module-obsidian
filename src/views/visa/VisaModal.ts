@@ -4,14 +4,21 @@ import type { DocVerdict, Project, Task } from '../../types'
 import type { LibraryDoc } from '../../store/library/libraryDoc'
 import type { Requirement } from '../../store/requirements/Requirement'
 import { documentOf, pendingApprovers } from '../../store/Document'
-import { VISA_SEVERITIES, VISA_VERDICTS, verdictFor, type VisaSheet } from '../../store/visa/visaSheet'
+import {
+  LIFT_STATES,
+  VISA_SEVERITIES,
+  VISA_VERDICTS,
+  verdictFor,
+  type LiftState,
+  type VisaSheet
+} from '../../store/visa/visaSheet'
 import { LibraryDocPicker } from '../documents/LibraryDocPicker'
 import { today } from '../../dates'
 import { displayName, safeAsync } from '../../utils'
 import { explain } from '../../ui/explain'
 import { promptText } from '../../ui/ModalFactory'
 import { t } from '../../i18n'
-import { documentName, severityLabel, verdictLabel, type VisaContext } from './visaDocument'
+import { documentName, liftLabel, severityLabel, verdictLabel, type VisaContext } from './visaDocument'
 import { draftVisa, projectRequirements, saveVisa, visaCandidates, VisaNoModel, VisaUnreadable } from './visaRun'
 
 /** Opens the assisted visa sheet of a document ticket, for a reviewer when one is named. */
@@ -239,7 +246,7 @@ class VisaModal extends Modal {
       sheet.verdict = verdict.value as DocVerdict
       this.render()
     })
-    const owed = verdictFor(sheet.observations)
+    const owed = verdictFor(sheet.observations, sheet.carried)
     if (owed !== sheet.verdict) {
       verdictLine.createSpan({ cls: 'pm-visa-hint', text: t('visa.verdictHint', { verdict: verdictLabel(owed) }) })
     }
@@ -253,11 +260,43 @@ class VisaModal extends Modal {
       sheet.summary = summary.value.trim()
     })
 
+    // The earlier issue's observations, each where it stands now.
+    if (sheet.carried?.length) {
+      root.createDiv({ cls: 'pm-visa-label', text: t('visa.liftTitle', { issue: sheet.previous?.issue || '—' }) })
+      const carried = root.createDiv('pm-visa-rows pm-visa-carried')
+      for (const one of sheet.carried) {
+        const row = carried.createDiv(`pm-visa-row is-${one.severity} is-${one.state}`)
+        row.createSpan({ cls: 'pm-visa-number', text: one.ref })
+        const fields = row.createDiv('pm-visa-fields')
+        fields.createDiv({
+          cls: 'pm-visa-was',
+          text: `${one.article ? `${one.article} — ` : ''}${one.observation} (${severityLabel(one.severity)})`
+        })
+        const top = fields.createDiv('pm-visa-row-top')
+        const state = top.createEl('select', { cls: 'dropdown pm-visa-lift' })
+        for (const level of LIFT_STATES) state.createEl('option', { value: level, text: liftLabel(level) })
+        state.value = one.state
+        state.addEventListener('change', () => {
+          one.state = state.value as LiftState
+          this.render()
+        })
+        const note = top.createEl('input', {
+          cls: 'pm-visa-source',
+          attr: { type: 'text', placeholder: t('visa.liftNote') }
+        })
+        note.value = one.note
+        note.addEventListener('change', () => {
+          one.note = note.value.trim()
+        })
+      }
+      root.createDiv({ cls: 'pm-visa-label', text: t('visa.newObservations') })
+    }
+
     const table = root.createDiv('pm-visa-rows')
     if (!sheet.observations.length) table.createDiv({ cls: 'pm-visa-hint', text: t('visa.noObservation') })
     sheet.observations.forEach((one, at) => {
       const row = table.createDiv(`pm-visa-row is-${one.severity}`)
-      row.createSpan({ cls: 'pm-visa-number', text: String(at + 1) })
+      row.createSpan({ cls: 'pm-visa-number', text: `${documentOf(this.task).issue.trim()}${at + 1}` })
       const fields = row.createDiv('pm-visa-fields')
       const top = fields.createDiv('pm-visa-row-top')
       const article = top.createEl('input', {

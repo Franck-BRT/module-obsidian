@@ -175,3 +175,41 @@
   padding: 1px var(--size-4-2);
   height: auto;
 }
+
+.pm-visa-carried {
+  margin-bottom: var(--size-4-4);
+}
+
+.pm-visa-was {
+  font-size: var(--font-ui-small);
+}
+
+.pm-visa-row.is-lifted {
+  border-left-color: var(--color-green, #79b58d);
+  opacity: 0.8;
+}
+
+.pm-visa-row.is-lifted .pm-visa-was {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.pm-visa-lift {
+  min-width: 180px;
+}
+
+.pm-doc-sheets {
+  margin-top: var(--size-4-3);
+}
+
+.pm-doc-sheet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2) var(--size-4-3);
+  padding: 2px 0;
+  font-size: var(--font-ui-small);
+}
+
+.pm-doc-sheet-open {
+  color: var(--text-warning, var(--color-orange));
+}

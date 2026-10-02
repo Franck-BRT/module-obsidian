@@ -4,7 +4,7 @@ import type { DemoManifest, Project, Task } from '../../types'
 import { buildDocx } from '../../store/docx'
 import { ContactBook, readContacts, saveContact } from '../../store/contacts'
 import { projectDocsFolder } from '../../store/DocumentStore'
-import { ensureFolder, folderOf } from '../../store/vaultFs'
+import { ensureFolder, folderOf, projectInboxFolder } from '../../store/vaultFs'
 import { today } from '../../dates'
 import { t } from '../../i18n'
 import {
@@ -98,6 +98,12 @@ export async function createDemo(plugin: PMPlugin): Promise<void> {
     buildDocx(calculationNote('B'))
   )
   await plugin.store.insertTask(b12, calculationTask(day, notePath))
+  // Its next issue, arrived and waiting to be deposited.
+  await writeBytes(
+    plugin,
+    normalizePath(`${projectInboxFolder(plugin.app, b12.filePath)}/NDC-04 Note de calcul radier indice C.docx`),
+    buildDocx(calculationNote('C'))
+  )
 
   // The requirements, under ids of their own, and the note of the project that quotes them.
   for (const requirement of DEMO_REQUIREMENTS) {

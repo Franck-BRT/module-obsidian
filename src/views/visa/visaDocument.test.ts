@@ -55,7 +55,8 @@ describe('the visa sheet', () => {
     })
     expect(note).toContain('verdict: rejected')
     expect(note).toContain('## Avis : Refusé')
-    expect(note).toContain('| 1 | § 2.1 | Béton C25/30 au lieu de C30/37 XC2. | **Bloquante** | CCTP art. 3.2 |')
+    expect(note).toContain('| B1 | § 2.1 | Béton C25/30 au lieu de C30/37 XC2. | **Bloquante** | CCTP art. 3.2 |')
+    expect(note).toContain('observations:\n  - {"ref":"B1"')
     // A bar in an observation does not cut its row.
     expect(note).toContain('Enrobage 30 mm \\| requis 40 mm.')
     expect(note).toContain('[[Work/B12/Visas/Fiche.pdf|PDF]]')

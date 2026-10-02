@@ -14,6 +14,10 @@ import { languageName } from '../requirements/translate'
  * Only a draft: the reviewer reads it, changes it, signs it. The model is told to find
  * nothing it cannot point to in the texts it was given, and its verdict is checked
  * against its own observations — one blocking observation is a refusal, whatever it said.
+ *
+ * A later issue of the document is read against the observations still open on the one
+ * before: each said lifted, partly lifted or not lifted, with what shows it; those not
+ * lifted stay in force, with their severity, in the verdict and on the next sheet.
  */
 
 export type VisaSeverity = 'minor' | 'major' | 'blocking'
@@ -30,10 +34,29 @@ export interface VisaObservation {
   source: string
 }
 
+/** Where an observation of an earlier issue stands in this one. */
+export type LiftState = 'lifted' | 'partial' | 'open'
+
+export const LIFT_STATES: LiftState[] = ['lifted', 'partial', 'open']
+
+/** An observation of an earlier issue, followed up in this one. */
+export interface CarriedObservation extends VisaObservation {
+  /** Its number, the issue it was raised at first: « B2 ». */
+  ref: string
+  state: LiftState
+  /** What shows it lifted, or not. */
+  note: string
+}
+
 export interface VisaSheet {
   verdict: DocVerdict
   summary: string
+  /** What this issue newly raises. */
   observations: VisaObservation[]
+  /** The observations still open on the sheet before, and where each stands now. */
+  carried?: CarriedObservation[]
+  /** The issue of that sheet, and the sheet itself by its path. */
+  previous?: { issue: string; sheet: string }
 }
 
 /** A text the document is read against, by its name. */
@@ -54,12 +77,62 @@ export interface VisaInput {
   requirements: VisaRequirement[]
   /** The language the sheet is written in, as a code. */
   language: string
+  /** The observations still open on the sheet of an earlier issue, to say where each stands. */
+  previous?: { issue: string; observations: CarriedObservation[] }
 }
 
-/** The verdict a list of observations calls for: none, a visa; one blocking, a refusal; else with observations. */
-export function verdictFor(observations: Pick<VisaObservation, 'severity'>[]): DocVerdict {
-  if (observations.some((one) => one.severity === 'blocking')) return 'rejected'
-  return observations.length ? 'observations' : 'approved'
+/**
+ * The verdict a list of observations calls for — those of an earlier issue not lifted
+ * counting with them —: none, a visa; one blocking, a refusal; else with observations.
+ */
+export function verdictFor(
+  observations: Pick<VisaObservation, 'severity'>[],
+  carried: Pick<CarriedObservation, 'severity' | 'state'>[] = []
+): DocVerdict {
+  const standing = [...observations, ...carried.filter((one) => one.state !== 'lifted')]
+  if (standing.some((one) => one.severity === 'blocking')) return 'rejected'
+  return standing.length ? 'observations' : 'approved'
+}
+
+/** Where an earlier observation stands, as written, in either language; open when it says none. */
+export function readLiftState(raw: unknown): LiftState {
+  const folded = typeof raw === 'string' ? fold(raw).replace(/[-_]/g, ' ').trim() : ''
+  if (/^(lifted|levee?|leve|resolved|resolue?|closed|close|soldee?)$/.test(folded)) return 'lifted'
+  if (/^(partial|partially lifted|partiellement levee?|partielle|partiel|in part)$/.test(folded)) return 'partial'
+  return 'open'
+}
+
+/** The numbers new observations take at an issue: « C1 », « C2 »…; « 1 », « 2 » when it has none. */
+export function numberObservations<T extends VisaObservation>(issue: string, list: T[]): (T & { ref: string })[] {
+  const mark = issue.trim().replace(/\s+/g, '')
+  return list.map((one, at) => ({ ...one, ref: `${mark}${at + 1}` }))
+}
+
+/**
+ * The observations a sheet's note keeps, as its properties hold them, ready to follow up
+ * at the next issue: those lifted dropped.
+ */
+export function openObservations(raw: unknown): CarriedObservation[] {
+  if (!Array.isArray(raw)) return []
+  const text = (value: unknown): string =>
+    typeof value === 'string' ? value.trim() : typeof value === 'number' ? String(value) : ''
+  return raw
+    .map((one): CarriedObservation | null => {
+      if (!one || typeof one !== 'object') return null
+      const row = one as Record<string, unknown>
+      const observation = text(row.observation)
+      if (!observation) return null
+      return {
+        ref: text(row.ref),
+        article: text(row.article),
+        observation,
+        severity: readSeverity(row.severity),
+        source: text(row.source),
+        state: readLiftState(row.state),
+        note: text(row.note)
+      }
+    })
+    .filter((one): one is CarriedObservation => !!one && one.state !== 'lifted')
 }
 
 const SEVERITY_WORDS: [VisaSeverity, string[]][] = [
@@ -92,7 +165,7 @@ export function readVerdict(raw: unknown): DocVerdict | null {
  * The model's reply, read: its observations kept where they say something, its verdict
  * held to them. Null when it is no sheet at all.
  */
-export function readVisaReply(reply: string): VisaSheet | null {
+export function readVisaReply(reply: string, previous: CarriedObservation[] = []): VisaSheet | null {
   let parsed: unknown
   try {
     parsed = parseJsonContent<unknown>(reply)
@@ -117,12 +190,31 @@ export function readVisaReply(reply: string): VisaSheet | null {
       }
     })
     .filter((one): one is VisaObservation => !!one)
+  // Each earlier observation where the reply says it stands, by its number; not said, still open.
+  const followed = new Map<string, Record<string, unknown>>()
+  for (const one of Array.isArray(record.previous) ? (record.previous as unknown[]) : []) {
+    if (!one || typeof one !== 'object') continue
+    const row = one as Record<string, unknown>
+    const ref = text(row.ref ?? row.id ?? row.number).toUpperCase()
+    if (ref) followed.set(ref, row)
+  }
+  const carried = previous.map((one): CarriedObservation => {
+    const row = followed.get(one.ref.toUpperCase())
+    return row
+      ? { ...one, state: readLiftState(row.state ?? row.status), note: text(row.note ?? row.comment) }
+      : { ...one, state: 'open', note: '' }
+  })
   const said = readVerdict(record.verdict ?? record.avis)
-  const owed = verdictFor(observations)
+  const owed = verdictFor(observations, carried)
   // Never kinder than its own observations; it may be sterner.
   const rank: Record<DocVerdict, number> = { approved: 0, observations: 1, rejected: 2 }
   const verdict = said && rank[said] >= rank[owed] ? said : owed
-  return { verdict, summary: text(record.summary ?? record.synthese ?? record['synthèse']), observations }
+  return {
+    verdict,
+    summary: text(record.summary ?? record.synthese ?? record['synthèse']),
+    observations,
+    ...(previous.length ? { carried } : {})
+  }
 }
 
 /** A text cut to a length, saying it was cut. */
@@ -166,7 +258,17 @@ export function visaRequest(model: string, input: VisaInput, budget = 60_000): C
       ? input.references.flatMap((one) => [`## ${one.name}`, cut(one.text, share, mark), ''])
       : ['(none given)', '']),
     '# Project requirements',
-    requirementText || '(none given)'
+    requirementText || '(none given)',
+    ...(input.previous?.observations.length
+      ? [
+          '',
+          `# Observations still open on the review of issue ${input.previous.issue || '(previous)'}`,
+          ...input.previous.observations.map(
+            (one) =>
+              `- ${one.ref} [${one.severity}]${one.article ? ` (${one.article})` : ''} : ${one.observation}${one.note ? ` — last follow-up: ${one.note}` : ''}`
+          )
+        ]
+      : [])
   ].join('\n')
   const system = [
     'You review, for the client’s side, a document a contractor submitted for approval (« visa ») on a construction or engineering project: a drawing, a calculation note, a method statement, a data sheet.',
@@ -174,8 +276,15 @@ export function visaRequest(model: string, input: VisaInput, budget = 60_000): C
     'For each observation give: "article" — where it is in the document reviewed (section, article, sheet, detail), "observation" — one or two precise sentences quoting the figures concerned, "severity" — "minor" (form, clarification), "major" (to correct in the next issue) or "blocking" (a non-conformity that prevents executing the work), and "source" — the reference document and its article, or the requirement id, that it is checked against.',
     'Only raise what the texts given support: never invent a requirement, a standard or a value. A point the references do not cover is at most a minor request for clarification. A document that conforms gets no observation.',
     'Then propose the verdict: "approved" when there is no observation, "observations" when there are minor or major ones, "rejected" when at least one is blocking; and a two- or three-sentence "summary" of the review.',
-    `Write the observations and the summary in ${language}. Keep references, article numbers, values and units exactly as written.`,
-    'Answer with a JSON object only: {"verdict": "approved|observations|rejected", "summary": "…", "observations": [{"article": "…", "observation": "…", "severity": "minor|major|blocking", "source": "…"}]}'
+    ...(input.previous?.observations.length
+      ? [
+          'This is a new issue of a document already reviewed. For each observation still open on the previous review, listed at the end, say whether this issue lifts it: "lifted" (corrected), "partial" (corrected in part) or "open" (not corrected), with a one-sentence "note" quoting what the new issue says. Do not repeat those observations among the new ones; list as new only what this issue newly gets wrong. Observations not lifted count in the verdict with their severity.'
+        ]
+      : []),
+    `Write the observations, the notes and the summary in ${language}. Keep references, article numbers, values and units exactly as written.`,
+    input.previous?.observations.length
+      ? 'Answer with a JSON object only: {"verdict": "approved|observations|rejected", "summary": "…", "previous": [{"ref": "…", "state": "lifted|partial|open", "note": "…"}], "observations": [{"article": "…", "observation": "…", "severity": "minor|major|blocking", "source": "…"}]}'
+      : 'Answer with a JSON object only: {"verdict": "approved|observations|rejected", "summary": "…", "observations": [{"article": "…", "observation": "…", "severity": "minor|major|blocking", "source": "…"}]}'
   ].join('\n')
   return {
     model,

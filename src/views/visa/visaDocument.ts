@@ -1,6 +1,6 @@
 import type { DocVerdict } from '../../types'
 import { DOCX_TEXT_WIDTH, para, type DocxBlock, type DocxCell, type DocxDocument } from '../../store/docx'
-import type { VisaSeverity, VisaSheet } from '../../store/visa/visaSheet'
+import { numberObservations, type LiftState, type VisaSeverity, type VisaSheet } from '../../store/visa/visaSheet'
 import { formatDateLetter } from '../../dates'
 import { t } from '../../i18n'
 
@@ -23,6 +23,17 @@ export function severityLabel(severity: VisaSeverity): string {
       return t('visa.severity.major')
     case 'blocking':
       return t('visa.severity.blocking')
+  }
+}
+
+export function liftLabel(state: LiftState): string {
+  switch (state) {
+    case 'lifted':
+      return t('visa.lift.lifted')
+    case 'partial':
+      return t('visa.lift.partial')
+    case 'open':
+      return t('visa.lift.open')
   }
 }
 
@@ -82,23 +93,42 @@ export function visaDocument(sheet: VisaSheet, context: VisaContext): DocxDocume
     runs: [{ text: `${t('visa.verdict')} : ` }, { text: verdictLabel(sheet.verdict) }]
   })
   if (sheet.summary) blocks.push(para('Normal', sheet.summary))
-  blocks.push(para('Heading1', t('visa.observations')))
-  if (!sheet.observations.length) blocks.push(para('Normal', t('visa.noObservation')))
-  else {
-    const widths = [600, 1500, 4338, 1200, 2000]
-    const cell = (text: string, at: number, bold = false): DocxCell => ({
+  const cells = (widths: number[]) => {
+    const total = widths.reduce((sum, width) => sum + width, 0)
+    if (total !== DOCX_TEXT_WIDTH) widths[2] += DOCX_TEXT_WIDTH - total
+    return (text: string, at: number, bold = false): DocxCell => ({
       runs: [{ text, ...(bold ? { bold: true } : {}) }],
       width: widths[at]
     })
-    const total = widths.reduce((sum, width) => sum + width, 0)
-    if (total !== DOCX_TEXT_WIDTH) widths[2] += DOCX_TEXT_WIDTH - total
+  }
+  if (sheet.carried?.length) {
+    blocks.push(para('Heading1', t('visa.liftTitle', { issue: sheet.previous?.issue || '—' })))
+    const cell = cells([700, 1600, 3238, 1800, 2300])
+    blocks.push({
+      kind: 'table',
+      header: [t('visa.number'), t('visa.article'), t('visa.observation'), t('visa.liftState'), t('visa.liftNote')].map(
+        (text, at) => cell(text, at, true)
+      ),
+      rows: sheet.carried.map((one) => [
+        cell(one.ref, 0),
+        cell(one.article || '—', 1),
+        cell(`${one.observation} (${severityLabel(one.severity)})`, 2),
+        cell(liftLabel(one.state), 3, one.state !== 'lifted'),
+        cell(one.note || '—', 4)
+      ])
+    })
+  }
+  blocks.push(para('Heading1', sheet.carried?.length ? t('visa.newObservations') : t('visa.observations')))
+  if (!sheet.observations.length) blocks.push(para('Normal', t('visa.noObservation')))
+  else {
+    const cell = cells([700, 1500, 4238, 1200, 2000])
     blocks.push({
       kind: 'table',
       header: [t('visa.number'), t('visa.article'), t('visa.observation'), t('visa.severity'), t('visa.source')].map(
         (text, at) => cell(text, at, true)
       ),
-      rows: sheet.observations.map((one, at) => [
-        cell(String(at + 1), 0),
+      rows: numberObservations(doc.issue, sheet.observations).map((one) => [
+        cell(one.ref, 0),
         cell(one.article || '—', 1),
         cell(one.observation, 2),
         cell(severityLabel(one.severity), 3, one.severity === 'blocking'),
@@ -113,15 +143,46 @@ export function visaDocument(sheet: VisaSheet, context: VisaContext): DocxDocume
 const cellText = (text: string): string => text.replace(/\|/g, '\\|').replace(/\n+/g, ' ')
 
 /** The sheet as a note of the vault: its properties, its verdict, its table, links to its files. */
-export function visaNote(sheet: VisaSheet, context: VisaContext, links: { document: string; files: string[] }): string {
+export function visaNote(
+  sheet: VisaSheet,
+  context: VisaContext,
+  links: { document: string; files: string[]; task?: string }
+): string {
   const quote = (value: string): string => JSON.stringify(value)
+  const fresh = numberObservations(context.document.issue, sheet.observations)
+  // Every observation as the next issue reads it back: those carried with where they stand, the new ones open.
+  const kept = [
+    ...(sheet.carried ?? []).map(({ ref, article, observation, severity, source, state, note }) => ({
+      ref,
+      article,
+      observation,
+      severity,
+      source,
+      state,
+      note
+    })),
+    ...fresh.map(({ ref, article, observation, severity, source }) => ({
+      ref,
+      article,
+      observation,
+      severity,
+      source,
+      state: 'open',
+      note: ''
+    }))
+  ]
   const lines = [
     '---',
     'type: visa',
     `document: ${quote(links.document)}`,
+    ...(links.task ? [`task: ${quote(links.task)}`] : []),
+    `reference: ${quote(context.document.reference)}`,
+    `issue: ${quote(context.document.issue)}`,
     `verdict: ${sheet.verdict}`,
     `date: ${context.date}`,
     `reviewer: ${quote(context.reviewer)}`,
+    ...(sheet.previous ? [`previous: ${quote(`[[${sheet.previous.sheet}]]`)}`] : []),
+    ...(kept.length ? ['observations:', ...kept.map((one) => `  - ${JSON.stringify(one)}`)] : ['observations: []']),
     '---',
     '',
     `# ${t('visa.sheetTitle')} — ${documentName(context)}`,
@@ -133,22 +194,37 @@ export function visaNote(sheet: VisaSheet, context: VisaContext, links: { docume
     '',
     `## ${t('visa.verdict')} : ${verdictLabel(sheet.verdict)}`,
     '',
-    ...(sheet.summary ? [sheet.summary, ''] : []),
-    `## ${t('visa.observations')}`,
-    ''
+    ...(sheet.summary ? [sheet.summary, ''] : [])
   ]
-  if (!sheet.observations.length) lines.push(t('visa.noObservation'))
+  if (sheet.carried?.length) {
+    lines.push(
+      `## ${t('visa.liftTitle', { issue: sheet.previous?.issue || '—' })}`,
+      '',
+      ...(sheet.previous ? [`${t('visa.previousSheet')} : [[${sheet.previous.sheet}]]`, ''] : []),
+      `| ${t('visa.number')} | ${t('visa.article')} | ${t('visa.observation')} | ${t('visa.severity')} | ${t('visa.liftState')} | ${t('visa.liftNote')} |`,
+      '| --- | --- | --- | --- | --- | --- |'
+    )
+    for (const one of sheet.carried) {
+      const state = liftLabel(one.state)
+      lines.push(
+        `| ${one.ref} | ${cellText(one.article || '—')} | ${cellText(one.observation)} | ${severityLabel(one.severity)} | ${one.state === 'lifted' ? state : `**${state}**`} | ${cellText(one.note || '—')} |`
+      )
+    }
+    lines.push('')
+  }
+  lines.push(`## ${sheet.carried?.length ? t('visa.newObservations') : t('visa.observations')}`, '')
+  if (!fresh.length) lines.push(t('visa.noObservation'))
   else {
     lines.push(
       `| ${t('visa.number')} | ${t('visa.article')} | ${t('visa.observation')} | ${t('visa.severity')} | ${t('visa.source')} |`,
       '| --- | --- | --- | --- | --- |'
     )
-    sheet.observations.forEach((one, at) => {
+    for (const one of fresh) {
       const severity = severityLabel(one.severity)
       lines.push(
-        `| ${at + 1} | ${cellText(one.article || '—')} | ${cellText(one.observation)} | ${one.severity === 'blocking' ? `**${severity}**` : severity} | ${cellText(one.source || '—')} |`
+        `| ${one.ref} | ${cellText(one.article || '—')} | ${cellText(one.observation)} | ${one.severity === 'blocking' ? `**${severity}**` : severity} | ${cellText(one.source || '—')} |`
       )
-    })
+    }
   }
   lines.push('')
   return lines.join('\n')

@@ -116,8 +116,12 @@ export function cctpDocument(): DocxDocument {
   }
 }
 
-/** The contractor's calculation note — wrong twice, and short of a justification once. */
+/**
+ * The contractor's calculation note: at issue B wrong twice and short of a justification
+ * once; at issue C the concrete and the loads put right, the cover only in part.
+ */
 export function calculationNote(issue: string): DocxDocument {
+  const second = issue !== 'B'
   return {
     title: `NDC-04 — Note de calcul du radier — indice ${issue}`,
     blocks: [
@@ -127,17 +131,29 @@ export function calculationNote(issue: string): DocxDocument {
       para('Normal', 'La présente note justifie le dimensionnement du radier général du bâtiment B12.'),
       para('Heading1', '2. Matériaux'),
       para('Heading2', '2.1 Béton'),
-      para('Normal', 'Béton de classe C25/30, classe d’exposition XC1, Dmax 20 mm.'),
+      para(
+        'Normal',
+        second
+          ? 'Béton de classe C30/37, classe d’exposition XC2, Dmax 20 mm, conformément au CCTP.'
+          : 'Béton de classe C25/30, classe d’exposition XC1, Dmax 20 mm.'
+      ),
       para('Heading2', '2.2 Aciers'),
       para('Normal', 'Aciers à haute adhérence B500B.'),
       para('Heading2', '2.3 Enrobages'),
-      para('Normal', 'Enrobage nominal retenu : 30 mm en sous-face et en sous-face des nervures.'),
+      para(
+        'Normal',
+        second
+          ? 'Enrobage nominal retenu : 40 mm en sous-face, 35 mm en rive et sur les faces latérales des nervures.'
+          : 'Enrobage nominal retenu : 30 mm en sous-face et en sous-face des nervures.'
+      ),
       para('Heading1', '3. Hypothèses géotechniques'),
       para('Normal', 'Contrainte admissible du sol : 0,25 MPa d’après le rapport G2 AVP.'),
       para('Heading1', '4. Charges'),
       para(
         'Normal',
-        'Charges permanentes : poids propre et superstructure. Charge d’exploitation : 2,5 kN/m² sur l’ensemble des planchers, locaux techniques compris.'
+        second
+          ? 'Charges permanentes : poids propre et superstructure. Charges d’exploitation : 2,5 kN/m² pour les bureaux, 5 kN/m² pour les locaux techniques.'
+          : 'Charges permanentes : poids propre et superstructure. Charge d’exploitation : 2,5 kN/m² sur l’ensemble des planchers, locaux techniques compris.'
       ),
       para('Heading1', '5. Résultats'),
       para(
@@ -446,6 +462,11 @@ Ce projet et le projet « ${DEMO_C7} » sont fictifs. La commande **« Supprimer
 - [ ] Onglet **Documents** : la note de calcul NDC-04 indice B, reçue, en attente de deux visas.
 - [ ] Sur la pastille d’Anne Leroy → **Fiche de visa assistée** : le CCTP est coché, les 3 exigences aussi ; « Analyser » doit trouver le béton C25/30 au lieu de C30/37 XC2, l’enrobage de 30 mm au lieu de 40, et la charge des locaux techniques.
 - [ ] Valider : la fiche, son Word et son PDF dans « Visas », et l’avis dans le circuit.
+
+## Levée des observations (indice suivant)
+- [ ] Dans la fiche du ticket « Note de calcul du radier », bouton **Déposer** : choisir **NDC-04 Note de calcul radier indice C** dans le dossier \`_inbox\` du projet, puis passer l’indice à **C**.
+- [ ] **Fiche de visa assistée** de nouveau : les observations de l’indice B sont reprises ; le béton et les charges doivent ressortir « Levée », l’enrobage « Partiellement levée » (35 mm en rive).
+- [ ] La fiche du ticket liste les fiches de visa par indice, avec les observations encore ouvertes.
 
 ## Bibliothèque et traduction
 - [ ] Bibliothèque, dossier **Démo** : le CCTP et un *Statement of work* en anglais.

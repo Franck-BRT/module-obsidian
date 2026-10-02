@@ -8,7 +8,13 @@ import { documentOf, recordApproval } from '../../store/Document'
 import { extractText } from '../../store/library/docText'
 import { LlmClient } from '../../store/llm/client'
 import { chatModel } from '../../store/chat/chatModels'
-import { readVisaReply, visaRequest, type VisaSheet } from '../../store/visa/visaSheet'
+import {
+  openObservations,
+  readVisaReply,
+  visaRequest,
+  type CarriedObservation,
+  type VisaSheet
+} from '../../store/visa/visaSheet'
 import { buildDocx } from '../../store/docx'
 import { buildPdf } from '../../store/pdf'
 import { ensureFolder, folderOf } from '../../store/vaultFs'
@@ -64,6 +70,44 @@ export async function fileText(plugin: PMPlugin, path: string): Promise<string> 
   return read.text
 }
 
+/** A sheet kept for a document, as its note's properties say. */
+export interface KeptSheet {
+  path: string
+  issue: string
+  date: string
+  verdict: string
+  reviewer: string
+  /** Its observations not lifted: what the next issue is read against. */
+  open: CarriedObservation[]
+}
+
+/** The sheets kept for a document ticket, the oldest first. */
+export function documentSheets(plugin: PMPlugin, task: Task): KeptSheet[] {
+  const out: KeptSheet[] = []
+  for (const file of plugin.app.vault.getMarkdownFiles()) {
+    const fm = plugin.app.metadataCache.getFileCache(file)?.frontmatter
+    if (!fm || fm.type !== 'visa' || fm.task !== task.id) continue
+    const text = (value: unknown): string =>
+      typeof value === 'string' ? value : typeof value === 'number' ? String(value) : ''
+    out.push({
+      path: file.path,
+      issue: text(fm.issue),
+      date: text(fm.date),
+      verdict: text(fm.verdict),
+      reviewer: text(fm.reviewer),
+      open: openObservations(fm.observations)
+    })
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date) || a.path.localeCompare(b.path))
+}
+
+/** The latest sheet of an earlier issue of the document — the one this issue is to lift. */
+export function previousSheet(plugin: PMPlugin, task: Task): KeptSheet | null {
+  const issue = documentOf(task).issue.trim()
+  const earlier = documentSheets(plugin, task).filter((sheet) => sheet.issue.trim() !== issue)
+  return earlier[earlier.length - 1] ?? null
+}
+
 export class VisaNoModel extends Error {}
 export class VisaUnreadable extends Error {}
 
@@ -78,6 +122,7 @@ export async function draftVisa(
   const model = chatModel(plugin.settings.chat.model, llm.modelText)
   if (!llm.enabled || !llm.baseUrl.trim() || !model) throw new VisaNoModel()
   const meta = documentOf(task)
+  const before = previousSheet(plugin, task)
   const request = visaRequest(model, {
     document: {
       title: task.title,
@@ -95,12 +140,13 @@ export async function draftVisa(
       title: one.title,
       text: displayText(one, one.sourceLang)?.body ?? ''
     })),
-    language: currentLocale()
+    language: currentLocale(),
+    ...(before?.open.length ? { previous: { issue: before.issue, observations: before.open } } : {})
   })
   const reply = await new LlmClient({ settings: llm }).chat(request)
-  const sheet = readVisaReply(reply)
+  const sheet = readVisaReply(reply, before?.open ?? [])
   if (!sheet) throw new VisaUnreadable()
-  return sheet
+  return before ? { ...sheet, previous: { issue: before.issue, sheet: before.path } } : sheet
 }
 
 /** A name for a new file in a folder, numbered past the ones already there. */
@@ -151,7 +197,7 @@ export async function saveVisa(
   }
   const notePath = freePath(plugin, folder, base, 'md')
   const documentLink = task.filePath ? `[[${task.filePath}|${task.title}]]` : task.title
-  await plugin.app.vault.create(notePath, visaNote(sheet, context, { document: documentLink, files }))
+  await plugin.app.vault.create(notePath, visaNote(sheet, context, { document: documentLink, files, task: task.id }))
   const note = `${verdictLabel(sheet.verdict)} — [[${notePath}|${t('visa.sheetTitle')}]]`
   const meta = recordApproval(documentOf(task), {
     by: context.reviewer,
