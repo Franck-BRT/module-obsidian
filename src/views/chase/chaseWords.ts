@@ -7,9 +7,19 @@ import { t } from '../../i18n'
 export function chaseWords(): ChaseWords {
   return {
     date: formatDateLetter,
-    subject: (project) => t('chase.mail.subject', { project }),
+    subject: (project, tone) =>
+      tone === 'final'
+        ? t('chase.mail.subjectFinal', { project })
+        : tone === 'firm'
+          ? t('chase.mail.subjectFirm', { project })
+          : t('chase.mail.subject', { project }),
     greeting: t('chase.mail.greeting'),
-    intro: (project) => t('chase.mail.intro', { project }),
+    intro: (project, tone) =>
+      tone === 'final'
+        ? t('chase.mail.introFinal', { project })
+        : tone === 'firm'
+          ? t('chase.mail.introFirm', { project })
+          : t('chase.mail.intro', { project }),
     line: (item) =>
       [
         item.reference,
@@ -21,7 +31,12 @@ export function chaseWords(): ChaseWords {
         .join(' — '),
     already: (last, count) =>
       count > 1 ? t('chase.mail.alreadyMany', { count, date: last }) : t('chase.mail.alreadyOnce', { date: last }),
-    ask: (date) => t('chase.mail.ask', { date }),
+    ask: (date, tone) =>
+      tone === 'final'
+        ? t('chase.mail.askFinal', { date })
+        : tone === 'firm'
+          ? t('chase.mail.askFirm', { date })
+          : t('chase.mail.ask', { date }),
     closing: t('chase.mail.closing')
   }
 }

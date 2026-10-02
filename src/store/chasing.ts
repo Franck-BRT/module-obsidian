@@ -88,6 +88,39 @@ export function askedBy(today: string, days: number): string {
   return weekday === 6 ? addDays(at, 2) : weekday === 0 ? addDays(at, 1) : at
 }
 
+/**
+ * How a reminder speaks: courteous the first time, firm the second, and the last time
+ * firm with what follows if nothing comes.
+ */
+export type ChaseTone = 'courteous' | 'firm' | 'final'
+
+export const CHASE_TONES: ChaseTone[] = ['courteous', 'firm', 'final']
+
+/** The tone of the next reminder, after `chased` of them already. */
+export function toneFor(chased: number): ChaseTone {
+  return chased <= 0 ? 'courteous' : chased === 1 ? 'firm' : 'final'
+}
+
+/** The days a reminder of that tone gives them: less each time. */
+export function delayFor(tone: ChaseTone): number {
+  return tone === 'courteous' ? 7 : tone === 'firm' ? 5 : 3
+}
+
+/** How many days since the last reminder; -1 when there was none. */
+export function daysSinceChase(group: ChaseGroup, today: string): number {
+  return group.lastChase ? daysBetween(group.lastChase, today) : -1
+}
+
+/**
+ * The reminders left unanswered: those who were chased `days` ago or more, and still owe
+ * the documents — the longest silent first.
+ */
+export function unansweredChases<T extends { group: ChaseGroup }>(list: T[], today: string, days: number): T[] {
+  return list
+    .filter((one) => one.group.issuer && daysSinceChase(one.group, today) >= Math.max(1, days))
+    .sort((a, b) => daysSinceChase(b.group, today) - daysSinceChase(a.group, today))
+}
+
 /** A document chased today: the day added once, whatever else it holds kept. */
 export function recordChase(meta: DocumentMeta, day: string): DocumentMeta {
   const chases = meta.chases ?? []
@@ -97,36 +130,40 @@ export function recordChase(meta: DocumentMeta, day: string): DocumentMeta {
 export interface ChaseWords {
   /** A date as a letter writes it: « 14 octobre 2026 ». */
   date: (iso: string) => string
-  subject: (project: string) => string
+  subject: (project: string, tone: ChaseTone) => string
   greeting: string
-  intro: (project: string) => string
+  intro: (project: string, tone: ChaseTone) => string
   /** A document's line, its reference and issue only when it has them. */
   line: (item: { reference: string; title: string; issue: string; due: string }) => string
   already: (last: string, count: number) => string
-  ask: (date: string) => string
+  ask: (date: string, tone: ChaseTone) => string
   closing: string
 }
 
-/** The reminder to one who owes documents, ready to send: its subject and its body. */
+/**
+ * The reminder to one who owes documents, ready to send: its subject and its body — in
+ * the tone given, or the one its earlier reminders call for.
+ */
 export function chaseMail(
   group: ChaseGroup,
-  context: { project: string; askedBy: string },
+  context: { project: string; askedBy: string; tone?: ChaseTone },
   words: ChaseWords
 ): { subject: string; body: string } {
+  const tone = context.tone ?? toneFor(group.chaseCount)
   const lines = group.items.map((item) => `- ${words.line({ ...item, due: words.date(item.due) })}`)
   const body = [
     words.greeting,
     '',
-    words.intro(context.project),
+    words.intro(context.project, tone),
     '',
     ...lines,
     '',
     ...(group.lastChase ? [words.already(words.date(group.lastChase), group.chaseCount), ''] : []),
-    words.ask(words.date(context.askedBy)),
+    words.ask(words.date(context.askedBy), tone),
     '',
     words.closing
   ]
-  return { subject: words.subject(context.project), body: body.join('\n') }
+  return { subject: words.subject(context.project, tone), body: body.join('\n') }
 }
 
 export interface ChaseBlockWords {

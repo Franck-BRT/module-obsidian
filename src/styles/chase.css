@@ -139,3 +139,21 @@
   font-size: var(--font-ui-smaller);
   white-space: nowrap;
 }
+
+.pm-chase-how {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2) var(--size-4-5);
+  align-items: center;
+  margin-bottom: var(--size-4-2);
+  font-size: var(--font-ui-small);
+}
+
+.pm-chase-notice-title {
+  font-weight: var(--font-semibold);
+}
+
+.pm-chase-notice-list {
+  margin: var(--size-4-1) 0 var(--size-4-2);
+  padding-left: var(--size-4-5);
+}

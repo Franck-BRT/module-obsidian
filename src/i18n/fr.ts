@@ -121,7 +121,7 @@ export const fr: Catalog = {
     one: '{count} document attendu au-delà de sa date. Une relance par émetteur :',
     other: '{count} documents attendus au-delà de leur date. Une relance par émetteur :'
   },
-  'chase.askedBy': 'Remise demandée au plus tard le',
+  'chase.askedBy': 'Remise au plus tard le',
   'chase.noteOnSend': 'Noter la relance sur les documents quand je copie ou ouvre le mail',
   'chase.noIssuer': 'Émetteur non renseigné',
   'chase.noIssuerHint': 'Renseigne l’émetteur de ces documents pour savoir à qui envoyer la relance.',
@@ -615,6 +615,52 @@ export const fr: Catalog = {
   'translate.formulaTexts': 'Excel : traduire aussi les textes des formules',
   'translate.formulaTextsDesc':
     'Les textes qu’utilisent les formules, les listes déroulantes et les mises en forme conditionnelles (un statut « Late », un message « Chase the company »…) sont traduits, et remplacés de la même façon dans les cellules, les formules, les listes et les règles, pour que le classeur continue de fonctionner. Décoché, ils restent tels quels. Les formats de date ou de nombre, les adresses et les noms d’onglets dans les formules ne sont jamais touchés ; les formules sont recalculées à l’ouverture.',
+  'chase.tone': 'Ton',
+  'chase.tone.courteous': 'Courtois — 1re relance',
+  'chase.tone.firm': 'Ferme — 2e relance',
+  'chase.tone.final': 'Dernière relance',
+  'chase.silent': { one: 'sans réponse depuis {count} jour', other: 'sans réponse depuis {count} jours' },
+  'chase.introUnanswered': {
+    one: '{count} relance est restée sans réponse. Voici la suivante, plus ferme : vérifie le ton et la date, puis envoie-la.',
+    other:
+      '{count} relances sont restées sans réponse. Voici les suivantes, plus fermes : vérifie le ton et la date de chacune, puis envoie-les.'
+  },
+  'chase.mail.subjectFirm': '2e relance — documents attendus — {project}',
+  'chase.mail.subjectFinal': 'Dernière relance — documents attendus — {project}',
+  'chase.mail.introFirm':
+    'Malgré notre précédente relance, nous n’avons toujours pas reçu les documents suivants, attendus pour le projet {project} :',
+  'chase.mail.introFinal':
+    'Malgré nos relances successives, les documents suivants, attendus pour le projet {project}, ne nous sont toujours pas parvenus :',
+  'chase.mail.askFirm':
+    'Nous vous demandons de nous les transmettre au plus tard le {date}. Ce retard pèse désormais sur l’avancement du projet : merci de nous confirmer cette date par retour de mail.',
+  'chase.mail.askFinal':
+    'Nous vous demandons de nous les transmettre impérativement au plus tard le {date}. À défaut, nous serons contraints de faire remonter ce retard et d’appliquer les dispositions prévues au contrat.',
+  'chase.unanswered': {
+    one: '{count} relance reste sans réponse depuis {days} jours ou plus :',
+    other: '{count} relances restent sans réponse depuis {days} jours ou plus :'
+  },
+  'chase.unansweredItem': '{issuer} — {project}, relancé le {date} ({days} j)',
+  'chase.unansweredMore': { one: 'et {count} autre', other: 'et {count} autres' },
+  'chase.unansweredGo': 'Préparer la relance suivante',
+  'chase.unansweredLater': 'Plus tard',
+  'chase.unansweredNone': {
+    one: 'Aucune relance sans réponse depuis {count} jour ou plus.',
+    other: 'Aucune relance sans réponse depuis {count} jours ou plus.'
+  },
+  'command.unansweredChases': 'Relances restées sans réponse',
+  'tip.chase.tone':
+    'Le ton du mail et le délai donné. Il monte à chaque relance : courtois (7 jours), ferme (5 jours), puis dernière relance (3 jours), qui annonce les suites. Tu peux le changer.',
+  'settings.chaseReminder.name': 'Rappel des relances sans réponse',
+  'settings.chaseReminder.desc':
+    'À l’ouverture d’Obsidian, une fois par jour, signale les documents relancés et toujours pas reçus, et propose la relance suivante, plus ferme.',
+  'settings.chaseReminderDays.name': 'Délai avant rappel',
+  'settings.chaseReminderDays.desc': 'Combien de jours une relance attend sa réponse avant d’être signalée.',
+  'settings.chaseReminderDays.three': '3 jours',
+  'settings.chaseReminderDays.five': '5 jours',
+  'settings.chaseReminderDays.seven': '7 jours',
+  'settings.chaseReminderDays.ten': '10 jours',
+  'settings.chaseReminderDays.fourteen': '14 jours',
+  'settings.aliases.chaseReminder': 'relance, relances, rappel, sans réponse, documents attendus',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

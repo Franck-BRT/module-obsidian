@@ -126,7 +126,7 @@ export const en = {
     one: '{count} document awaited past its date. One reminder per issuer:',
     other: '{count} documents awaited past their dates. One reminder per issuer:'
   },
-  'chase.askedBy': 'Ask for them by',
+  'chase.askedBy': 'Due no later than',
   'chase.noteOnSend': 'Note the reminder on the documents when I copy or open the mail',
   'chase.noIssuer': 'No issuer set',
   'chase.noIssuerHint': 'Set the issuer of these documents to know whom to send the reminder to.',
@@ -591,6 +591,52 @@ export const en = {
   'translate.formulaTexts': 'Excel: also translate the texts in formulas',
   'translate.formulaTextsDesc':
     'The texts that formulas, drop-down lists and conditional formats use (a « Late » status, a « Chase the company » message…) are translated, and replaced the same way in cells, formulas, lists and rules, so the workbook keeps working. Unticked, they stay as they are. Date or number formats, addresses and sheet names in formulas are never touched; formulas are recalculated on opening.',
+  'chase.tone': 'Tone',
+  'chase.tone.courteous': 'Courteous — 1st reminder',
+  'chase.tone.firm': 'Firm — 2nd reminder',
+  'chase.tone.final': 'Final reminder',
+  'chase.silent': { one: 'no answer for {count} day', other: 'no answer for {count} days' },
+  'chase.introUnanswered': {
+    one: '{count} reminder went unanswered. Here is the next one, firmer: check its tone and date, then send it.',
+    other:
+      '{count} reminders went unanswered. Here are the next ones, firmer: check the tone and date of each, then send them.'
+  },
+  'chase.mail.subjectFirm': 'Second reminder — documents expected — {project}',
+  'chase.mail.subjectFinal': 'Final reminder — documents expected — {project}',
+  'chase.mail.introFirm':
+    'Despite our previous reminder, we still have not received the following documents, expected for the {project} project:',
+  'chase.mail.introFinal':
+    'Despite our repeated reminders, the following documents, expected for the {project} project, have still not reached us:',
+  'chase.mail.askFirm':
+    'Please send them to us by {date} at the latest. This delay now weighs on the progress of the project: please confirm this date by return.',
+  'chase.mail.askFinal':
+    'We require them by {date} at the latest. Failing that, we will have to escalate this delay and apply the provisions of the contract.',
+  'chase.unanswered': {
+    one: '{count} reminder has had no answer for {days} days or more:',
+    other: '{count} reminders have had no answer for {days} days or more:'
+  },
+  'chase.unansweredItem': '{issuer} — {project}, chased on {date} ({days} d)',
+  'chase.unansweredMore': { one: 'and {count} other', other: 'and {count} others' },
+  'chase.unansweredGo': 'Prepare the next reminder',
+  'chase.unansweredLater': 'Later',
+  'chase.unansweredNone': {
+    one: 'No reminder left unanswered for {count} day or more.',
+    other: 'No reminder left unanswered for {count} days or more.'
+  },
+  'command.unansweredChases': 'Reminders left unanswered',
+  'tip.chase.tone':
+    'The tone of the mail and the time given. It rises with each reminder: courteous (7 days), firm (5 days), then final (3 days), which says what follows. You can change it.',
+  'settings.chaseReminder.name': 'Unanswered reminders',
+  'settings.chaseReminder.desc':
+    'When Obsidian opens, once a day, points out the documents chased and still not received, and offers the next reminder, firmer.',
+  'settings.chaseReminderDays.name': 'Wait before pointing out',
+  'settings.chaseReminderDays.desc': 'How many days a reminder waits for its answer before it is pointed out.',
+  'settings.chaseReminderDays.three': '3 days',
+  'settings.chaseReminderDays.five': '5 days',
+  'settings.chaseReminderDays.seven': '7 days',
+  'settings.chaseReminderDays.ten': '10 days',
+  'settings.chaseReminderDays.fourteen': '14 days',
+  'settings.aliases.chaseReminder': 'reminder, chase, unanswered, awaited documents',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

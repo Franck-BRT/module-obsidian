@@ -10,7 +10,12 @@ import {
   chaseBlock,
   chaseGroups,
   chaseMail,
+  CHASE_TONES,
+  daysSinceChase,
+  delayFor,
   recordChase,
+  toneFor,
+  unansweredChases,
   type ChaseWords
 } from './chasing'
 
@@ -35,15 +40,15 @@ const register = [
 
 const words: ChaseWords = {
   date: (iso) => iso,
-  subject: (project) => `Relance — ${project}`,
+  subject: (project, tone) => (tone === 'courteous' ? `Relance — ${project}` : `Relance ${tone} — ${project}`),
   greeting: 'Bonjour,',
-  intro: (project) => `Pour ${project}, il manque :`,
+  intro: (project, tone) => `Pour ${project}, il manque (${tone}) :`,
   line: (item) =>
     [item.reference, item.title, item.issue ? `ind. ${item.issue}` : '', `attendu le ${item.due}`]
       .filter(Boolean)
       .join(' — '),
   already: (last, count) => `Déjà relancé le ${last} (${count}).`,
-  ask: (date) => `Avant le ${date}, merci.`,
+  ask: (date, tone) => (tone === 'final' ? `Avant le ${date}, impérativement.` : `Avant le ${date}, merci.`),
   closing: 'Cordialement,'
 }
 
@@ -74,16 +79,47 @@ describe('the reminder', () => {
   it('lists what is missing, says it was chased already, and asks for a date', () => {
     const [group] = chaseGroups(awaitedDocuments(register, TODAY))
     const mail = chaseMail(group, { project: 'Bâtiment B12', askedBy: '2026-10-09' }, words)
-    expect(mail.subject).toBe('Relance — Bâtiment B12')
+    // Chased once already: the second reminder is firm.
+    expect(mail.subject).toBe('Relance firm — Bâtiment B12')
+    expect(mail.body).toContain('(firm)')
     expect(mail.body).toContain('- PL-002 — Plan de coffrage radier — ind. B — attendu le 2026-09-20')
     expect(mail.body).toContain('- NDC-04 — Note de calcul radier — attendu le 2026-09-28')
     expect(mail.body).toContain('Déjà relancé le 2026-09-29 (1).')
     expect(mail.body).toContain('Avant le 2026-10-09, merci.')
   })
 
-  it('says nothing of earlier reminders when there were none', () => {
+  it('says nothing of earlier reminders when there were none, and is courteous', () => {
     const group = chaseGroups(awaitedDocuments(register, TODAY))[1]
-    expect(chaseMail(group, { project: 'B12', askedBy: '2026-10-09' }, words).body).not.toContain('Déjà')
+    const mail = chaseMail(group, { project: 'B12', askedBy: '2026-10-09' }, words)
+    expect(mail.body).not.toContain('Déjà')
+    expect(mail.subject).toBe('Relance — B12')
+  })
+
+  it('takes the tone it is given, and gives less time each reminder', () => {
+    const group = chaseGroups(awaitedDocuments(register, TODAY))[1]
+    const mail = chaseMail(group, { project: 'B12', askedBy: '2026-10-07', tone: 'final' }, words)
+    expect(mail.body).toContain('Avant le 2026-10-07, impérativement.')
+    expect([toneFor(0), toneFor(1), toneFor(2), toneFor(5)]).toEqual(['courteous', 'firm', 'final', 'final'])
+    expect(CHASE_TONES.map(delayFor)).toEqual([7, 5, 3])
+  })
+
+  it('finds the reminders left unanswered, the longest silent first', () => {
+    const list = chaseGroups(
+      awaitedDocuments(
+        [
+          ...register,
+          doc('Plan réseaux', '2026-09-01', { issuer: 'Réseaux Ouest', chases: ['2026-09-10', '2026-09-20'] }),
+          doc('PAQ', '2026-09-15', { issuer: 'Électricité Sud', chases: ['2026-10-01'] })
+        ],
+        TODAY
+      )
+    ).map((group) => ({ group }))
+    const silent = unansweredChases(list, TODAY, 3)
+    expect(silent.map((one) => [one.group.issuer, daysSinceChase(one.group, TODAY)])).toEqual([
+      ['Réseaux Ouest', 12],
+      ['Garonne Bâtiment', 3]
+    ])
+    expect(unansweredChases(list, TODAY, 7).map((one) => one.group.issuer)).toEqual(['Réseaux Ouest'])
   })
 
   it('asks for a working day', () => {

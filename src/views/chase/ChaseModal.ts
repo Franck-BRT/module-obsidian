@@ -4,7 +4,21 @@ import type { Project } from '../../types'
 import { documentOf } from '../../store/Document'
 import { findTaskById } from '../../store/TaskIndex'
 import { flattenTasks } from '../../store/TaskTreeOps'
-import { askedBy, awaitedDocuments, chaseGroups, chaseMail, recordChase, type ChaseGroup } from '../../store/chasing'
+import {
+  askedBy,
+  awaitedDocuments,
+  CHASE_TONES,
+  chaseGroups,
+  chaseMail,
+  daysSinceChase,
+  delayFor,
+  recordChase,
+  toneFor,
+  unansweredChases,
+  type ChaseGroup,
+  type ChaseTone
+} from '../../store/chasing'
+import { fold } from '../../store/library/libraryDoc'
 import { ContactBook, contactKey, readContacts } from '../../store/contacts'
 import { formatDate, today } from '../../dates'
 import { safeAsync } from '../../utils'
@@ -13,12 +27,26 @@ import { chaseWords } from './chaseWords'
 import { t } from '../../i18n'
 import { explain } from '../../ui/explain'
 
-/** How many days the reminder gives them, by default. */
-const DEFAULT_DELAY = 7
-
 interface ProjectGroup {
   project: Project
   group: ChaseGroup
+}
+
+/** A reminder's own key: its project, and who owes. */
+function groupKey({ project, group }: ProjectGroup): string {
+  return `${project.filePath}|${fold(group.issuer).replace(/\s+/g, ' ')}`
+}
+
+/** A tone's name for the reader. */
+export function toneLabel(tone: ChaseTone): string {
+  switch (tone) {
+    case 'courteous':
+      return t('chase.tone.courteous')
+    case 'firm':
+      return t('chase.tone.firm')
+    case 'final':
+      return t('chase.tone.final')
+  }
 }
 
 /**
@@ -63,7 +91,23 @@ export function openChase(
     new Notice(t('view.awaitedNone'))
     return
   }
-  new ChaseModal(plugin, projects, list, onRefresh, only).open()
+  new ChaseModal(plugin, projects, list, onRefresh, { only }).open()
+}
+
+/**
+ * The reminders left unanswered `days` or more, opened on the next one each — firmer —
+ * or false when there is none.
+ */
+export function openUnansweredChases(
+  plugin: PMPlugin,
+  projects: Project[],
+  days: number,
+  onRefresh: () => Promise<void>
+): boolean {
+  const list = unansweredChases(chaseList(projects, today().toString()), today().toString(), days)
+  if (!list.length) return false
+  new ChaseModal(plugin, projects, list, onRefresh, { unanswered: true }).open()
+  return true
 }
 
 /**
@@ -73,18 +117,35 @@ export function openChase(
  * documents, so the next one knows it is the second.
  */
 class ChaseModal extends Modal {
-  private asked: string
   private note = true
+  /** Each reminder's tone and date, as the reader set them. */
+  private choices = new Map<string, { tone: ChaseTone; asked: string; dated: boolean }>()
+  /** The reminders shown: those first listed, however their chases change. */
+  private shown: Set<string>
 
   constructor(
     private plugin: PMPlugin,
     private projects: Project[],
     private list: ProjectGroup[],
     private onRefresh: () => Promise<void>,
-    private only?: (issuer: string) => boolean
+    private mode: { only?: (issuer: string) => boolean; unanswered?: boolean } = {}
   ) {
     super(plugin.app)
-    this.asked = askedBy(today().toString(), DEFAULT_DELAY)
+    this.shown = new Set(list.map(groupKey))
+  }
+
+  /** A reminder's tone and date: the next its earlier ones call for, unless changed. */
+  private choice(one: ProjectGroup): { tone: ChaseTone; asked: string; dated: boolean } {
+    const key = groupKey(one)
+    let choice = this.choices.get(key)
+    if (!choice) {
+      // Noted today, it was the reminder of today: its tone is the one it went with.
+      const sent = one.group.lastChase === today().toString() ? one.group.chaseCount - 1 : one.group.chaseCount
+      const tone = toneFor(sent)
+      choice = { tone, asked: askedBy(today().toString(), delayFor(tone)), dated: false }
+      this.choices.set(key, choice)
+    }
+    return choice
   }
 
   onOpen(): void {
@@ -101,17 +162,12 @@ class ChaseModal extends Modal {
     const root = this.contentEl
     root.empty()
     const count = this.list.reduce((sum, one) => sum + one.group.items.length, 0)
-    root.createDiv({ cls: 'pm-chase-intro', text: t('chase.intro', { count }) })
+    root.createDiv({
+      cls: 'pm-chase-intro',
+      text: this.mode.unanswered ? t('chase.introUnanswered', { count: this.list.length }) : t('chase.intro', { count })
+    })
 
     const options = root.createDiv('pm-chase-options')
-    const date = options.createEl('label', { cls: 'pm-chase-option' })
-    date.createSpan({ text: t('chase.askedBy') })
-    const input = date.createEl('input', { attr: { type: 'date' } })
-    input.value = this.asked
-    input.addEventListener('change', () => {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(input.value)) this.asked = input.value
-      this.render()
-    })
     const note = options.createEl('label', { cls: 'pm-chase-option' })
     const box = note.createEl('input', { attr: { type: 'checkbox' } })
     box.checked = this.note
@@ -133,27 +189,34 @@ class ChaseModal extends Modal {
       safeAsync(async () => {
         this.close()
         const paths = [...new Set(this.list.map((one) => one.project.filePath))]
-        await this.plugin.chatChase(paths, this.asked)
+        const first = this.list[0]
+        await this.plugin.chatChase(paths, first ? this.choice(first).asked : askedBy(today().toString(), 7))
       })
     )
     foot.createEl('button', { text: t('common.close') }).addEventListener('click', () => this.close())
   }
 
-  private renderGroup(el: HTMLElement, { project, group }: ProjectGroup, several: boolean): void {
+  private renderGroup(el: HTMLElement, one: ProjectGroup, several: boolean): void {
+    const { project, group } = one
+    const choice = this.choice(one)
     const head = el.createDiv('pm-chase-head')
     setIcon(head.createSpan({ cls: 'pm-chase-icon' }), group.issuer ? 'building-2' : 'circle-help')
     head.createSpan({ cls: 'pm-chase-issuer', text: group.issuer || t('chase.noIssuer') })
     if (several) head.createSpan({ cls: 'pm-chase-project', text: project.title })
     const day = today().toString()
     if (group.lastChase) {
+      const silent = daysSinceChase(group, day)
       head.createSpan({
         cls: `pm-chase-chased${group.lastChase === day ? ' is-today' : ''}`,
         text:
           group.lastChase === day
             ? t('chase.chasedToday')
-            : group.chaseCount > 1
-              ? t('chase.chasedMany', { count: group.chaseCount, date: formatDate(group.lastChase) })
-              : t('chase.chasedOnce', { date: formatDate(group.lastChase) })
+            : [
+                group.chaseCount > 1
+                  ? t('chase.chasedMany', { count: group.chaseCount, date: formatDate(group.lastChase) })
+                  : t('chase.chasedOnce', { date: formatDate(group.lastChase) }),
+                t('chase.silent', { count: silent })
+              ].join(' · ')
       })
     }
     if (!group.issuer) el.createDiv({ cls: 'pm-chase-hint', text: t('chase.noIssuerHint') })
@@ -194,7 +257,31 @@ class ChaseModal extends Modal {
       })
     }
 
-    const mail = chaseMail(group, { project: project.title, askedBy: this.asked }, chaseWords())
+    // How it speaks, and by when it asks: the next step after the earlier reminders, unless changed.
+    const how = el.createDiv('pm-chase-how')
+    const toneField = how.createEl('label', { cls: 'pm-chase-option' })
+    toneField.createSpan({ text: t('chase.tone') })
+    const select = toneField.createEl('select', { cls: 'dropdown' })
+    for (const tone of CHASE_TONES) select.createEl('option', { value: tone, text: toneLabel(tone) })
+    select.value = choice.tone
+    explain(select, t('chase.tone'), t('tip.chase.tone'))
+    select.addEventListener('change', () => {
+      choice.tone = select.value as ChaseTone
+      if (!choice.dated) choice.asked = askedBy(today().toString(), delayFor(choice.tone))
+      this.render()
+    })
+    const dateField = how.createEl('label', { cls: 'pm-chase-option' })
+    dateField.createSpan({ text: t('chase.askedBy') })
+    const input = dateField.createEl('input', { attr: { type: 'date' } })
+    input.value = choice.asked
+    input.addEventListener('change', () => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(input.value)) return
+      choice.asked = input.value
+      choice.dated = true
+      this.render()
+    })
+
+    const mail = chaseMail(group, { project: project.title, askedBy: choice.asked, tone: choice.tone }, chaseWords())
     const preview = el.createEl('details', { cls: 'pm-chase-preview' })
     preview.createEl('summary', { text: t('chase.preview') })
     preview.createDiv({ cls: 'pm-chase-subject', text: mail.subject })
@@ -252,7 +339,7 @@ class ChaseModal extends Modal {
     }
     await this.onRefresh()
     new Notice(t('chase.noted', { count: group.items.length }))
-    this.list = chaseList(this.projects, day, this.only)
+    this.list = chaseList(this.projects, day, this.mode.only).filter((one) => this.shown.has(groupKey(one)))
     this.render()
   }
 }

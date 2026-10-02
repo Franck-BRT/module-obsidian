@@ -42,6 +42,7 @@ import {
 import type { FormerSettings, ProjectRef, TaskSource } from './store'
 import { PMSettingTab } from './settings'
 import { openChase } from './views/chase/ChaseModal'
+import { remindUnansweredChases } from './views/chase/chaseReminder'
 import { configureExplain } from './ui/explain'
 import { openAgendas } from './views/agenda/AgendasModal'
 import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
@@ -595,6 +596,12 @@ export default class PMPlugin extends Plugin {
         }
         openChase(this, scope.projects, () => view.refreshProject())
       }
+    })
+
+    this.addCommand({
+      id: 'unanswered-chases',
+      name: t('command.unansweredChases'),
+      callback: safeAsync(() => remindUnansweredChases(this, true))
     })
 
     this.addCommand({
@@ -1803,6 +1810,7 @@ export default class PMPlugin extends Plugin {
     await this.cleanupStaleProjectFilters()
     this.notifier.check()
     await this.autoArchiver.check()
+    await remindUnansweredChases(this)
   }
 
   async cleanupStaleProjectFilters(): Promise<void> {

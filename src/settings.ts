@@ -404,6 +404,29 @@ export class PMSettingTab extends PluginSettingTab {
               step: 1,
               disabled: () => !this.plugin.settings.notificationsEnabled
             }
+          },
+          {
+            name: t('settings.chaseReminder.name'),
+            desc: t('settings.chaseReminder.desc'),
+            aliases: searchAliases('settings.aliases.chaseReminder'),
+            control: { type: 'toggle', key: 'chaseReminder' }
+          },
+          {
+            name: t('settings.chaseReminderDays.name'),
+            desc: t('settings.chaseReminderDays.desc'),
+            aliases: searchAliases('settings.aliases.chaseReminder'),
+            control: {
+              type: 'dropdown',
+              key: 'chaseReminderDays',
+              options: {
+                '3': t('settings.chaseReminderDays.three'),
+                '5': t('settings.chaseReminderDays.five'),
+                '7': t('settings.chaseReminderDays.seven'),
+                '10': t('settings.chaseReminderDays.ten'),
+                '14': t('settings.chaseReminderDays.fourteen')
+              },
+              disabled: () => !this.plugin.settings.chaseReminder
+            }
           }
         ]
       },

@@ -785,6 +785,12 @@ export interface PMSettings {
   globalTeamMembers: string[]
   notificationsEnabled: boolean
   notificationLeadDays: number
+  /** Whether Obsidian, opening, says which reminders were left unanswered. */
+  chaseReminder: boolean
+  /** The days a reminder waits for its answer before that: '3', '5', '7', '10' or '14'. */
+  chaseReminderDays: string
+  /** The day it was last said, YYYY-MM-DD: once a day is enough. */
+  chaseReminderShown: string
   /** Days after completion before a task moves to its project's archive. 0 turns it off. */
   autoArchiveDays: number
   /** The day the archive sweep last ran, so it runs at most once a day. */
@@ -1096,6 +1102,9 @@ export const DEFAULT_SETTINGS: PMSettings = {
   showTagColors: true,
   notificationsEnabled: true,
   notificationLeadDays: 2,
+  chaseReminder: true,
+  chaseReminderDays: '7',
+  chaseReminderShown: '',
   autoArchiveDays: 0,
   lastAutoArchiveDate: '',
   autoSchedule: true,
