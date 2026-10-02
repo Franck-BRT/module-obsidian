@@ -1329,6 +1329,23 @@ export const en = {
   'chat.preset.summaryQ': 'Summarise this note in a few points, keeping the figures, dates and decisions.',
   'chat.preset.actions': 'Actions to take',
   'chat.preset.actionTickets': 'Actions → tickets',
+  'chat.preset.compare': 'Compare versions',
+  'chat.preset.compareQ':
+    'Compare the two versions of this document ({files}): the first is the previous version, the second the new one. Sum up what changed, article by article — added, removed, changed —, quoting the passages, and say apart what only changes the wording. Point out first the dates, delays, quantities, strengths and requirements changed. Then, for each change that touches the project’s plan, propose the change of the tickets concerned (dates, description) or the tickets to create, with in "why" the passage changed and its article. Propose nothing for a change of wording.',
+  'chat.compareIntro':
+    'What changes from “{before}” (previous version) to “{after}” (new version), found line by line by the tool — “−” what goes, “+” what comes; a line removed followed by a line added is a line changed. Build on this list, inventing no other change:',
+  'chat.compareSame': 'The two versions say the same, word for word (layout aside).',
+  'chat.compareRemoved': 'Removed',
+  'chat.compareAdded': 'Added',
+  'chat.compareStart': 'Start of the document',
+  'chat.compareDatesAdded': 'Dates appearing in the new version:',
+  'chat.compareDatesRemoved': 'Dates gone from the previous version:',
+  'chat.compareMore': '… and {count} more passages changed, not shown here.',
+  'library.compareWith': 'Compare with the previous version (“{title}”)',
+  'library.newVersionOf': 'New version of…',
+  'library.unlinkVersion': 'No longer link to “{title}”',
+  'library.versionLinked':
+    '“{title}” is linked to its previous version “{previous}”: right-click › Compare with the previous version.',
   'chat.preset.deadlines': 'Deadlines → milestones and tasks',
   'chat.busy': 'The chat is answering: wait for the reply to end, or stop it.',
   'chat.preset.deadlinesQ':

@@ -44,6 +44,8 @@ export interface LibraryDoc {
   tags: string[]
   /** The library's folder its record is in, by its path under the library's; '' at its root, or outside it. */
   folder: string
+  /** The version it follows — the issue before it —, by its record's path; absent when none. */
+  previous?: string
 }
 
 export type DocFamily = 'pdf' | 'word' | 'sheet' | 'slides' | 'image' | 'mail' | 'note' | 'other'

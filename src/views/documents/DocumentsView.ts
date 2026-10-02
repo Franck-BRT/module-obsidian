@@ -28,6 +28,8 @@ import {
   type DocSort,
   type LibraryDoc
 } from '../../store/library/libraryDoc'
+import { versionKey } from '../../store/library/docVersions'
+import { LibraryDocPicker } from './LibraryDocPicker'
 import type { PourItem } from '../../store/library/DocLibrary'
 import { snippet } from '../../store/library/docText'
 import { AT_ROOT } from '../../store/folderFilter'
@@ -415,6 +417,31 @@ export class DocumentsView extends ItemView {
 
   private projectOptions(): [string, string][] {
     return this.plugin.libraryProjects().map((project): [string, string] => [project.path, project.title])
+  }
+
+  /**
+   * The document a document is the new issue of, picked among the others — those known
+   * by the same name first —, and linked to it as its version.
+   */
+  private pickPrevious(doc: LibraryDoc): void {
+    const key = versionKey(doc.title) || versionKey(doc.file.slice(doc.file.lastIndexOf('/') + 1))
+    const others = sortDocs(
+      this.plugin.library.docs().filter((one) => one.record !== doc.record),
+      'added'
+    )
+    const alike = (one: LibraryDoc): boolean => !!key && versionKey(one.title) === key
+    const texts = this.plugin.libraryText
+    new LibraryDocPicker(
+      this.app,
+      [...others.filter(alike), ...others.filter((one) => !alike(one))],
+      (path) => this.projectTitle(path),
+      (one) => texts.folded(one),
+      safeAsync(async (chosen: LibraryDoc) => {
+        await this.plugin.library.setPrevious(doc, chosen)
+        new Notice(t('library.versionLinked', { title: doc.title, previous: chosen.title }), 8000)
+      }),
+      (one) => texts.entry(one)?.text ?? ''
+    ).open()
   }
 
   private projectTitle(path: string): string {
@@ -922,6 +949,31 @@ export class DocumentsView extends ItemView {
         .setDisabled(!doc.file)
         .onClick(safeAsync(() => this.plugin.chatDeadlines([doc.file])))
     )
+    // Its versions: the issue before it, compared or unlinked; another one named as such.
+    const previous = doc.previous ? this.plugin.library.docs().find((one) => one.record === doc.previous) : undefined
+    if (previous) {
+      menu.addItem((item) =>
+        item
+          .setTitle(t('library.compareWith', { title: previous.title }))
+          .setIcon('git-compare')
+          .setDisabled(!doc.file || !previous.file)
+          .onClick(safeAsync(() => this.plugin.chatCompare(previous.file, doc.file)))
+      )
+    }
+    menu.addItem((item) =>
+      item
+        .setTitle(t('library.newVersionOf'))
+        .setIcon('git-branch-plus')
+        .onClick(() => this.pickPrevious(doc))
+    )
+    if (previous) {
+      menu.addItem((item) =>
+        item
+          .setTitle(t('library.unlinkVersion', { title: previous.title }))
+          .setIcon('unlink')
+          .onClick(safeAsync(() => this.plugin.library.setPrevious(doc, null)))
+      )
+    }
     menu.addItem((item) =>
       item
         .setTitle(t('library.openRecord'))

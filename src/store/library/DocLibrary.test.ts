@@ -62,6 +62,27 @@ describe('DocLibrary', () => {
     expect(record).toContain('## Notes')
   })
 
+  it('links a new issue of a document to the one before it, and the one after to it', async () => {
+    await library.pour([outside('CCTP lot 02 ind A.pdf', 'indice A')], { projects: [GC], move: false, today: TODAY })
+    const report = await library.pour([outside('CCTP lot 02 ind B.pdf', 'indice B')], {
+      projects: [GC],
+      move: false,
+      today: TODAY
+    })
+    expect(report.versions.map((one) => [one.doc.title, one.previous.title])).toEqual([
+      ['CCTP lot 02 ind B', 'CCTP lot 02 ind A']
+    ])
+    const byTitle = (title: string) => library.docs().find((doc) => doc.title === title)
+    expect(byTitle('CCTP lot 02 ind B')?.previous).toBe('Bibliothèque/CCTP lot 02 ind A.md')
+    expect(byTitle('CCTP lot 02 ind A')?.previous).toBeUndefined()
+    await library.pour([outside('CCTP lot 02 ind C.pdf', 'indice C')], { projects: [GC], move: false, today: TODAY })
+    expect(byTitle('CCTP lot 02 ind C')?.previous).toBe('Bibliothèque/CCTP lot 02 ind B.md')
+    // Unlinked by hand, it follows none.
+    const c = byTitle('CCTP lot 02 ind C')
+    if (c) await library.setPrevious(c, null)
+    expect(byTitle('CCTP lot 02 ind C')?.previous).toBeUndefined()
+  })
+
   it('files a document that belongs to no project too', async () => {
     await library.pour([outside('Norme.pdf', 'norme')], { projects: [], move: false, today: TODAY })
     expect(library.docs()[0].projects).toEqual([])

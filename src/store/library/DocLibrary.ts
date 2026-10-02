@@ -3,6 +3,7 @@ import { sanitizeFileName } from '../../utils'
 import { DOCS_FOLDER_NAME, freePath } from '../DocumentStore'
 import { refLink } from '../refs'
 import { ensureFolder } from '../vaultFs'
+import { previousVersion } from './docVersions'
 import {
   dissolveSubfolder,
   folderPath,
@@ -77,6 +78,8 @@ export interface PourReport {
   /** Documents that were already there, by their records; the projects were added to them. */
   known: string[]
   failed: { name: string; reason: string }[]
+  /** New documents found to be another issue of one already there, and that one: linked as its version. */
+  versions: { doc: LibraryDoc; previous: LibraryDoc }[]
 }
 
 export class DocLibrary {
@@ -176,8 +179,24 @@ export class DocLibrary {
       category: text(fm.category),
       lot: text(fm.lot),
       issuer: text(fm.issuer),
-      tags: cleanTags(stringList(fm.tags))
+      tags: cleanTags(stringList(fm.tags)),
+      ...(typeof fm.previous === 'string' && this.resolve(fm.previous, record.path)
+        ? { previous: this.resolve(fm.previous, record.path)?.path }
+        : {})
     }
+  }
+
+  /**
+   * Says which version a document follows — the issue before it —, or that it follows
+   * none: written in its record, as a link to the other's.
+   */
+  async setPrevious(doc: LibraryDoc, previous: LibraryDoc | null): Promise<void> {
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return
+    await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+      if (previous) fm.previous = `[[${previous.record.replace(/\.md$/, '')}]]`
+      else delete fm.previous
+    })
   }
 
   /** The file a link names: as Obsidian finds it, or by its full path. */
@@ -199,7 +218,7 @@ export class DocLibrary {
     options: PourOptions,
     onProgress?: (done: number, total: number) => void
   ): Promise<PourReport> {
-    const report: PourReport = { added: [], docs: [], known: [], failed: [] }
+    const report: PourReport = { added: [], docs: [], known: [], failed: [], versions: [] }
     const existing = this.docs()
     const byHash = new Map(existing.filter((doc) => doc.hash).map((doc) => [doc.hash, doc]))
     const byFile = new Map(existing.filter((doc) => doc.file).map((doc) => [doc.file, doc]))
@@ -220,7 +239,17 @@ export class DocLibrary {
           if (known.file) byFile.set(known.file, updated)
           if (!report.known.includes(known.record)) report.known.push(known.record)
         } else {
-          const doc = await this.addNew(item, bytes, hash, options)
+          let doc = await this.addNew(item, bytes, hash, options)
+          // Another issue of a document already there — « ind B » after « ind A » —: linked to it.
+          const before = previousVersion(doc, [...existing, ...report.docs])
+          const previous = before
+            ? [...existing, ...report.docs].find((one) => one.record === before.record)
+            : undefined
+          if (previous) {
+            await this.setPrevious(doc, previous)
+            doc = { ...doc, previous: previous.record }
+            report.versions.push({ doc, previous })
+          }
           byHash.set(hash, doc)
           if (doc.file) byFile.set(doc.file, doc)
           report.added.push(doc.record)

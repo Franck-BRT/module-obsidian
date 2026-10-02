@@ -1310,6 +1310,23 @@ export const fr: Catalog = {
   'chat.preset.summaryQ': 'Résume cette note en quelques points, en gardant les chiffres, les dates et les décisions.',
   'chat.preset.actions': 'Actions à mener',
   'chat.preset.actionTickets': 'Actions → tickets',
+  'chat.preset.compare': 'Comparer les versions',
+  'chat.preset.compareQ':
+    'Compare les deux versions de ce document ({files}) : la première est la version précédente, la seconde la nouvelle. Résume ce qui a changé, article par article — ajouté, retiré, modifié —, en citant les passages, et dis à part ce qui ne change que la forme. Signale en premier les dates, délais, quantités, résistances et exigences modifiés. Ensuite, pour chaque changement qui touche le planning du projet, propose la modification des tickets concernés (dates, description) ou les tickets à créer, avec dans "why" le passage modifié et son article. Ne propose rien pour un changement de forme.',
+  'chat.compareIntro':
+    'Ce qui change de « {before} » (version précédente) à « {after} » (nouvelle version), relevé ligne à ligne par l’outil — « − » ce qui disparaît, « + » ce qui apparaît ; une ligne retirée suivie d’une ligne ajoutée est une ligne modifiée. Appuie-toi sur ce relevé, sans inventer d’autres changements :',
+  'chat.compareSame': 'Les deux versions disent la même chose, mot pour mot (à la mise en page près).',
+  'chat.compareRemoved': 'Retiré',
+  'chat.compareAdded': 'Ajouté',
+  'chat.compareStart': 'Début du document',
+  'chat.compareDatesAdded': 'Dates qui apparaissent dans la nouvelle version :',
+  'chat.compareDatesRemoved': 'Dates qui disparaissent de la version précédente :',
+  'chat.compareMore': '… et {count} autres passages modifiés, non montrés ici.',
+  'library.compareWith': 'Comparer avec la version précédente (« {title} »)',
+  'library.newVersionOf': 'Nouvelle version de…',
+  'library.unlinkVersion': 'Ne plus relier à « {title} »',
+  'library.versionLinked':
+    '« {title} » est relié à sa version précédente « {previous} » : clic droit › Comparer avec la version précédente.',
   'chat.preset.deadlines': 'Échéances → jalons et tâches',
   'chat.busy': 'Le chat est en train de répondre : attendez la fin de la réponse, ou arrêtez-la.',
   'chat.preset.deadlinesQ':

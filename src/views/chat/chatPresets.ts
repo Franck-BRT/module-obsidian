@@ -37,6 +37,7 @@ export function builtinPrompts(): ChatPrompt[] {
     prompt('requirements', t('chat.preset.translateTo'), t('chat.preset.translateToQ')),
     prompt('file', t('chat.preset.document'), t('chat.preset.documentQ')),
     { ...prompt('file', t('chat.preset.deadlines'), t('chat.preset.deadlinesQ')), tickets: true },
+    { ...prompt('file', t('chat.preset.compare'), t('chat.preset.compareQ')), tickets: true },
     prompt('note', t('chat.preset.summary'), t('chat.preset.summaryQ')),
     { ...prompt('note', t('chat.preset.actionTickets'), t('chat.preset.actionTicketsQ')), tickets: true },
     prompt('note', t('chat.preset.actions'), t('chat.preset.actionsQ')),

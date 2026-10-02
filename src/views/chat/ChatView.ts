@@ -88,6 +88,7 @@ import { chunkText } from '../../store/rag/ragChunk'
 import { noteBody } from '../../store/notes/NoteLibrary'
 import { pdfPages } from './pdfPages'
 import { asksForDeadlines, deadlinesBlock } from '../../store/chat/deadlines'
+import { asksForComparison, changesBlock, documentChanges } from '../../store/library/docDiff'
 import { noteProjects } from '../../store/chat/noteProjects'
 import {
   documentSource,
@@ -2363,6 +2364,23 @@ export class ChatView extends ItemView {
    * file, project, skill, nor the open note —, only them and, then, their projects.
    */
   async askDeadlines(paths: string[]): Promise<void> {
+    await this.askFresh(paths, t('chat.preset.deadlinesQ'))
+  }
+
+  /**
+   * Two versions of a document compared — the one before first —, in a conversation of
+   * their own: what changed, and what it changes in the plan.
+   */
+  async askComparison(before: string, after: string): Promise<void> {
+    await this.askFresh([before, after], t('chat.preset.compareQ'))
+  }
+
+  /**
+   * One of the ready questions asked about documents, in a conversation of its own:
+   * nothing said before, nothing else attached — no other file, project, skill, nor the
+   * open note —, only them and, then, their projects.
+   */
+  private async askFresh(paths: string[], question: string): Promise<void> {
     if (this.pending) {
       new Notice(t('chat.busy'))
       return
@@ -2378,7 +2396,7 @@ export class ChatView extends ItemView {
     this.searchLibrary = false
     this.render()
     this.attachFiles(paths)
-    const preset = builtinPrompts().find((one) => one.question === t('chat.preset.deadlinesQ'))
+    const preset = builtinPrompts().find((one) => one.question === question)
     if (preset) await this.askPreset(preset)
   }
 
@@ -2539,6 +2557,25 @@ export class ChatView extends ItemView {
         ...attached.read.map((file) => ({ name: file.name, text: file.text })),
         ...(note ? [{ name: note.title, text: note.content }] : [])
       ]
+      // Two versions compared: what changed, found line by line by the plugin, the one
+      // attached first taken for the one before.
+      const comparison =
+        attached.read.length >= 2 && asksForComparison(asked)
+          ? changesBlock(
+              { before: attached.read[0].name, after: attached.read[1].name },
+              documentChanges(attached.read[0].text, attached.read[1].text),
+              {
+                intro: (before, after) => t('chat.compareIntro', { before, after }),
+                same: t('chat.compareSame'),
+                removed: t('chat.compareRemoved'),
+                added: t('chat.compareAdded'),
+                start: t('chat.compareStart'),
+                datesAdded: t('chat.compareDatesAdded'),
+                datesRemoved: t('chat.compareDatesRemoved'),
+                more: (count) => t('chat.compareMore', { count })
+              }
+            )
+          : ''
       const deadlines =
         dated.length && asksForDeadlines(asked)
           ? deadlinesBlock(dated, {
@@ -2569,6 +2606,7 @@ export class ChatView extends ItemView {
             status,
             block,
             this.filesText(attached, fileBudget, asked, !told),
+            comparison,
             deadlines,
             library,
             skills,

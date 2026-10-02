@@ -1314,7 +1314,11 @@ export default class PMPlugin extends Plugin {
         })
       )
     }
-    new Notice(parts.join('\n'), report.failed.length ? 0 : 6000)
+    // Another issue of a document already there, linked to it: said, with what can be done.
+    for (const { doc, previous } of report.versions) {
+      parts.push(t('library.versionLinked', { title: doc.title, previous: previous.title }))
+    }
+    new Notice(parts.join('\n'), report.failed.length ? 0 : report.versions.length ? 12000 : 6000)
     await this.openDocuments(answer.projects.length === 1 ? answer.projects[0] : '')
     // Read what they say, for searching; the library shows how far it has got.
     void this.libraryText.refresh(this.library.docs())
@@ -1526,6 +1530,13 @@ export default class PMPlugin extends Plugin {
     await this.openChat()
     const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
     if (view instanceof ChatView) await view.askDeadlines(paths)
+  }
+
+  /** The chat, opened on two versions of a document — the one before first — to say what changed. */
+  async chatCompare(before: string, after: string): Promise<void> {
+    await this.openChat()
+    const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
+    if (view instanceof ChatView) await view.askComparison(before, after)
   }
 
   /** The chat, opened on a branch of a saved conversation, picked in its note. */
