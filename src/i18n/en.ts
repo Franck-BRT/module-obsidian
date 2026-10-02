@@ -2067,6 +2067,10 @@ export const en = {
   'chat.note.createAnother': 'Create another note',
   'chat.note.appendIn': 'Add to “{section}”',
   'chat.note.appendAtEnd': 'Add at the end',
+  'chat.note.chooseFolder': 'Change folder…',
+  'chat.note.otherFolder': 'Create it in another folder…',
+  'chat.note.vaultRoot': '(vault root)',
+  'chat.note.folderPlaceholder': 'Folder to create the note in…',
   'chat.note.noSection': 'No section “{section}” in the note (or several of that name). Sections: {list}.',
   'chat.note.keptSection':
     'This section holds a document’s transcription: it is not rewritten from the chat. Clean the transcription, or read the document again.',

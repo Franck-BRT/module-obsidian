@@ -679,6 +679,10 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
   font-size: var(--font-ui-smaller);
 }
 
+.pm-note-folder {
+  margin-left: var(--size-4-2);
+}
+
 .pm-note-preview {
   position: relative;
   max-height: 9em;

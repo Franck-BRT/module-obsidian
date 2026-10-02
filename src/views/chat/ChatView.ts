@@ -1492,7 +1492,8 @@ export class ChatView extends ItemView {
     for (const turn of this.turns) {
       if (turn.role !== 'assistant' || turn.failed) continue
       for (const block of noteBlocks(turn.content)) {
-        const proposal = parseNoteProposal(block)
+        // As the reader changed it — another folder chosen on its card.
+        const proposal = parseNoteProposal(this.plugin.changeEdits.get(block.trim()) ?? block)
         if (!proposal || proposal.append || proposal.replace || proposal.clean) continue
         const file = (await writtenNote(app, proposal, fallback)) ?? noteAtTitle(app, proposal, fallback)
         if (file) found.set(file.path, file)

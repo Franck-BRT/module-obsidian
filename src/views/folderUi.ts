@@ -32,10 +32,11 @@ export class FolderPicker extends SuggestModal<FolderChoice> {
     app: App,
     private folders: string[],
     private rootLabel: string,
-    private onChoose: (choice: FolderChoice) => void
+    private onChoose: (choice: FolderChoice) => void,
+    placeholder = t('folders.moveToPlaceholder')
   ) {
     super(app)
-    this.setPlaceholder(t('folders.moveToPlaceholder'))
+    this.setPlaceholder(placeholder)
   }
 
   getSuggestions(query: string): FolderChoice[] {

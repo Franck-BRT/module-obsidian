@@ -2057,6 +2057,10 @@ export const fr: Catalog = {
   'chat.note.createAnother': 'Créer une autre note',
   'chat.note.appendIn': 'Ajouter dans « {section} »',
   'chat.note.appendAtEnd': 'Ajouter à la fin',
+  'chat.note.chooseFolder': 'Changer de dossier…',
+  'chat.note.otherFolder': 'La créer dans un autre dossier…',
+  'chat.note.vaultRoot': '(racine du coffre)',
+  'chat.note.folderPlaceholder': 'Dossier où créer la note…',
   'chat.note.noSection': 'Aucune section « {section} » dans la note (ou plusieurs du même nom). Sections : {list}.',
   'chat.note.keptSection':
     'Cette section contient la transcription d’un document : elle ne se réécrit pas depuis le chat. Utilisez le nettoyage de la transcription, ou relisez le document.',

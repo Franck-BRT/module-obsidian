@@ -149,9 +149,41 @@ export function holdsProposal(existing: string, proposal: NoteProposal): boolean
   return squeeze(existing).includes(squeeze(proposal.body))
 }
 
-/** Where a new note goes: the folder it names, or the one given for the chat's notes. */
+/** Where a new note goes: the folder it names — « / » for the vault's root —, or the one given for the chat's notes. */
 export function proposalFolder(proposal: NoteProposal, fallback: string): string {
+  if (proposal.folder.trim() === '/') return ''
   return safeFolder(proposal.folder) || safeFolder(fallback)
+}
+
+/**
+ * The block with the folder its note goes to changed — « / » for the vault's root —: its
+ * « dossier » line rewritten, or added to its header, or a header given to a block that
+ * had none.
+ */
+export function withFolder(source: string, folder: string): string {
+  const lines = source.replace(/\r\n?/g, '\n').split('\n')
+  const value = folder.trim() || '/'
+  const dashes = lines.findIndex((line) => /^-{3,}\s*$/.test(line))
+  const header = dashes >= 0 ? lines.slice(0, dashes) : []
+  const isHeader =
+    dashes >= 0 &&
+    header
+      .filter((line) => line.trim())
+      .every((line) => {
+        const pair = /^\s*([^:]{1,24}):/.exec(line)
+        return !!pair && !!KEYS[fold(pair[1]).replace(/\s+/g, ' ').trim()]
+      })
+  if (!isHeader) {
+    const title = parseNoteProposal(source)?.title ?? ''
+    return [...(title ? [`titre: ${title}`] : []), `dossier: ${value}`, '---', ...lines].join('\n')
+  }
+  const at = header.findIndex((line) => {
+    const pair = /^\s*([^:]{1,24}):/.exec(line)
+    return !!pair && KEYS[fold(pair[1]).replace(/\s+/g, ' ').trim()] === 'folder'
+  })
+  if (at >= 0) lines[at] = `dossier: ${value}`
+  else lines.splice(dashes, 0, `dossier: ${value}`)
+  return lines.join('\n')
 }
 
 /** The note a proposal adds to, found as Obsidian finds a link. */

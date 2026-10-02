@@ -1,4 +1,4 @@
-import { MarkdownRenderChild, MarkdownRenderer, Notice, setIcon, TFile } from 'obsidian'
+import { MarkdownRenderChild, MarkdownRenderer, Notice, setIcon, TFile, TFolder } from 'obsidian'
 import type PMPlugin from '../../main'
 import {
   appendProposal,
@@ -13,6 +13,8 @@ import {
   replaceSection,
   sectionText,
   sectionTitles,
+  safeFolder,
+  withFolder,
   NOTE_LANGUAGE,
   parseNoteProposal,
   proposalFolder,
@@ -23,6 +25,8 @@ import {
 import { cleanTranscriptIn } from '../../store/chat/ocr'
 import { diffWords } from '../../store/requirements/reqDiff'
 import { safeAsync } from '../../utils'
+import { replaceBlock } from '../../store/chat/chatChange'
+import { FolderPicker, type FolderChoice } from '../folderUi'
 import { t } from '../../i18n'
 
 /**
@@ -46,6 +50,8 @@ class NoteCard extends MarkdownRenderChild {
   private timer: number | null = null
   private generation = 0
   private open = false
+  /** The block as the reply wrote it, whatever the reader changed of it since. */
+  private original: string
 
   constructor(
     private plugin: PMPlugin,
@@ -54,6 +60,52 @@ class NoteCard extends MarkdownRenderChild {
     private sourcePath: string
   ) {
     super(container)
+    this.original = source
+    // Changed by the reader already — its folder chosen —, here or where the same card is drawn.
+    this.source = plugin.changeEdits.get(source.trim()) ?? source
+  }
+
+  /**
+   * The block as the reader changed it, kept: in the conversation's note, so the card reads
+   * so after a restart, and here, for the other place it is drawn.
+   */
+  private async keepSource(source: string): Promise<void> {
+    const before = this.source
+    const edits = this.plugin.changeEdits
+    for (const [key, value] of edits) if (value === before) edits.set(key, source)
+    edits.set(this.original.trim(), source)
+    edits.set(before.trim(), source)
+    this.source = source
+    const file = this.sourcePath ? this.plugin.app.vault.getAbstractFileByPath(this.sourcePath) : null
+    if (file instanceof TFile) {
+      await this.plugin.app.vault.process(file, (content) => replaceBlock(content, before, source) ?? content)
+    }
+  }
+
+  /** Every folder of the vault but the hidden ones, in order: where a note may go. */
+  private vaultFolders(): string[] {
+    return this.plugin.app.vault
+      .getAllLoadedFiles()
+      .filter((file): file is TFolder => file instanceof TFolder && !!file.path && file.path !== '/')
+      .map((folder) => folder.path)
+      .filter((path) => !path.split('/').some((part) => part.startsWith('.')))
+      .sort((a, b) => a.localeCompare(b))
+  }
+
+  /** Another folder for the note, picked or named — a new name is made when the note is. */
+  private chooseFolder(): void {
+    new FolderPicker(
+      this.plugin.app,
+      this.vaultFolders(),
+      t('chat.note.vaultRoot'),
+      safeAsync(async (choice: FolderChoice) => {
+        const folder = choice.kind === 'new' ? safeFolder(choice.name) : choice.path
+        if (choice.kind === 'new' && !folder) return
+        await this.keepSource(withFolder(this.source, folder || '/'))
+        await this.draw()
+      }),
+      t('chat.note.folderPlaceholder')
+    ).open()
   }
 
   onload(): void {
@@ -141,7 +193,7 @@ class NoteCard extends MarkdownRenderChild {
     } else {
       this.head(card, 'file-plus', t('chat.note.newKind'), proposal.title)
       const folder = proposalFolder(proposal, fallback)
-      card.createDiv({
+      const where = card.createDiv({
         cls: 'pm-note-where',
         text: [
           folder ? t('chat.note.in', { folder }) : t('chat.note.atRoot'),
@@ -150,6 +202,14 @@ class NoteCard extends MarkdownRenderChild {
           .filter(Boolean)
           .join(' · ')
       })
+      // Where it goes, the reader's to choose before it is written.
+      if (!done) {
+        const change = where.createEl('a', { cls: 'pm-note-folder', href: '#', text: t('chat.note.chooseFolder') })
+        change.addEventListener('click', (event) => {
+          event.preventDefault()
+          this.chooseFolder()
+        })
+      }
     }
     await this.preview(card, proposal)
     this.footer(card, proposal, target, done, section ? { section, guessed: !named } : null)
@@ -241,7 +301,15 @@ class NoteCard extends MarkdownRenderChild {
       asNew ? t('chat.note.rewriteKind') : t('chat.note.replaceKind'),
       `${target?.basename ?? proposal.replace}${where}`
     )
-    if (asNew && target) card.createDiv({ cls: 'pm-note-where', text: t('chat.note.exists', { path: target.path }) })
+    if (asNew && target) {
+      const where = card.createDiv({ cls: 'pm-note-where', text: t('chat.note.exists', { path: target.path }) })
+      // Meant as another note after all: written elsewhere, under its own name.
+      const change = where.createEl('a', { cls: 'pm-note-folder', href: '#', text: t('chat.note.otherFolder') })
+      change.addEventListener('click', (event) => {
+        event.preventDefault()
+        this.chooseFolder()
+      })
+    }
     const problem = (text: string): void => {
       card.addClass('pm-change--problem')
       const foot = card.createDiv('pm-change-foot')

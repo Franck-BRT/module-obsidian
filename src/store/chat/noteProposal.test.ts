@@ -8,6 +8,8 @@ import {
   newNoteContent,
   noteAtTitle,
   noteBlocks,
+  proposalFolder,
+  withFolder,
   appendToSection,
   sectionFor,
   underSection,
@@ -282,5 +284,29 @@ describe('text added to a section of a note', () => {
   it('is read from a block that names the note and the section', () => {
     const proposal = parseNoteProposal('ajouter à: [[Analyse]]\nsection: Bétons\n---\nTexte.')
     expect(proposal).toMatchObject({ append: '[[Analyse]]', section: 'Bétons', body: 'Texte.' })
+  })
+})
+
+describe('the folder a proposed note goes to, chosen by the reader', () => {
+  it('rewrites the folder line, adds one, or gives a header to a block that had none', () => {
+    const moved = withFolder(BLOCK, 'Projets/COSMA/CR')
+    expect(parseNoteProposal(moved)).toMatchObject({ folder: 'Projets/COSMA/CR', title: 'Compte rendu réunion 12' })
+    expect(moved.split('\n').filter((line) => /dossier/i.test(line))).toHaveLength(1)
+    const added = withFolder('titre: Décision\n---\nOn décale.', 'Notes/Décisions')
+    expect(parseNoteProposal(added)).toMatchObject({ folder: 'Notes/Décisions', title: 'Décision', body: 'On décale.' })
+    const bare = withFolder('# Décision\n\nOn décale.', 'Notes')
+    expect(parseNoteProposal(bare)).toMatchObject({
+      folder: 'Notes',
+      title: 'Décision',
+      body: '# Décision\n\nOn décale.'
+    })
+  })
+
+  it('takes « / » for the vault’s root, not for the chat’s folder', () => {
+    const proposal = parseNoteProposal(withFolder(BLOCK, ''))
+    if (!proposal) throw new Error('unread')
+    expect(proposal.folder).toBe('/')
+    expect(proposalFolder(proposal, 'Notes/Chat')).toBe('')
+    expect(proposalFolder({ ...proposal, folder: '' }, 'Notes/Chat')).toBe('Notes/Chat')
   })
 })
