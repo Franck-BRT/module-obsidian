@@ -5,6 +5,7 @@ import {
   appendTarget,
   holdsKept,
   holdsProposal,
+  noteAtTitle,
   noteNamed,
   replaceSection,
   sectionText,
@@ -98,6 +99,20 @@ class NoteCard extends MarkdownRenderChild {
       ? target !== null && holdsProposal(await this.plugin.app.vault.cachedRead(target), proposal)
       : await writtenNote(this.plugin.app, proposal, fallback)
     if (generation !== this.generation) return
+    // A note of that name there already, saying something else — or rewritten from here —:
+    // what is proposed is most likely that note again, deepened, which a second note of the
+    // same name would only stand beside. It is offered as the note rewritten, with the way
+    // to make another note all the same.
+    const existing = proposal.append ? null : noteAtTitle(this.plugin.app, proposal, fallback)
+    if (existing) {
+      await this.plugin.noteUndo.ready()
+      if (generation !== this.generation) return
+      const rewritten = this.plugin.noteUndo.get(this.source)?.path === existing.path
+      if (rewritten || !done) {
+        await this.drawReplace({ ...proposal, replace: existing.path, section: '' }, generation, proposal)
+        return
+      }
+    }
 
     this.containerEl.empty()
     const card = this.containerEl.createDiv('pm-change pm-note')
@@ -191,7 +206,7 @@ class NoteCard extends MarkdownRenderChild {
    * marked, and a button that rewrites it — then the way to take it back, while the
    * section still reads as it was written.
    */
-  private async drawReplace(proposal: NoteProposal, generation: number): Promise<void> {
+  private async drawReplace(proposal: NoteProposal, generation: number, asNew?: NoteProposal): Promise<void> {
     const app = this.plugin.app
     const target = noteNamed(app, proposal.replace, this.sourcePath)
     const content = target ? await app.vault.cachedRead(target) : ''
@@ -200,7 +215,13 @@ class NoteCard extends MarkdownRenderChild {
     this.containerEl.empty()
     const card = this.containerEl.createDiv('pm-change pm-note')
     const where = proposal.section.trim() ? ` › ${proposal.section.trim()}` : ''
-    this.head(card, 'replace', t('chat.note.replaceKind'), `${target?.basename ?? proposal.replace}${where}`)
+    this.head(
+      card,
+      'replace',
+      asNew ? t('chat.note.rewriteKind') : t('chat.note.replaceKind'),
+      `${target?.basename ?? proposal.replace}${where}`
+    )
+    if (asNew && target) card.createDiv({ cls: 'pm-note-where', text: t('chat.note.exists', { path: target.path }) })
     const problem = (text: string): void => {
       card.addClass('pm-change--problem')
       const foot = card.createDiv('pm-change-foot')
@@ -272,7 +293,10 @@ class NoteCard extends MarkdownRenderChild {
       }
       return
     }
-    const button = foot.createEl('button', { cls: 'mod-cta', text: t('chat.note.replace') })
+    const button = foot.createEl('button', {
+      cls: 'mod-cta',
+      text: asNew ? t('chat.note.rewrite') : t('chat.note.replace')
+    })
     button.addEventListener(
       'click',
       safeAsync(async () => {
@@ -295,6 +319,27 @@ class NoteCard extends MarkdownRenderChild {
         await this.draw()
       })
     )
+    // Another note after all, beside the one of that name: what the card offered before.
+    if (asNew) {
+      const another = foot.createEl('button', { text: t('chat.note.createAnother') })
+      another.addEventListener(
+        'click',
+        safeAsync(async () => {
+          another.disabled = true
+          try {
+            const file = await writeProposedNote(
+              app,
+              asNew,
+              notesFallback(this.plugin, this.sourcePath),
+              this.sourcePath
+            )
+            new Notice(t('chat.note.createdAt', { path: file.path }))
+          } finally {
+            await this.draw()
+          }
+        })
+      )
+    }
   }
 
   private head(card: HTMLElement, icon: string, kind: string, name: string): void {

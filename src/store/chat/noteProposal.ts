@@ -177,6 +177,24 @@ export async function writtenNote(app: App, proposal: NoteProposal, fallback: st
   return null
 }
 
+/**
+ * The note of the proposed note's name, there already in the folder it would go to —
+ * whatever it says now —; null when the name is free.
+ */
+export function noteAtTitle(app: App, proposal: NoteProposal, fallback: string): TFile | null {
+  const folder = proposalFolder(proposal, fallback)
+  const base = sanitizeFileName(proposal.title).trim() || 'Note'
+  const file = app.vault.getAbstractFileByPath(normalizePath(`${folder ? `${folder}/` : ''}${base}.md`))
+  return file instanceof TFile ? file : null
+}
+
+/** The `pm-note` blocks of a reply, their text as written between the fences. */
+export function noteBlocks(reply: string): string[] {
+  const out: string[] = []
+  for (const found of reply.matchAll(/^(`{3,})\s*pm-note[^\n]*\n([\s\S]*?)^\1\s*$/gm)) out.push(found[2])
+  return out
+}
+
 /** Writes the proposed note, never over another: a name taken gets a number. */
 export async function writeProposedNote(
   app: App,

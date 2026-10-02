@@ -6,6 +6,8 @@ import {
   appendTarget,
   holdsProposal,
   newNoteContent,
+  noteAtTitle,
+  noteBlocks,
   parseNoteProposal,
   findSection,
   replaceSection,
@@ -132,6 +134,14 @@ describe('writing a proposed note', () => {
     expect((await writeProposedNote(app, proposal, '', '')).path).toBe('Décision.md')
   })
 
+  it('finds the note of the proposed name already there, whatever it says, and none for a free name', async () => {
+    const proposal = parseNoteProposal(BLOCK)
+    if (!proposal) throw new Error('unread')
+    expect(noteAtTitle(app, proposal, 'Notes')).toBeNull()
+    await vault.create('Work/Génie civil/CR/Compte rendu réunion 12.md', '# Compte rendu réunion 12\n\nAncien texte.')
+    expect(noteAtTitle(app, proposal, 'Notes')?.path).toBe('Work/Génie civil/CR/Compte rendu réunion 12.md')
+  })
+
   it('adds to the note it names, found as a link is', async () => {
     const journal = await vault.create('Work/Journal de chantier.md', '# Journal\n\n## 28/09\nFerraillage.\n')
     const proposal = parseNoteProposal('ajouter à: [[Journal de chantier]]\n---\n## 29/09\nBéton coulé.')
@@ -208,5 +218,32 @@ describe('a section of a note rewritten', () => {
     expect(replaceSection(note, 'Suite', '')).toMatch(/## Suite\n$/)
     expect(replaceSection(note, '', '# Nouveau\n\nTexte.')).toBe('---\ntags: [cr]\n---\n\n# Nouveau\n\nTexte.\n')
     expect(replaceSection(note, 'Absent', 'x')).toBeNull()
+  })
+})
+
+describe('the note blocks of a reply', () => {
+  it('are read between their fences, of three backticks or four, the rest of the reply aside', () => {
+    const reply = [
+      'Voici l’analyse.',
+      '````pm-note',
+      'titre: Analyse CCTG',
+      '---',
+      '# Analyse CCTG',
+      '```',
+      'code',
+      '```',
+      '````',
+      'Et un ajout :',
+      '```pm-note',
+      'ajouter à: [[Journal]]',
+      '---',
+      'Ligne.',
+      '```'
+    ].join('\n')
+    expect(noteBlocks(reply)).toEqual([
+      'titre: Analyse CCTG\n---\n# Analyse CCTG\n```\ncode\n```\n',
+      'ajouter à: [[Journal]]\n---\nLigne.\n'
+    ])
+    expect(noteBlocks('Rien à proposer.')).toEqual([])
   })
 })

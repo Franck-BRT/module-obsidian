@@ -71,6 +71,7 @@ import {
 import { needsOcr } from '../../store/chat/ocr'
 import { scanPages, transcribeScan, transcriptFile } from './scanReader'
 import { notesFallback } from './noteCard'
+import { noteAtTitle, noteBlocks, parseNoteProposal, sectionTitles, writtenNote } from '../../store/chat/noteProposal'
 import { calledSkills, readSkill, skillBody, skillsContext, type Skill } from '../../store/chat/skills'
 import { lookUpVault, SEARCH_DEFAULTS, vaultContext } from '../../store/rag/ragSearch'
 import { citedFile } from '../../store/chat/citedLink'
@@ -1479,6 +1480,33 @@ export class ChatView extends ItemView {
       .join('\n')
   }
 
+  /**
+   * The notes the conversation's replies proposed and the reader created, as they are now
+   * — with their sections —, for a note asked to be changed afterwards to be rewritten
+   * where it is rather than proposed anew, a second copy of the first.
+   */
+  private async writtenNotes(): Promise<string> {
+    const app = this.app
+    const fallback = notesFallback(this.plugin, this.notePath ?? '')
+    const found = new Map<string, TFile>()
+    for (const turn of this.turns) {
+      if (turn.role !== 'assistant' || turn.failed) continue
+      for (const block of noteBlocks(turn.content)) {
+        const proposal = parseNoteProposal(block)
+        if (!proposal || proposal.append || proposal.replace || proposal.clean) continue
+        const file = (await writtenNote(app, proposal, fallback)) ?? noteAtTitle(app, proposal, fallback)
+        if (file) found.set(file.path, file)
+      }
+    }
+    if (!found.size) return ''
+    const list: string[] = []
+    for (const file of [...found.values()].slice(-10)) {
+      const sections = sectionTitles(await app.vault.cachedRead(file)).slice(0, 20)
+      list.push(t('chat.noteWrittenOne', { path: file.path, sections: sections.join(', ') || '—' }))
+    }
+    return t('chat.noteWritten', { list: list.join(' ; ') })
+  }
+
   private get projectWords(): ProjectWords {
     return {
       heading: (title, path) => t('chat.projectHeading', { title, path }),
@@ -2443,10 +2471,12 @@ export class ChatView extends ItemView {
         : []
       // A status point asked for: its facts worked out here, against the plan at the last one.
       const status = project && asksForStatus(asked) ? await this.statusBlock(currentProjects(this.turns)) : ''
+      const written = await this.writtenNotes()
       const how = [
         this.changeInstructions(requirements.length > 0, project, paths.length > 0, places),
         this.projectInstructions(),
-        this.noteInstructions()
+        this.noteInstructions(),
+        written
       ]
         .filter(Boolean)
         .join('\n\n')
