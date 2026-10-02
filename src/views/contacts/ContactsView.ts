@@ -25,7 +25,8 @@ export class ContactsView extends ItemView {
   private project = ''
   private search = ''
   private kind: KindFilter = 'all'
-  private open = new Set<string>()
+  /** The contacts whose detail is shown, by note path. */
+  private expanded = new Set<string>()
   private projects: Project[] = []
   private timer: number | null = null
   private bodyEl: HTMLElement | null = null
@@ -247,11 +248,11 @@ export class ContactsView extends ItemView {
       cls: 'clickable-icon',
       attr: { 'aria-label': t('contact.details') }
     })
-    const isOpen = this.open.has(contact.path)
+    const isOpen = this.expanded.has(contact.path)
     setIcon(toggle, isOpen ? 'chevron-up' : 'chevron-down')
     toggle.addEventListener('click', () => {
-      if (isOpen) this.open.delete(contact.path)
-      else this.open.add(contact.path)
+      if (isOpen) this.expanded.delete(contact.path)
+      else this.expanded.add(contact.path)
       this.renderBody()
     })
     if (!isOpen) return
