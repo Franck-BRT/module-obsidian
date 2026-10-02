@@ -214,7 +214,7 @@
   font-style: italic;
 }
 
-.pm-decision-chip-remove {
+.pm-decision-chip .pm-decision-chip-remove {
   display: inline-flex;
   padding: 0;
   height: auto;

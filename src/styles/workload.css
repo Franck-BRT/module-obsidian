@@ -1,0 +1,266 @@
+/* ---- The load plan: people × weeks, against their capacity -------------- */
+
+.pm-load {
+  padding: var(--size-4-4) var(--size-4-5);
+  overflow: auto;
+  height: 100%;
+  --pm-load-under: var(--color-green, #79b58d);
+  --pm-load-near: var(--color-orange, #e0a458);
+  --pm-load-over: var(--color-red, #e5534b);
+}
+
+.pm-load-wait,
+.pm-load-empty {
+  padding: var(--size-4-8) var(--size-4-4);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.pm-load-empty-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  margin-bottom: var(--size-4-2);
+}
+
+.pm-load-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-3) var(--size-4-5);
+  margin-bottom: var(--size-4-4);
+}
+
+.pm-load-title {
+  margin: 0;
+}
+
+.pm-load-summary {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-load-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2) var(--size-4-4);
+  font-size: var(--font-ui-small);
+}
+
+.pm-load-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-3);
+}
+
+.pm-load-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-3);
+  margin-left: auto;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.pm-load-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+}
+
+.pm-load-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.pm-load-swatch.is-under {
+  background: color-mix(in srgb, var(--pm-load-under) 35%, transparent);
+}
+
+.pm-load-swatch.is-near {
+  background: color-mix(in srgb, var(--pm-load-near) 45%, transparent);
+}
+
+.pm-load-swatch.is-over {
+  background: color-mix(in srgb, var(--pm-load-over) 60%, transparent);
+}
+
+.pm-load-how {
+  flex-basis: 100%;
+  display: flex;
+  gap: var(--size-2-3);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-load-how-icon {
+  display: inline-flex;
+  --icon-size: 14px;
+}
+
+.pm-load-grid-wrap {
+  overflow-x: auto;
+}
+
+.pm-load-grid {
+  border-collapse: separate;
+  border-spacing: 3px;
+  font-size: var(--font-ui-small);
+}
+
+.pm-load-grid th {
+  font-weight: normal;
+  text-align: center;
+}
+
+.pm-load-person-head,
+.pm-load-person {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 170px;
+  text-align: left !important;
+  background: var(--background-primary);
+  padding-right: var(--size-4-3);
+}
+
+.pm-load-name {
+  font-weight: var(--font-semibold);
+}
+
+.pm-load-capacity {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+tr.is-nobody .pm-load-name {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.pm-load-week {
+  min-width: 58px;
+  color: var(--text-muted);
+}
+
+.pm-load-week.is-current {
+  color: var(--text-accent);
+}
+
+.pm-load-week-number {
+  font-weight: var(--font-semibold);
+}
+
+.pm-load-week-day,
+.pm-load-undated-head {
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-load-cell,
+.pm-load-undated {
+  position: relative;
+  height: 40px;
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.pm-load-cell.is-under {
+  background: color-mix(in srgb, var(--pm-load-under) 22%, var(--background-secondary));
+}
+
+.pm-load-cell.is-near {
+  background: color-mix(in srgb, var(--pm-load-near) 35%, var(--background-secondary));
+}
+
+.pm-load-cell.is-over {
+  background: color-mix(in srgb, var(--pm-load-over) 50%, var(--background-secondary));
+}
+
+.pm-load-cell.is-over .pm-load-hours {
+  font-weight: var(--font-bold);
+}
+
+.pm-load-cell.is-chosen,
+.pm-load-undated.is-chosen {
+  outline: 2px solid var(--interactive-accent);
+}
+
+.pm-load .pm-load-hours {
+  width: 100%;
+  height: 100%;
+  padding: 0 var(--size-2-2);
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+/* The share of the view's own projects, the rest — other projects — in grey. */
+.pm-load-share {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 4px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--text-faint);
+  pointer-events: none;
+}
+
+.pm-load-share-here {
+  width: var(--pm-share);
+  height: 100%;
+  border-radius: 2px;
+  background: var(--interactive-accent);
+}
+
+.pm-load-detail {
+  margin-top: var(--size-4-5);
+  max-width: 900px;
+}
+
+.pm-load-detail-title {
+  margin: 0 0 var(--size-4-2);
+}
+
+.pm-load-piece {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: var(--size-2-2) var(--size-4-3);
+  padding: var(--size-4-2) 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pm-load-piece-hours {
+  grid-row: span 2;
+  font-weight: var(--font-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-load-piece-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  text-decoration: none;
+}
+
+.pm-load-piece-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2) var(--size-4-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-load-piece-late {
+  color: var(--text-error, var(--color-red));
+}
+
+.pm-load-piece-guess {
+  font-style: italic;
+}

@@ -432,6 +432,34 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
+        heading: t('settings.group.workload'),
+        items: [
+          {
+            name: t('settings.workloadCapacity.name'),
+            desc: t('settings.workloadCapacity.desc'),
+            aliases: searchAliases('settings.aliases.workload'),
+            control: { type: 'slider', key: 'workloadCapacity', min: 4, max: 60, step: 1 }
+          },
+          {
+            name: t('settings.workloadDefaultHours.name'),
+            desc: t('settings.workloadDefaultHours.desc'),
+            aliases: searchAliases('settings.aliases.workload'),
+            control: {
+              type: 'dropdown',
+              key: 'workloadDefaultHours',
+              options: {
+                '0': t('settings.workloadDefaultHours.none'),
+                '1': t('settings.workloadDefaultHours.one'),
+                '2': t('settings.workloadDefaultHours.two'),
+                '4': t('settings.workloadDefaultHours.four'),
+                '7': t('settings.workloadDefaultHours.seven')
+              }
+            }
+          }
+        ]
+      },
+      {
+        type: 'group',
         heading: t('settings.group.taskFields'),
         items: [
           this.statusesPage(),

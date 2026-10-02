@@ -22,6 +22,8 @@ export interface ContactFields {
   email: string
   phone: string
   lots: string[]
+  /** Hours a week a person can give the projects; 0 or none for the default. */
+  capacity?: number
 }
 
 export interface Contact extends ContactFields {
@@ -61,6 +63,25 @@ function list(...values: unknown[]): string[] {
   return []
 }
 
+/** A number of hours as a note writes it — « 35 », « 35 h », « 17,5 » —; 0 when none. */
+function hours(...values: unknown[]): number {
+  for (const value of values) {
+    const number =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string'
+          ? Number(
+              value
+                .replace(',', '.')
+                .replace(/\s*h.*$/i, '')
+                .trim()
+            )
+          : NaN
+    if (Number.isFinite(number) && number > 0) return Math.min(168, number)
+  }
+  return 0
+}
+
 /** A contact as its note's properties say. */
 export function readContact(path: string, name: string, fm: Record<string, unknown> | undefined): Contact {
   const data = fm ?? {}
@@ -74,6 +95,7 @@ export function readContact(path: string, name: string, fm: Record<string, unkno
     email: text(data.email, data.mail, data.courriel, data['e-mail']),
     phone: text(data.phone, data.telephone, data['téléphone'], data.tel, data.mobile),
     lots: list(data.lots, data.lot),
+    capacity: hours(data.capacity, data.capacite, data['capacité']),
     aliases: list(data.aliases, data.alias)
   }
 }
@@ -162,6 +184,7 @@ export function contactProperties(fields: ContactFields, companyLink: string): R
   if (fields.phone.trim()) out.phone = fields.phone.trim()
   const lots = fields.lots.map((lot) => lot.trim()).filter(Boolean)
   if (lots.length) out.lots = lots
+  if (fields.kind === 'person' && fields.capacity && fields.capacity > 0) out.capacity = fields.capacity
   return out
 }
 
@@ -188,7 +211,10 @@ const CONTACT_KEYS = [
   'tel',
   'mobile',
   'lots',
-  'lot'
+  'lot',
+  'capacity',
+  'capacite',
+  'capacité'
 ]
 
 /** A name a note can be given: what a file name cannot hold, taken out. */

@@ -599,6 +599,12 @@ export default class PMPlugin extends Plugin {
     })
 
     this.addCommand({
+      id: 'open-workload',
+      name: t('command.openWorkload'),
+      callback: safeAsync(() => this.router.openWorkload())
+    })
+
+    this.addCommand({
       id: 'unanswered-chases',
       name: t('command.unansweredChases'),
       callback: safeAsync(() => remindUnansweredChases(this, true))

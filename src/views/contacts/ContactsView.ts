@@ -10,6 +10,7 @@ import { EmptyState } from '../../ui/primitives/EmptyState'
 import { openChase } from '../chase/ChaseModal'
 import { openContactModal } from './ContactModal'
 import { t } from '../../i18n'
+import { safeAsync } from '../../utils'
 import { explain } from '../../ui/explain'
 
 export const PM_CONTACTS_VIEW_TYPE = 'pm-contacts'
@@ -105,6 +106,15 @@ export class ContactsView extends ItemView {
     add.createSpan({ text: t('contact.new') })
     explain(add, t('contact.new'), t('tip.contact.new'))
     add.addEventListener('click', () => openContactModal(this.plugin, { onDone: () => this.reloadSoon() }))
+    // Who holds how much, week by week, on every project.
+    const load = head.createEl('button')
+    setIcon(load.createSpan({ cls: 'pm-contacts-icon' }), 'calendar-range')
+    load.createSpan({ text: t('view.workload') })
+    explain(load, t('view.workload'), t('tip.view.workload'))
+    load.addEventListener(
+      'click',
+      safeAsync(() => this.plugin.router.openWorkload())
+    )
 
     const bar = root.createDiv('pm-contacts-bar')
     const search = bar.createEl('input', {

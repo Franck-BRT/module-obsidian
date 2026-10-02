@@ -26,6 +26,8 @@ export function viewModeLabel(mode: ViewMode): string {
       return t('view.risks')
     case 'decisions':
       return t('view.decisions')
+    case 'workload':
+      return t('view.workload')
     case 'dashboard':
       return t('kpi.title')
   }

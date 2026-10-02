@@ -38,7 +38,8 @@ class ContactModal extends Modal {
       role: contact?.role ?? '',
       email: contact?.email ?? '',
       phone: contact?.phone ?? '',
-      lots: [...(contact?.lots ?? [])]
+      lots: [...(contact?.lots ?? [])],
+      capacity: contact?.capacity ?? 0
     }
   }
 
@@ -126,6 +127,25 @@ class ContactModal extends Modal {
               .filter(Boolean)
           })
       )
+
+    // What a person can give in a week: the load plan sets their work against it.
+    if (this.fields.kind === 'person') {
+      new Setting(root)
+        .setName(t('contact.capacity'))
+        .setDesc(t('contact.capacityDesc', { hours: this.plugin.settings.workloadCapacity }))
+        .addText((text) => {
+          text.inputEl.type = 'number'
+          text.inputEl.min = '0'
+          text.inputEl.step = '0.5'
+          text
+            .setPlaceholder(String(this.plugin.settings.workloadCapacity))
+            .setValue(this.fields.capacity ? String(this.fields.capacity) : '')
+            .onChange((value) => {
+              const number = Number(value.replace(',', '.'))
+              this.fields.capacity = Number.isFinite(number) && number > 0 ? number : 0
+            })
+        })
+    }
 
     const foot = new Setting(root)
     const contact = this.options.contact

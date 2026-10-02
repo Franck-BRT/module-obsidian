@@ -53,6 +53,11 @@ export class PMViewRouter {
     )
   }
 
+  /** The load plan of every project: who holds how much work, week by week. */
+  async openWorkload(leaf?: WorkspaceLeaf): Promise<void> {
+    await this.open(PM_PROJECT_VIEW_TYPE, { scope: { kind: 'vault' }, view: 'workload' }, leaf)
+  }
+
   async openProjectOverview(path: string, leaf?: WorkspaceLeaf): Promise<void> {
     await this.open(PM_PROJECT_OVERVIEW_VIEW_TYPE, { filePath: path }, leaf)
   }

@@ -103,6 +103,24 @@ describe('a contact written', () => {
     expect(text).not.toContain('email')
   })
 
+  it('keeps a person’s capacity in hours a week, however it is written', async () => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    const path = await saveContact(app, 'People', null, 'Anne Leroy', {
+      kind: 'person',
+      company: '',
+      role: '',
+      email: '',
+      phone: '',
+      lots: [],
+      capacity: 28
+    })
+    expect(readContacts(app, 'People')[0].capacity).toBe(28)
+    expect(await fake.vault.read(fake.vault.getAbstractFileByPath(path) as never)).toContain('capacity: 28')
+    expect(readContact('x.md', 'X', { capacité: '17,5 h' }).capacity).toBe(17.5)
+    expect(readContact('x.md', 'X', {}).capacity).toBe(0)
+  })
+
   it('takes out of a name what a file name cannot hold', () => {
     expect(contactFileName('SNC « Lot 2 » / GO')).toBe('SNC « Lot 2 » GO')
   })

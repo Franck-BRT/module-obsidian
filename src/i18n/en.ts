@@ -693,6 +693,60 @@ export const en = {
   'agenda.block.pendingDecisions': 'The decisions to take, the most urgent first, with their deadline and decider.',
   'agenda.block.recentDecisions':
     'The decisions taken since the previous meeting (or the last 30 days), with their date and decider.',
+  'view.workload': 'Workload',
+  'tip.view.workload':
+    'Each person’s load, week by week, across all their projects, against what they can give. Weeks over capacity are red.',
+  'command.openWorkload': 'Open the workload plan of every project',
+  'load.computing': 'Computing the load…',
+  'load.title': 'Workload plan',
+  'load.nobody': 'Unassigned',
+  'load.none': 'No load ahead',
+  'load.noneDesc':
+    'The workload plan is read from open tickets that have a person, dates and, ideally, an estimate in hours.',
+  'load.person': 'Person',
+  'load.week': 'W{week}',
+  'load.undated': 'No dates',
+  'tip.load.undated':
+    'Estimated work of tickets with no date at all: owed, but in no week. Give them dates so it enters the plan.',
+  'load.capacity': '{hours} h/wk',
+  'load.cellOf': '{hours} for a capacity of {capacity}.',
+  'load.cellOther': 'Of which {hours} on other projects.',
+  'load.cellOpen': 'Click to see the tickets.',
+  'load.overCount': {
+    one: '{count} person over capacity in the period',
+    other: '{count} people over capacity in the period'
+  },
+  'load.allFine': 'Nobody over capacity in the period',
+  'load.weeks': { one: '{count} week', other: '{count} weeks' },
+  'load.allProjects': 'Count the other projects too',
+  'tip.load.allProjects':
+    'Adds to each person’s load their work on the vault’s other projects: that is what shows overloads. The share of other projects is drawn in grey under the figure.',
+  'load.companies': 'Show companies',
+  'load.under': 'under capacity',
+  'load.near': 'close (85 % and more)',
+  'load.over': 'over capacity',
+  'load.how':
+    'What is left of the estimate (less progress) spread over working days up to the due date; {hours} h a day for a ticket with no estimate; meeting durations; late work counted this week. Default capacity {capacity} h/week, changed on each contact’s card.',
+  'load.detail': '{name} — W{week} (week of {date}): {hours} for {capacity}',
+  'load.detailUndated': '{name} — work with no dates: {hours}',
+  'load.late': 'late',
+  'load.noEstimate': 'no estimate',
+  'contact.capacity': 'Capacity (hours a week)',
+  'contact.capacityDesc':
+    'The time this person can give the projects each week, for the workload plan. Empty: {hours} h, the settings’ value.',
+  'settings.group.workload': 'Workload plan',
+  'settings.workloadCapacity.name': 'Default capacity (hours a week)',
+  'settings.workloadCapacity.desc':
+    'The time a person can give the projects each week, when their contact card says nothing.',
+  'settings.workloadDefaultHours.name': 'Ticket with no estimate',
+  'settings.workloadDefaultHours.desc':
+    'How many hours per working day a ticket with no estimate in hours counts, for each of its people.',
+  'settings.workloadDefaultHours.none': 'Do not count it',
+  'settings.workloadDefaultHours.one': '1 h a day',
+  'settings.workloadDefaultHours.two': '2 h a day',
+  'settings.workloadDefaultHours.four': '4 h a day (half a day)',
+  'settings.workloadDefaultHours.seven': '7 h a day (a full day)',
+  'settings.aliases.workload': 'workload, load, capacity, overload, resources, hours',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

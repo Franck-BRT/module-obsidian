@@ -720,6 +720,60 @@ export const fr: Catalog = {
     'Les décisions à prendre, la plus urgente d’abord, avec leur échéance et leur décideur.',
   'agenda.block.recentDecisions':
     'Les décisions prises depuis la réunion précédente (ou depuis 30 jours), avec leur date et leur décideur.',
+  'view.workload': 'Plan de charge',
+  'tip.view.workload':
+    'La charge de chacun, semaine par semaine, sur tous ses projets, comparée à ce qu’il peut donner. Les semaines en dépassement sont en rouge.',
+  'command.openWorkload': 'Ouvrir le plan de charge de tous les projets',
+  'load.computing': 'Calcul de la charge…',
+  'load.title': 'Plan de charge',
+  'load.nobody': 'Non attribué',
+  'load.none': 'Aucune charge à venir',
+  'load.noneDesc':
+    'Le plan de charge se lit dans les tickets ouverts qui ont une personne, des dates et, idéalement, une estimation en heures.',
+  'load.person': 'Personne',
+  'load.week': 'S{week}',
+  'load.undated': 'Sans dates',
+  'tip.load.undated':
+    'Le travail estimé de tickets sans aucune date : dû, mais placé dans aucune semaine. Donne-leur des dates pour qu’il entre dans le plan.',
+  'load.capacity': '{hours} h/sem.',
+  'load.cellOf': '{hours} pour une capacité de {capacity}.',
+  'load.cellOther': 'Dont {hours} sur d’autres projets.',
+  'load.cellOpen': 'Clique pour voir les tickets.',
+  'load.overCount': {
+    one: '{count} personne en dépassement sur la période',
+    other: '{count} personnes en dépassement sur la période'
+  },
+  'load.allFine': 'Personne en dépassement sur la période',
+  'load.weeks': { one: '{count} semaine', other: '{count} semaines' },
+  'load.allProjects': 'Compter aussi les autres projets',
+  'tip.load.allProjects':
+    'Ajoute à la charge de chacun son travail sur les autres projets du coffre : c’est ce qui révèle les surcharges. La part des autres projets est dessinée en gris sous le chiffre.',
+  'load.companies': 'Afficher les entreprises',
+  'load.under': 'sous la capacité',
+  'load.near': 'proche (85 % et plus)',
+  'load.over': 'en dépassement',
+  'load.how':
+    'Reste à faire de l’estimation (moins l’avancement) réparti sur les jours ouvrés jusqu’à l’échéance ; {hours} h par jour pour un ticket sans estimation ; durée des réunions ; travail en retard compté cette semaine. Capacité par défaut {capacity} h/semaine, modifiable sur la fiche de chaque intervenant.',
+  'load.detail': '{name} — S{week} (semaine du {date}) : {hours} pour {capacity}',
+  'load.detailUndated': '{name} — travail sans dates : {hours}',
+  'load.late': 'en retard',
+  'load.noEstimate': 'sans estimation',
+  'contact.capacity': 'Capacité (heures par semaine)',
+  'contact.capacityDesc':
+    'Le temps que cette personne peut donner aux projets chaque semaine, pour le plan de charge. Vide : {hours} h, la valeur des réglages.',
+  'settings.group.workload': 'Plan de charge',
+  'settings.workloadCapacity.name': 'Capacité par défaut (heures par semaine)',
+  'settings.workloadCapacity.desc':
+    'Le temps qu’une personne peut donner aux projets chaque semaine, quand sa fiche intervenant n’en dit rien.',
+  'settings.workloadDefaultHours.name': 'Ticket sans estimation',
+  'settings.workloadDefaultHours.desc':
+    'Combien d’heures par jour ouvré compte un ticket sans estimation en heures, pour chacune de ses personnes.',
+  'settings.workloadDefaultHours.none': 'Ne pas le compter',
+  'settings.workloadDefaultHours.one': '1 h par jour',
+  'settings.workloadDefaultHours.two': '2 h par jour',
+  'settings.workloadDefaultHours.four': '4 h par jour (une demi-journée)',
+  'settings.workloadDefaultHours.seven': '7 h par jour (une journée)',
+  'settings.aliases.workload': 'charge, plan de charge, capacité, surcharge, ressources, heures',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

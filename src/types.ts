@@ -25,6 +25,7 @@ export const VIEW_MODES = [
   'impacts',
   'risks',
   'decisions',
+  'workload',
   'dashboard'
 ] as const
 export type ViewMode = (typeof VIEW_MODES)[number]
@@ -822,6 +823,14 @@ export interface PMSettings {
   chaseReminderDays: string
   /** The day it was last said, YYYY-MM-DD: once a day is enough. */
   chaseReminderShown: string
+  /** Hours a week a person can give, unless their contact says otherwise. */
+  workloadCapacity: number
+  /** Hours a day a ticket with no estimate holds each of its people: '0', '1', '2', '4' or '7'. */
+  workloadDefaultHours: string
+  /** How many weeks the load plan shows. */
+  workloadWeeks: number
+  /** Whether the load plan of a project counts its people's work in the other projects too. */
+  workloadAllProjects: boolean
   /** Days after completion before a task moves to its project's archive. 0 turns it off. */
   autoArchiveDays: number
   /** The day the archive sweep last ran, so it runs at most once a day. */
@@ -1138,6 +1147,10 @@ export const DEFAULT_SETTINGS: PMSettings = {
   chaseReminder: true,
   chaseReminderDays: '7',
   chaseReminderShown: '',
+  workloadCapacity: 35,
+  workloadDefaultHours: '4',
+  workloadWeeks: 12,
+  workloadAllProjects: true,
   autoArchiveDays: 0,
   lastAutoArchiveDate: '',
   autoSchedule: true,
