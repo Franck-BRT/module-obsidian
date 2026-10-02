@@ -300,3 +300,73 @@
   cursor: pointer;
   white-space: nowrap;
 }
+
+/* ---- A project's agendas, by where they stand ----------------------------- */
+
+.pm-agendas-head {
+  justify-content: flex-start;
+  margin: 0 0 var(--size-4-3);
+}
+
+.pm-agendas-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-3);
+}
+
+.pm-agendas-section {
+  margin-top: var(--size-4-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+}
+
+.pm-agendas-heading {
+  margin: 0 0 var(--size-2-2);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.pm-agendas-row {
+  align-items: center;
+}
+
+.pm-agendas-row.is-held {
+  opacity: 0.75;
+}
+
+.pm-agendas-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  flex: 0 0 150px;
+  box-sizing: border-box;
+  padding: 2px var(--size-4-2);
+  border-radius: var(--radius-l);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  --pm-agenda-state: var(--text-muted);
+  color: var(--pm-agenda-state);
+  background: color-mix(in srgb, var(--pm-agenda-state) 14%, transparent);
+}
+
+.pm-agendas-state.is-coming {
+  --pm-agenda-state: var(--color-orange, #d97706);
+}
+
+.pm-agendas-state.is-preparing {
+  --pm-agenda-state: var(--color-blue, #2563eb);
+}
+
+.pm-agendas-state.is-held {
+  --pm-agenda-state: var(--color-green, #15803d);
+}
+
+.pm-agendas-state-icon {
+  display: inline-flex;
+  --icon-size: 13px;
+}
+
+.pm-agendas-none {
+  margin-top: var(--size-4-3);
+}

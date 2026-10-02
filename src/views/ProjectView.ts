@@ -45,7 +45,7 @@ import { affectsInbox, inboxFiles, sweepInbox } from '../store/Inbox'
 import { ensureProjectFolders, projectInboxFolder } from '../store/vaultFs'
 import { DOCS_FOLDER_NAME } from '../store/DocumentStore'
 import { emailToMarkdown } from '../store/email'
-import { openAgenda } from './agenda/AgendaModal'
+import { openAgendas } from './agenda/AgendasModal'
 import { t } from '../i18n'
 
 export const PM_PROJECT_VIEW_TYPE = 'pm-project'
@@ -567,8 +567,8 @@ export class ProjectView extends ItemView {
       if (this.spec.kind === 'project') {
         new ExtraButtonComponent(right)
           .setIcon('list-ordered')
-          .setTooltip(t('agenda.title'))
-          .onClick(() => openAgenda(this.plugin, primary))
+          .setTooltip(t('agendas.manage'))
+          .onClick(() => openAgendas(this.plugin, primary))
       }
     }
     const spec = this.spec

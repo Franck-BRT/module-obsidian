@@ -305,3 +305,39 @@ describe('an agenda named in its meeting', () => {
     expect(reread?.description).toContain('[[Work/B12/_meetings/2026-10-02 Chantier|2026-10-02 Chantier]]')
   })
 })
+
+describe('a project’s agendas', () => {
+  it('stand held before today, coming within the rolling week, in preparation after', async () => {
+    const { agendaState } = await import('../../store/agenda/agendaList')
+    expect(agendaState('2026-10-01', '2026-10-02')).toBe('held')
+    expect(agendaState('2026-10-02', '2026-10-02')).toBe('coming')
+    expect(agendaState('2026-10-09', '2026-10-02')).toBe('coming')
+    expect(agendaState('2026-10-10', '2026-10-02')).toBe('preparing')
+    expect(agendaState('', '2026-10-02')).toBe('preparing')
+  })
+
+  it('are found by the project they link, wherever their notes are, and sorted by state', async () => {
+    const { agendasByState } = await import('../../store/agenda/agendaList')
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    const settings = { ...DEFAULT_SETTINGS }
+    const store = new ProjectStore(app, () => settings)
+    const b12 = await store.createProject('Bâtiment B12', 'Work')
+    const other = await store.createProject('Autre', 'Work')
+    const template = readTemplate('T/x.md', 'Chantier', { name: 'Réunion de chantier' }, '# {{projet}}')
+    const plugin = { app, settings, store } as never
+    await writeAgenda(plugin, b12, template, '2026-09-25')
+    await writeAgenda(plugin, b12, template, '2026-10-05')
+    await writeAgenda(plugin, b12, template, '2026-11-20')
+    await writeAgenda(plugin, other, template, '2026-10-05')
+    await fake.vault.create('Notes/Une note.md', '---\ntitle: rien\n---\n')
+    const { projectAgendas } = await import('./projectAgendas')
+    const found = projectAgendas(app, b12.filePath)
+    expect(found).toHaveLength(3)
+    expect(found[0]).toMatchObject({ template: 'Réunion de chantier' })
+    const groups = agendasByState(found, '2026-10-02')
+    expect(groups.held.map((note) => note.date)).toEqual(['2026-09-25'])
+    expect(groups.coming.map((note) => note.date)).toEqual(['2026-10-05'])
+    expect(groups.preparing.map((note) => note.date)).toEqual(['2026-11-20'])
+  })
+})
