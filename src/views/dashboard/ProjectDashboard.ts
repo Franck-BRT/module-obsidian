@@ -20,7 +20,7 @@ import { focusRiskCell } from '../risks/RisksView'
 import { openChase } from '../chase/ChaseModal'
 import type { SubView } from '../SubView'
 import { barList, burnChart, progressRing } from './charts'
-import { writeStatusReport } from './statusReport'
+import { writeStatusReport, writeStatusReportPdf } from './statusReport'
 import { SUBVIEW_CLASS } from '../subviewClasses'
 import { t } from '../../i18n'
 import { explain } from '../../ui/explain'
@@ -134,6 +134,17 @@ export class ProjectDashboard implements SubView {
         })
       )
       .explain(t('kpi.report'), t('tip.kpi.report'))
+    new ChipButton(bar.querySelector<HTMLElement>('.pm-kpi-header-actions') ?? bar)
+      .setLabel(t('report.pdf'))
+      .setShape('pill')
+      .onClick(
+        safeAsync(async () => {
+          if (!this.metrics) return
+          const path = await writeStatusReportPdf(this.plugin, this.scope, this.metrics)
+          new Notice(t('report.pdfWritten', { path }))
+        })
+      )
+      .explain(t('report.pdf'), t('tip.report.pdf'))
   }
 
   private healthWhy(m: ProjectMetrics): string {

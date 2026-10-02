@@ -1,6 +1,12 @@
 import { normalizePath } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Project } from '../../types'
+import type { ProjectScope } from '../../store'
+import { flattenTasks } from '../../store/TaskTreeOps'
+import { decidedSince, isDecision, isPending, orderDecisions } from '../../store/decision'
+import { awaitedDocuments } from '../../store/chasing'
+import { addDays } from '../../store/Metrics'
+import { statusReportPdf } from './statusReportPdf'
 import type { ProjectMetrics } from '../../store/Metrics'
 import { ensureFolder, folderOf } from '../../store/vaultFs'
 import { displayName, sanitizeFileName } from '../../utils'
@@ -131,4 +137,38 @@ export async function writeStatusReport(plugin: PMPlugin, project: Project, m: P
 
 function section(lines: string[], heading: string, header: string[]): void {
   lines.push(`## ${heading}`, '', ...header)
+}
+
+/**
+ * Writes the status report as a PDF beside the project, to send to whoever has no
+ * Obsidian, and opens it. Its path comes back.
+ */
+export async function writeStatusReportPdf(plugin: PMPlugin, scope: ProjectScope, m: ProjectMetrics): Promise<string> {
+  const project = scope.primary
+  const stamp = today().toString()
+  const tasks = flattenTasks(scope.tasks()).map((flat) => flat.task)
+  const decisions = tasks.filter((task) => !task.archived && isDecision(task))
+  const title = project?.title ?? scope.label()
+  const others = scope.projects.filter((one) => one !== project && !one.program)
+  const bytes = statusReportPdf({
+    title,
+    subtitle: scope.isMulti ? others.map((one) => one.title).join(' · ') : undefined,
+    today: stamp,
+    metrics: m,
+    decisions: {
+      recent: decidedSince(decisions, addDays(stamp, -30)),
+      pending: orderDecisions(decisions.filter(isPending))
+    },
+    lateDocuments: awaitedDocuments(tasks, stamp)
+  })
+  const folder = project ? folderOf(project.filePath) : ''
+  if (folder) await ensureFolder(plugin.app, folder)
+  const base = sanitizeFileName(`${t('kpi.reportTitle')} ${title} ${stamp}`)
+  let path = normalizePath(folder ? `${folder}/${base}.pdf` : `${base}.pdf`)
+  for (let n = 2; plugin.app.vault.getAbstractFileByPath(path); n++) {
+    path = normalizePath(folder ? `${folder}/${base} (${n}).pdf` : `${base} (${n}).pdf`)
+  }
+  const file = await plugin.app.vault.createBinary(path, bytes.slice().buffer)
+  await plugin.app.workspace.getLeaf('tab').openFile(file)
+  return path
 }

@@ -371,13 +371,13 @@ export function pdfString(text: string): string {
   return `${out})`
 }
 
-function fontName(bold: boolean, italic: boolean): string {
+export function fontName(bold: boolean, italic: boolean): string {
   if (bold && italic) return '/F4'
   if (bold) return '/F2'
   return italic ? '/F3' : '/F1'
 }
 
-function round(value: number): string {
+export function round(value: number): string {
   return (Math.round(value * 100) / 100).toString()
 }
 
@@ -411,15 +411,14 @@ function stamp(at: Date): string {
 }
 
 /**
- * The file.
+ * The file, from the content stream of each page: the four Helvetica fonts as F1 to F4.
  *
  * Objects in order, then the cross-reference table that says where each one starts, which
  * is the part a reader trusts absolutely: an offset out by one byte is a file that will
  * not open at all. So the offsets are taken from the bytes as they are written, never
  * computed a second time from the lengths.
  */
-export function buildPdf(doc: DocxDocument, at = new Date()): Uint8Array {
-  const pages = layoutPdf(doc)
+export function writePdf(streams: string[], title: string, at = new Date()): Uint8Array {
   const bytes: number[] = []
   const push = (text: string): void => {
     for (const char of text) bytes.push(char.charCodeAt(0) & 0xff)
@@ -430,12 +429,11 @@ export function buildPdf(doc: DocxDocument, at = new Date()): Uint8Array {
   const pageId = (at2: number): number => first + at2 * 2
   const objects: string[] = [
     '<< /Type /Catalog /Pages 2 0 R >>',
-    `<< /Type /Pages /Kids [${pages.map((_, i) => `${pageId(i)} 0 R`).join(' ')}] /Count ${pages.length} >>`,
-    `<< /Title ${pdfString(doc.title)} /Producer (Black Projects) /CreationDate (${stamp(at)}) >>`,
+    `<< /Type /Pages /Kids [${streams.map((_, i) => `${pageId(i)} 0 R`).join(' ')}] /Count ${streams.length} >>`,
+    `<< /Title ${pdfString(title)} /Producer (Black Projects) /CreationDate (${stamp(at)}) >>`,
     ...FONTS.map((font) => `<< /Type /Font /Subtype /Type1 /BaseFont /${font} /Encoding /WinAnsiEncoding >>`)
   ]
-  pages.forEach((page, i) => {
-    const stream = pageStream(page)
+  streams.forEach((stream, i) => {
     objects.push(
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${round(PAGE.width)} ${round(PAGE.height)}]` +
         ' /Resources << /Font << /F1 4 0 R /F2 5 0 R /F3 6 0 R /F4 7 0 R >> >>' +
@@ -462,4 +460,9 @@ export function buildPdf(doc: DocxDocument, at = new Date()): Uint8Array {
   for (const offset of offsets) push(`${String(offset).padStart(10, '0')} 00000 n \n`)
   push(`trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info 3 0 R >>\nstartxref\n${xref}\n%%EOF\n`)
   return Uint8Array.from(bytes)
+}
+
+/** A document of the shared model — a specification, a register — as a PDF. */
+export function buildPdf(doc: DocxDocument, at = new Date()): Uint8Array {
+  return writePdf(layoutPdf(doc).map(pageStream), doc.title, at)
 }
