@@ -35,6 +35,7 @@ import {
   type FolderChoice
 } from '../folderUi'
 import { AT_ROOT } from '../../store/folderFilter'
+import { explain } from '../../ui/explain'
 
 export const PM_NOTES_VIEW_TYPE = 'pm-notes'
 
@@ -211,15 +212,23 @@ export class NotesView extends ItemView {
       })
     }
     const right = this.toolbarEl.createDiv('pm-toolbar-right')
-    new ButtonComponent(right)
-      .setButtonText(t('folders.newFolder'))
-      .setIcon('folder-plus')
-      .onClick(safeAsync(() => this.newFolder()))
-    new ButtonComponent(right)
-      .setButtonText(t('notes.new'))
-      .setIcon('file-plus')
-      .setCta()
-      .onClick(safeAsync(() => this.plugin.newInboxNote(this.currentFolder())))
+    explain(
+      new ButtonComponent(right)
+        .setButtonText(t('folders.newFolder'))
+        .setIcon('folder-plus')
+        .onClick(safeAsync(() => this.newFolder())).buttonEl,
+      t('folders.newFolder'),
+      t('tip.folders.newFolder')
+    )
+    explain(
+      new ButtonComponent(right)
+        .setButtonText(t('notes.new'))
+        .setIcon('file-plus')
+        .setCta()
+        .onClick(safeAsync(() => this.plugin.newInboxNote(this.currentFolder()))).buttonEl,
+      t('notes.new'),
+      t('tip.notes.new')
+    )
   }
 
   private renderFilters(): void {
@@ -305,11 +314,15 @@ export class NotesView extends ItemView {
       setIcon(empty.createDiv('pm-docs-empty-icon'), 'notebook-pen')
       empty.createDiv({ cls: 'pm-docs-empty-title', text: t('notes.emptyTitle') })
       empty.createDiv({ cls: 'pm-docs-empty-text', text: t('notes.emptyText', { folder: this.plugin.notes.root }) })
-      new ButtonComponent(empty)
-        .setButtonText(t('notes.new'))
-        .setIcon('file-plus')
-        .setCta()
-        .onClick(safeAsync(() => this.plugin.newInboxNote()))
+      explain(
+        new ButtonComponent(empty)
+          .setButtonText(t('notes.new'))
+          .setIcon('file-plus')
+          .setCta()
+          .onClick(safeAsync(() => this.plugin.newInboxNote())).buttonEl,
+        t('notes.new'),
+        t('tip.notes.new')
+      )
       return
     }
     const paths = new Set(all.map((entry) => entry.path))
@@ -382,23 +395,39 @@ export class NotesView extends ItemView {
     const picked = this.entries.filter((entry) => this.picked.has(entry.path))
     const bar = this.bodyEl.createDiv('pm-docs-picked')
     bar.createSpan({ cls: 'pm-docs-picked-count', text: t('notes.picked', { count: picked.length }) })
-    new ButtonComponent(bar)
-      .setButtonText(t('library.askChat'))
-      .setIcon('messages-square')
-      .setCta()
-      .onClick(safeAsync(() => this.plugin.chatAboutDocuments(picked.map((entry) => entry.path))))
-    new ButtonComponent(bar)
-      .setButtonText(t('notes.fileTo'))
-      .setIcon('folder-kanban')
-      .onClick(safeAsync(() => this.fileTo(picked)))
-    new ButtonComponent(bar)
-      .setButtonText(t('folders.moveTo'))
-      .setIcon('folder-input')
-      .onClick(() => this.moveToFolder(picked))
-    new ButtonComponent(bar).setButtonText(t('library.unpick')).onClick(() => {
-      this.picked.clear()
-      this.renderBody()
-    })
+    explain(
+      new ButtonComponent(bar)
+        .setButtonText(t('library.askChat'))
+        .setIcon('messages-square')
+        .setCta()
+        .onClick(safeAsync(() => this.plugin.chatAboutDocuments(picked.map((entry) => entry.path)))).buttonEl,
+      t('library.askChat'),
+      t('tip.library.askChat')
+    )
+    explain(
+      new ButtonComponent(bar)
+        .setButtonText(t('notes.fileTo'))
+        .setIcon('folder-kanban')
+        .onClick(safeAsync(() => this.fileTo(picked))).buttonEl,
+      t('notes.fileTo'),
+      t('tip.notes.fileTo')
+    )
+    explain(
+      new ButtonComponent(bar)
+        .setButtonText(t('folders.moveTo'))
+        .setIcon('folder-input')
+        .onClick(() => this.moveToFolder(picked)).buttonEl,
+      t('folders.moveTo'),
+      t('tip.folders.moveTo')
+    )
+    explain(
+      new ButtonComponent(bar).setButtonText(t('library.unpick')).onClick(() => {
+        this.picked.clear()
+        this.renderBody()
+      }).buttonEl,
+      t('library.unpick'),
+      t('tip.library.unpick')
+    )
   }
 
   private renderRow(list: HTMLElement, entry: NoteEntry): void {
@@ -458,6 +487,7 @@ export class NotesView extends ItemView {
     if (!entry.projects.length) chips.createSpan({ cls: 'pm-docs-chip is-none', text: t('notes.toSort') })
     for (const path of entry.projects) {
       const chip = chips.createEl('button', { cls: 'pm-docs-chip', text: this.projectTitle(path) })
+      explain(chip, this.projectTitle(path), t('library.filterOn', { project: this.projectTitle(path) }))
       chip.addEventListener('click', () => {
         this.query = { ...this.query, project: path }
         this.renderFilters()
@@ -466,6 +496,7 @@ export class NotesView extends ItemView {
     }
     for (const tag of entry.tags) {
       const chip = chips.createEl('button', { cls: 'pm-docs-chip pm-docs-tag', text: `#${tag}` })
+      explain(chip, `#${tag}`, t('library.filterTag', { tag }))
       chip.addEventListener('click', () => {
         this.query = { ...this.query, tag }
         this.renderFilters()
@@ -474,14 +505,17 @@ export class NotesView extends ItemView {
     }
 
     const actions = row.createDiv('pm-docs-actions')
-    new ExtraButtonComponent(actions)
-      .setIcon('folder-kanban')
-      .setTooltip(t('notes.fileTo'))
-      .onClick(safeAsync(() => this.fileTo([entry])))
-    new ExtraButtonComponent(actions)
-      .setIcon('more-vertical')
-      .setTooltip(t('library.more'))
-      .extraSettingsEl.addEventListener('click', (event) => this.showMenu(entry, event))
+    explain(
+      new ExtraButtonComponent(actions)
+        .setIcon('folder-kanban')
+        .setTooltip(t('notes.fileTo'))
+        .onClick(safeAsync(() => this.fileTo([entry]))).extraSettingsEl,
+      t('notes.fileTo'),
+      t('tip.notes.fileTo')
+    )
+    const more = new ExtraButtonComponent(actions).setIcon('more-vertical')
+    more.extraSettingsEl.addEventListener('click', (event) => this.showMenu(entry, event))
+    explain(more.extraSettingsEl, t('library.more'), t('tip.notes.more'))
   }
 
   private showMenu(entry: NoteEntry, event: MouseEvent): void {

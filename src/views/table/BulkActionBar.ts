@@ -10,6 +10,7 @@ import { TaskPickerModal } from '../../modals/PickerModals'
 import type { TableContext } from './TableRenderer'
 import { updateSelectAllCheckbox } from './TableRow'
 import { t } from '../../i18n'
+import { explain } from '../../ui/explain'
 
 export type BulkAction =
   | { type: 'set-status'; status: TaskStatus }
@@ -56,144 +57,179 @@ function updateBarContent(bar: HTMLElement, ctx: TableContext, onAction: (a: Bul
   const left = bar.createDiv('pm-bulk-bar-left')
   left.createSpan({ text: t('table.selected', { count }), cls: 'pm-bulk-bar-count' })
 
-  new ButtonComponent(left).setButtonText(t('bulk.setStatus')).onClick((e) => {
-    const menu = new Menu()
-    for (const s of ctx.statuses) {
-      addPaletteMenuItem(menu, s, { onClick: () => onAction({ type: 'set-status', status: s.id }) })
-    }
-    menu.showAtMouseEvent(e)
-  })
+  explain(
+    new ButtonComponent(left).setButtonText(t('bulk.setStatus')).onClick((e) => {
+      const menu = new Menu()
+      for (const s of ctx.statuses) {
+        addPaletteMenuItem(menu, s, { onClick: () => onAction({ type: 'set-status', status: s.id }) })
+      }
+      menu.showAtMouseEvent(e)
+    }).buttonEl,
+    t('bulk.setStatus'),
+    t('tip.bulk.setStatus')
+  )
 
-  new ButtonComponent(left).setButtonText(t('bulk.setPriority')).onClick((e) => {
-    const menu = new Menu()
-    for (const p of ctx.priorities) {
-      addPaletteMenuItem(
-        menu,
-        { ...p, namedIcon: priorityIcon(ctx.priorities, p.id, ctx.priorityIcons) },
-        { onClick: () => onAction({ type: 'set-priority', priority: p.id }) }
-      )
-    }
-    menu.showAtMouseEvent(e)
-  })
+  explain(
+    new ButtonComponent(left).setButtonText(t('bulk.setPriority')).onClick((e) => {
+      const menu = new Menu()
+      for (const p of ctx.priorities) {
+        addPaletteMenuItem(
+          menu,
+          { ...p, namedIcon: priorityIcon(ctx.priorities, p.id, ctx.priorityIcons) },
+          { onClick: () => onAction({ type: 'set-priority', priority: p.id }) }
+        )
+      }
+      menu.showAtMouseEvent(e)
+    }).buttonEl,
+    t('bulk.setPriority'),
+    t('tip.bulk.setPriority')
+  )
 
-  new ButtonComponent(left).setButtonText(t('bulk.setAssignee')).onClick((e) => {
-    const menu = new Menu()
-    const source = peopleSource(ctx.plugin, ctx.scope.primary?.filePath ?? '', () => [
-      ...ctx.scope.teamMembers(),
-      ...collectAllAssignees(ctx.scope.tasks())
-    ])
-    for (const member of source.known()) {
+  explain(
+    new ButtonComponent(left).setButtonText(t('bulk.setAssignee')).onClick((e) => {
+      const menu = new Menu()
+      const source = peopleSource(ctx.plugin, ctx.scope.primary?.filePath ?? '', () => [
+        ...ctx.scope.teamMembers(),
+        ...collectAllAssignees(ctx.scope.tasks())
+      ])
+      for (const member of source.known()) {
+        menu.addItem((item) =>
+          item.setTitle(displayName(member)).onClick(() => onAction({ type: 'set-assignee', assignee: member }))
+        )
+      }
+      menu.addSeparator()
       menu.addItem((item) =>
-        item.setTitle(displayName(member)).onClick(() => onAction({ type: 'set-assignee', assignee: member }))
+        item.setTitle(t('table.clearAssignees')).onClick(() => onAction({ type: 'set-assignee', assignee: '' }))
       )
-    }
-    menu.addSeparator()
-    menu.addItem((item) =>
-      item.setTitle(t('table.clearAssignees')).onClick(() => onAction({ type: 'set-assignee', assignee: '' }))
-    )
-    menu.showAtMouseEvent(e)
-  })
+      menu.showAtMouseEvent(e)
+    }).buttonEl,
+    t('bulk.setAssignee'),
+    t('tip.bulk.setAssignee')
+  )
 
-  new ButtonComponent(left).setButtonText(t('bulk.setTag')).onClick((e) => {
-    const menu = new Menu()
-    const allTags = collectAllTags(ctx.scope.tasks())
-    for (const tag of allTags) {
-      menu.addItem((item) => item.setTitle(tag).onClick(() => onAction({ type: 'set-tag', tag })))
-    }
-    menu.addSeparator()
-    menu.addItem((item) =>
-      item.setTitle(t('table.newTag')).onClick(async () => {
-        const tag = await promptText(ctx.plugin.app, t('bulk.enterTag'), t('bulk.tag'))
-        if (tag) onAction({ type: 'set-tag', tag })
-      })
-    )
-    menu.addSeparator()
-    menu.addItem((item) => item.setTitle(t('table.clearTags')).onClick(() => onAction({ type: 'set-tag', tag: '' })))
-    menu.showAtMouseEvent(e)
-  })
-
-  new ButtonComponent(left).setButtonText(t('bulk.setDueDate')).onClick((e) => {
-    const menu = new Menu()
-    const now = today()
-    const ahead = (days: number) => now.add({ days }).toString()
-    menu.addItem((item) =>
-      item
-        .setTitle(t('table.dueToday', { date: ahead(0) }))
-        .onClick(() => onAction({ type: 'set-due-date', due: ahead(0) }))
-    )
-    menu.addItem((item) =>
-      item
-        .setTitle(t('table.dueTomorrow', { date: ahead(1) }))
-        .onClick(() => onAction({ type: 'set-due-date', due: ahead(1) }))
-    )
-    menu.addItem((item) =>
-      item
-        .setTitle(t('table.dueInOneWeek', { date: ahead(7) }))
-        .onClick(() => onAction({ type: 'set-due-date', due: ahead(7) }))
-    )
-    menu.addItem((item) =>
-      item
-        .setTitle(t('table.dueInTwoWeeks', { date: ahead(14) }))
-        .onClick(() => onAction({ type: 'set-due-date', due: ahead(14) }))
-    )
-    menu.addSeparator()
-    menu.addItem((item) =>
-      item.setTitle(t('table.pickDate')).onClick(() => {
-        const input = activeDocument.createEl('input')
-        input.type = 'date'
-        input.addClass('pm-offscreen')
-        activeDocument.body.appendChild(input)
-        input.addEventListener('change', () => {
-          if (input.value) onAction({ type: 'set-due-date', due: input.value })
-          input.remove()
+  explain(
+    new ButtonComponent(left).setButtonText(t('bulk.setTag')).onClick((e) => {
+      const menu = new Menu()
+      const allTags = collectAllTags(ctx.scope.tasks())
+      for (const tag of allTags) {
+        menu.addItem((item) => item.setTitle(tag).onClick(() => onAction({ type: 'set-tag', tag })))
+      }
+      menu.addSeparator()
+      menu.addItem((item) =>
+        item.setTitle(t('table.newTag')).onClick(async () => {
+          const tag = await promptText(ctx.plugin.app, t('bulk.enterTag'), t('bulk.tag'))
+          if (tag) onAction({ type: 'set-tag', tag })
         })
-        input.addEventListener('blur', () => window.setTimeout(() => input.remove(), 200))
-        input.showPicker()
-      })
-    )
-    menu.addSeparator()
-    menu.addItem((item) =>
-      item.setTitle(t('table.clearDueDate')).onClick(() => onAction({ type: 'set-due-date', due: '' }))
-    )
-    menu.showAtMouseEvent(e)
-  })
+      )
+      menu.addSeparator()
+      menu.addItem((item) => item.setTitle(t('table.clearTags')).onClick(() => onAction({ type: 'set-tag', tag: '' })))
+      menu.showAtMouseEvent(e)
+    }).buttonEl,
+    t('bulk.setTag'),
+    t('tip.bulk.setTag')
+  )
 
-  new ButtonComponent(left).setButtonText(t('bulk.setProgress')).onClick((e) => {
-    const menu = new Menu()
-    for (const pct of [0, 25, 50, 75, 100]) {
-      menu.addItem((item) => item.setTitle(`${pct}%`).onClick(() => onAction({ type: 'set-progress', progress: pct })))
-    }
-    menu.showAtMouseEvent(e)
-  })
+  explain(
+    new ButtonComponent(left).setButtonText(t('bulk.setDueDate')).onClick((e) => {
+      const menu = new Menu()
+      const now = today()
+      const ahead = (days: number) => now.add({ days }).toString()
+      menu.addItem((item) =>
+        item
+          .setTitle(t('table.dueToday', { date: ahead(0) }))
+          .onClick(() => onAction({ type: 'set-due-date', due: ahead(0) }))
+      )
+      menu.addItem((item) =>
+        item
+          .setTitle(t('table.dueTomorrow', { date: ahead(1) }))
+          .onClick(() => onAction({ type: 'set-due-date', due: ahead(1) }))
+      )
+      menu.addItem((item) =>
+        item
+          .setTitle(t('table.dueInOneWeek', { date: ahead(7) }))
+          .onClick(() => onAction({ type: 'set-due-date', due: ahead(7) }))
+      )
+      menu.addItem((item) =>
+        item
+          .setTitle(t('table.dueInTwoWeeks', { date: ahead(14) }))
+          .onClick(() => onAction({ type: 'set-due-date', due: ahead(14) }))
+      )
+      menu.addSeparator()
+      menu.addItem((item) =>
+        item.setTitle(t('table.pickDate')).onClick(() => {
+          const input = activeDocument.createEl('input')
+          input.type = 'date'
+          input.addClass('pm-offscreen')
+          activeDocument.body.appendChild(input)
+          input.addEventListener('change', () => {
+            if (input.value) onAction({ type: 'set-due-date', due: input.value })
+            input.remove()
+          })
+          input.addEventListener('blur', () => window.setTimeout(() => input.remove(), 200))
+          input.showPicker()
+        })
+      )
+      menu.addSeparator()
+      menu.addItem((item) =>
+        item.setTitle(t('table.clearDueDate')).onClick(() => onAction({ type: 'set-due-date', due: '' }))
+      )
+      menu.showAtMouseEvent(e)
+    }).buttonEl,
+    t('bulk.setDueDate'),
+    t('tip.bulk.setDueDate')
+  )
+
+  explain(
+    new ButtonComponent(left).setButtonText(t('bulk.setProgress')).onClick((e) => {
+      const menu = new Menu()
+      for (const pct of [0, 25, 50, 75, 100]) {
+        menu.addItem((item) =>
+          item.setTitle(`${pct}%`).onClick(() => onAction({ type: 'set-progress', progress: pct }))
+        )
+      }
+      menu.showAtMouseEvent(e)
+    }).buttonEl,
+    t('bulk.setProgress'),
+    t('tip.bulk.setProgress')
+  )
 
   // A parent and its subtask live in the same project, so this is offered only when the
   // whole selection does too.
   const groups = ctx.scope.groupByProject([...ctx.state.selectedTaskIds])
   if (groups.length === 1) {
     const owner = groups[0].project
-    new ButtonComponent(left).setButtonText(t('bulk.setParent')).onClick(() => {
-      const selectedIdSet = new Set(ctx.state.selectedTaskIds)
-      // A selected task's own descendants can't become its parent.
-      const excludedIds = new Set<string>(selectedIdSet)
-      for (const id of selectedIdSet) {
-        const task = ctx.scope.taskById(id)
-        if (task) {
-          for (const ft of flattenTasks(task.subtasks)) {
-            excludedIds.add(ft.task.id)
+    explain(
+      new ButtonComponent(left).setButtonText(t('bulk.setParent')).onClick(() => {
+        const selectedIdSet = new Set(ctx.state.selectedTaskIds)
+        // A selected task's own descendants can't become its parent.
+        const excludedIds = new Set<string>(selectedIdSet)
+        for (const id of selectedIdSet) {
+          const task = ctx.scope.taskById(id)
+          if (task) {
+            for (const ft of flattenTasks(task.subtasks)) {
+              excludedIds.add(ft.task.id)
+            }
           }
         }
-      }
-      const candidates = flattenTasks(owner.tasks)
-        .filter((ft) => !excludedIds.has(ft.task.id))
-        .map((ft) => ft.task)
-      const modal = new TaskPickerModal(ctx.plugin.app, candidates, (chosen) => {
-        onAction({ type: 'set-parent', parentId: chosen.id })
-      })
-      modal.open()
-    })
+        const candidates = flattenTasks(owner.tasks)
+          .filter((ft) => !excludedIds.has(ft.task.id))
+          .map((ft) => ft.task)
+        const modal = new TaskPickerModal(ctx.plugin.app, candidates, (chosen) => {
+          onAction({ type: 'set-parent', parentId: chosen.id })
+        })
+        modal.open()
+      }).buttonEl,
+      t('bulk.setParent'),
+      t('tip.bulk.setParent')
+    )
   }
 
-  new ButtonComponent(left).setButtonText(t('bulk.removeParent')).onClick(() => onAction({ type: 'remove-parent' }))
+  explain(
+    new ButtonComponent(left).setButtonText(t('bulk.removeParent')).onClick(() => onAction({ type: 'remove-parent' }))
+      .buttonEl,
+    t('bulk.removeParent'),
+    t('tip.bulk.removeParent')
+  )
 
   const selectedIds = [...ctx.state.selectedTaskIds]
   const selectedTasks = selectedIds.map((id) => ctx.scope.taskById(id)).filter(Boolean) as Task[]
@@ -201,30 +237,48 @@ function updateBarContent(bar: HTMLElement, ctx: TableContext, onAction: (a: Bul
   const hasNonArchived = selectedTasks.some((t) => !t.archived)
 
   if (hasNonArchived) {
-    new ButtonComponent(left).setButtonText(t('common.archive')).onClick(() => onAction({ type: 'archive' }))
+    explain(
+      new ButtonComponent(left).setButtonText(t('common.archive')).onClick(() => onAction({ type: 'archive' }))
+        .buttonEl,
+      t('common.archive'),
+      t('tip.bulk.archive')
+    )
   }
   if (hasArchived) {
-    new ButtonComponent(left).setButtonText(t('common.unarchive')).onClick(() => onAction({ type: 'unarchive' }))
+    explain(
+      new ButtonComponent(left).setButtonText(t('common.unarchive')).onClick(() => onAction({ type: 'unarchive' }))
+        .buttonEl,
+      t('common.unarchive'),
+      t('tip.bulk.unarchive')
+    )
   }
 
-  new ButtonComponent(left)
-    .setButtonText(t('common.delete'))
-    .setDestructive()
-    .onClick(() => onAction({ type: 'delete' }))
+  explain(
+    new ButtonComponent(left)
+      .setButtonText(t('common.delete'))
+      .setDestructive()
+      .onClick(() => onAction({ type: 'delete' })).buttonEl,
+    t('common.delete'),
+    t('tip.bulk.delete')
+  )
 
   const right = bar.createDiv('pm-bulk-bar-right')
-  new ExtraButtonComponent(right)
-    .setIcon('x')
-    .setTooltip(t('table.clearSelection'))
-    .onClick(() => {
-      ctx.state.selectedTaskIds.clear()
-      if (ctx.state.tableBody) {
-        const cbs = ctx.state.tableBody.querySelectorAll('.pm-select-checkbox')
-        cbs.forEach((checkbox) => {
-          ;(checkbox as HTMLInputElement).checked = false
-        })
-      }
-      updateSelectAllCheckbox(ctx.state)
-      renderBulkActionBar({ ctx, onAction })
-    })
+  explain(
+    new ExtraButtonComponent(right)
+      .setIcon('x')
+      .setTooltip(t('table.clearSelection'))
+      .onClick(() => {
+        ctx.state.selectedTaskIds.clear()
+        if (ctx.state.tableBody) {
+          const cbs = ctx.state.tableBody.querySelectorAll('.pm-select-checkbox')
+          cbs.forEach((checkbox) => {
+            ;(checkbox as HTMLInputElement).checked = false
+          })
+        }
+        updateSelectAllCheckbox(ctx.state)
+        renderBulkActionBar({ ctx, onAction })
+      }).extraSettingsEl,
+    t('table.clearSelection'),
+    t('tip.table.clearSelection')
+  )
 }

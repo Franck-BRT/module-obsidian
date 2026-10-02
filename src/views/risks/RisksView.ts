@@ -10,6 +10,7 @@ import { SUBVIEW_CLASS } from '../subviewClasses'
 import type { SubView } from '../SubView'
 import { BAND_COLOR, bandLabel, impactLabel, probabilityLabel } from './riskLabels'
 import { t } from '../../i18n'
+import { explain } from '../../ui/explain'
 
 /** A cell the next register opened is narrowed to, set by a view that sends the reader there. */
 let pendingCell: { probability: number; impact: number } | null = null
@@ -93,6 +94,7 @@ export class RisksView implements SubView {
       const add = head.createEl('button', { cls: 'mod-cta pm-risks-add' })
       setIcon(add.createSpan({ cls: 'pm-risks-add-icon' }), 'shield-plus')
       add.createSpan({ text: t('risk.new') })
+      explain(add, t('risk.new'), t('tip.risk.new'))
       add.addEventListener('click', () =>
         openTaskModal(this.plugin, project, {
           defaults: { type: 'risk', start: '', risk: { probability: 2, impact: 2, mitigation: '' } },
@@ -121,11 +123,13 @@ export class RisksView implements SubView {
         const cell = grid.createEl('button', {
           cls: `pm-risks-cell${count ? '' : ' is-empty'}${chosen ? ' is-chosen' : ''}`,
           text: count ? String(count) : '',
-          attr: {
-            title: `${probabilityLabel(probability)} × ${impactLabel(impact)} = ${score} · ${bandLabel(band)}`,
-            'aria-pressed': String(chosen)
-          }
+          attr: { 'aria-pressed': String(chosen) }
         })
+        explain(
+          cell,
+          `${probabilityLabel(probability)} × ${impactLabel(impact)} = ${score} · ${bandLabel(band)}`,
+          t('tip.risk.cell', { count })
+        )
         cell.style.setProperty('--pm-risk-color', BAND_COLOR[band])
         cell.addEventListener('click', () => {
           this.cell = chosen ? null : { probability, impact }

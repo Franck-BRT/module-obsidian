@@ -36,6 +36,7 @@ import { phaseBracket } from './GanttPhaseBar'
 import { SUBVIEW_CLASS } from '../subviewClasses'
 import { t } from '../../i18n'
 import { confirmDialog } from '../../ui/ModalFactory'
+import { explain } from '../../ui/explain'
 
 /**
  * One line of the chart. A project heading occupies a row of its own so the label
@@ -177,8 +178,16 @@ export class GanttView implements SubView {
     // A template has no today to scroll to: its plan is counted from its own day one.
     if (!this.relative) new ButtonComponent(bar).setButtonText(t('common.today')).onClick(() => this.scrollToToday())
 
-    new ButtonComponent(bar).setButtonText(t('gantt.expandAll')).onClick(() => this.setAllCollapsed(false))
-    new ButtonComponent(bar).setButtonText(t('gantt.collapseAll')).onClick(() => this.setAllCollapsed(true))
+    explain(
+      new ButtonComponent(bar).setButtonText(t('gantt.expandAll')).onClick(() => this.setAllCollapsed(false)).buttonEl,
+      t('gantt.expandAll'),
+      t('tip.gantt.expandAll')
+    )
+    explain(
+      new ButtonComponent(bar).setButtonText(t('gantt.collapseAll')).onClick(() => this.setAllCollapsed(true)).buttonEl,
+      t('gantt.collapseAll'),
+      t('tip.gantt.collapseAll')
+    )
     if (!this.relative) this.renderBaselineControl(bar)
   }
 
@@ -201,40 +210,44 @@ export class GanttView implements SubView {
     if (!projects.length) return
     const frozen = [...new Set(projects.map((project) => project.baselineAt).filter((at): at is string => !!at))]
     const shown = this.plugin.settings.ganttBaseline
-    new ButtonComponent(bar)
-      .setButtonText(t('gantt.baseline'))
-      .setTooltip(t('gantt.baselineDesc'))
-      .onClick((event) => {
-        const menu = new Menu()
-        menu.addItem((item) =>
-          item
-            .setTitle(frozen.length ? t('gantt.baselineRefreeze') : t('gantt.baselineFreeze'))
-            .setIcon('flag')
-            .onClick(safeAsync(() => this.freezeBaseline(projects)))
-        )
-        if (frozen.length) {
+    explain(
+      new ButtonComponent(bar)
+        .setButtonText(t('gantt.baseline'))
+        .setTooltip(t('gantt.baselineDesc'))
+        .onClick((event) => {
+          const menu = new Menu()
           menu.addItem((item) =>
             item
-              .setTitle(t('gantt.baselineShow'))
-              .setIcon('eye')
-              .setChecked(shown)
-              .onClick(
-                safeAsync(async () => {
-                  this.plugin.settings.ganttBaseline = !shown
-                  await this.plugin.saveSettings()
-                  this.refresh()
-                })
-              )
+              .setTitle(frozen.length ? t('gantt.baselineRefreeze') : t('gantt.baselineFreeze'))
+              .setIcon('flag')
+              .onClick(safeAsync(() => this.freezeBaseline(projects)))
           )
-          menu.addItem((item) =>
-            item
-              .setTitle(t('gantt.baselineClear'))
-              .setIcon('trash-2')
-              .onClick(safeAsync(() => this.clearBaseline(projects)))
-          )
-        }
-        menu.showAtMouseEvent(event)
-      })
+          if (frozen.length) {
+            menu.addItem((item) =>
+              item
+                .setTitle(t('gantt.baselineShow'))
+                .setIcon('eye')
+                .setChecked(shown)
+                .onClick(
+                  safeAsync(async () => {
+                    this.plugin.settings.ganttBaseline = !shown
+                    await this.plugin.saveSettings()
+                    this.refresh()
+                  })
+                )
+            )
+            menu.addItem((item) =>
+              item
+                .setTitle(t('gantt.baselineClear'))
+                .setIcon('trash-2')
+                .onClick(safeAsync(() => this.clearBaseline(projects)))
+            )
+          }
+          menu.showAtMouseEvent(event)
+        }).buttonEl,
+      t('gantt.baseline'),
+      t('tip.gantt.baseline')
+    )
     if (frozen.length && shown) {
       bar.createSpan({
         cls: 'pm-gantt-baseline-legend',

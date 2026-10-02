@@ -16,6 +16,7 @@ import { renderTagChip } from '../ui/composites/tagChip'
 import { renderTimeChip } from '../ui/composites/timeChip'
 import { renderGlyph } from '../ui/composites/properties'
 import { t } from '../i18n'
+import { explain } from '../ui/explain'
 
 export const PM_PROJECT_OVERVIEW_VIEW_TYPE = 'pm-project-overview'
 
@@ -161,13 +162,15 @@ export class ProjectOverviewView extends ItemView {
     if (project.teamMembers.length) bits.push(t('count.members', { count: project.teamMembers.length }))
     identity.createDiv({ cls: 'pm-overview-subline', text: bits.join(' · ') })
 
-    new ButtonComponent(header)
+    const edit = new ButtonComponent(header)
       .setButtonText(t('project.edit'))
       .onClick(safeAsync(() => this.plugin.router.openProjectEdit(project.filePath, this.leaf)))
-    new ButtonComponent(header)
+    explain(edit.buttonEl, t('project.edit'), t('tip.project.settings'))
+    const tasks = new ButtonComponent(header)
       .setButtonText(t('project.openTasks'))
       .setCta()
       .onClick(safeAsync(() => this.plugin.router.openScope({ kind: 'project', path: project.filePath }, this.leaf)))
+    explain(tasks.buttonEl, t('project.openTasks'), t('tip.project.openTasks'))
   }
 
   private section(parent: HTMLElement, title: string, note = ''): HTMLElement {

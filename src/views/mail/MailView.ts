@@ -268,6 +268,7 @@ export class MailView implements SubView {
       .setLabel(t('count.messages', { count: this.entries.length }))
       .setShape('pill')
       .setAriaLabel(t('email.count'))
+      .explain(t('count.messages', { count: this.entries.length }), t('tip.count.messages'))
 
     renderSortControl(right, {
       keys: MAIL_SORT_KEYS,

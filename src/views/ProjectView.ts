@@ -724,6 +724,7 @@ export class ProjectView extends ItemView {
     new ChipButton(parent)
       .setLabel(ref?.rule ? t('collection.hasRule') : t('scope.collection'))
       .setShape('pill')
+      .explain(ref?.rule ? t('collection.hasRule') : t('scope.collection'), t('tip.project.collection'))
       .onClick((e) => {
         const menu = new Menu()
         // Saving an empty filter would write a rule that matches the whole vault, which

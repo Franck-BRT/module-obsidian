@@ -30,6 +30,7 @@ import { undoKey } from '../../store/chat/chatUndo'
 import type { HistoryKind } from '../../store/chat/chatHistory'
 import { FolderPicker, type FolderChoice } from '../folderUi'
 import { t } from '../../i18n'
+import { explain } from '../../ui/explain'
 
 /**
  * A note the model proposed, drawn as a card: its title and folder — or the note it adds
@@ -230,6 +231,7 @@ class NoteCard extends MarkdownRenderChild {
           text: folder || t('chat.note.vaultRoot'),
           attr: { 'aria-label': t('chat.note.chooseFolder') }
         })
+        explain(pick, t('chat.note.chooseFolder'), t('tip.chat.note.chooseFolder'))
         pick.addEventListener('click', () => this.chooseFolder())
         // A folder the model named that is not there yet: made with the note, said beforehand.
         if (folder && !(this.plugin.app.vault.getAbstractFileByPath(folder) instanceof TFolder)) {
@@ -294,6 +296,7 @@ class NoteCard extends MarkdownRenderChild {
     }
     const el = foot()
     const button = el.createEl('button', { cls: 'mod-cta', text: t('chat.note.clean') })
+    explain(button, t('chat.note.clean'), t('tip.chat.note.clean'))
     button.addEventListener(
       'click',
       safeAsync(async () => {
@@ -387,6 +390,7 @@ class NoteCard extends MarkdownRenderChild {
       })
       if (undo && undo.path === target.path) {
         const back = foot.createEl('button', { text: t('chat.change.undo') })
+        explain(back, t('chat.change.undo'), t('tip.chat.change.undo'))
         back.addEventListener(
           'click',
           safeAsync(async () => {
@@ -415,6 +419,7 @@ class NoteCard extends MarkdownRenderChild {
       cls: 'mod-cta',
       text: asNew ? t('chat.note.rewrite') : t('chat.note.replace')
     })
+    explain(button, asNew ? t('chat.note.rewrite') : t('chat.note.replace'), t('tip.chat.note.replace'))
     button.addEventListener(
       'click',
       safeAsync(async () => {
@@ -446,6 +451,7 @@ class NoteCard extends MarkdownRenderChild {
     // Another note after all, beside the one of that name: what the card offered before.
     if (asNew) {
       const another = foot.createEl('button', { text: t('chat.note.createAnother') })
+      explain(another, t('chat.note.createAnother'), t('tip.chat.note.createAnother'))
       another.addEventListener(
         'click',
         safeAsync(async () => {
@@ -532,6 +538,11 @@ class NoteCard extends MarkdownRenderChild {
         cls: 'mod-cta',
         text: into.guessed ? t('chat.note.appendIn', { section: into.section }) : t('chat.note.append')
       })
+      explain(
+        inside,
+        into.guessed ? t('chat.note.appendIn', { section: into.section }) : t('chat.note.append'),
+        t('tip.chat.note.appendIn')
+      )
       inside.addEventListener(
         'click',
         safeAsync(async () => {
@@ -556,10 +567,9 @@ class NoteCard extends MarkdownRenderChild {
       this.copyButton(foot, proposal)
       return
     }
-    const button = foot.createEl('button', {
-      cls: into ? '' : 'mod-cta',
-      text: into ? t('chat.note.appendAtEnd') : proposal.append ? t('chat.note.append') : t('chat.note.create')
-    })
+    const label = into ? t('chat.note.appendAtEnd') : proposal.append ? t('chat.note.append') : t('chat.note.create')
+    const button = foot.createEl('button', { cls: into ? '' : 'mod-cta', text: label })
+    explain(button, label, into || proposal.append ? t('tip.chat.note.appendEnd') : t('tip.chat.note.create'))
     button.addEventListener(
       'click',
       safeAsync(async () => {
@@ -590,6 +600,7 @@ class NoteCard extends MarkdownRenderChild {
 
   private copyButton(foot: HTMLElement, proposal: NoteProposal): void {
     const copy = foot.createEl('button', { text: t('chat.note.copy') })
+    explain(copy, t('chat.note.copy'), t('tip.chat.note.copy'))
     copy.addEventListener(
       'click',
       safeAsync(async () => {

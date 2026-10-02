@@ -184,6 +184,7 @@ export class LibraryView implements SubView {
       .setLabel(`${t('common.all')} · ${docs.length}`)
       .setShape('pill')
       .setActive(this.stateFilter === null)
+      .explain(t('common.all'), t('tip.register.all'))
       .onClick(() => {
         this.stateFilter = null
         this.render()
@@ -196,6 +197,7 @@ export class LibraryView implements SubView {
         .setLabel(`${docStateLabel(state)} · ${count}`)
         .setShape('pill')
         .setActive(this.stateFilter === state)
+        .explain(docStateLabel(state), t('tip.register.state'))
         .onClick(() => {
           this.stateFilter = this.stateFilter === state ? null : state
           this.render()
@@ -241,6 +243,7 @@ export class LibraryView implements SubView {
         .setLabel(t('chase.button'))
         .setShape('pill')
         .onClick(() => openChase(this.plugin, this.scope.projects, this.onRefresh))
+        .explain(t('chase.button'), t('tip.chase.button'))
     }
     this.renderOrphanChip(right)
     // A document already in the library, followed here without being copied.
@@ -250,15 +253,18 @@ export class LibraryView implements SubView {
         .setLabel(t('library.fromLibrary'))
         .setShape('pill')
         .onClick(() => this.pickFromLibrary(primary.filePath))
+        .explain(t('library.fromLibrary'), t('tip.library.fromLibrary'))
       // The other way: this register's documents, poured into the library where they are.
       new ChipButton(right)
         .setLabel(t('library.toLibrary'))
         .setShape('pill')
         .onClick(safeAsync(() => pourRegisterFiles(this.plugin, primary.filePath)))
+        .explain(t('library.toLibrary'), t('tip.library.toLibrary'))
     }
     new ChipButton(right)
       .setLabel(t('view.bordereau'))
       .setShape('pill')
+      .explain(t('view.bordereau'), t('tip.view.bordereau'))
       .onClick(
         safeAsync(async () => {
           const chosen = docs.filter((task) => this.picked.has(task.id))
@@ -271,6 +277,7 @@ export class LibraryView implements SubView {
           new Notice(t('view.bordereauCreated', { path: await writeBordereau(this.plugin, project, chosen) }))
         })
       )
+      .explain(t('view.bordereau'), t('tip.view.bordereau'))
   }
 
   /**
@@ -329,7 +336,7 @@ export class LibraryView implements SubView {
     const chip = new ChipButton(parent)
       .setLabel(t('count.orphanFiles', { count: orphans.length }))
       .setShape('pill')
-      .setAriaLabel(t('view.orphanFiles'))
+      .explain(t('view.orphanFiles'), t('tip.register.orphans'))
     chip.el.addEventListener('click', (e) => {
       const menu = new Menu()
       for (const path of orphans) {

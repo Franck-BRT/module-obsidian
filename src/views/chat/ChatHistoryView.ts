@@ -8,6 +8,7 @@ import { EmptyState } from '../../ui/primitives/EmptyState'
 import { safeAsync } from '../../utils'
 import { reportUndone } from './changeCard'
 import { t } from '../../i18n'
+import { explain } from '../../ui/explain'
 
 export const PM_CHAT_HISTORY_VIEW_TYPE = 'pm-chat-history'
 
@@ -201,6 +202,7 @@ export class ChatHistoryView extends ItemView {
     }
     if (!this.undoable(entry)) return
     const button = foot.createEl('button', { text: t('chat.change.undo') })
+    explain(button, t('chat.change.undo'), t('tip.chat.change.undo'))
     button.addEventListener(
       'click',
       safeAsync(async () => {

@@ -11,6 +11,7 @@ import { safeAsync } from '../../utils'
 import { openContactModal } from '../contacts/ContactModal'
 import { chaseWords } from './chaseWords'
 import { t } from '../../i18n'
+import { explain } from '../../ui/explain'
 
 /** How many days the reminder gives them, by default. */
 const DEFAULT_DELAY = 7
@@ -126,6 +127,7 @@ class ChaseModal extends Modal {
     const chat = foot.createEl('button', { cls: 'mod-cta' })
     setIcon(chat.createSpan({ cls: 'pm-chase-icon' }), 'message-square')
     chat.createSpan({ text: t('chase.withChat') })
+    explain(chat, t('chase.withChat'), t('tip.chase.withChat'))
     chat.addEventListener(
       'click',
       safeAsync(async () => {
@@ -199,25 +201,41 @@ class ChaseModal extends Modal {
     preview.createEl('pre', { cls: 'pm-chase-body', text: mail.body })
 
     const actions = el.createDiv('pm-chase-actions')
-    const button = (icon: string, label: string, run: () => Promise<void>): HTMLButtonElement => {
+    const button = (icon: string, label: string, run: () => Promise<void>, help = ''): HTMLButtonElement => {
       const one = actions.createEl('button')
       setIcon(one.createSpan({ cls: 'pm-chase-icon' }), icon)
       one.createSpan({ text: label })
+      explain(one, label, help)
       one.addEventListener('click', safeAsync(run))
       return one
     }
-    button('copy', t('chase.copy'), async () => {
-      await navigator.clipboard.writeText(`${t('chase.subjectLine', { subject: mail.subject })}\n\n${mail.body}`)
-      new Notice(t('chase.copied'))
-      if (this.note) await this.noteChase(project, group)
-    })
-    button('mail', t('chase.openMail'), async () => {
-      window.open(
-        `mailto:${to.map((one) => one.replace(/[?&#\s,]/g, '')).join(',')}?subject=${encodeURIComponent(mail.subject)}&body=${encodeURIComponent(mail.body)}`
-      )
-      if (this.note) await this.noteChase(project, group)
-    })
-    const noted = button('calendar-check', t('chase.noteNow'), () => this.noteChase(project, group))
+    button(
+      'copy',
+      t('chase.copy'),
+      async () => {
+        await navigator.clipboard.writeText(`${t('chase.subjectLine', { subject: mail.subject })}\n\n${mail.body}`)
+        new Notice(t('chase.copied'))
+        if (this.note) await this.noteChase(project, group)
+      },
+      t('tip.chase.copy')
+    )
+    button(
+      'mail',
+      t('chase.openMail'),
+      async () => {
+        window.open(
+          `mailto:${to.map((one) => one.replace(/[?&#\s,]/g, '')).join(',')}?subject=${encodeURIComponent(mail.subject)}&body=${encodeURIComponent(mail.body)}`
+        )
+        if (this.note) await this.noteChase(project, group)
+      },
+      t('tip.chase.openMail')
+    )
+    const noted = button(
+      'calendar-check',
+      t('chase.noteNow'),
+      () => this.noteChase(project, group),
+      t('tip.chase.noteNow')
+    )
     noted.disabled = group.lastChase === day
   }
 

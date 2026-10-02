@@ -9,6 +9,7 @@ import { t } from '../../i18n'
 import { openAgenda } from './AgendaModal'
 import { openAgendaTemplates } from './AgendaTemplatesModal'
 import { projectAgendas } from './projectAgendas'
+import { explain } from '../../ui/explain'
 
 /** A project's agendas managed: prepared, found again by where they stand, opened, thrown away. */
 export function openAgendas(plugin: PMPlugin, project: Project): void {
@@ -73,11 +74,13 @@ class AgendasModal extends Modal {
     const prepare = head.createEl('button', { cls: 'mod-cta' })
     setIcon(prepare.createSpan({ cls: 'pm-agenda-template-icon' }), 'list-plus')
     prepare.createSpan({ text: t('agendas.prepare') })
+    explain(prepare, t('agendas.prepare'), t('tip.agendas.prepare'))
     prepare.addEventListener('click', () => {
       this.close()
       openAgenda(this.plugin, this.project)
     })
     const manage = head.createEl('button', { text: t('agenda.manage') })
+    explain(manage, t('agenda.manage'), t('tip.agenda.manage'))
     manage.addEventListener('click', () => openAgendaTemplates(this.plugin, () => this.render()))
 
     const notes = projectAgendas(this.app, this.project.filePath)
@@ -115,6 +118,7 @@ class AgendasModal extends Modal {
     text.createDiv({ cls: 'pm-agenda-template-desc', text: about.join(' · ') })
     const actions = row.createDiv('pm-agenda-template-actions')
     const remove = actions.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('agendas.delete') } })
+    explain(remove, t('agendas.delete'), t('tip.agendas.delete'))
     setIcon(remove, 'trash-2')
     remove.addEventListener(
       'click',

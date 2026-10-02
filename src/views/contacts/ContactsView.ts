@@ -10,6 +10,7 @@ import { EmptyState } from '../../ui/primitives/EmptyState'
 import { openChase } from '../chase/ChaseModal'
 import { openContactModal } from './ContactModal'
 import { t } from '../../i18n'
+import { explain } from '../../ui/explain'
 
 export const PM_CONTACTS_VIEW_TYPE = 'pm-contacts'
 
@@ -102,6 +103,7 @@ export class ContactsView extends ItemView {
     const add = head.createEl('button', { cls: 'mod-cta' })
     setIcon(add.createSpan({ cls: 'pm-contacts-icon' }), 'user-plus')
     add.createSpan({ text: t('contact.new') })
+    explain(add, t('contact.new'), t('tip.contact.new'))
     add.addEventListener('click', () => openContactModal(this.plugin, { onDone: () => this.reloadSoon() }))
 
     const bar = root.createDiv('pm-contacts-bar')
@@ -233,12 +235,14 @@ export class ContactsView extends ItemView {
     const actions = row.createDiv('pm-contact-actions')
     if (work?.lateDocuments) {
       const chase = actions.createEl('button', { text: t('chase.button') })
+      explain(chase, t('chase.button'), t('tip.chase.button'))
       chase.addEventListener('click', () => {
         const involved = this.projects.filter((one) => work.projects.has(one.filePath))
         openChase(this.plugin, involved, () => this.reload(), contact.name)
       })
     }
     const edit = actions.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('contact.edit') } })
+    explain(edit, t('contact.edit'), t('tip.contact.edit'))
     setIcon(edit, 'pencil')
     edit.addEventListener('click', () => openContactModal(this.plugin, { contact, onDone: () => this.reloadSoon() }))
 
@@ -248,6 +252,7 @@ export class ContactsView extends ItemView {
       cls: 'clickable-icon',
       attr: { 'aria-label': t('contact.details') }
     })
+    explain(toggle, t('contact.details'), t('tip.contact.details'))
     const isOpen = this.expanded.has(contact.path)
     setIcon(toggle, isOpen ? 'chevron-up' : 'chevron-down')
     toggle.addEventListener('click', () => {
@@ -290,6 +295,7 @@ export class ContactsView extends ItemView {
       row.createSpan({ cls: 'pm-contacts-unknown-name', text: one.name })
       row.createSpan({ cls: 'pm-contacts-unknown-count', text: t('contact.uses', { count: one.count }) })
       const make = row.createEl('button', { text: t('contact.make') })
+      explain(make, t('contact.make'), t('tip.contact.make'))
       make.addEventListener('click', () =>
         openContactModal(this.plugin, {
           name: one.name,

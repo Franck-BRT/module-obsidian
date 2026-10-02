@@ -27,6 +27,7 @@ import { isDocument } from '../store/Document'
 import { renderSubtasksPanel } from './SubtasksPanel'
 import { NoteLinkSuggest } from './NoteLinkSuggest'
 import { t } from '../i18n'
+import { explain } from '../ui/explain'
 
 /** What the editor needs from whatever surface hosts it: a modal, a tab. */
 export interface TaskEditorHost {
@@ -333,6 +334,7 @@ export class TaskEditor {
     if (!this.isNew) {
       const moreBtn = new ExtraButtonComponent(header).setIcon('more-horizontal').setTooltip(t('editor.moreActions'))
       moreBtn.extraSettingsEl.addClass('pm-te-header-btn')
+      explain(moreBtn.extraSettingsEl, t('editor.moreActions'), t('tip.editor.more'))
       moreBtn.onClick(() => this.openOverflowMenu(moreBtn.extraSettingsEl))
     }
     const closeBtn = new ExtraButtonComponent(header).setIcon('x').setTooltip(t('common.close'))

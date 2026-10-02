@@ -27,6 +27,7 @@ import { CUSTOM_FIELD_TYPE_LABELS, renderCustomFieldListEditor } from '../ui/Cus
 import { EmptyState } from '../ui/primitives/EmptyState'
 import { IconButton } from '../ui/primitives/IconButton'
 import { t } from '../i18n'
+import { explain } from '../ui/explain'
 
 export const PM_PROJECT_EDIT_VIEW_TYPE = 'pm-project-edit'
 
@@ -629,7 +630,9 @@ export class ProjectEditView extends ItemView {
     const text = section.createDiv('pm-edit-danger-text')
     text.createDiv({ cls: 'pm-edit-danger-title', text: t('project.delete') })
     text.createDiv({ cls: 'pm-modal-hint', text: t('project.deleteHint') })
-    new ButtonComponent(section)
+    const remove = new ButtonComponent(section)
+    explain(remove.buttonEl, t('project.delete'), t('project.deleteHint'))
+    remove
       .setButtonText(t('project.delete'))
       .setDestructive()
       .onClick(

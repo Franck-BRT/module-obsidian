@@ -23,6 +23,7 @@ import { barList, burnChart, progressRing } from './charts'
 import { writeStatusReport } from './statusReport'
 import { SUBVIEW_CLASS } from '../subviewClasses'
 import { t } from '../../i18n'
+import { explain } from '../../ui/explain'
 
 /** Where a click on a figure takes the reader, and what it narrows the views to. */
 export type DrillHandler = (patch: Partial<FilterState>, view: ViewMode) => void
@@ -132,6 +133,7 @@ export class ProjectDashboard implements SubView {
           new Notice(t('kpi.reportWritten', { path }))
         })
       )
+      .explain(t('kpi.report'), t('tip.kpi.report'))
   }
 
   private healthWhy(m: ProjectMetrics): string {
@@ -180,6 +182,7 @@ export class ProjectDashboard implements SubView {
     onClick?: () => void
   ): void {
     const tile = parent.createDiv(`pm-kpi-tile pm-kpi-tile--${tone}`)
+    explain(tile, label, tileHelp(icon))
     if (onClick) {
       tile.addClass('pm-kpi-tile--link')
       tile.setAttr('role', 'button')
@@ -254,6 +257,7 @@ export class ProjectDashboard implements SubView {
           .setLabel(t('program.addProject'))
           .setShape('pill')
           .onClick(() => openProjectCreate(this.plugin, false, host.filePath))
+          .explain(t('program.addProject'), t('tip.program.addProject'))
       }
       return
     }
@@ -302,7 +306,11 @@ export class ProjectDashboard implements SubView {
     const openRegister = (): void => this.drill(makeDefaultFilter(), 'risks')
     if (!risks.open) {
       body.createDiv({ cls: 'pm-kpi-empty', text: t('kpi.risksNoneOpen', { count: risks.closed }) })
-      new ChipButton(body.createDiv('pm-kpi-chips')).setLabel(t('kpi.risksOpen')).setShape('pill').onClick(openRegister)
+      new ChipButton(body.createDiv('pm-kpi-chips'))
+        .setLabel(t('kpi.risksOpen'))
+        .setShape('pill')
+        .onClick(openRegister)
+        .explain(t('kpi.risksOpen'), t('tip.kpi.risksOpen'))
       return
     }
     const layout = body.createDiv('pm-kpi-risks')
@@ -324,6 +332,11 @@ export class ProjectDashboard implements SubView {
         })
         cell.style.setProperty('--pm-risk-color', BAND_COLOR[band])
         if (count) {
+          explain(
+            cell,
+            `${probabilityLabel(probability)} × ${impactLabel(impact)} · ${bandLabel(band)}`,
+            t('tip.kpi.riskCell')
+          )
           makeActivatable(cell, () => {
             focusRiskCell({ probability, impact })
             openRegister()
@@ -348,6 +361,7 @@ export class ProjectDashboard implements SubView {
     for (const risk of risks.top.slice(0, RISKS_SHOWN)) {
       const row = list.createDiv('pm-kpi-risk')
       makeActivatable(row, () => this.openTask(risk.id))
+      explain(row, risk.title, t('tip.kpi.riskRow'))
       const score = row.createSpan({ cls: 'pm-kpi-risk-score', text: String(risk.score) })
       score.style.setProperty('--pm-risk-color', BAND_COLOR[risk.band])
       score.setAttr('title', bandLabel(risk.band))
@@ -378,7 +392,11 @@ export class ProjectDashboard implements SubView {
         .setVariant('solid')
         .setColor('var(--text-error, var(--color-red))')
     }
-    new ChipButton(foot).setLabel(t('kpi.risksOpen')).setShape('pill').onClick(openRegister)
+    new ChipButton(foot)
+      .setLabel(t('kpi.risksOpen'))
+      .setShape('pill')
+      .onClick(openRegister)
+      .explain(t('kpi.risksOpen'), t('tip.kpi.risksOpen'))
   }
 
   private renderStatuses(parent: HTMLElement, m: ProjectMetrics): void {
@@ -496,6 +514,7 @@ export class ProjectDashboard implements SubView {
         .setLabel(t('chase.button'))
         .setShape('pill')
         .onClick(() => openChase(this.plugin, this.scope.projects, this.onRefresh))
+        .explain(t('chase.button'), t('tip.chase.button'))
     }
   }
 
@@ -505,6 +524,28 @@ export class ProjectDashboard implements SubView {
     const task = findTaskById(project, taskId)
     if (!task) return
     openTaskModal(this.plugin, project, { task, onSave: () => this.onRefresh() })
+  }
+}
+
+/** What a tile counts, and where a click on it leads; by the icon it wears. */
+function tileHelp(icon: string): string {
+  switch (icon) {
+    case 'alarm-clock':
+      return t('tip.kpi.late')
+    case 'calendar-clock':
+      return t('tip.kpi.dueSoon')
+    case 'circle-dashed':
+      return t('tip.kpi.open')
+    case 'calendar-off':
+      return t('tip.kpi.undated')
+    case 'file-clock':
+      return t('tip.kpi.awaitedDocs')
+    case 'shield-alert':
+      return t('tip.kpi.risks')
+    case 'clock':
+      return t('tip.kpi.hours')
+    default:
+      return ''
   }
 }
 

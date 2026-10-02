@@ -65,6 +65,7 @@ import { logTicketChange } from './historyLog'
 import { undoKey } from '../../store/chat/chatUndo'
 import { openRequirementModal } from '../requirements/RequirementModal'
 import { reqLanguages, verificationLabel } from '../requirements/reqPalette'
+import { explain } from '../../ui/explain'
 
 /** The id a ticket not made yet goes by in the dependency picker: none of the vault's has it. */
 const NEW_TICKET = 'pm-chat-new-ticket'
@@ -414,6 +415,7 @@ class ChangeCard extends MarkdownRenderChild {
       const fix = card.createDiv('pm-change-fix')
       fix.createDiv({ cls: 'pm-change-note', text: t('chat.change.exists') })
       const button = fix.createEl('button', { cls: 'mod-cta', text: t('chat.change.asModification') })
+      explain(button, t('chat.change.asModification'), t('tip.chat.change.asModification'))
       button.addEventListener(
         'click',
         safeAsync(async () => {
@@ -432,6 +434,7 @@ class ChangeCard extends MarkdownRenderChild {
     if (!(resolved.ok && resolved.applied)) {
       const foot = card.querySelector('.pm-change-foot') ?? card.createDiv('pm-change-foot')
       const edit = foot.createEl('button', { text: t('chat.change.edit') })
+      explain(edit, t('chat.change.edit'), t('tip.chat.change.edit'))
       setIcon(edit.createSpan({ cls: 'pm-change-edit-icon' }), 'pencil')
       edit.prepend(edit.lastChild as Node)
       edit.addEventListener('click', () => {
@@ -584,6 +587,7 @@ class ChangeCard extends MarkdownRenderChild {
 
     const foot = card.createDiv('pm-change-foot')
     const save = foot.createEl('button', { cls: 'mod-cta', text: t('chat.change.saveEdits') })
+    explain(save, t('chat.change.saveEdits'), t('tip.chat.change.saveEdits'))
     save.addEventListener(
       'click',
       safeAsync(async () => {
@@ -639,6 +643,7 @@ class ChangeCard extends MarkdownRenderChild {
         cls: 'mod-cta',
         text: t('chat.change.createLot', { title: spec.parent.trim() })
       })
+      explain(make, t('chat.change.createLot', { title: spec.parent.trim() }), t('tip.chat.change.createLot'))
       make.addEventListener(
         'click',
         safeAsync(async () => {
@@ -660,6 +665,7 @@ class ChangeCard extends MarkdownRenderChild {
     const lots = target.context.tickets.filter((ticket) => ticket.type === 'phase')
     for (const lot of lots) select.createEl('option', { value: lot.title, text: lot.title })
     const place = fix.createEl('button', { text: t('chat.change.pickParentButton') })
+    explain(place, t('chat.change.pickParentButton'), t('tip.chat.change.pickParentButton'))
     place.addEventListener('click', () => {
       this.chosenParent = select.value
       void this.draw()
@@ -689,6 +695,7 @@ class ChangeCard extends MarkdownRenderChild {
     const select = foot.createEl('select', { cls: 'dropdown' })
     for (const choice of choices) select.createEl('option', { value: choice.path, text: choice.title })
     const button = foot.createEl('button', { cls: 'mod-cta', text: t('chat.change.pickProjectButton') })
+    explain(button, t('chat.change.pickProjectButton'), t('tip.chat.change.pickProjectButton'))
     button.addEventListener('click', () => {
       this.chosen = select.value
       void this.draw()
@@ -917,6 +924,7 @@ class ChangeCard extends MarkdownRenderChild {
   private editButton(card: HTMLElement): void {
     const foot = card.querySelector('.pm-change-foot') ?? card.createDiv('pm-change-foot')
     const edit = foot.createEl('button', { text: t('chat.change.edit') })
+    explain(edit, t('chat.change.edit'), t('tip.chat.change.edit'))
     setIcon(edit.createSpan({ cls: 'pm-change-edit-icon' }), 'pencil')
     edit.prepend(edit.lastChild as Node)
     edit.addEventListener('click', () => {
@@ -1056,6 +1064,7 @@ class ChangeCard extends MarkdownRenderChild {
 
     const foot = card.createDiv('pm-change-foot')
     const save = foot.createEl('button', { cls: 'mod-cta', text: t('chat.change.saveEdits') })
+    explain(save, t('chat.change.saveEdits'), t('tip.chat.change.saveEdits'))
     save.addEventListener(
       'click',
       safeAsync(async () => {
@@ -1160,6 +1169,7 @@ class ChangeCard extends MarkdownRenderChild {
       return
     }
     const button = foot.createEl('button', { cls: words.warning ? 'mod-warning' : 'mod-cta', text: words.apply })
+    explain(button, words.apply, words.warning ? t('tip.chat.change.applyWarning') : t('tip.chat.change.apply'))
     button.addEventListener(
       'click',
       safeAsync(async () => {
@@ -1219,6 +1229,7 @@ class ChangeCard extends MarkdownRenderChild {
     const record = this.plugin.chatUndo.get(this.source)
     if (!record) return
     const button = foot.createEl('button', { cls: 'pm-change-undo', text: t('chat.change.undo') })
+    explain(button, t('chat.change.undo'), t('tip.chat.change.undo'))
     setIcon(button.createSpan({ cls: 'pm-change-edit-icon' }), 'undo-2')
     button.prepend(button.lastChild as Node)
     button.setAttr('title', t('chat.change.undoHint', { count: record.changed.length + record.created.length }))

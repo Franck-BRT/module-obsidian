@@ -12,6 +12,7 @@ import { linkedRefs } from './linkedRefs'
 import { renderImpactZones } from './impacts/impactRows'
 import type { ImpactLevel } from '../store/ZoneImpact'
 import { t } from '../i18n'
+import { explain } from '../ui/explain'
 
 const COLUMNS: { label: string; cls?: string }[] = [
   { label: '' },
@@ -39,53 +40,77 @@ export function renderProjectListToolbar(ctx: ProjectListContext): void {
 
   // The chat opens beside whatever is being read, and sits before the library: both are
   // places rather than things this page makes.
-  new ExtraButtonComponent(ctx.toolbarEl)
-    .setIcon('messages-square')
-    .setTooltip(t('chat.title'))
-    .onClick(() => {
-      void ctx.plugin.openChat()
-    })
+  explain(
+    new ExtraButtonComponent(ctx.toolbarEl)
+      .setIcon('messages-square')
+      .setTooltip(t('chat.title'))
+      .onClick(() => {
+        void ctx.plugin.openChat()
+      }).extraSettingsEl,
+    t('chat.title'),
+    t('tip.chat.title')
+  )
 
   // Every document, whatever project it belongs to — or none.
-  new ExtraButtonComponent(ctx.toolbarEl)
-    .setIcon('library-big')
-    .setTooltip(t('library.title'))
-    .onClick(() => {
-      void ctx.plugin.openDocuments()
-    })
+  explain(
+    new ExtraButtonComponent(ctx.toolbarEl)
+      .setIcon('library-big')
+      .setTooltip(t('library.title'))
+      .onClick(() => {
+        void ctx.plugin.openDocuments()
+      }).extraSettingsEl,
+    t('library.title'),
+    t('tip.library.title')
+  )
 
   // Notes of no project yet, and the inbox new ones land in.
-  new ExtraButtonComponent(ctx.toolbarEl)
-    .setIcon('notebook-pen')
-    .setTooltip(t('notes.title'))
-    .onClick(() => {
-      void ctx.plugin.openNotes()
-    })
+  explain(
+    new ExtraButtonComponent(ctx.toolbarEl)
+      .setIcon('notebook-pen')
+      .setTooltip(t('notes.title'))
+      .onClick(() => {
+        void ctx.plugin.openNotes()
+      }).extraSettingsEl,
+    t('notes.title'),
+    t('tip.notes.title')
+  )
 
   // Who the projects deal with.
-  new ExtraButtonComponent(ctx.toolbarEl)
-    .setIcon('contact')
-    .setTooltip(t('contact.title'))
-    .onClick(() => {
-      void ctx.plugin.openContacts()
-    })
+  explain(
+    new ExtraButtonComponent(ctx.toolbarEl)
+      .setIcon('contact')
+      .setTooltip(t('contact.title'))
+      .onClick(() => {
+        void ctx.plugin.openContacts()
+      }).extraSettingsEl,
+    t('contact.title'),
+    t('tip.contact.title')
+  )
 
   // The library is a place rather than something this page makes, so it gets a button
   // of its own instead of a line in the menu below.
-  new ExtraButtonComponent(ctx.toolbarEl)
-    .setIcon('list-checks')
-    .setTooltip(t('req.libraryTitle'))
-    .onClick(() => {
-      void ctx.plugin.openRequirements()
-    })
+  explain(
+    new ExtraButtonComponent(ctx.toolbarEl)
+      .setIcon('list-checks')
+      .setTooltip(t('req.libraryTitle'))
+      .onClick(() => {
+        void ctx.plugin.openRequirements()
+      }).extraSettingsEl,
+    t('req.libraryTitle'),
+    t('tip.req.libraryTitle')
+  )
 
   // One button that asks what kind, rather than one per kind. Four of them had grown
   // along this row, three of them ghosts beside the one anybody presses, and a fifth
   // would have had nowhere to go.
-  new ButtonComponent(ctx.toolbarEl)
-    .setButtonText(t('project.newMenu'))
-    .setCta()
-    .onClick((event) => showNewMenu(event, ctx))
+  explain(
+    new ButtonComponent(ctx.toolbarEl)
+      .setButtonText(t('project.newMenu'))
+      .setCta()
+      .onClick((event) => showNewMenu(event, ctx)).buttonEl,
+    t('project.newMenu'),
+    t('tip.project.newMenu')
+  )
 }
 
 /**

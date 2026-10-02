@@ -136,6 +136,7 @@ import { replyNoteContent, replyTitle, withoutChangeBlocks } from '../../store/c
 import { freePath, openDocumentFile } from '../../store/DocumentStore'
 import { ensureFolder } from '../../store/vaultFs'
 import { t } from '../../i18n'
+import { explain } from '../../ui/explain'
 
 export const PM_CHAT_VIEW_TYPE = 'pm-chat'
 
@@ -376,6 +377,7 @@ export class ChatView extends ItemView {
         attr: { 'aria-label': this.useNote ? t('chat.noteOff') : t('chat.noteOn') }
       })
       setIcon(toggle, this.useNote ? 'eye' : 'eye-off')
+      explain(toggle, this.useNote ? t('chat.noteOff') : t('chat.noteOn'), t('tip.chat.note'))
       toggle.addEventListener('click', () => {
         this.useNote = !this.useNote
         this.renderContext()
@@ -395,6 +397,7 @@ export class ChatView extends ItemView {
         attr: { title: this.plugin.ragIndexer.ready ? t('chat.vaultOnDesc') : t('chat.libraryOnDesc') }
       })
       const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.libraryOff') } })
+      explain(off, t('chat.libraryOff'), t('tip.chat.libraryOff'))
       setIcon(off, 'x')
       off.addEventListener('click', () => this.toggleLibrary())
     }
@@ -409,6 +412,7 @@ export class ChatView extends ItemView {
       attr: { title: list }
     })
     const detach = reqRow.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.detach') } })
+    explain(detach, t('chat.detach'), t('tip.chat.detach'))
     setIcon(detach, 'x')
     detach.addEventListener('click', () => {
       this.attached = []
@@ -451,6 +455,7 @@ export class ChatView extends ItemView {
     const add = (row: HTMLElement, label: string): void => {
       const pick = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': label } })
       setIcon(pick, 'plus')
+      explain(pick, label, t('tip.chat.pickProject'))
       pick.addEventListener('click', () => this.pickProject())
     }
     if (!rows.length) {
@@ -471,6 +476,7 @@ export class ChatView extends ItemView {
       name.addEventListener('click', safeAsync(entry.open))
       if (at === rows.length - 1) add(row, t('chat.pickAnotherProject'))
       const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.projectOff') } })
+      explain(off, t('chat.projectOff'), t('tip.chat.projectOff'))
       setIcon(off, 'x')
       off.addEventListener('click', () => {
         entry.off()
@@ -492,6 +498,7 @@ export class ChatView extends ItemView {
       attr: { title: chosen.text.slice(0, 500) }
     })
     const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.selectionOff') } })
+    explain(off, t('chat.selectionOff'), t('tip.chat.selectionOff'))
     setIcon(off, 'x')
     off.addEventListener('click', () => {
       this.selection = null
@@ -529,6 +536,7 @@ export class ChatView extends ItemView {
       // A transcription already made is the reader's to check, one click away: in the
       // document's record, or beside it.
       const open = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.ocrOpen') } })
+      explain(open, t('chat.ocrOpen'), t('tip.chat.ocrOpen'))
       setIcon(open, 'file-scan')
       open.hide()
       const offer = safeAsync(async () => {
@@ -550,6 +558,7 @@ export class ChatView extends ItemView {
           attr: { 'aria-label': forced ? t('chat.ocrOff') : t('chat.ocrOn'), 'aria-pressed': String(forced) }
         })
         setIcon(scan, 'scan-text')
+        explain(scan, forced ? t('chat.ocrOff') : t('chat.ocrOn'), t('tip.chat.ocr'))
         scan.addEventListener('click', () => {
           if (forced) this.ocrForced.delete(path)
           else this.ocrForced.add(path)
@@ -557,6 +566,7 @@ export class ChatView extends ItemView {
         })
       }
       const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.fileOff') } })
+      explain(off, t('chat.fileOff'), t('tip.chat.fileOff'))
       setIcon(off, 'x')
       off.addEventListener('click', () => {
         this.files = this.files.filter((each) => each !== path)
@@ -592,6 +602,7 @@ export class ChatView extends ItemView {
         safeAsync(() => this.app.workspace.openLinkText(path, '', 'tab'))
       )
       const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.skillOff') } })
+      explain(off, t('chat.skillOff'), t('tip.chat.skillOff'))
       setIcon(off, 'x')
       off.addEventListener('click', () => {
         this.skills = this.skills.filter((each) => each !== path)
@@ -1722,6 +1733,7 @@ export class ChatView extends ItemView {
         attr: { 'aria-label': label, title: label }
       })
       pick.createSpan({ cls: 'pm-chat-model-name', text: model || t('chat.modelNone') })
+      explain(pick, t('chat.modelPick'), t('tip.chat.model', { model: model || t('chat.modelNone') }))
       setIcon(pick.createSpan({ cls: 'pm-chat-model-caret' }), 'chevron-down')
       pick.disabled = this.pending
       pick.addEventListener(
@@ -1729,9 +1741,10 @@ export class ChatView extends ItemView {
         safeAsync((event: MouseEvent) => this.pickModel(event))
       )
     }
-    const button = (icon: string, label: string, run: () => void): void => {
+    const button = (icon: string, label: string, run: () => void, help = ''): void => {
       const el = head.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': label } })
       setIcon(el, icon)
+      explain(el, label, help)
       el.addEventListener('click', () => {
         if (!this.pending) run()
       })
@@ -1741,7 +1754,8 @@ export class ChatView extends ItemView {
       button(
         'file-text',
         t('chat.openNote'),
-        safeAsync(() => this.app.workspace.openLinkText(path, '', 'tab'))
+        safeAsync(() => this.app.workspace.openLinkText(path, '', 'tab')),
+        t('tip.chat.openNote')
       )
     }
     // Once the conversation is kept, its branches are one click away — drawn as one line
@@ -1751,20 +1765,27 @@ export class ChatView extends ItemView {
       button(
         'git-fork',
         t('chat.branches'),
-        safeAsync(() => this.openBranches(path))
+        safeAsync(() => this.openBranches(path)),
+        t('tip.chat.branches')
       )
     }
-    button('history', t('chat.history'), () => this.pickConversation())
+    button('history', t('chat.history'), () => this.pickConversation(), t('tip.chat.history'))
     // What the chat changed, in every conversation: applied, taken back, and why.
     button(
       'clipboard-list',
       t('history.title'),
-      safeAsync(() => this.plugin.openChatHistory())
+      safeAsync(() => this.plugin.openChatHistory()),
+      t('tip.chat.changes')
     )
-    button('square-pen', t('chat.new'), () => {
-      this.newConversation()
-      this.render()
-    })
+    button(
+      'square-pen',
+      t('chat.new'),
+      () => {
+        this.newConversation()
+        this.render()
+      },
+      t('tip.chat.new')
+    )
 
     if (this.turnsComponent) this.removeChild(this.turnsComponent)
     this.turnsComponent = this.addChild(new Component())
@@ -1790,6 +1811,7 @@ export class ChatView extends ItemView {
       setIcon(banner.createSpan({ cls: 'pm-chat-editing-icon' }), 'pencil')
       banner.createSpan({ text: t('chat.editing', { at: localStamp(editing.at) }) })
       const cancel = banner.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.editCancel') } })
+      explain(cancel, t('chat.editCancel'), t('tip.chat.editCancel'))
       setIcon(cancel, 'x')
       cancel.addEventListener('click', () => {
         this.editing = null
@@ -1814,6 +1836,7 @@ export class ChatView extends ItemView {
       cls: 'clickable-icon pm-chat-ready',
       attr: { 'aria-label': t('chat.attachFile') }
     })
+    explain(attach, t('chat.attachFile'), t('tip.chat.attachFile'))
     setIcon(attach, 'paperclip')
     attach.disabled = missing !== null || this.pending
     attach.addEventListener('click', (event) => this.showAttachMenu(event))
@@ -1821,6 +1844,7 @@ export class ChatView extends ItemView {
       cls: 'clickable-icon pm-chat-ready',
       attr: { 'aria-label': t('chat.presets') }
     })
+    explain(ready, t('chat.presets'), t('tip.chat.presets'))
     setIcon(ready, 'zap')
     ready.disabled = missing !== null || this.pending
     ready.addEventListener('click', (event) => this.presetMenu(event))
@@ -1828,6 +1852,7 @@ export class ChatView extends ItemView {
       cls: 'clickable-icon pm-chat-ready',
       attr: { 'aria-label': t('chat.skillPick') }
     })
+    explain(skill, t('chat.skillPick'), t('tip.chat.skillPick'))
     setIcon(skill, 'sparkles')
     skill.disabled = missing !== null || this.pending
     skill.addEventListener('click', () => this.pickSkill())
@@ -1839,6 +1864,11 @@ export class ChatView extends ItemView {
       }
     })
     setIcon(library, 'library-big')
+    explain(
+      library,
+      this.plugin.ragIndexer.ready ? t('chat.vaultToggle') : t('chat.libraryToggle'),
+      this.plugin.ragIndexer.ready ? t('tip.chat.vault') : t('tip.chat.library')
+    )
     library.disabled = missing !== null || this.pending
     library.addEventListener('click', () => this.toggleLibrary())
     this.libraryButton = library
@@ -1849,6 +1879,11 @@ export class ChatView extends ItemView {
       attr: { 'aria-label': stoppable ? t('chat.stop') : t('chat.send') }
     })
     setIcon(this.sendEl, stoppable ? 'square' : 'send')
+    explain(
+      this.sendEl,
+      stoppable ? t('chat.stop') : t('chat.send'),
+      stoppable ? t('tip.chat.stop') : t('tip.chat.send')
+    )
     this.sendEl.disabled = missing !== null || (this.pending && !stoppable)
     this.sendEl.addEventListener(
       'click',
@@ -1868,6 +1903,7 @@ export class ChatView extends ItemView {
     setIcon(card.createDiv('pm-chat-setup-icon'), 'plug-zap')
     card.createDiv({ text: message })
     const open = card.createEl('button', { text: t('chat.openSettings') })
+    explain(open, t('chat.openSettings'), t('tip.chat.openSettings'))
     open.addEventListener('click', () => {
       // Obsidian's settings window is not part of its published API, and is reached the
       // way every plugin reaches it; where it is not there, the Notice says where to go.
@@ -1961,6 +1997,7 @@ export class ChatView extends ItemView {
     if (turn.failed) {
       if (last) {
         const retry = actions.createEl('button', { text: t('chat.retry') })
+        explain(retry, t('chat.retry'), t('tip.chat.retry'))
         retry.addEventListener('click', () => {
           this.turns = withoutFailure(this.turns)
           void this.ask()
@@ -1971,17 +2008,31 @@ export class ChatView extends ItemView {
     // A question can be copied, rewritten or asked again: the last two take its place and
     // that of everything said after it.
     if (turn.role === 'user') {
-      this.turnButton(actions, 'copy', t('chat.copyQuestion'), async () => {
-        await navigator.clipboard.writeText(turn.content)
-        new Notice(t('chat.copiedQuestion'))
-      })
-      this.turnButton(actions, 'pencil', t('chat.editQuestion'), () => this.edit(turn))
-      this.turnButton(actions, 'refresh-cw', t('chat.askAgain'), () => this.retake(turn))
+      this.turnButton(
+        actions,
+        'copy',
+        t('chat.copyQuestion'),
+        async () => {
+          await navigator.clipboard.writeText(turn.content)
+          new Notice(t('chat.copiedQuestion'))
+        },
+        t('tip.chat.copyQuestion')
+      )
+      this.turnButton(actions, 'pencil', t('chat.editQuestion'), () => this.edit(turn), t('tip.chat.editQuestion'))
+      this.turnButton(actions, 'refresh-cw', t('chat.askAgain'), () => this.retake(turn), t('tip.chat.askAgain'))
       return
     }
     // Written again: its question asked again, as it was.
     const question = this.questionOf(turn)
-    if (question) this.turnButton(actions, 'refresh-cw', t('chat.regenerate'), () => this.retake(question))
+    if (question) {
+      this.turnButton(
+        actions,
+        'refresh-cw',
+        t('chat.regenerate'),
+        () => this.retake(question),
+        t('tip.chat.regenerate')
+      )
+    }
     // A reply the length limit cut short says so, with the way to have the rest.
     if (turn.cut) {
       const note = el.createDiv('pm-chat-cut')
@@ -1989,6 +2040,7 @@ export class ChatView extends ItemView {
       note.createSpan({ text: t('chat.cut') })
       if (last) {
         const more = note.createEl('button', { text: t('chat.continue') })
+        explain(more, t('chat.continue'), t('tip.chat.continue'))
         more.addEventListener(
           'click',
           safeAsync(() => this.send(t('chat.continueQ')))
@@ -2009,6 +2061,7 @@ export class ChatView extends ItemView {
     const blocks = changeBlocks(turn.content).map((block) => this.plugin.changeEdits.get(block.trim()) ?? block)
     if (blocks.length > 1) {
       const all = actions.createEl('button', { text: t('chat.change.applyAll', { count: blocks.length }) })
+      explain(all, t('chat.change.applyAll', { count: blocks.length }), t('tip.chat.change.applyAll'))
       all.addEventListener(
         'click',
         safeAsync(async () => {
@@ -2026,6 +2079,7 @@ export class ChatView extends ItemView {
     const undoable = blocks.filter((block) => this.plugin.chatUndo.get(block) !== null)
     if (undoable.length > 1) {
       const back = actions.createEl('button', { text: t('chat.change.undoAll', { count: undoable.length }) })
+      explain(back, t('chat.change.undoAll', { count: undoable.length }), t('tip.chat.change.undoAll'))
       back.addEventListener(
         'click',
         safeAsync(async () => {
@@ -2044,18 +2098,21 @@ export class ChatView extends ItemView {
       cls: 'clickable-icon',
       attr: { 'aria-label': t('chat.insertReply') }
     })
+    explain(insert, t('chat.insertReply'), t('tip.chat.insertReply'))
     setIcon(insert, 'text-cursor-input')
     insert.addEventListener(
       'click',
       safeAsync(() => this.insertReply(turn))
     )
     const keep = actions.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.saveReply') } })
+    explain(keep, t('chat.saveReply'), t('tip.chat.saveReply'))
     setIcon(keep, 'file-plus-2')
     keep.addEventListener(
       'click',
       safeAsync(() => this.saveReply(turn))
     )
     const copy = actions.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.copy') } })
+    explain(copy, t('chat.copy'), t('tip.chat.copy'))
     setIcon(copy, 'copy')
     copy.addEventListener(
       'click',
@@ -2067,9 +2124,16 @@ export class ChatView extends ItemView {
   }
 
   /** A small button under a turn, doing nothing while a reply is being written. */
-  private turnButton(parent: HTMLElement, icon: string, label: string, run: () => void | Promise<void>): void {
+  private turnButton(
+    parent: HTMLElement,
+    icon: string,
+    label: string,
+    run: () => void | Promise<void>,
+    help = ''
+  ): void {
     const button = parent.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': label } })
     setIcon(button, icon)
+    explain(button, label, help)
     button.disabled = this.pending
     button.addEventListener(
       'click',
@@ -2291,10 +2355,11 @@ export class ChatView extends ItemView {
       return
     }
     for (const preset of presets) {
-      const chip = el.createEl('button', { cls: 'pm-chat-preset', attr: { title: preset.question } })
+      const chip = el.createEl('button', { cls: 'pm-chat-preset' })
       setIcon(chip.createSpan({ cls: 'pm-chat-preset-icon' }), scopeIcon(preset.scope))
       // A question with blanks says so: it asks something before it goes.
       const blanks = promptParams(preset.question).length > 0
+      explain(chip, preset.label, preset.question.length > 400 ? `${preset.question.slice(0, 399)}…` : preset.question)
       chip.createSpan({ cls: 'pm-chat-preset-label', text: blanks ? `${preset.label}…` : preset.label })
       chip.addEventListener(
         'click',

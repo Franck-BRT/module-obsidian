@@ -100,6 +100,7 @@ import {
   type ReqFlag,
   type ReqSortKey
 } from './reqFilter'
+import { explain } from '../../ui/explain'
 
 export const PM_REQUIREMENTS_VIEW_TYPE = 'pm-requirements'
 
@@ -114,6 +115,24 @@ const FLAGS: ReqFlag[] = ['weak', 'stale', 'unreviewed', 'missing', 'suspect', '
  * opening times, in whichever language somebody remembers it in, and say at a glance
  * which of them have drifted out of step with the source they were translated from.
  */
+/** What each way of seeing the requirements shows. */
+function modeHelp(id: string): string {
+  switch (id) {
+    case 'library':
+      return t('tip.req.mode.library')
+    case 'tree':
+      return t('tip.req.mode.tree')
+    case 'trace':
+      return t('tip.req.mode.trace')
+    case 'baseline':
+      return t('tip.req.mode.baseline')
+    case 'twins':
+      return t('tip.req.mode.twins')
+    default:
+      return ''
+  }
+}
+
 export class RequirementsView extends ItemView {
   private filter: ReqFilterState = { ...EMPTY_REQ_FILTER }
   /**
@@ -336,6 +355,7 @@ export class RequirementsView extends ItemView {
         .setLabel(label)
         .setShape('pill')
         .setActive(this.mode === id)
+        .explain(label, modeHelp(id))
         .onClick(() => {
           this.mode = id
           this.render()
@@ -353,6 +373,7 @@ export class RequirementsView extends ItemView {
       .setLabel(`${t('common.all')} · ${all.length}`)
       .setShape('pill')
       .setActive(this.filter.flag === 'all')
+      .explain(t('common.all'), t('tip.req.flagAll'))
       .onClick(() => {
         this.filter.flag = 'all'
         this.renderBodyOnly()
@@ -366,6 +387,7 @@ export class RequirementsView extends ItemView {
         .setLabel(`${flagLabel(flag)} · ${count}`)
         .setShape('pill')
         .setActive(this.filter.flag === flag)
+        .explain(flagLabel(flag), t('tip.req.flag'))
         .onClick(() => {
           this.filter.flag = this.filter.flag === flag ? 'all' : flag
           this.renderBodyOnly()
@@ -381,6 +403,7 @@ export class RequirementsView extends ItemView {
           .setLabel(lang.toUpperCase())
           .setShape('pill')
           .setActive(this.lang === lang)
+          .explain(lang.toUpperCase(), t('tip.req.lang'))
           .onClick(() => {
             this.lang = lang
             this.render()
@@ -395,6 +418,7 @@ export class RequirementsView extends ItemView {
           this.filter = { ...EMPTY_REQ_FILTER }
           this.render()
         })
+        .explain(t('common.clear'), t('tip.req.clearSearch'))
     }
     // Offered only when there is a gateway to ask and something for it to do: a button
     // that explains on click why it cannot work is a button that should not be drawn.
@@ -406,6 +430,11 @@ export class RequirementsView extends ItemView {
         bulk.createSpan({
           text: this.running ? t('req.bulkStop') : t('req.bulkTranslate', { count: jobs.length })
         })
+        explain(
+          bulk,
+          this.running ? t('req.bulkStop') : t('req.bulkTranslate', { count: jobs.length }),
+          this.running ? t('tip.req.stop') : t('tip.req.bulkTranslate')
+        )
         bulk.addEventListener(
           'click',
           this.running
@@ -432,6 +461,7 @@ export class RequirementsView extends ItemView {
           this.picked.clear()
           this.render()
         })
+        .explain(t('req.selected', { count: this.picked.size }), t('tip.req.selected'))
     }
 
     // A conversation about what is ticked: only a selection, never the whole list by
@@ -440,6 +470,7 @@ export class RequirementsView extends ItemView {
       const chat = right.createEl('button', { cls: 'pm-req-bulk' })
       setIcon(chat.createSpan({ cls: 'pm-glyph-icon' }), 'messages-square')
       chat.createSpan({ text: t('req.chatAbout', { count: this.picked.size }) })
+      explain(chat, t('req.chatAbout', { count: this.picked.size }), t('tip.req.chat'))
       chat.addEventListener(
         'click',
         safeAsync(async () => {
@@ -460,12 +491,14 @@ export class RequirementsView extends ItemView {
     }
 
     const port = right.createEl('button', { cls: 'pm-req-port', attr: { 'aria-label': t('req.exchange') } })
+    explain(port, t('req.exchange'), t('tip.req.exchange'))
     setIcon(port, 'arrow-down-up')
     port.addEventListener('click', (event) => this.showPortMenu(event, all, langs))
 
     const add = right.createEl('button', { cls: 'pm-req-new mod-cta' })
     setIcon(add.createSpan({ cls: 'pm-glyph-icon' }), 'plus')
     add.createSpan({ text: t('req.new') })
+    explain(add, t('req.new'), t('tip.req.new'))
     add.addEventListener('click', () => this.createRequirement())
   }
 
@@ -529,6 +562,7 @@ export class RequirementsView extends ItemView {
         .setLabel(strictnessLabel(level))
         .setShape('pill')
         .setActive(this.strictness === level)
+        .explain(strictnessLabel(level), t('tip.req.strictness'))
         .onClick(() => {
           this.strictness = level
           // The vectors are kept; only the line they are judged against moves.
@@ -540,6 +574,11 @@ export class RequirementsView extends ItemView {
       const ask = bar.createEl('button', { cls: 'pm-req-bulk' })
       setIcon(ask.createSpan({ cls: 'pm-glyph-icon' }), this.embedding ? 'square' : 'brain')
       ask.createSpan({ text: this.embedding ? t('req.bulkStop') : t('req.twinsAsk', { count: items.length }) })
+      explain(
+        ask,
+        this.embedding ? t('req.bulkStop') : t('req.twinsAsk', { count: items.length }),
+        this.embedding ? t('tip.req.stop') : t('tip.req.twinsAsk')
+      )
       ask.addEventListener(
         'click',
         this.embedding
@@ -588,6 +627,7 @@ export class RequirementsView extends ItemView {
       row.addClass('pm-req-twin--known')
     } else {
       const mark = head.createEl('button', { cls: 'pm-req-accept', text: t('req.twinsMark') })
+      explain(mark, t('req.twinsMark'), t('tip.req.twinsMark'))
       mark.addEventListener(
         'click',
         safeAsync(() => this.markDuplicate(left, right))
@@ -741,12 +781,14 @@ export class RequirementsView extends ItemView {
         .setLabel(t('req.foldAll'))
         .setShape('pill')
         .onClick(safeAsync(() => this.setFolded(branches, true)))
+        .explain(t('req.foldAll'), t('tip.req.foldAll'))
     }
     if (branches.some((id) => folded.has(id))) {
       new ChipButton(group)
         .setLabel(t('req.unfoldAll'))
         .setShape('pill')
         .onClick(safeAsync(() => this.setFolded(branches, false)))
+        .explain(t('req.unfoldAll'), t('tip.req.unfoldAll'))
     }
   }
 
@@ -1233,6 +1275,7 @@ export class RequirementsView extends ItemView {
 
     if (this.baseline) {
       const back = bar.createEl('button', { text: t('req.allBaselines') })
+      explain(back, t('req.allBaselines'), t('tip.req.allBaselines'))
       back.addEventListener('click', () => {
         this.baseline = null
         this.render()
@@ -1261,6 +1304,7 @@ export class RequirementsView extends ItemView {
         attr: { 'aria-label': t('req.deleteBaseline') }
       })
       setIcon(drop, 'trash')
+      explain(drop, t('req.deleteBaseline'), t('tip.req.deleteBaseline'))
       drop.addEventListener(
         'click',
         safeAsync(async (event: MouseEvent) => {
@@ -1494,6 +1538,7 @@ export class RequirementsView extends ItemView {
       .setLabel(`${t('common.all')} · ${all.length}`)
       .setShape('pill')
       .setActive(this.gapFilter === null)
+      .explain(t('common.all'), t('tip.req.gapAll'))
       .onClick(() => {
         this.gapFilter = null
         this.render()
@@ -1504,6 +1549,7 @@ export class RequirementsView extends ItemView {
         .setLabel(`${gapLabel(gap)} · ${counts[gap]}`)
         .setShape('pill')
         .setActive(this.gapFilter === gap)
+        .explain(gapLabel(gap), t('tip.req.gap'))
         .onClick(() => {
           this.gapFilter = this.gapFilter === gap ? null : gap
           this.render()

@@ -400,7 +400,7 @@ export const fr: Catalog = {
   'tip.library.pour':
     'Ajoute des fichiers de ton ordinateur : ils sont copiés dans la bibliothèque, classés d’après leur nom et lus pour la recherche. Tu peux aussi les faire glisser dans la liste.',
   'tip.library.moreFilters': 'Affiche les autres filtres : catégorie, lot, émetteur, étiquette et type de fichier.',
-  'tip.library.askChat': 'Ouvre le chat avec les documents cochés joints, pour poser une question sur leur contenu.',
+  'tip.library.askChat': 'Ouvre le chat avec les éléments cochés joints, pour poser une question sur leur contenu.',
   'tip.library.classify':
     'Propose une catégorie, un lot, un émetteur et des étiquettes pour les documents cochés, d’après leur nom et leur contenu.',
   'tip.library.moveTo': 'Range les documents cochés dans un dossier de la bibliothèque, existant ou nouveau.',
@@ -424,6 +424,189 @@ export const fr: Catalog = {
   'tip.folder.chip': 'Ouvre ce dossier. Fais glisser des documents dessus pour les y ranger.',
   'tip.folder.rename': 'Renomme ce dossier ; les liens vers ses documents suivent.',
   'tip.folder.remove': 'Supprime ce dossier ; ses documents remontent dans le dossier parent.',
+  'tip.agenda.manage':
+    'Modifier, créer, dupliquer ou supprimer les modèles d’ordre du jour, et restaurer ceux fournis.',
+  'tip.agendas.delete': 'Met la note de cet ordre du jour à la corbeille, après confirmation.',
+  'tip.chase.button':
+    'Prépare les relances des documents en retard de cet émetteur : un mail prêt à envoyer, et la relance notée sur les documents.',
+  'tip.chat.attachFile':
+    'Joint un fichier à la question : le modèle lit son contenu. Un PDF scanné peut être lu par le modèle qui voit.',
+  'tip.chat.change.applyAll': 'Applique toutes les propositions de cette réponse d’un coup. Chacune reste annulable.',
+  'tip.chat.change.asModification':
+    'Le ticket existe déjà : applique la proposition comme une modification de ce ticket plutôt que d’en créer un second.',
+  'tip.chat.change.createLot': 'Le lot proposé n’existe pas encore : le crée, puis y place le ticket.',
+  'tip.chat.change.edit': 'Ouvre la carte en modification : tu corriges les champs proposés avant d’appliquer.',
+  'tip.chat.change.pickParentButton': 'Place le ticket sous l’élément choisi dans la liste.',
+  'tip.chat.change.pickProjectButton': 'Crée le ticket dans le projet choisi.',
+  'tip.chat.change.saveEdits': 'Garde tes corrections sur la carte ; il reste à l’appliquer.',
+  'tip.chat.change.undo': 'Défait ce changement : le ticket ou la note revient à son état d’avant.',
+  'tip.chat.change.undoAll': 'Annule tous les changements appliqués depuis cette réponse.',
+  'tip.chat.continue':
+    'La réponse a été coupée par sa longueur : demande au modèle de reprendre là où il s’est arrêté.',
+  'tip.chat.copy': 'Copie la réponse dans le presse-papiers, au format Markdown.',
+  'tip.chat.detach': 'Retire les exigences jointes : les prochaines questions ne les verront plus.',
+  'tip.chat.editCancel': 'Abandonne la réécriture de la question ; la conversation reste comme elle était.',
+  'tip.chat.fileOff': 'Retire ce fichier : les prochaines questions ne le verront plus.',
+  'tip.chat.insertReply': 'Écrit la réponse dans la note ouverte, au curseur ou à la place du texte sélectionné.',
+  'tip.chat.libraryOff': 'Les prochaines questions ne chercheront plus de passages dans la bibliothèque et le coffre.',
+  'tip.chat.note.chooseFolder': 'Choisis le dossier où la note sera créée.',
+  'tip.chat.note.clean': 'Retire de la note les lignes que le modèle a signalées, après vérification de la carte.',
+  'tip.chat.note.copy': 'Copie le texte proposé dans le presse-papiers, sans créer de note.',
+  'tip.chat.note.createAnother': 'Crée une nouvelle note au lieu de modifier celle qui porte déjà ce titre.',
+  'tip.chat.ocrOpen': 'Ouvre le texte que le modèle a lu dans ce document, pour le vérifier ou le corriger.',
+  'tip.chat.openSettings': 'Ouvre les réglages du plugin, pour renseigner l’adresse et les modèles de la passerelle.',
+  'tip.chat.presets': 'Questions toutes prêtes : point d’avancement, retards, risques, échéances, relances, résumé…',
+  'tip.chat.projectOff': 'Retire ce projet : les prochaines questions ne verront plus ses tickets.',
+  'tip.chat.retry': 'Repose la même question, après une erreur du modèle ou de la connexion.',
+  'tip.chat.saveReply': 'Crée une note avec cette réponse, dans le dossier du projet joint.',
+  'tip.chat.selectionOff': 'Retire le passage sélectionné de la question.',
+  'tip.chat.skillOff': 'Retire cette compétence : ses consignes ne s’appliqueront plus.',
+  'tip.chat.skillPick': 'Ajoute une compétence : une note de consignes que le modèle suivra pour cette conversation.',
+  'tip.contact.details': 'Affiche ou masque les tickets et documents de cet intervenant.',
+  'tip.contact.edit': 'Modifie sa fiche : type, entreprise, fonction, courriel, téléphone, lots.',
+  'tip.contact.make': 'Crée une fiche d’intervenant pour ce nom, pour retrouver ses coordonnées et ce qu’il a à faire.',
+  'tip.req.allBaselines': 'Revient à la liste de toutes les références des exigences.',
+  'tip.req.exchange': 'Importe des exigences (Excel, Word, ReqIF, CSV) ou exporte celles affichées.',
+  'tip.req.twinsMark':
+    'Indique que ces deux exigences disent la même chose ; elles ne seront plus proposées comme doublons possibles.',
+  'tip.chat.openNote': 'Ouvre la note où cette conversation est enregistrée.',
+  'tip.chat.branches':
+    'Montre les branches de la conversation : les questions reposées autrement, pour reprendre l’une d’elles.',
+  'tip.chat.history': 'Reprend une conversation enregistrée.',
+  'tip.chat.changes':
+    'Tout ce que le chat a modifié, toutes conversations confondues : quoi, quand, pourquoi, et l’annulation encore possible.',
+  'tip.chat.new': 'Commence une nouvelle conversation ; la précédente reste enregistrée.',
+  'tip.chat.model':
+    'Modèle utilisé pour les prochaines questions : {model}. Clique pour en choisir un autre parmi ceux de la passerelle.',
+  'tip.chat.note': 'Joint ou non la note ouverte : quand l’œil est ouvert, le modèle lit son contenu avec la question.',
+  'tip.chat.pickProject':
+    'Joint un projet : le modèle connaît ses tickets, dates, retards, et peut proposer des modifications.',
+  'tip.chat.ocr': 'Fait lire ce PDF par le modèle qui voit (scan, plan, planning en image) au lieu de son texte.',
+  'tip.chat.vault':
+    'Cherche dans tout le coffre et la bibliothèque les passages qui répondent à la question, et les cite en sources.',
+  'tip.chat.library':
+    'Cherche dans la bibliothèque de documents les passages qui répondent à la question, et les cite en sources.',
+  'tip.chat.send': 'Envoie la question (Entrée). Maj+Entrée pour aller à la ligne.',
+  'tip.chat.stop': 'Arrête la réponse en cours ; ce qui est déjà écrit est gardé.',
+  'tip.chat.copyQuestion': 'Copie la question dans le presse-papiers.',
+  'tip.chat.editQuestion':
+    'Réécris cette question : la suite de la conversation repart de là, l’ancienne branche reste consultable.',
+  'tip.chat.askAgain': 'Repose cette question telle quelle, pour une autre réponse.',
+  'tip.chat.regenerate': 'Demande une nouvelle réponse à la même question ; l’ancienne reste dans les branches.',
+  'tip.chat.change.apply':
+    'Applique ce changement. Il reste annulable depuis la carte ou l’historique des modifications.',
+  'tip.chat.change.applyWarning':
+    'Applique ce changement après ta validation. Il reste annulable depuis la carte ou l’historique des modifications.',
+  'tip.chat.note.replace':
+    'Remplace le texte de la note (ou de sa section) par celui proposé ; annulable depuis la carte.',
+  'tip.chat.note.appendIn': 'Ajoute le texte proposé à la fin de cette section de la note.',
+  'tip.chat.note.appendEnd': 'Ajoute le texte proposé à la fin de la note.',
+  'tip.chat.note.create': 'Crée la note proposée, dans le dossier indiqué ; annulable depuis la carte.',
+  'tip.bulk.removeParent':
+    'Sort les tickets sélectionnés de leur parent ou de leur lot : ils remontent au premier niveau.',
+  'tip.bulk.setAssignee': 'Assigne tous les tickets sélectionnés à une personne, ou leur retire leurs assignés.',
+  'tip.bulk.setDueDate':
+    'Donne la même échéance à tous les tickets sélectionnés : aujourd’hui, demain, ou une date choisie.',
+  'tip.bulk.setParent': 'Range les tickets sélectionnés sous un même parent ou dans un même lot.',
+  'tip.bulk.setPriority': 'Donne la même priorité à tous les tickets sélectionnés.',
+  'tip.bulk.setProgress': 'Donne le même avancement à tous les tickets sélectionnés.',
+  'tip.bulk.setStatus': 'Donne le même statut à tous les tickets sélectionnés.',
+  'tip.bulk.setTag': 'Ajoute une étiquette à tous les tickets sélectionnés, ou leur retire toutes leurs étiquettes.',
+  'tip.bulk.archive': 'Archive les tickets sélectionnés : ils quittent les vues, sans être supprimés.',
+  'tip.bulk.unarchive': 'Remet les tickets sélectionnés dans les vues.',
+  'tip.bulk.delete': 'Supprime les tickets sélectionnés et leurs notes, après confirmation.',
+  'tip.chat.title': 'Ouvre le chat avec le modèle de langage, à côté de ce que tu lis.',
+  'tip.contact.title':
+    'Les entreprises et personnes de tous les projets : coordonnées, tickets, documents dus et retards.',
+  'tip.count.messages': 'Le nombre de courriels déposés dans ce projet.',
+  'tip.folders.moveTo': 'Range les notes cochées dans un dossier de la bibliothèque de notes, existant ou nouveau.',
+  'tip.folders.newFolder': 'Crée un dossier dans la bibliothèque de notes.',
+  'tip.gantt.baseline':
+    'Le planning de référence : le figer, l’afficher sous les barres avec l’écart de chaque tâche, ou l’effacer.',
+  'tip.gantt.collapseAll': 'Replie tous les lots et tickets parents : on ne voit plus que le premier niveau.',
+  'tip.gantt.expandAll': 'Déplie tous les lots et tickets parents.',
+  'tip.kpi.report':
+    'Écrit une note de rapport d’état dans le dossier du projet : chiffres, lots, jalons, charge et risques, en tableaux.',
+  'tip.kpi.risksOpen': 'Ouvre la vue Risques : matrice et registre complet.',
+  'tip.library.fromLibrary': 'Rattache à ce projet un document déjà dans la bibliothèque, sans le copier.',
+  'tip.library.title':
+    'Tous les documents, de tous les projets ou d’aucun : verser, classer, lire, traduire, interroger.',
+  'tip.library.toLibrary':
+    'Verse les fichiers du registre de ce projet dans la bibliothèque, là où ils sont, pour la recherche et le chat.',
+  'tip.notes.fileTo': 'Rattache les notes à un ou plusieurs projets.',
+  'tip.notes.more': 'Toutes les actions sur cette note : ouvrir, rattacher, déplacer, supprimer…',
+  'tip.notes.new': 'Crée une note dans la bibliothèque de notes et l’ouvre.',
+  'tip.notes.title': 'Les notes d’aucun projet encore, et la boîte de réception où arrivent les nouvelles.',
+  'tip.program.addProject': 'Crée un projet dans ce programme.',
+  'tip.project.newMenu': 'Crée un projet, un programme ou un modèle de projet.',
+  'tip.req.foldAll': 'Replie toutes les exigences : on ne voit plus que leurs titres.',
+  'tip.req.libraryTitle': 'La bibliothèque d’exigences : rédiger, vérifier, tracer, traduire, importer et exporter.',
+  'tip.req.selected': 'Les exigences sélectionnées ; clique pour tout désélectionner.',
+  'tip.req.unfoldAll': 'Déplie toutes les exigences.',
+  'tip.req.clearSearch': 'Retire tous les filtres de la liste d’exigences.',
+  'tip.table.clearSelection': 'Désélectionne tous les tickets.',
+  'tip.view.bordereau':
+    'Écrit le bordereau d’envoi des documents cochés : références, indices, versions et destinataires.',
+  'tip.register.all': 'Montre tous les documents du registre, quel que soit leur état.',
+  'tip.register.state': 'Ne montre que les documents du registre dans cet état ; un autre clic revient à tous.',
+  'tip.register.orphans':
+    'Fichiers du dossier du projet qu’aucun document du registre ne cite : clique pour en rattacher un.',
+  'tip.impacts.all': 'Montre tous les croisements, quelle que soit leur gravité.',
+  'tip.impacts.level': 'Ne montre que les croisements de cette gravité ; un autre clic revient à tous.',
+  'tip.agendas.prepare': 'Choisis un modèle et une date : l’ordre du jour est rempli depuis le projet et créé en note.',
+  'tip.agenda.edit': 'Ouvre la note du modèle pour en changer la forme ou les blocs.',
+  'tip.agenda.duplicate': 'Crée une copie du modèle, à adapter sans toucher à l’original.',
+  'tip.agenda.delete': 'Met le modèle à la corbeille, après confirmation.',
+  'tip.agenda.restore': 'Recrée les modèles fournis qui manquent ; ceux que tu as modifiés ne sont pas touchés.',
+  'tip.agenda.new': 'Crée un modèle vide avec la liste des blocs disponibles, et l’ouvre.',
+  'tip.risk.new': 'Crée un risque : probabilité, impact, parade, responsable et date de revue.',
+  'tip.risk.cell':
+    '{count} risque(s) ouvert(s) dans cette case. Clique pour filtrer le registre dessus ; un autre clic l’enlève.',
+  'tip.contact.new': 'Crée une fiche d’entreprise ou de personne : coordonnées, fonction, lots.',
+  'tip.chase.withChat':
+    'Le chat rédige les relances à sa façon, une par émetteur, à partir de la liste exacte des documents en retard.',
+  'tip.chase.copy':
+    'Copie l’objet et le texte de la relance, à coller dans ta messagerie. La relance est notée si la case est cochée.',
+  'tip.chase.openMail':
+    'Ouvre ta messagerie avec le destinataire, l’objet et le texte déjà remplis. La relance est notée si la case est cochée.',
+  'tip.chase.noteNow':
+    'Note la relance d’aujourd’hui sur ces documents, pour que la suivante sache qu’elle n’est pas la première.',
+  'tip.kpi.late': 'Les tickets dont l’échéance est passée. Clique pour les voir dans le tableur.',
+  'tip.kpi.dueSoon': 'Les tickets dus cette semaine. Clique pour les voir dans le tableur.',
+  'tip.kpi.open': 'Les tickets pas encore terminés. Clique pour les voir dans le tableur.',
+  'tip.kpi.undated':
+    'Les tickets ouverts sans échéance : ils n’apparaissent nulle part dans le planning. Clique pour les voir.',
+  'tip.kpi.awaitedDocs':
+    'Les documents attendus pas encore reçus ; en rouge s’il y en a en retard. Clique pour ouvrir le registre.',
+  'tip.kpi.risks':
+    'Les risques encore ouverts ; en rouge s’il y en a un critique. Clique pour ouvrir le registre des risques.',
+  'tip.kpi.hours': 'Le temps passé saisi sur les tickets du projet.',
+  'tip.kpi.riskCell': 'Clique pour ouvrir le registre des risques filtré sur cette case.',
+  'tip.kpi.riskRow': 'Clique pour ouvrir ce risque.',
+  'tip.req.mode.library': 'Les exigences en liste, avec leurs rédactions, filtres et traductions.',
+  'tip.req.mode.tree': 'Les exigences rangées par parent et dérivées, en arbre.',
+  'tip.req.mode.trace': 'La traçabilité : qui cite, satisfait et vérifie chaque exigence, et les trous de couverture.',
+  'tip.req.mode.baseline': 'Les références figées des exigences, pour comparer une version à une autre.',
+  'tip.req.mode.twins': 'Les exigences qui disent peut-être la même chose, à fusionner ou à marquer distinctes.',
+  'tip.req.flagAll': 'Montre toutes les exigences, sans filtre d’alerte.',
+  'tip.req.flag': 'Ne montre que les exigences qui portent cette alerte ; un autre clic revient à toutes.',
+  'tip.req.lang': 'Affiche les exigences dans cette langue, quand une traduction existe.',
+  'tip.req.stop': 'Arrête le traitement en cours ; ce qui est fait est gardé.',
+  'tip.req.bulkTranslate':
+    'Fait traduire par le modèle les rédactions qui manquent ou ont changé, dans les langues de la bibliothèque.',
+  'tip.req.chat': 'Ouvre le chat avec les exigences sélectionnées jointes.',
+  'tip.req.new': 'Rédige une nouvelle exigence dans la bibliothèque.',
+  'tip.req.strictness': 'Le degré de ressemblance à partir duquel deux exigences sont proposées comme doublons.',
+  'tip.req.twinsAsk':
+    'Fait comparer le sens des exigences par le modèle (embeddings), pour trouver les doublons qui ne se ressemblent pas mot à mot.',
+  'tip.req.deleteBaseline': 'Supprime cette référence figée, après confirmation ; les exigences ne sont pas touchées.',
+  'tip.req.gapAll': 'Montre toutes les exigences, quel que soit leur trou de couverture.',
+  'tip.req.gap': 'Ne montre que les exigences qui ont ce trou de couverture ; un autre clic revient à toutes.',
+  'tip.project.openTasks':
+    'Ouvre les tickets du projet : tableur, Gantt, tableau, documents, risques, tableau de bord.',
+  'tip.editor.more': 'Autres actions sur ce ticket : l’ouvrir dans un onglet ou comme note, le désarchiver.',
+  'tip.project.collection':
+    'Cette vue rassemble des tickets de plusieurs projets. Clique pour enregistrer ses filtres comme règle, ou retirer la règle.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

@@ -121,6 +121,7 @@ export class ImpactsView implements SubView {
       .setLabel(`${t('common.all')} · ${inZone.length}`)
       .setShape('pill')
       .setActive(this.levelFilter === null)
+      .explain(t('common.all'), t('tip.impacts.all'))
       .onClick(() => {
         this.levelFilter = null
         this.render()
@@ -134,6 +135,7 @@ export class ImpactsView implements SubView {
         .setLabel(`${impactLevelLabel(level)} · ${count}`)
         .setShape('pill')
         .setActive(this.levelFilter === level)
+        .explain(impactLevelLabel(level), t('tip.impacts.level'))
         .onClick(() => {
           // Clicking the one already on clears it, so the filter never becomes a trap.
           this.levelFilter = this.levelFilter === level ? null : level
