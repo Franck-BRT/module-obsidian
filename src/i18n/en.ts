@@ -333,7 +333,7 @@ export const en = {
   'translate.glossaryDesc': 'The terms imposed by the « {path} » note.',
   'translate.openGlossary': 'Open the glossary',
   'translate.limits':
-    'Good to know: a bold or italic word in the middle of a sentence may lose its formatting; text inside images is not translated; in Word, the table of contents and cross-references update with F9; in PowerPoint, a longer translated text may overflow its box; in Excel, sheet names are not translated, and texts a formula, a drop-down list or a conditional format uses stay as they are so the workbook keeps working.',
+    'Good to know: a bold or italic word in the middle of a sentence may lose its formatting; text inside images is not translated; in Word, the table of contents and cross-references update with F9; in PowerPoint, a longer translated text may overflow its box; in Excel, sheet names and the headers of structured tables (Insert › Table) are not translated.',
   'translate.go': 'Translate',
   'translate.noModel':
     'No model is set up to translate: fill in the translation (or text) model in the language model settings.',
@@ -585,9 +585,12 @@ export const en = {
   'tip.project.collection':
     'This view gathers tickets from several projects. Click to save its filters as a rule, or remove the rule.',
   'translate.kept': {
-    one: '{count} text of the workbook was kept as it is, as a formula or a list uses it: {list}',
-    other: '{count} texts of the workbook were kept as they are, as formulas or lists use them: {list}'
+    one: '{count} text of the workbook was kept as it is, as a formula, a list or a table uses it: {list}',
+    other: '{count} texts of the workbook were kept as they are, as formulas, lists or tables use them: {list}'
   },
+  'translate.formulaTexts': 'Excel: also translate the texts in formulas',
+  'translate.formulaTextsDesc':
+    'The texts that formulas, drop-down lists and conditional formats use (a « Late » status, a « Chase the company » message…) are translated, and replaced the same way in cells, formulas, lists and rules, so the workbook keeps working. Unticked, they stay as they are. Date or number formats, addresses and sheet names in formulas are never touched; formulas are recalculated on opening.',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

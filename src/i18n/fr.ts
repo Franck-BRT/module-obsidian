@@ -329,7 +329,7 @@ export const fr: Catalog = {
   'translate.glossaryDesc': 'Les termes imposés de la note « {path} ».',
   'translate.openGlossary': 'Ouvrir le glossaire',
   'translate.limits':
-    'À savoir : un mot en gras ou en italique au milieu d’une phrase peut perdre sa mise en forme ; le texte dans les images n’est pas traduit ; dans Word, le sommaire et les renvois se mettent à jour avec F9 ; dans PowerPoint, un texte traduit plus long peut déborder de sa zone ; dans Excel, les noms d’onglets ne sont pas traduits, et les textes utilisés par une formule, une liste déroulante ou une mise en forme conditionnelle restent tels quels pour que le classeur continue de fonctionner.',
+    'À savoir : un mot en gras ou en italique au milieu d’une phrase peut perdre sa mise en forme ; le texte dans les images n’est pas traduit ; dans Word, le sommaire et les renvois se mettent à jour avec F9 ; dans PowerPoint, un texte traduit plus long peut déborder de sa zone ; dans Excel, les noms d’onglets et les en-têtes des tableaux structurés (Insertion › Tableau) ne sont pas traduits.',
   'translate.go': 'Traduire',
   'translate.noModel':
     'Aucun modèle n’est configuré pour traduire : renseigne le modèle de traduction (ou de texte) dans les réglages du modèle de langage.',
@@ -608,10 +608,13 @@ export const fr: Catalog = {
   'tip.project.collection':
     'Cette vue rassemble des tickets de plusieurs projets. Clique pour enregistrer ses filtres comme règle, ou retirer la règle.',
   'translate.kept': {
-    one: '{count} texte du classeur est resté tel quel, parce qu’une formule ou une liste l’utilise : {list}',
+    one: '{count} texte du classeur est resté tel quel, parce qu’une formule, une liste ou un tableau l’utilise : {list}',
     other:
-      '{count} textes du classeur sont restés tels quels, parce que des formules ou des listes les utilisent : {list}'
+      '{count} textes du classeur sont restés tels quels, parce que des formules, des listes ou des tableaux les utilisent : {list}'
   },
+  'translate.formulaTexts': 'Excel : traduire aussi les textes des formules',
+  'translate.formulaTextsDesc':
+    'Les textes qu’utilisent les formules, les listes déroulantes et les mises en forme conditionnelles (un statut « Late », un message « Chase the company »…) sont traduits, et remplacés de la même façon dans les cellules, les formules, les listes et les règles, pour que le classeur continue de fonctionner. Décoché, ils restent tels quels. Les formats de date ou de nombre, les adresses et les noms d’onglets dans les formules ne sont jamais touchés ; les formules sont recalculées à l’ouverture.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

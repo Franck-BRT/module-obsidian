@@ -42,6 +42,8 @@ export function openTranslate(plugin: PMPlugin, docs: LibraryDoc[]): void {
 class TranslateModal extends Modal {
   private language: string
   private useGlossary = true
+  /** A workbook's formulas' texts translated too: asked each time, off unless ticked. */
+  private formulaTexts = false
 
   constructor(
     private plugin: PMPlugin,
@@ -86,6 +88,16 @@ class TranslateModal extends Modal {
           })
         )
       )
+    if (this.docs.some((doc) => /\.xlsx$/i.test(doc.file))) {
+      new Setting(root)
+        .setName(t('translate.formulaTexts'))
+        .setDesc(t('translate.formulaTextsDesc'))
+        .addToggle((toggle) =>
+          toggle.setValue(this.formulaTexts).onChange((value) => {
+            this.formulaTexts = value
+          })
+        )
+    }
     root.createEl('p', { cls: 'pm-translate-note', text: t('translate.limits') })
     new Setting(root)
       .addButton((button) => button.setButtonText(t('common.cancel')).onClick(() => this.close()))
@@ -98,7 +110,10 @@ class TranslateModal extends Modal {
               this.plugin.settings.translationLanguage = this.language
               await this.plugin.saveSettings()
               this.close()
-              await translateDocuments(this.plugin, this.docs, this.language, this.useGlossary)
+              await translateDocuments(this.plugin, this.docs, this.language, {
+                useGlossary: this.useGlossary,
+                formulaTexts: this.formulaTexts
+              })
             })
           )
       )

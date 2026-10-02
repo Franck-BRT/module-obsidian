@@ -46,15 +46,14 @@ async function readGlossary(plugin: PMPlugin): Promise<GlossaryEntry[]> {
 
 /**
  * Documents translated, one after another in the queue the scans wait in: each read,
- * translated a batch of paragraphs at a time, written back as a Word document of its
- * own, poured into the library beside the source — same folder, same projects, filed
+ * translated a batch of paragraphs at a time, written back as a document of its own, poured into the library beside the source — same folder, same projects, filed
  * alike — and marked as its translation. False when no model is set up.
  */
 export async function translateDocuments(
   plugin: PMPlugin,
   docs: LibraryDoc[],
   language: string,
-  useGlossary: boolean
+  options: { useGlossary: boolean; formulaTexts: boolean }
 ): Promise<boolean> {
   const llm = plugin.settings.llm
   const model = llm.modelTranslate.trim() || chatModel(plugin.settings.chat.model, llm.modelText)
@@ -63,7 +62,7 @@ export async function translateDocuments(
     return false
   }
   const client = new LlmClient({ settings: llm })
-  const glossary = useGlossary ? await readGlossary(plugin) : []
+  const glossary = options.useGlossary ? await readGlossary(plugin) : []
   const code = language.toUpperCase()
   void plugin.scans.add(
     docs.filter(translatable).map((doc) => ({
@@ -74,7 +73,13 @@ export async function translateDocuments(
         const file = plugin.app.vault.getAbstractFileByPath(doc.file)
         if (!(file instanceof TFile)) throw new Error(t('library.fileMissing'))
         try {
-          const opened = await openDocxForTranslation(new Uint8Array(await plugin.app.vault.readBinary(file)), language)
+          const opened = await openDocxForTranslation(
+            new Uint8Array(await plugin.app.vault.readBinary(file)),
+            language,
+            {
+              formulaTexts: options.formulaTexts
+            }
+          )
           const translations = await translateTexts(
             client,
             opened.texts,
@@ -100,7 +105,7 @@ export async function translateDocuments(
           const made = report.docs[0] ?? plugin.library.docs().find((one) => one.record === report.known[0])
           if (made) await plugin.library.setTranslationOf(made, doc, language)
           new Notice(t('translate.written', { title: doc.title, name: translatedName(doc.file, language) }), 8000)
-          // Texts the workbook's formulas compare with, left as they were: said, so none is a surprise.
+          // Texts the workbook's formulas or tables need, left as they were: said, so none is a surprise.
           if (opened.kept.length) {
             new Notice(
               t('translate.kept', { count: opened.kept.length, list: opened.kept.slice(0, 8).join(', ') }),

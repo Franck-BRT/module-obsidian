@@ -288,4 +288,68 @@ describe('an Excel workbook translated', () => {
     expect(read('xl/comments1.xml')).toContain('Selon la météo')
     expect(read('xl/workbook.xml')).toContain('name="Planning"')
   })
+
+  it('translates on demand the words its formulas, lists and conditional formats use, the same everywhere', async () => {
+    const { zip, utf8 } = await import('../zip')
+    const parts = {
+      '[Content_Types].xml': '<Types/>',
+      'xl/workbook.xml': '<workbook><sheets><sheet name="Planning" sheetId="1"/></sheets><definedNames/></workbook>',
+      'xl/sharedStrings.xml': '<sst><si><t>Status</t></si><si><t>Late</t></si><si><t>Done</t></si></sst>',
+      'xl/worksheets/sheet1.xml':
+        '<worksheet><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row>' +
+        '<row r="2"><c r="A2" t="s"><v>1</v></c>' +
+        '<c r="B2" t="str"><f>IF(A2="Late","Chase the company","")</f><v>Chase the company</v></c>' +
+        '<c r="C2"><f>COUNTIF(A:A,"&lt;&gt;Done")+LEN(TEXT(D2,"dd mmm yyyy"))</f><v>1</v></c></row></sheetData>' +
+        '<conditionalFormatting sqref="A2:C9"><cfRule type="expression"><formula>$A2="Late"</formula></cfRule>' +
+        '<cfRule type="containsText" operator="containsText" text="Late"><formula>NOT(ISERROR(SEARCH("Late",A2)))</formula></cfRule></conditionalFormatting>' +
+        '<dataValidations><dataValidation type="list" sqref="A2:A9"><formula1>"Late,Done"</formula1></dataValidation></dataValidations></worksheet>',
+      'xl/tables/table1.xml':
+        '<table><tableColumns count="1"><tableColumn id="1" name="Status"/></tableColumns></table>'
+    }
+    const source = zip(Object.entries(parts).map(([name, xml]) => ({ name, data: utf8(xml) })))
+    const opened = await openDocxForTranslation(source, 'fr', { formulaTexts: true })
+    expect(opened.texts).toEqual(['Late', 'Done', 'Chase the company'])
+    expect(opened.kept).toEqual(['Status'])
+    const french: Record<string, string> = {
+      Status: 'Statut',
+      Late: 'En retard, urgent',
+      Done: 'Fait',
+      'Chase the company': 'Relancer l’entreprise'
+    }
+    const out = await unzip(opened.build((text) => french[text]))
+    const read = (name: string): string => new TextDecoder().decode(out.find((entry) => entry.name === name)?.data)
+    expect(read('xl/sharedStrings.xml')).toBe(
+      '<sst><si><t>Status</t></si><si><t xml:space="preserve">En retard urgent</t></si><si><t xml:space="preserve">Fait</t></si></sst>'
+    )
+    const sheet = read('xl/worksheets/sheet1.xml')
+    expect(sheet).toContain('<f>IF(A2=&quot;En retard urgent&quot;,&quot;Relancer l’entreprise&quot;,&quot;&quot;)</f>')
+    expect(sheet).toContain('<v>Relancer l’entreprise</v>')
+    expect(sheet).toContain('COUNTIF(A:A,&quot;&lt;&gt;Fait&quot;)+LEN(TEXT(D2,&quot;dd mmm yyyy&quot;))')
+    expect(sheet).toContain('<formula>$A2=&quot;En retard urgent&quot;</formula>')
+    expect(sheet).toContain('text="En retard urgent"')
+    expect(sheet).toContain('SEARCH(&quot;En retard urgent&quot;,A2)')
+    expect(sheet).toContain('<formula1>&quot;En retard urgent,Fait&quot;</formula1>')
+    expect(read('xl/workbook.xml')).toContain('<definedNames/><calcPr fullCalcOnLoad="1"/></workbook>')
+  })
+})
+
+describe('a formula’s texts', () => {
+  it('are told from sheet names, table columns and the function they are given to', async () => {
+    const { literalsOf } = await import('./docxTranslate')
+    const found = literalsOf('IF(\'Bob\'\'s "plan"\'!A1="Done",Table1[[#This Row],["Status"]],TEXT(B1,"dd ""x"""))')
+    expect(found.map((one) => [one.value, one.call])).toEqual([
+      ['Done', 'IF'],
+      ['dd "x"', 'TEXT']
+    ])
+  })
+
+  it('are words to translate, but for codes, addresses and patterns', async () => {
+    const { formulaWords } = await import('./docxTranslate')
+    const sheet =
+      '<f>IF(A1="*late*",HYPERLINK("https://x.org","Open the site"),INDIRECT("Budget!A1"))&amp;"Sheet2!B3"</f>' +
+      '<x14:dataValidation><x14:formula1><xm:f>"Yes,No,42"</xm:f></x14:formula1></x14:dataValidation>'
+    const { words, choices } = formulaWords(sheet)
+    expect([...words]).toEqual(['late', 'Yes', 'No'])
+    expect([...choices]).toEqual(['Yes', 'No'])
+  })
 })
