@@ -16,13 +16,23 @@ export type GanttWeekLabel = 'weekNumber' | 'dateRange' | 'both'
  * the saved-view reader, the default-view setting — are derived from it and cannot be
  * left a view behind.
  */
-export const VIEW_MODES = ['table', 'gantt', 'kanban', 'library', 'mail', 'impacts', 'risks', 'dashboard'] as const
+export const VIEW_MODES = [
+  'table',
+  'gantt',
+  'kanban',
+  'library',
+  'mail',
+  'impacts',
+  'risks',
+  'decisions',
+  'dashboard'
+] as const
 export type ViewMode = (typeof VIEW_MODES)[number]
 export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
 export const IMPACT_ROLES = ['both', 'emitter', 'receiver'] as const
 export const IMPACT_LEVELS = ['blocking', 'caution', 'info'] as const
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
-export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document' | 'meeting' | 'risk'
+export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document' | 'meeting' | 'risk' | 'decision'
 
 /**
  * Every kind of ticket, in the order they are offered.
@@ -39,7 +49,8 @@ const TASK_TYPE_ORDER = {
   phase: true,
   document: true,
   meeting: true,
-  risk: true
+  risk: true,
+  decision: true
 } satisfies Record<TaskType, true>
 
 export const TASK_TYPES = Object.keys(TASK_TYPE_ORDER) as TaskType[]
@@ -184,6 +195,24 @@ export interface TaskRisk {
   mitigation: string
 }
 
+/** Where a decision stands: put forward, taken, replaced by a later one, or dropped. */
+export type DecisionState = 'proposed' | 'decided' | 'superseded' | 'cancelled'
+
+/**
+ * A decision as the register keeps it: when it was taken and by whom, why, and what it
+ * bears on — tickets and documents by a link to their note, requirements by their id,
+ * anything else in words. By when it must be taken, while it is only proposed, is the
+ * ticket's own due date.
+ */
+export interface TaskDecision {
+  state: DecisionState
+  /** The day it was taken, YYYY-MM-DD; '' while it is not. */
+  date: string
+  decidedBy: string
+  rationale: string
+  affects: string[]
+}
+
 /** A ticket's dates in the reference plan; '' where it had none. */
 export interface TaskBaseline {
   start: string
@@ -247,6 +276,8 @@ export interface Task {
   baseline?: TaskBaseline
   /** Set on a ticket of type `risk`: how likely, how serious, and what is done about it. */
   risk?: TaskRisk
+  /** Set on a ticket of type `decision`: where it stands, when, by whom, why, and what it bears on. */
+  decision?: TaskDecision
   /** UI state, persisted per project in plugin settings (data.json), not in frontmatter. */
   collapsed: boolean
   createdAt: string
@@ -930,7 +961,8 @@ export const DEFAULT_TYPES: TypeConfig[] = [
   { id: 'phase', label: 'Phase', color: '#b45309', icon: 'layers' },
   { id: 'document', label: 'Document', color: '#0369a1', icon: 'file-text' },
   { id: 'meeting', label: 'Meeting', color: '#db2777', icon: 'users' },
-  { id: 'risk', label: 'Risk', color: '#c2410c', icon: 'shield-alert' }
+  { id: 'risk', label: 'Risk', color: '#c2410c', icon: 'shield-alert' },
+  { id: 'decision', label: 'Decision', color: '#0f766e', icon: 'gavel' }
 ]
 
 /**
@@ -978,7 +1010,8 @@ export function seedTypes(): TypeConfig[] {
     phase: t('task.type.phase'),
     document: t('task.type.document'),
     meeting: t('task.type.meeting'),
-    risk: t('task.type.risk')
+    risk: t('task.type.risk'),
+    decision: t('task.type.decision')
   }
   return DEFAULT_TYPES.map((type) => ({ ...type, label: labels[type.id] ?? type.label }))
 }

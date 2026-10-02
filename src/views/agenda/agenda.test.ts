@@ -118,6 +118,20 @@ function project(): Task[] {
       risk: { probability: 1, impact: 2, mitigation: '' }
     }),
     makeTask({
+      title: 'Choix du revêtement',
+      type: 'decision',
+      start: '',
+      due: '2026-09-30',
+      decision: { state: 'proposed', date: '', decidedBy: 'MOA', rationale: '', affects: [] }
+    }),
+    makeTask({
+      title: 'Béton C30/37',
+      type: 'decision',
+      start: '',
+      status: 'done',
+      decision: { state: 'decided', date: '2026-09-29', decidedBy: 'COPIL', rationale: '', affects: [] }
+    }),
+    makeTask({
       title: 'Plan de coffrage',
       type: 'document',
       start: '',
@@ -207,6 +221,16 @@ describe('the blocks', () => {
     expect(f.render('risks')).toContain('Grève')
     expect(f.render('risks-to-review')).toContain('Retard béton')
     expect(f.render('risk-matrix')).toContain('**2**')
+  })
+
+  it('list the decisions to take, the late ones said so, and those taken since the meeting before', () => {
+    const pending = f.render('pending-decisions')
+    expect(pending).toContain('| Choix du revêtement | 30 sept. (en retard) | MOA |')
+    expect(pending).not.toContain('Béton')
+    const taken = f.render('recent-decisions')
+    expect(taken).toContain('Béton C30/37')
+    expect(taken).toContain('par COPIL')
+    expect(agendaBlock('décisions à prendre')).toBe('pending-decisions')
   })
 
   it('chase the documents by issuer, and list those expected and in review', () => {

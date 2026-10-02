@@ -29,6 +29,8 @@ export const AGENDA_BLOCKS = [
   ['risques-critiques', 'critical-risks'],
   ['risques-à-revoir', 'risks-to-review'],
   ['matrice-risques', 'risk-matrix'],
+  ['décisions-à-prendre', 'pending-decisions'],
+  ['décisions-récentes', 'recent-decisions'],
   ['documents-en-retard', 'late-documents'],
   ['documents-attendus', 'expected-documents'],
   ['documents-en-revue', 'documents-in-review'],

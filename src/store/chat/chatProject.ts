@@ -1,5 +1,6 @@
 import type { PriorityConfig, Project, StatusConfig, Task } from '../../types'
 import { riskScore } from '../risk'
+import { affectedLabel, decisionOf } from '../decision'
 import { isTerminalStatus } from '../../utils'
 import { documentOf, isDocument } from '../Document'
 import { projectMetrics } from '../Metrics'
@@ -59,6 +60,14 @@ export interface ProjectWords {
   docState: (state: string) => string
   /** A risk's weighing, on one line: its levels, its criticality, its mitigation. */
   risk?: (probability: number, impact: number, mitigation: string) => string
+  /** A decision on one line: where it stands, when, by whom, why, what it bears on. */
+  decision?: (decision: {
+    state: string
+    date: string
+    decidedBy: string
+    rationale: string
+    affects: string
+  }) => string
   late: string
   after: string
   /** What introduces a document's reference, its revision mark and its file. */
@@ -130,6 +139,22 @@ function ticketLine(
     const { probability, impact } = riskScore(task)
     const mitigation = (task.risk?.mitigation ?? '').replace(/\s+/g, ' ').trim()
     facts.push(words.risk(probability, impact, mitigation.length > 140 ? `${mitigation.slice(0, 139)}…` : mitigation))
+  }
+  if (task.type === 'decision' && words.decision) {
+    const decision = decisionOf(task)
+    const short = (value: string, size: number): string => {
+      const line = value.replace(/\s+/g, ' ').trim()
+      return line.length > size ? `${line.slice(0, size - 1)}…` : line
+    }
+    facts.push(
+      words.decision({
+        state: decision.state,
+        date: decision.date,
+        decidedBy: decision.decidedBy,
+        rationale: short(decision.rationale, 160),
+        affects: short(decision.affects.map(affectedLabel).join(', '), 160)
+      })
+    )
   }
   const status = input.statuses.find((config) => config.id === task.status)
   facts.push(status?.label ?? task.status)

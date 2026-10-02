@@ -61,6 +61,8 @@ import type { Project, TaskType } from '../../types'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { impactLabel, probabilityLabel } from '../risks/riskLabels'
+import { readDecisionState } from '../../store/decision'
+import { decisionStateLabel } from '../decisions/decisionLabels'
 import { logTicketChange } from './historyLog'
 import { undoKey } from '../../store/chat/chatUndo'
 import { openRequirementModal } from '../requirements/RequirementModal'
@@ -162,11 +164,23 @@ function ticketFieldLabel(field: TicketChangeField): string {
       return t('risk.impact')
     case 'mitigation':
       return t('risk.mitigation')
+    case 'decision':
+      return t('decision.state')
+    case 'decidedOn':
+      return t('decision.date')
+    case 'decidedBy':
+      return t('decision.decidedBy')
+    case 'rationale':
+      return t('decision.rationale')
+    case 'affects':
+      return t('decision.affects')
   }
 }
 
 /** A risk's level as the card says it — « 3 · Probable » —; any other value as it is. */
 function levelText(field: string, value: string): string {
+  const state = field === 'decision' ? readDecisionState(value) : null
+  if (state) return decisionStateLabel(state)
   const level = Number(value)
   if (!value || !Number.isInteger(level)) return value
   if (field === 'probability') return `${level} · ${probabilityLabel(level)}`
@@ -808,7 +822,10 @@ class ChangeCard extends MarkdownRenderChild {
           card,
           ticketFieldLabel(row.field),
           { before: levelText(row.field, row.before), after: levelText(row.field, row.after) },
-          row.field === 'title' || row.field === 'description' || row.field === 'mitigation'
+          row.field === 'title' ||
+            row.field === 'description' ||
+            row.field === 'mitigation' ||
+            row.field === 'rationale'
         )
       }
     } else this.body(card, ticketFieldLabel(resolved.field), null, false)

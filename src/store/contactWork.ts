@@ -5,6 +5,7 @@ import type { ContactBook } from './contacts'
 import { contactKey } from './contacts'
 import { isPhase } from './Phase'
 import { isRisk } from './risk'
+import { isDecision } from './decision'
 
 /**
  * What each contact has to do with the projects: the tickets they are assigned, the
@@ -107,7 +108,7 @@ export function contactWork(
         }
         const work = workOf(contact.path)
         work.projects.add(project.path)
-        if (done || isRisk(task)) continue
+        if (done || isRisk(task) || isDecision(task)) continue
         const late = !!task.due && task.due < today
         work.tickets.push({ task, project, late })
         if (late) work.lateTickets += 1

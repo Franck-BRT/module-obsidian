@@ -1,5 +1,6 @@
 import type { Task } from '../../types'
 import { readRiskLevel } from '../risk'
+import { affectedLabel, DECISION_STATES, decisionOf, readDecisionState, withAffected } from '../decision'
 import { setText, VERIFICATION_METHODS, type Requirement } from '../requirements/Requirement'
 
 /**
@@ -43,7 +44,12 @@ export const TICKET_CHANGE_FIELDS = [
   'parent',
   'probability',
   'impact',
-  'mitigation'
+  'mitigation',
+  'decision',
+  'decidedOn',
+  'decidedBy',
+  'rationale',
+  'affects'
 ] as const
 export type TicketChangeField = (typeof TICKET_CHANGE_FIELDS)[number]
 
@@ -107,7 +113,12 @@ export const CREATE_FIELDS = [
   'description',
   'probability',
   'impact',
-  'mitigation'
+  'mitigation',
+  'decision',
+  'decidedOn',
+  'decidedBy',
+  'rationale',
+  'affects'
 ] as const
 export type CreateField = (typeof CREATE_FIELDS)[number]
 
@@ -163,7 +174,28 @@ const FIELD_ALIASES: Record<string, string> = {
   severity: 'impact',
   parade: 'mitigation',
   traitement: 'mitigation',
-  'plan d action': 'mitigation'
+  'plan d action': 'mitigation',
+  // The model is told these two in camel case; read folded, they are lower case.
+  decidedon: 'decidedOn',
+  decidedby: 'decidedBy',
+  etat: 'decision',
+  state: 'decision',
+  decidee: 'decision',
+  'date de decision': 'decidedOn',
+  'decide le': 'decidedOn',
+  decisiondate: 'decidedOn',
+  decided: 'decidedOn',
+  decideur: 'decidedBy',
+  'decide par': 'decidedBy',
+  decider: 'decidedBy',
+  motif: 'rationale',
+  pourquoi: 'rationale',
+  reason: 'rationale',
+  touche: 'affects',
+  impacte: 'affects',
+  concerne: 'affects',
+  liens: 'affects',
+  'bears on': 'affects'
 }
 
 /** Lower case, without accents or spacing around: how two spellings of one word are compared. */
@@ -178,6 +210,12 @@ export function fold(text: string): string {
       .replace(/æ/g, 'ae')
       .trim()
   )
+}
+
+/** A list as the model wrote it: an array, or names one after the other, cut at « ; » or a line. */
+function listOf(raw: unknown): string[] {
+  const items = Array.isArray(raw) ? raw.map((one) => text(one)) : text(raw).split(/[;\n]/)
+  return items.map((one) => one.trim()).filter(Boolean)
 }
 
 function text(value: unknown): string {
@@ -572,6 +610,41 @@ export function ticketChange(
         patch.risk = { ...(patch.risk ?? { ...was }), mitigation: after }
         break
       }
+      case 'decision':
+      case 'decidedOn':
+      case 'decidedBy':
+      case 'rationale':
+      case 'affects': {
+        const was = decisionOf(task)
+        const now = patch.decision ?? { ...was, affects: [...was.affects] }
+        let before: string
+        let after: string
+        if (field === 'decision') {
+          const state = readDecisionState(value)
+          if (!state) return refuse('unknown', DECISION_STATES)
+          before = was.state
+          after = state
+          now.state = state
+        } else if (field === 'decidedOn') {
+          if (!isDate(value)) return refuse('date')
+          before = was.date
+          after = value
+          now.date = value
+        } else if (field === 'affects') {
+          // Added to what it bears on already, each once.
+          before = was.affects.map(affectedLabel).join(', ')
+          for (const one of listOf(raw)) now.affects = withAffected(now.affects, one)
+          after = now.affects.map(affectedLabel).join(', ')
+        } else {
+          before = (field === 'decidedBy' ? was.decidedBy : was.rationale).trim()
+          after = typeof raw === 'string' ? raw.trim() : value
+          if (field === 'decidedBy') now.decidedBy = after
+          else now.rationale = after
+        }
+        rows.push({ field, before, after, applied: before === after })
+        patch.decision = now
+        break
+      }
       case 'parent': {
         const tree = lists.tree ?? []
         const here = tree.find((one) => one.id === task.id)?.parentId ?? null
@@ -808,6 +881,32 @@ export function createChange(spec: Extract<ChangeSpec, { kind: 'create' }>, cont
           rows.push({ field, after: value })
         }
         break
+      case 'decision':
+      case 'decidedOn':
+      case 'decidedBy':
+      case 'rationale':
+      case 'affects': {
+        const now = task.decision ?? decisionOf({})
+        if (field === 'decision') {
+          const state = readDecisionState(value)
+          if (!state) return { ok: false, problem: 'unknown', allowed: DECISION_STATES }
+          now.state = state
+          rows.push({ field, after: state })
+        } else if (field === 'decidedOn') {
+          if (!isDate(value)) return { ok: false, problem: 'date' }
+          now.date = value
+          rows.push({ field, after: value })
+        } else if (field === 'affects') {
+          for (const one of listOf(raw)) now.affects = withAffected(now.affects, one)
+          if (now.affects.length) rows.push({ field, after: now.affects.map(affectedLabel).join(', ') })
+        } else if (value) {
+          if (field === 'decidedBy') now.decidedBy = value
+          else now.rationale = typeof raw === 'string' ? raw.trim() : value
+          rows.push({ field, after: value })
+        }
+        task.decision = now
+        break
+      }
       case 'description':
         // Its text whole — where it comes from, what is to be done —, said as written.
         if (value) {
@@ -829,7 +928,10 @@ export function createChange(spec: Extract<ChangeSpec, { kind: 'create' }>, cont
       }
     }
   }
-  if (!typed) task.type = parentId && !parentIsLot ? 'subtask' : 'task'
+  // Said to be a decision by its fields alone, it is one; one said so without them is proposed.
+  if (!typed) task.type = task.decision ? 'decision' : parentId && !parentIsLot ? 'subtask' : 'task'
+  if (task.type === 'decision') task.decision ??= decisionOf({})
+  else delete task.decision
   task.status ??= context.defaultStatus
   task.priority ??= context.defaultPriority
   // A milestone is a day: given only one of its dates, it is on that day.
@@ -854,7 +956,7 @@ export interface CreateEdits {
 }
 
 /** The fields said as lists: several names or titles, one written after the other. */
-const LIST_FIELDS: CreateField[] = ['assignees', 'after']
+const LIST_FIELDS: CreateField[] = ['assignees', 'after', 'affects']
 
 /** A proposed ticket as the reader changed it: what they touched replaced, the rest as proposed. */
 export function withEdits(

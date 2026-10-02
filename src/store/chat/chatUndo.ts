@@ -26,7 +26,8 @@ export const UNDO_FIELDS = [
   'dependencyOptions',
   'description',
   'archived',
-  'risk'
+  'risk',
+  'decision'
 ] as const
 export type UndoField = (typeof UNDO_FIELDS)[number]
 /** A ticket's fields, and where it sits: the lot or ticket it is under, null at the top. */

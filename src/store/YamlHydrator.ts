@@ -1,3 +1,4 @@
+import { readDecisionState } from './decision'
 import type {
   Collection,
   CustomFieldDef,
@@ -169,6 +170,22 @@ function readRisk(raw: unknown): Task['risk'] {
   }
 }
 
+/** A decision, as written in its note; none when it is not there. */
+function readDecision(raw: unknown): Task['decision'] {
+  if (!raw || typeof raw !== 'object') return undefined
+  const { state, date, decidedBy, rationale, affects } = raw as Record<string, unknown>
+  const text = (value: unknown): string => (typeof value === 'string' ? value : '')
+  return {
+    state: readDecisionState(state) ?? 'proposed',
+    date: typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date.trim()) ? date.trim() : '',
+    decidedBy: text(decidedBy),
+    rationale: text(rationale),
+    affects: Array.isArray(affects)
+      ? affects.filter((one): one is string => typeof one === 'string' && !!one.trim())
+      : []
+  }
+}
+
 /** A ticket's reference dates, as written in its note; none when they are not there. */
 function readBaseline(raw: unknown): Task['baseline'] {
   if (!raw || typeof raw !== 'object') return undefined
@@ -219,6 +236,7 @@ export function mapRawToTask(r: Record<string, unknown>, overrides?: Partial<Tas
     document: readDocument(r.document),
     baseline: readBaseline(r.baseline),
     risk: readRisk(r.risk),
+    decision: readDecision(r.decision),
     collapsed: r.collapsed === true,
     createdAt: (r.createdAt as string) ?? new Date().toISOString(),
     updatedAt: (r.updatedAt as string) ?? new Date().toISOString(),

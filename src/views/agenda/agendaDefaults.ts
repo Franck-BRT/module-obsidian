@@ -64,7 +64,7 @@ const FR: DefaultTemplate[] = [
 {{charge}}
 
 ## 10. Décisions à prendre
--
+{{décisions-à-prendre}}
 
 ## 11. Questions diverses et prochaine réunion
 -
@@ -219,9 +219,10 @@ Pour chacun : probabilité et impact toujours justes ? parade engagée ? respons
 -
 
 ## 6. Décisions attendues du comité (15 min)
--
+{{décisions-à-prendre}}
 
 ## 7. Relevé de décisions
+{{décisions-récentes}}
 -
 `
   },
@@ -371,7 +372,7 @@ const EN: DefaultTemplate[] = [
 {{workload}}
 
 ## 10. Decisions to make
--
+{{pending-decisions}}
 
 ## 11. Any other business and next meeting
 -
@@ -525,9 +526,10 @@ For each: are probability and impact still right? Is the mitigation under way? W
 -
 
 ## 6. Decisions expected from the committee (15 min)
--
+{{pending-decisions}}
 
 ## 7. Decisions taken
+{{recent-decisions}}
 -
 `
   },

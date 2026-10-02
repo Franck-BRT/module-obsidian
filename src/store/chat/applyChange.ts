@@ -1,4 +1,5 @@
-import { makeDocument, makeTask, TASK_TYPES, type Project, type Task } from '../../types'
+import { makeDocument, makeTask, TASK_TYPES, type Project, type Task, type TaskDecision } from '../../types'
+import { linkAffected, statusForDecision, type AffectedTarget } from '../decision'
 import { getDefaultPriorityId, getDefaultStatusId } from '../../utils'
 import { flattenTasks } from '../TaskTreeOps'
 import { fold } from '../library/libraryDoc'
@@ -138,12 +139,50 @@ export async function applyToTicket(index: VaultIndex, store: TaskSource, spec: 
   if (resolved.applied) return { ok: true, name: target.task.title, changed: false }
   const name = target.task.title
   const { project, task } = target
+  const decided = resolved.change.patch.decision
+  if (decided) {
+    const settled = { ...task, ...resolved.change.patch }
+    settleDecision(index, store, project, settled, decided)
+    resolved.change.patch.decision = settled.decision
+    if (settled.status !== task.status && !resolved.change.patch.status) resolved.change.patch.status = settled.status
+  }
   if (Object.keys(resolved.change.patch).length) await store.updateTask(project, task.id, resolved.change.patch)
   if (resolved.change.move) await moveTicket(store, project, task.id, resolved.change.move.parentId)
   if (resolved.change.reschedule) await store.scheduleAfterChange(project, task.id)
   if (spec.action === 'archive' && !task.archived) await store.archiveTask(project, task.id)
   if (spec.action === 'delete') await store.deleteTask(project, task.id)
   return { ok: true, name, changed: true }
+}
+
+/**
+ * A decision made or changed from the chat, settled as the editor settles one: what it
+ * bears on made links where a name is a ticket of the project or a requirement's id, and
+ * the ticket's status following its state.
+ */
+function settleDecision(
+  index: VaultIndex,
+  store: TaskSource,
+  project: Project,
+  task: Task,
+  decision: TaskDecision
+): void {
+  const targets: AffectedTarget[] = [
+    ...flattenTasks(project.tasks)
+      .map((flat) => flat.task)
+      .filter((one) => one.filePath && one.id !== task.id)
+      .map((one) => ({ names: [one.title], path: one.filePath ?? '', label: one.title })),
+    ...index
+      .requirementRefs()
+      .filter((requirement) => requirement.filePath)
+      .map((requirement) => ({
+        names: [requirement.id, ...requirement.aliases],
+        path: requirement.filePath ?? '',
+        label: requirement.id
+      }))
+  ]
+  task.decision = { ...decision, affects: linkAffected(decision.affects, targets) }
+  const status = statusForDecision(decision.state, task.status, store.configFor(project).statuses)
+  if (status) task.status = status
 }
 
 type CreateSpec = Extract<ChangeSpec, { kind: 'create' }>
@@ -250,6 +289,7 @@ export async function applyCreate(
     ...fields,
     ...(fields.type === 'document' ? { document: makeDocument({ reference: fields.title }) } : {})
   })
+  if (task.decision) settleDecision(index, store, target.project, task, task.decision)
   await store.insertTask(target.project, task, parentId)
   if (reschedule) await store.scheduleAfterChange(target.project, task.id)
   return { ok: true, name: task.title, changed: true }

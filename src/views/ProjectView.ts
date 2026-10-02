@@ -1,5 +1,6 @@
 import { ButtonComponent, ExtraButtonComponent, ItemView, Menu, Scope, WorkspaceLeaf } from 'obsidian'
 import { RisksView } from './risks/RisksView'
+import { DecisionsView } from './decisions/DecisionsView'
 import type PMPlugin from '../main'
 import {
   type Project,
@@ -522,6 +523,7 @@ export class ProjectView extends ItemView {
         { id: 'mail', icon: 'mail', label: t('view.mail'), help: t('tip.view.mail') },
         { id: 'impacts', icon: 'triangle-alert', label: t('view.impacts'), help: t('tip.view.impacts') },
         { id: 'risks', icon: 'shield-alert', label: t('view.risks'), help: t('tip.view.risks') },
+        { id: 'decisions', icon: 'gavel', label: t('view.decisions'), help: t('tip.view.decisions') },
         { id: 'dashboard', icon: 'gauge', label: t('kpi.title'), help: t('tip.view.dashboard') }
       ],
       active: this.currentView,
@@ -928,6 +930,9 @@ export class ProjectView extends ItemView {
       }
       case 'risks':
         this.subview = new RisksView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)
+        break
+      case 'decisions':
+        this.subview = new DecisionsView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)
         break
       case 'dashboard':
         this.subview = new ProjectDashboard(

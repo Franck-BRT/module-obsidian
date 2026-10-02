@@ -23,6 +23,8 @@ import { renderGlyph } from '../ui/composites/properties'
 import { renderTaskFormFields } from './TaskFormFields'
 import { renderTimeTrackingPanel } from './TimeTrackingPanel'
 import { renderDocumentPanel } from './DocumentPanel'
+import { renderDecisionPanel } from './DecisionPanel'
+import { isDecision } from '../store/decision'
 import { isDocument } from '../store/Document'
 import { renderSubtasksPanel } from './SubtasksPanel'
 import { NoteLinkSuggest } from './NoteLinkSuggest'
@@ -611,6 +613,15 @@ export class TaskEditor {
         plugin: this.plugin,
         rerender: () => this.render(),
         save: () => this.saveInPlace()
+      })
+    }
+
+    if (isDecision(this.task)) {
+      renderDecisionPanel(body, {
+        task: this.task,
+        project: this.project,
+        plugin: this.plugin,
+        rerender: () => this.render()
       })
     }
 

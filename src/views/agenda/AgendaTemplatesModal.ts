@@ -58,6 +58,10 @@ export function blockDescription(block: AgendaBlock): string {
       return t('agenda.block.risksToReview')
     case 'risk-matrix':
       return t('agenda.block.riskMatrix')
+    case 'pending-decisions':
+      return t('agenda.block.pendingDecisions')
+    case 'recent-decisions':
+      return t('agenda.block.recentDecisions')
     case 'late-documents':
       return t('agenda.block.lateDocuments')
     case 'expected-documents':

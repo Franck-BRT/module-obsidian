@@ -1,3 +1,4 @@
+import { decisionStateLabel } from '../decisions/decisionLabels'
 import {
   Component,
   ItemView,
@@ -115,7 +116,7 @@ import { ProjectScope, resolveScopePaths, type ScopeSpec } from '../../store/Pro
 import { collectionMemberIds } from '../../store/Collection'
 import type { ProjectRef } from '../../store/VaultIndex'
 import { docStateConfigOf, typeConfigOf } from '../../store/TicketPalette'
-import { TASK_TYPES, type DocState, type TaskType } from '../../types'
+import { TASK_TYPES, type DecisionState, type DocState, type TaskType } from '../../types'
 import { formatDate, today } from '../../dates'
 import {
   reqCriticalityGlyph,
@@ -1401,6 +1402,7 @@ export class ChatView extends ItemView {
         )
       }
       lines.push(t('chat.changeRisk'))
+      lines.push(t('chat.changeDecision'))
       lines.push(t('chat.changeAsk', { lot: typeConfigOf('phase').label }))
       // A planning received, read against the plan: what the whole feature is for.
       if (files) lines.push(t('chat.changePlanning'))
@@ -1569,6 +1571,14 @@ export class ChatView extends ItemView {
       summary: (figures) => t('chat.projectFigures', figures),
       type: (type) => typeConfigOf(type as TaskType).label,
       docState: (state) => docStateConfigOf(state as DocState).label,
+      decision: (decision) =>
+        t('chat.projectDecision', {
+          state: decisionStateLabel(decision.state as DecisionState),
+          date: decision.date || '—',
+          by: decision.decidedBy || '—',
+          why: decision.rationale || '—',
+          affects: decision.affects || '—'
+        }),
       risk: (probability, impact, mitigation) =>
         t('chat.projectRisk', { probability, impact, score: probability * impact, mitigation: mitigation || '—' }),
       late: t('chat.projectLate'),

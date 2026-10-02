@@ -822,3 +822,68 @@ describe('a risk proposed by the chat', () => {
     expect((await store.loadProjectByPath(project.filePath))?.tasks).toEqual([])
   })
 })
+
+describe('a decision proposed by the chat', () => {
+  it('is created taken, its ticket done, what it bears on linked, and changed later', async () => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    const index = new VaultIndex(app, () => DEFAULT_SETTINGS)
+    const store = new ProjectStore(app, () => DEFAULT_SETTINGS, index)
+    const project = await store.createProject('Génie civil', 'Work')
+    await store.insertTask(project, makeTask({ title: 'Couler le radier', start: '', due: '2026-10-20' }))
+    index.build()
+    const label = (type: string): string => type
+    const create = spec('create', {
+      create: 'Béton C30/37 pour le radier',
+      project: 'Génie civil',
+      changes: {
+        décision: 'prise',
+        decidedOn: '2026-10-01',
+        décideur: 'COPIL',
+        justification: 'Classe d’exposition XC2.',
+        affects: ['Couler le radier', 'Lot 02']
+      },
+      why: 'Compte rendu du COPIL n°3.'
+    })
+    expect(await applyCreate(index, store, create, label)).toMatchObject({ ok: true, changed: true })
+    const reread = await new ProjectStore(app, () => DEFAULT_SETTINGS, index).loadProjectByPath(project.filePath)
+    const decision = reread?.tasks.find((task) => task.title === 'Béton C30/37 pour le radier')
+    const slab = reread?.tasks.find((task) => task.title === 'Couler le radier')
+    expect(decision).toMatchObject({
+      type: 'decision',
+      status: 'done',
+      decision: {
+        state: 'decided',
+        date: '2026-10-01',
+        decidedBy: 'COPIL',
+        rationale: 'Classe d’exposition XC2.',
+        affects: [`[[${slab?.filePath}|Couler le radier]]`, 'Lot 02']
+      }
+    })
+    index.build()
+    const replace = spec('ticket', { ticket: 'Béton C30/37 pour le radier', changes: { decision: 'superseded' } })
+    expect(await applyToTicket(index, store, replace)).toMatchObject({ ok: true, changed: true })
+    const after = (await store.loadProjectByPath(project.filePath))?.tasks.find((task) => task.type === 'decision')
+    expect(after?.decision?.state).toBe('superseded')
+    expect(after?.status).toBe('done')
+  })
+
+  it('is to take when it says so, with its deadline, and refuses a state it does not know', async () => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    const index = new VaultIndex(app, () => DEFAULT_SETTINGS)
+    const store = new ProjectStore(app, () => DEFAULT_SETTINGS, index)
+    const project = await store.createProject('Génie civil', 'Work')
+    index.build()
+    const pending = spec('create', {
+      create: 'Choix du revêtement',
+      project: 'Génie civil',
+      changes: { type: 'decision', decision: 'à prendre', due: '2026-10-15' }
+    })
+    expect(await applyCreate(index, store, pending, (type) => type)).toMatchObject({ ok: true, changed: true })
+    const made = (await store.loadProjectByPath(project.filePath))?.tasks[0]
+    expect(made).toMatchObject({ type: 'decision', status: 'todo', due: '2026-10-15', decision: { state: 'proposed' } })
+    const wrong = spec('create', { create: 'X', project: 'Génie civil', changes: { decision: 'peut-être' } })
+    expect(await applyCreate(index, store, wrong, (type) => type)).toMatchObject({ ok: false, problem: 'unknown' })
+  })
+})

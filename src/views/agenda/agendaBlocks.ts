@@ -9,6 +9,7 @@ import { isMeeting, taskTimeRange } from '../../store/Meeting'
 import { addDays, projectMetrics, type ProjectMetrics } from '../../store/Metrics'
 import { isPhase } from '../../store/Phase'
 import { isRisk } from '../../store/risk'
+import { decidedSince, decisionDay, decisionOf, isDecision, isPending, orderDecisions } from '../../store/decision'
 import { flattenTasks } from '../../store/TaskTreeOps'
 import { formatDateLetter, formatDateShort } from '../../dates'
 import { displayName, isTerminalStatus } from '../../utils'
@@ -124,6 +125,7 @@ export class AgendaFiller {
         !task.archived &&
         !isPhase(task) &&
         !isRisk(task) &&
+        !isDecision(task) &&
         !isDocument(task) &&
         !isMeeting(task) &&
         task.type !== 'milestone' &&
@@ -181,6 +183,10 @@ export class AgendaFiller {
         return this.risks(() => true, true)
       case 'risk-matrix':
         return this.riskMatrix(m)
+      case 'pending-decisions':
+        return this.pendingDecisions()
+      case 'recent-decisions':
+        return this.recentDecisions()
       case 'late-documents':
         return this.lateDocuments()
       case 'expected-documents':
@@ -450,6 +456,40 @@ export class AgendaFiller {
         return [meta.reference, task.title, displayName(meta.issuer), formatDateShort(task.due)]
       })
     )
+  }
+
+  /** The decisions still to take, the soonest due first: what the meeting is asked to settle. */
+  private pendingDecisions(): string {
+    const pending = orderDecisions(this.flat.filter((task) => !task.archived && isDecision(task) && isPending(task)))
+    if (!pending.length) return nothing()
+    const date = this.context.date
+    return table(
+      [t('task.type.decision'), t('agenda.decideBy'), t('decision.decidedBy')],
+      pending.map((task) => [
+        task.title,
+        task.due ? `${formatDateShort(task.due)}${task.due < date ? ` (${t('decision.late')})` : ''}` : '',
+        displayName(decisionOf(task).decidedBy)
+      ])
+    )
+  }
+
+  /** The decisions taken since the meeting before — or the last thirty days —, the latest first. */
+  private recentDecisions(): string {
+    const c = this.context
+    const since = c.previous ? meetingDay(c.previous) : addDays(c.date, -30)
+    const taken = decidedSince(
+      this.flat.filter((task) => !task.archived && isDecision(task)),
+      since
+    ).filter((task) => decisionDay(task) <= c.date)
+    if (!taken.length) return nothing()
+    return taken
+      .map((task) => {
+        const decision = decisionOf(task)
+        const by = decision.decidedBy ? `, ${t('decision.by', { name: displayName(decision.decidedBy) })}` : ''
+        const name = task.filePath ? c.link(task.filePath, task.title) : task.title
+        return `- ${name} — ${formatDateShort(decisionDay(task))}${by}`
+      })
+      .join('\n')
   }
 
   private documentsInReview(): string {
