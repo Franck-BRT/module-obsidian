@@ -196,7 +196,7 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
       () => {
         const cell = createDiv('pm-prop-value')
         const button = cell.createEl('button', { text: t('agenda.prepare') })
-        button.addEventListener('click', () => openAgenda(plugin, project, task))
+        button.addEventListener('click', () => openAgenda(plugin, project, task, rerender))
         return cell
       },
       'list-ordered'

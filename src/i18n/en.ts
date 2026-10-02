@@ -304,6 +304,8 @@ export const en = {
   'agenda.block.documentsInReview': 'Documents received or in review, and who has yet to approve.',
   'agenda.block.previousMeeting': 'A link to the previous meeting of the same kind.',
   'agenda.block.previousActions': 'The previous meeting’s actions still open (its subtickets).',
+  'agenda.heading': 'Agenda',
+  'agenda.line': '{link} — template « {template} », meeting of {date}',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

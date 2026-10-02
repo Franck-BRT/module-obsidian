@@ -300,6 +300,8 @@ export const fr: Catalog = {
   'agenda.block.documentsInReview': 'Les documents reçus ou en revue, et qui doit encore viser.',
   'agenda.block.previousMeeting': 'Le lien vers la réunion précédente du même type.',
   'agenda.block.previousActions': 'Les actions encore ouvertes de la réunion précédente (ses sous-tickets).',
+  'agenda.heading': 'Ordre du jour',
+  'agenda.line': '{link} — modèle « {template} », réunion du {date}',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

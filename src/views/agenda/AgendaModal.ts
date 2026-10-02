@@ -2,12 +2,12 @@ import { Modal, Notice, setIcon, Setting, TFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Project, Task } from '../../types'
 import { blocksIn, blockName, templateFor, type AgendaTemplate } from '../../store/agenda/agendaTemplate'
-import { today } from '../../dates'
+import { formatDate, today } from '../../dates'
 import { currentLocale, t } from '../../i18n'
 import { safeAsync } from '../../utils'
 import { listTemplates } from './agendaLibrary'
 import { openAgendaTemplates } from './AgendaTemplatesModal'
-import { writeAgenda } from './writeAgenda'
+import { linkAgendaToMeeting, writeAgenda } from './writeAgenda'
 
 /** The day a meeting is held: its due date, else its start; today when it has none. */
 function meetingDate(meeting: Task | undefined): string {
@@ -15,8 +15,8 @@ function meetingDate(meeting: Task | undefined): string {
 }
 
 /** Asks which template, for which day, then writes the agenda and opens it. */
-export function openAgenda(plugin: PMPlugin, project: Project, meeting?: Task): void {
-  new AgendaModal(plugin, project, meeting).open()
+export function openAgenda(plugin: PMPlugin, project: Project, meeting?: Task, onWritten?: () => void): void {
+  new AgendaModal(plugin, project, meeting, onWritten).open()
 }
 
 class AgendaModal extends Modal {
@@ -27,7 +27,8 @@ class AgendaModal extends Modal {
   constructor(
     private plugin: PMPlugin,
     private project: Project,
-    private meeting?: Task
+    private meeting?: Task,
+    private onWritten?: () => void
   ) {
     super(plugin.app)
     this.date = meetingDate(meeting)
@@ -121,6 +122,14 @@ class AgendaModal extends Modal {
             safeAsync(async () => {
               if (!chosen) return
               const path = await writeAgenda(this.plugin, this.project, chosen, this.date, this.meeting)
+              // The meeting says it has an agenda, and links it.
+              if (this.meeting) {
+                await linkAgendaToMeeting(this.plugin, this.project, this.meeting, path, {
+                  heading: t('agenda.heading'),
+                  line: (link) => t('agenda.line', { link, template: chosen.name, date: formatDate(this.date) })
+                })
+              }
+              this.onWritten?.()
               this.close()
               new Notice(t('agenda.written', { path }))
               const file = this.app.vault.getAbstractFileByPath(path)

@@ -16,7 +16,7 @@ import { flattenTasks } from '../../store/TaskTreeOps'
 import { DEFAULT_PRIORITIES, DEFAULT_SETTINGS, DEFAULT_STATUSES, makeDocument, makeTask, type Task } from '../../types'
 import { AgendaFiller, previousMeeting, type AgendaContext } from './agendaBlocks'
 import { defaultTemplates, templateNote } from './agendaDefaults'
-import { writeAgenda } from './writeAgenda'
+import { linkAgendaToMeeting, withAgendaLink, writeAgenda } from './writeAgenda'
 import { parseFrontmatter } from '../../store/YamlParser'
 
 beforeAll(() => setLocale('fr'))
@@ -258,5 +258,50 @@ describe('an agenda written', () => {
     expect(text).toContain('## Points divers')
     const again = await writeAgenda(plugin, loaded, template, '2026-10-02')
     expect(again).toMatch(/\(2\)\.md$/)
+  })
+})
+
+describe('an agenda named in its meeting', () => {
+  it('is linked under the agenda heading, added once, the others after it, never twice', () => {
+    const first = withAgendaLink('Points à traiter.', 'Ordre du jour', '[[M/a|a]] — chantier', 'M/a.md')
+    expect(first).toBe('Points à traiter.\n\n### Ordre du jour\n- [[M/a|a]] — chantier\n')
+    const second = withAgendaLink(`${first}\n## Notes\nRien.`, 'Ordre du jour', '[[M/b|b]] — risques', 'M/b.md')
+    expect(second).toBe(
+      'Points à traiter.\n\n### Ordre du jour\n- [[M/a|a]] — chantier\n- [[M/b|b]] — risques\n\n## Notes\nRien.\n'
+    )
+    expect(withAgendaLink(second, 'Ordre du jour', '[[M/a|a]] — chantier', 'M/a.md')).toBe(second)
+    expect(withAgendaLink('', 'Ordre du jour', '[[M/a|a]]', 'M/a.md')).toBe('### Ordre du jour\n- [[M/a|a]]\n')
+  })
+
+  it('is written in the meeting’s note and in the copy an editor holds', async () => {
+    const fake = makeFakeApp({ liveMetadataCache: true })
+    const app = fake.app as unknown as App
+    const settings = { ...DEFAULT_SETTINGS }
+    const store = new ProjectStore(app, () => settings)
+    const created = await store.createProject('Bâtiment B12', 'Work')
+    const meeting = makeTask({
+      title: 'Réunion de chantier n°4',
+      type: 'meeting',
+      start: '',
+      due: '2026-10-02',
+      description: 'Préparer les plans.'
+    })
+    await store.insertTask(created, meeting)
+    const loaded = (await store.loadProjectByPath(created.filePath)) ?? created
+    const copy = { ...meeting }
+    const words = { heading: 'Ordre du jour', line: (link: string) => `${link} — modèle « Chantier »` }
+    await linkAgendaToMeeting(
+      { app, settings, store } as never,
+      loaded,
+      copy,
+      'Work/B12/_meetings/2026-10-02 Chantier.md',
+      words
+    )
+    expect(copy.description).toContain(
+      '### Ordre du jour\n- [[Work/B12/_meetings/2026-10-02 Chantier|2026-10-02 Chantier]] — modèle « Chantier »'
+    )
+    const reread = (await store.loadProjectByPath(created.filePath))?.tasks.find((one) => one.id === meeting.id)
+    expect(reread?.description).toContain('Préparer les plans.')
+    expect(reread?.description).toContain('[[Work/B12/_meetings/2026-10-02 Chantier|2026-10-02 Chantier]]')
   })
 })
