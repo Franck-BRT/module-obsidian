@@ -1310,16 +1310,16 @@ export const fr: Catalog = {
   'chat.preset.summaryQ': 'Résume cette note en quelques points, en gardant les chiffres, les dates et les décisions.',
   'chat.preset.actions': 'Actions à mener',
   'chat.preset.actionTickets': 'Actions → tickets',
-  'chat.preset.deadlines': 'Échéances → jalons',
+  'chat.preset.deadlines': 'Échéances → jalons et tâches',
   'chat.busy': 'Le chat est en train de répondre : attendez la fin de la réponse, ou arrêtez-la.',
   'chat.preset.deadlinesQ':
-    'Relève les échéances que fixe ce document ({files}) : dates de remise, réunions, démarrages, réceptions, délais. Pour chacune, donne la date, ce qui est dû et par qui, avec la phrase du document. Propose ensuite pour chacune un jalon à créer, avec un bloc de création : type jalon, due = la date, le projet et le lot qui conviennent, et dans "description" la phrase d’origine suivie de « Source : » et du lien du document. Si un ticket existant correspond déjà à l’échéance, propose de modifier sa date plutôt que d’en créer un. Pour un délai relatif (« sous 15 jours »), calcule la date seulement si le document donne le point de départ, et dis comment ; sinon signale-le sans proposer de jalon. Ne propose aucune date que le document ne contient pas.',
+    'Relève les échéances que fixe ce document ({files}) : dates de remise, réunions, démarrages, réceptions, délais. Pour chacune, donne la date, ce qui est dû et par qui, avec la phrase du document. Propose-les ensuite au planning, chacune avec un bloc de création, en distinguant deux sortes : un moment — réunion, démarrage, réception, comité, notification, date butoir sans livrable — devient un jalon ("type": "milestone", "due" = la date) ; une remise — un document, des plans, une note, des essais, une action à faire par quelqu’un — devient une tâche ("type": "task", "due" = la date, "assignees" = le responsable nommé par le document, son titre commençant par un verbe : « Transmettre les plans d’armatures »). Place chacun dans le projet et le lot qui conviennent, et mets dans "description" la phrase d’origine suivie de « Source : » et du lien du document. Si un ticket existant correspond déjà à l’échéance, propose de modifier sa date plutôt que d’en créer un. Pour un délai relatif (« sous 15 jours »), calcule la date seulement si le document donne le point de départ, et dis comment ; sinon signale-le sans rien proposer. Ne propose aucune date que le document ne contient pas.',
   'chat.deadlinesIntro':
     'Dates et délais relevés par l’outil dans les documents, avec la phrase où chacun se trouve — appuie-toi sur eux, n’en ajoute pas d’autres ; une date sans intérêt pour le planning (date d’édition, référence) peut être laissée de côté :',
   'chat.deadlinesGuessed': 'année non écrite, supposée',
   'chat.deadlinesDelays': 'Délais relatifs :',
   'chat.deadlinesNone': '(aucune date trouvée)',
-  'library.deadlines': 'Échéances → jalons',
+  'library.deadlines': 'Échéances → jalons et tâches',
   'chat.actionTicketsPick': 'Choisissez le projet où créer les tickets de cette note.',
   'chat.actionTicketsProjects': 'Projet joint pour y créer les tickets : {list}.',
   'chat.preset.actionTicketsQ':

@@ -1329,16 +1329,16 @@ export const en = {
   'chat.preset.summaryQ': 'Summarise this note in a few points, keeping the figures, dates and decisions.',
   'chat.preset.actions': 'Actions to take',
   'chat.preset.actionTickets': 'Actions → tickets',
-  'chat.preset.deadlines': 'Deadlines → milestones',
+  'chat.preset.deadlines': 'Deadlines → milestones and tasks',
   'chat.busy': 'The chat is answering: wait for the reply to end, or stop it.',
   'chat.preset.deadlinesQ':
-    'List the deadlines this document sets ({files}): delivery dates, meetings, starts, receptions, delays. For each, give the date, what is due and by whom, with the document’s sentence. Then propose for each a milestone to create, with a creation block: type milestone, due = the date, the fitting project and lot, and in "description" the original sentence followed by “Source:” and the document’s link. When an existing ticket already matches the deadline, propose to change its date rather than to create one. For a relative delay (“within 15 days”), work the date out only when the document gives where it runs from, and say how; otherwise point it out without proposing a milestone. Never propose a date the document does not hold.',
+    'List the deadlines this document sets ({files}): delivery dates, meetings, starts, receptions, delays. For each, give the date, what is due and by whom, with the document’s sentence. Then propose them for the plan, each with a creation block, telling two kinds apart: a moment — a meeting, a start, a reception, a committee, a notification, a cut-off with nothing to deliver — becomes a milestone ("type": "milestone", "due" = the date); a delivery — a document, drawings, a note, tests, an action someone is to carry out — becomes a task ("type": "task", "due" = the date, "assignees" = the person in charge the document names, its title starting with a verb: “Send the reinforcement drawings”). Put each in the fitting project and lot, and in "description" the original sentence followed by “Source:” and the document’s link. When an existing ticket already matches the deadline, propose to change its date rather than to create one. For a relative delay (“within 15 days”), work the date out only when the document gives where it runs from, and say how; otherwise point it out without proposing anything. Never propose a date the document does not hold.',
   'chat.deadlinesIntro':
     'Dates and delays found by the tool in the documents, with the sentence each stands in — build on them, add none; a date of no use to the plan (an edition date, a reference) may be left aside:',
   'chat.deadlinesGuessed': 'year not written, assumed',
   'chat.deadlinesDelays': 'Relative delays:',
   'chat.deadlinesNone': '(no date found)',
-  'library.deadlines': 'Deadlines → milestones',
+  'library.deadlines': 'Deadlines → milestones and tasks',
   'chat.actionTicketsPick': 'Choose the project to create this note’s tickets in.',
   'chat.actionTicketsProjects': 'Project attached to create the tickets in: {list}.',
   'chat.preset.actionTicketsQ':
