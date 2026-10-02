@@ -220,6 +220,15 @@ export interface TaskDecision {
   affects: string[]
 }
 
+/** The paths the demonstration wrote: its projects, people, requirements, library records, notes. */
+export interface DemoManifest {
+  projects: string[]
+  contacts: string[]
+  requirements: string[]
+  library: string[]
+  notes: string[]
+}
+
 /** A ticket's dates in the reference plan; '' where it had none. */
 export interface TaskBaseline {
   start: string
@@ -837,6 +846,8 @@ export interface PMSettings {
   workloadWeeks: number
   /** Whether the load plan of a project counts its people's work in the other projects too. */
   workloadAllProjects: boolean
+  /** What the demonstration wrote, while it is there: removing it takes that and nothing else. */
+  demo?: DemoManifest
   /** Days after completion before a task moves to its project's archive. 0 turns it off. */
   autoArchiveDays: number
   /** The day the archive sweep last ran, so it runs at most once a day. */

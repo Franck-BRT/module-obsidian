@@ -43,6 +43,7 @@ import type { FormerSettings, ProjectRef, TaskSource } from './store'
 import { PMSettingTab } from './settings'
 import { openChase } from './views/chase/ChaseModal'
 import { remindUnansweredChases } from './views/chase/chaseReminder'
+import { createDemo, removeDemo } from './views/demo/demo'
 import { configureExplain } from './ui/explain'
 import { openAgendas } from './views/agenda/AgendasModal'
 import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
@@ -596,6 +597,24 @@ export default class PMPlugin extends Plugin {
         }
         openChase(this, scope.projects, () => view.refreshProject())
       }
+    })
+
+    this.addCommand({
+      id: 'create-demo',
+      name: t('command.createDemo'),
+      callback: safeAsync(() => createDemo(this))
+    })
+
+    this.addCommand({
+      id: 'remove-demo',
+      name: t('command.removeDemo'),
+      callback: safeAsync(async () => {
+        if (!this.settings.demo) {
+          new Notice(t('demo.none'))
+          return
+        }
+        if (await confirmDialog(this.app, t('demo.removeConfirm'), t('common.delete'))) await removeDemo(this)
+      })
     })
 
     this.addCommand({

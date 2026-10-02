@@ -829,6 +829,18 @@ export const en = {
     'Saves the sheet in the project’s « Reviews » folder and enters the verdict in the document’s sign-off circuit, in the chosen reviewer’s name.',
   'visa.noReviewer': 'Choose who reviews the document.',
   'visa.saved': '{verdict} recorded — sheet in {path}',
+  'command.createDemo': 'Create the demonstration project',
+  'command.removeDemo': 'Remove the demonstration project',
+  'demo.exists': 'The demonstration project is there already. Remove it first to create it again.',
+  'demo.none': 'There is no demonstration project.',
+  'demo.projectDescription':
+    'A made-up demonstration project, created to try the plugin. The « Remove the demonstration project » command takes it away.',
+  'demo.guideName': 'Demonstration — what to try',
+  'demo.created':
+    'Demonstration project created: the « Demonstration — what to try » note says what to try, and where.',
+  'demo.removeConfirm':
+    'Remove the demonstration project? Its two projects, its contacts, its requirements and its library documents go to the trash; nothing else is touched.',
+  'demo.removed': 'Demonstration project removed.',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

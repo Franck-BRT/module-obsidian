@@ -856,6 +856,17 @@ export const fr: Catalog = {
     'Enregistre la fiche dans le dossier « Visas » du projet et inscrit l’avis dans le circuit de visa du document, au nom du viseur choisi.',
   'visa.noReviewer': 'Choisis qui vise le document.',
   'visa.saved': '{verdict} enregistré — fiche dans {path}',
+  'command.createDemo': 'Créer le projet de démonstration',
+  'command.removeDemo': 'Supprimer le projet de démonstration',
+  'demo.exists': 'Le projet de démonstration existe déjà. Supprime-le d’abord pour le recréer.',
+  'demo.none': 'Il n’y a pas de projet de démonstration.',
+  'demo.projectDescription':
+    'Projet fictif de démonstration, créé pour essayer le plugin. Il se supprime avec la commande « Supprimer le projet de démonstration ».',
+  'demo.guideName': 'Démonstration — à tester',
+  'demo.created': 'Projet de démonstration créé : la note « Démonstration — à tester » dit quoi essayer, et où.',
+  'demo.removeConfirm':
+    'Supprimer le projet de démonstration ? Ses deux projets, ses intervenants, ses exigences et ses documents de la bibliothèque partent à la corbeille ; rien d’autre n’est touché.',
+  'demo.removed': 'Projet de démonstration supprimé.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',
