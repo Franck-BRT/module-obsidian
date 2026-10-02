@@ -23,6 +23,7 @@ import {
   type SelectItem,
   type HiddenProperty
 } from '../ui/composites/properties'
+import { openAgenda } from '../views/agenda/AgendaModal'
 import { t } from '../i18n'
 import { RISK_LEVELS, riskBand, riskLevel, riskScore } from '../store/risk'
 import { BAND_COLOR, bandLabel, impactLabel, probabilityLabel } from '../views/risks/riskLabels'
@@ -187,6 +188,18 @@ export function renderTaskFormFields(container: HTMLElement, ctx: TaskFormFields
         return cell
       },
       'users'
+    )
+    // Its agenda, prepared from a template and the project as it stands on its day.
+    renderPropRow(
+      grid,
+      t('agenda.field'),
+      () => {
+        const cell = createDiv('pm-prop-value')
+        const button = cell.createEl('button', { text: t('agenda.prepare') })
+        button.addEventListener('click', () => openAgenda(plugin, project, task))
+        return cell
+      },
+      'list-ordered'
     )
   }
 

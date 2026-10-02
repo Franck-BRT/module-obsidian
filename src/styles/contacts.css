@@ -193,3 +193,110 @@
   display: flex;
   gap: var(--size-4-2);
 }
+
+/* ---- Agendas: templates chosen and managed -------------------------------- */
+
+.pm-agenda-modal {
+  width: min(720px, 92vw);
+}
+
+.pm-agenda-for {
+  color: var(--text-muted);
+  margin-bottom: var(--size-4-3);
+  font-size: var(--font-ui-small);
+}
+
+.pm-agenda-templates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+  max-height: 46vh;
+  overflow: auto;
+}
+
+.pm-agenda-template {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+}
+
+.pm-agenda-template:hover,
+.pm-agenda-template:focus-visible {
+  background: var(--background-modifier-hover);
+}
+
+.pm-agenda-template.is-chosen {
+  border-color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
+}
+
+.pm-agenda-template-icon {
+  display: inline-flex;
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+
+.pm-agenda-template.is-chosen .pm-agenda-template-icon {
+  color: var(--interactive-accent);
+}
+
+.pm-agenda-template-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pm-agenda-template-name {
+  font-weight: var(--font-semibold);
+}
+
+.pm-agenda-template-desc {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-agenda-template-actions {
+  display: flex;
+  gap: var(--size-2-2);
+}
+
+.pm-agenda-blocks {
+  margin-top: var(--size-4-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-agenda-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.pm-agenda-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-4);
+}
+
+.pm-agenda-help {
+  margin-top: var(--size-4-4);
+  font-size: var(--font-ui-small);
+}
+
+.pm-agenda-help summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.pm-agenda-blocks-table td {
+  padding: 2px var(--size-4-2);
+  vertical-align: top;
+}
+
+.pm-agenda-blocks-table code {
+  cursor: pointer;
+  white-space: nowrap;
+}

@@ -28,6 +28,7 @@ import { isSettingsPath, readSettingsPath, writeSettingsPath } from './store/set
 import { viewModeOptions } from './views/viewModes'
 import { renderCustomFieldFields, renderCustomFieldOptions } from './ui/CustomFieldListEditor'
 import { renderPersonPicker } from './ui/PersonPicker'
+import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
 import { LOCALES, searchAliases, t } from './i18n'
 import { invalidHolidays, renderHolidays, renderWorkingWeekdays } from './ui/WorkCalendarEditor'
 import { OCR_STEPS, stepDesc, stepName } from './views/documents/scanOptions'
@@ -649,6 +650,25 @@ export class PMSettingTab extends PluginSettingTab {
               this.persist()
               this.update()
             }
+          }
+        },
+        {
+          name: t('settings.agendaFolder.name'),
+          desc: t('settings.agendaFolder.desc'),
+          control: {
+            type: 'folder',
+            key: 'agendaFolder',
+            defaultValue: '',
+            placeholder: t('agenda.defaultFolder')
+          }
+        },
+        {
+          name: t('agenda.templates'),
+          desc: t('settings.agendaTemplates.desc'),
+          render: (setting: Setting) => {
+            setting.addButton((button) =>
+              button.setButtonText(t('agenda.manage')).onClick(() => openAgendaTemplates(this.plugin))
+            )
           }
         }
       ]

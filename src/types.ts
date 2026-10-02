@@ -736,6 +736,10 @@ export interface PMSettings {
   /** The notes library: notes of no project yet, and the inbox new notes land in. */
   notesFolder: string
   peopleFolder: string
+  /** Where the agenda templates are kept; '' for the default, in the reader's language. */
+  agendaFolder: string
+  /** Whether the shipped agenda templates were written once: a template deleted stays deleted. */
+  agendaSeeded: boolean
   /** Folders discovery skips, for templates and archives holding pm-project notes. */
   excludedFolders: string[]
   defaultView: ViewMode
@@ -1051,6 +1055,8 @@ export const DEFAULT_SETTINGS: PMSettings = {
   libraryCategories: '',
   notesFolder: 'Notes',
   peopleFolder: 'People',
+  agendaFolder: '',
+  agendaSeeded: false,
   excludedFolders: [],
   defaultView: 'table',
   ganttGranularity: 'week',

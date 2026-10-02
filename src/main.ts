@@ -42,6 +42,8 @@ import {
 import type { FormerSettings, ProjectRef, TaskSource } from './store'
 import { PMSettingTab } from './settings'
 import { openChase } from './views/chase/ChaseModal'
+import { openAgenda } from './views/agenda/AgendaModal'
+import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
 import { ProjectView, PM_PROJECT_VIEW_TYPE } from './views/ProjectView'
 import { ProjectOverviewView, PM_PROJECT_OVERVIEW_VIEW_TYPE } from './views/ProjectOverviewView'
 import { ProjectEditView, PM_PROJECT_EDIT_VIEW_TYPE } from './views/ProjectEditView'
@@ -429,6 +431,25 @@ export default class PMPlugin extends Plugin {
         if (!checking) void this.askAndReadScans([doc], true)
         return true
       }
+    })
+
+    this.addCommand({
+      id: 'prepare-agenda',
+      name: t('command.prepareAgenda'),
+      callback: () => {
+        const project = this.app.workspace.getActiveViewOfType(ProjectView)?.projectScope?.primary
+        if (!project) {
+          this.showNotice(t('agenda.openProject'))
+          return
+        }
+        openAgenda(this, project)
+      }
+    })
+
+    this.addCommand({
+      id: 'agenda-templates',
+      name: t('command.agendaTemplates'),
+      callback: () => openAgendaTemplates(this)
     })
 
     this.addCommand({
