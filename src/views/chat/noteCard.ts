@@ -3,6 +3,9 @@ import type PMPlugin from '../../main'
 import {
   appendProposal,
   appendTarget,
+  appendToSection,
+  findSection,
+  sectionFor,
   holdsKept,
   holdsProposal,
   noteAtTitle,
@@ -95,8 +98,14 @@ class NoteCard extends MarkdownRenderChild {
     }
     const fallback = notesFallback(this.plugin, this.sourcePath)
     const target = proposal.append ? appendTarget(this.plugin.app, proposal, this.sourcePath) : null
+    const content = target ? await this.plugin.app.vault.cachedRead(target) : ''
+    // Where in the note: the section named, or the one the text is plainly about — a
+    // deepening of « Bétons » goes under « Bétons », not after the note's last line.
+    const named = proposal.append && proposal.section.trim() ? proposal.section.trim() : ''
+    const guessed = proposal.append && !named && target ? sectionFor(content, proposal.body) : null
+    const section = named || guessed || ''
     const done = proposal.append
-      ? target !== null && holdsProposal(await this.plugin.app.vault.cachedRead(target), proposal)
+      ? target !== null && holdsProposal(content, proposal)
       : await writtenNote(this.plugin.app, proposal, fallback)
     if (generation !== this.generation) return
     // A note of that name there already, saying something else — or rewritten from here —:
@@ -117,7 +126,18 @@ class NoteCard extends MarkdownRenderChild {
     this.containerEl.empty()
     const card = this.containerEl.createDiv('pm-change pm-note')
     if (proposal.append) {
-      this.head(card, 'file-pen-line', t('chat.note.appendKind'), target?.basename ?? proposal.append)
+      const where = named ? ` › ${named}` : ''
+      this.head(card, 'file-pen-line', t('chat.note.appendKind'), `${target?.basename ?? proposal.append}${where}`)
+      if (named && target && !done && !findSection(content, named)) {
+        card.addClass('pm-change--problem')
+        const foot = card.createDiv('pm-change-foot')
+        setIcon(foot.createSpan({ cls: 'pm-change-state-icon' }), 'circle-alert')
+        foot.createSpan({
+          cls: 'pm-change-problem',
+          text: t('chat.note.noSection', { section: named, list: sectionTitles(content).join(', ') || '—' })
+        })
+        return
+      }
     } else {
       this.head(card, 'file-plus', t('chat.note.newKind'), proposal.title)
       const folder = proposalFolder(proposal, fallback)
@@ -132,7 +152,7 @@ class NoteCard extends MarkdownRenderChild {
       })
     }
     await this.preview(card, proposal)
-    this.footer(card, proposal, target, done)
+    this.footer(card, proposal, target, done, section ? { section, guessed: !named } : null)
   }
 
   /**
@@ -372,7 +392,13 @@ class NoteCard extends MarkdownRenderChild {
     })
   }
 
-  private footer(card: HTMLElement, proposal: NoteProposal, target: TFile | null, done: TFile | boolean | null): void {
+  private footer(
+    card: HTMLElement,
+    proposal: NoteProposal,
+    target: TFile | null,
+    done: TFile | boolean | null,
+    into: { section: string; guessed: boolean } | null = null
+  ): void {
     const foot = card.createDiv('pm-change-foot')
     const written = done instanceof TFile ? done : done === true ? target : null
     if (written) {
@@ -395,9 +421,38 @@ class NoteCard extends MarkdownRenderChild {
       foot.createSpan({ cls: 'pm-change-problem', text: t('chat.note.noTarget', { name: proposal.append }) })
       return
     }
+    // Into its section, the text written under that section's heading.
+    if (into && target) {
+      const inside = foot.createEl('button', {
+        cls: 'mod-cta',
+        text: into.guessed ? t('chat.note.appendIn', { section: into.section }) : t('chat.note.append')
+      })
+      inside.addEventListener(
+        'click',
+        safeAsync(async () => {
+          inside.disabled = true
+          let written = false
+          try {
+            await this.plugin.app.vault.process(target, (text) => {
+              const next = appendToSection(text, into.section, proposal.body)
+              written = next !== null
+              return next ?? text
+            })
+            if (!written) new Notice(t('chat.note.noSection', { section: into.section, list: '—' }))
+          } finally {
+            await this.draw()
+          }
+        })
+      )
+    }
+    // At the note's end, as the model asked — beside the section guessed, the second choice.
+    if (into && !into.guessed) {
+      this.copyButton(foot, proposal)
+      return
+    }
     const button = foot.createEl('button', {
-      cls: 'mod-cta',
-      text: proposal.append ? t('chat.note.append') : t('chat.note.create')
+      cls: into ? '' : 'mod-cta',
+      text: into ? t('chat.note.appendAtEnd') : proposal.append ? t('chat.note.append') : t('chat.note.create')
     })
     button.addEventListener(
       'click',
@@ -421,6 +476,10 @@ class NoteCard extends MarkdownRenderChild {
         }
       })
     )
+    this.copyButton(foot, proposal)
+  }
+
+  private copyButton(foot: HTMLElement, proposal: NoteProposal): void {
     const copy = foot.createEl('button', { text: t('chat.note.copy') })
     copy.addEventListener(
       'click',

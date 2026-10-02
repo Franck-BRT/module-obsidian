@@ -8,6 +8,9 @@ import {
   newNoteContent,
   noteAtTitle,
   noteBlocks,
+  appendToSection,
+  sectionFor,
+  underSection,
   parseNoteProposal,
   findSection,
   replaceSection,
@@ -245,5 +248,39 @@ describe('the note blocks of a reply', () => {
       'ajouter à: [[Journal]]\n---\nLigne.\n'
     ])
     expect(noteBlocks('Rien à proposer.')).toEqual([])
+  })
+})
+
+describe('text added to a section of a note', () => {
+  // The note and the addition of a real exchange: the deepening asked for went to the end.
+  const NOTE =
+    "# Analyse du CCTG Lot 02 Gros œuvre\n\n## Contexte\nLe document définit les conditions d'exécution des travaux de gros œuvre pour le bâtiment technique B12, incluant terrassements, fondations, voiles, poteaux et dalles en béton armé.\n\n## Points clés\n\n### Objet et étendue\n- **Inclus** : Terrassements, fondations, radier, voiles, poteaux, dalles.\n- **Exclus** : VRD, étanchéité, charpente métallique (lots 01, 03, 04).\n\n### Bétons\n- **Classes d'exposition** :\n  - XC2 pour ouvrages enterrés.\n  - XC4 et XF1 pour extérieurs.\n  - XA1 pour le radier de la salle des groupes (agressivité chimique faible).\n- **Résistances** :\n  - C25/30 pour fondations.\n  - C30/37 pour voiles, poteaux, dalles.\n  - C35/45 pour le radier.\n- **Essais** :\n  - Épreuves de convenance avant premier coulage.\n  - 3 éprouvettes par 50 m³ ou par jour de bétonnage.\n- **Conditions météo** :\n  - Interdiction de bétonnage si température < 5 °C ou > 30 °C, sauf dispositions validées.\n\n### Armatures\n- **Nuance** : B500B, certifiées NF.\n- **Enrobages** :\n  - 30 mm intérieurs.\n  - 40 mm extérieurs.\n  - 50 mm contre terre.\n- **Validation** : Plans soumis au bureau de contrôle 15 jours avant ferraillage.\n\n### Coffrages et décoffrage\n- **Classe** : P3 pour parements vus.\n- **Délais** :\n  - 24 heures pour voiles.\n  - 7 jours pour dalles sans étaiement.\n\n### Tolérances\n- **Planéité** :\n  - 7 mm sous règle de 2 m pour dalles avec revêtement collé.\n  - 5 mm pour salle des groupes (radier recevant massifs).\n\n### Réservations\n- **Implantation** : D'après plans de synthèse visés.\n- **Oubli** : Reprise par carottage aux frais de l'entreprise.\n\n### Documents\n- **À remettre** :\n  - PAQ 4 semaines avant démarrage.\n  - Fiches techniques avant coulage.\n  - Procès-verbaux d'essais au fil de l'eau.\n  - DOE dans le mois suivant réception.\n\n### Réception des supports\n- **Fonds de fouille** : Réception contradictoire avec géotechnicien (mission G3), PV par zone."
+  const ADDED =
+    "## Approfondissement : Article 2 - Bétons\n\n### Fabrication et transport\n- **Origine** : Centrale certifiée NF.\n- **Délai** : Maximum 90 minutes entre malaxage et mise en œuvre.\n- **Interdiction** : Ajout d'eau sur chantier.\n\n### Essais\n- **Fréquence** :\n  - Épreuves de convenance avant premier coulage de chaque classe.\n  - 3 éprouvettes par tranche de 50 m³ ou par jour de bétonnage.\n- **Transmission** : Résultats au maître d'œuvre sous 30 jours.\n\n### Bétonnage par temps froid ou chaud\n- **Plage autorisée** : 5 °C à 30 °C.\n- **Exceptions** : Dispositions particulières (adjuvants, protection thermique, cure renforcée) validées par le maître d'œuvre."
+
+  it('finds the section the addition is about from its heading, the note’s own title aside', () => {
+    expect(sectionFor(NOTE, ADDED)).toBe('Bétons')
+    expect(sectionFor(NOTE, '## Divers\n\nRien.')).toBeNull()
+    expect(sectionFor(NOTE, 'Pas de titre.')).toBeNull()
+  })
+
+  it('goes at the end of the section, before the next one, its headings stepped under it', () => {
+    const next = appendToSection(NOTE, 'Bétons', ADDED)
+    if (next === null) throw new Error('not found')
+    const betons = next.indexOf('### Bétons')
+    const added = next.indexOf('#### Approfondissement : Article 2 - Bétons')
+    const armatures = next.indexOf('### Armatures')
+    expect(betons).toBeGreaterThan(0)
+    expect(added).toBeGreaterThan(betons)
+    expect(armatures).toBeGreaterThan(added)
+    expect(next).toContain('##### Fabrication et transport')
+    expect(next).toContain('Interdiction de bétonnage si température < 5 °C')
+    expect(underSection(NOTE, 'Bétons', ADDED)?.split('\n')[0]).toBe('#### Approfondissement : Article 2 - Bétons')
+    expect(appendToSection(NOTE, 'Nulle part', ADDED)).toBeNull()
+  })
+
+  it('is read from a block that names the note and the section', () => {
+    const proposal = parseNoteProposal('ajouter à: [[Analyse]]\nsection: Bétons\n---\nTexte.')
+    expect(proposal).toMatchObject({ append: '[[Analyse]]', section: 'Bétons', body: 'Texte.' })
   })
 })

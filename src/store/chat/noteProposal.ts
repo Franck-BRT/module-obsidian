@@ -136,9 +136,16 @@ export function appendedContent(existing: string, proposal: NoteProposal): strin
   return `${existing.trimEnd()}\n\n${proposal.body}\n`
 }
 
-/** Whether a note already holds the proposed text: a card applied once says so. */
+/**
+ * Whether a note already holds the proposed text: a card applied once says so — its
+ * headings at whatever level they were put, text added into a section stepping them down.
+ */
 export function holdsProposal(existing: string, proposal: NoteProposal): boolean {
-  const squeeze = (text: string): string => text.replace(/\s+/g, ' ').trim()
+  const squeeze = (text: string): string =>
+    text
+      .replace(/^[ \t]*#{1,6}[ \t]+/gm, '')
+      .replace(/\s+/g, ' ')
+      .trim()
   return squeeze(existing).includes(squeeze(proposal.body))
 }
 
@@ -287,6 +294,74 @@ export function replaceSection(content: string, title: string, text: string): st
   if (!title.trim()) return `${before}${before && body ? '\n' : ''}${body ? `${body}\n` : ''}`
   const rest = content.slice(at.end)
   return `${before}${body ? `\n${body}\n` : ''}${rest ? '\n' : ''}${rest}`
+}
+
+/**
+ * Text to go into a section, its headings stepped under the section's own: what was
+ * written for the end of a note under « ## » goes under « ### Bétons » as « #### ». Code
+ * is left as it is.
+ */
+export function underSection(content: string, title: string, text: string): string | null {
+  const at = findSection(content, title)
+  if (!at) return null
+  const level = headings(content).find((one) => one.end === at.start)?.level ?? 1
+  const lines = text.trim().split('\n')
+  let fence = false
+  const levels = lines
+    .map((line) => {
+      if (/^\s*(```|~~~)/.test(line)) fence = !fence
+      return fence ? null : (HEADING.exec(line)?.[1].length ?? null)
+    })
+    .filter((found): found is number => found !== null)
+  if (!levels.length) return text.trim()
+  const shift = level + 1 - Math.min(...levels)
+  fence = false
+  return lines
+    .map((line) => {
+      if (/^\s*(```|~~~)/.test(line)) fence = !fence
+      const heading = fence ? null : HEADING.exec(line)
+      if (!heading) return line
+      const depth = Math.min(6, Math.max(1, heading[1].length + shift))
+      return `${'#'.repeat(depth)} ${heading[2]}`
+    })
+    .join('\n')
+}
+
+/**
+ * The note with text added at the end of one of its sections — before the next heading of
+ * its level or above —, its headings stepped under the section's. Null when the section
+ * is not found.
+ */
+export function appendToSection(content: string, title: string, text: string): string | null {
+  const at = findSection(content, title)
+  const body = underSection(content, title, text)
+  if (!at || body === null) return null
+  const before = content.slice(0, at.end).trimEnd()
+  const rest = content.slice(at.end)
+  return `${before}\n\n${body}\n${rest ? `\n${rest}` : ''}`
+}
+
+/**
+ * The section of a note that text proposed for its end is most likely about: the one
+ * whose title its first heading holds — « Approfondissement : article 2 – Bétons » for
+ * « Bétons » —, the longest title first. Null when none does, or the text has no heading.
+ */
+export function sectionFor(content: string, text: string): string | null {
+  const first = /^#{1,6}\s+(.+)$/m.exec(text)?.[1]
+  if (!first) return null
+  const words = (value: string): string =>
+    ` ${fold(value)
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim()} `
+  const wanted = words(first)
+  const titles = sectionTitles(content)
+    .filter((title) => title.replace(/[^\p{L}\p{N}]/gu, '').length >= 4 && wanted.includes(words(title)))
+    // The note's own title — its first heading — is about everything, so about nothing.
+    .filter((title) => title !== sectionTitles(content)[0] || sectionTitles(content).length === 1)
+    .sort((a, b) => b.length - a.length)
+  const best = titles[0]
+  if (!best || titles.filter((title) => title.length === best.length).length > 1) return null
+  return findSection(content, best) ? best : null
 }
 
 /** Whether a section holds what the plugin keeps for itself, which a rewrite would break. */
