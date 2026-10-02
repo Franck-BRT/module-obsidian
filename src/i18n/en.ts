@@ -323,17 +323,20 @@ export const en = {
   'agendas.delete': 'Delete the agenda',
   'agendas.deleteConfirm': 'Move the « {name} » agenda to the trash?',
   'translate.menu': 'Translate…',
-  'translate.picked': { one: 'Translate {count} Word document', other: 'Translate the {count} Word documents' },
+  'translate.picked': {
+    one: 'Translate {count} Word or PowerPoint document',
+    other: 'Translate the {count} Word or PowerPoint documents'
+  },
   'translate.titleOne': 'Translate « {title} »',
   'translate.titleMany': { one: 'Translate {count} document', other: 'Translate {count} documents' },
   'translate.intro':
-    'The Word document is translated by the model, paragraph by paragraph, in the document itself: styles, tables, images, headers and footers are kept. The translation is poured into the library, beside the original.',
+    'The document is translated by the model, paragraph by paragraph, in the file itself: styles, tables, images, layouts, headers, footers and speaker notes are kept. The translation is poured into the library, beside the original.',
   'translate.language': 'Translate into',
   'translate.useGlossary': 'Use the glossary',
   'translate.glossaryDesc': 'The terms imposed by the « {path} » note.',
   'translate.openGlossary': 'Open the glossary',
   'translate.limits':
-    'Good to know: a bold or italic word in the middle of a sentence may lose its formatting; text inside images is not translated; the table of contents and cross-references update in Word (F9).',
+    'Good to know: a bold or italic word in the middle of a sentence may lose its formatting; text inside images is not translated; in Word, the table of contents and cross-references update with F9; in PowerPoint, a longer translated text may overflow its box.',
   'translate.go': 'Translate',
   'translate.noModel':
     'No model is set up to translate: fill in the translation (or text) model in the language model settings.',
@@ -407,7 +410,7 @@ export const en = {
   'tip.library.read':
     'Has the model read the ticked PDFs and images (scans), so the search and the chat find their text. Those read already are read again.',
   'tip.library.translate':
-    'Translates the ticked Word documents into the chosen language, formatting kept; the translation is poured beside the original.',
+    'Translates the ticked Word and PowerPoint documents into the chosen language, formatting kept; the translation is poured beside the original.',
   'tip.library.remove':
     'Removes the ticked documents from the library once confirmed: records and the files the library keeps go to the trash.',
   'tip.library.unpick': 'Unticks every document.',

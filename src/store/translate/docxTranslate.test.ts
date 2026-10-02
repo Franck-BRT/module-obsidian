@@ -133,3 +133,84 @@ describe('a translation’s name', () => {
     expect(translatedName('Spec', 'en')).toBe('Spec (EN)')
   })
 })
+
+const slideXml = (inner: string): string =>
+  `<?xml version="1.0"?><p:sld xmlns:a="a" xmlns:p="p"><p:cSld><p:spTree><p:sp><p:txBody>${inner}</p:txBody></p:sp></p:spTree></p:cSld></p:sld>`
+
+describe('a PowerPoint paragraph', () => {
+  it('is gathered from its runs, its line breaks kept, the slide number left out', async () => {
+    const { scanParagraphs: scan } = await import('./docxTranslate')
+    const xml = slideXml(
+      '<a:p><a:r><a:rPr lang="en-US" b="1"/><a:t>Antenna</a:t></a:r><a:r><a:rPr lang="en-US"/><a:t> maintenance plan</a:t></a:r>' +
+        '<a:br><a:rPr lang="en-US"/></a:br><a:r><a:rPr lang="en-US"/><a:t>Issue 2</a:t></a:r></a:p>' +
+        '<a:p><a:fld id="{1}" type="slidenum"><a:rPr lang="en-US"/><a:t>3</a:t></a:fld></a:p>'
+    )
+    expect(scan(xml, 'drawing').map(paragraphText)).toEqual(['Antenna maintenance plan\nIssue 2'])
+  })
+
+  it('is written back as runs like the one that held most of it, a break between its lines, the rest taken out', async () => {
+    const { scanParagraphs: scan, rewriteParagraphs: rewrite } = await import('./docxTranslate')
+    const xml = slideXml(
+      '<a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" b="1"/><a:t>Plan</a:t></a:r><a:r><a:rPr lang="en-US" sz="2400"/><a:t> for the antenna &amp; mast</a:t></a:r>' +
+        '<a:br/><a:r><a:rPr lang="en-US"/><a:t>Issue 2</a:t></a:r><a:endParaRPr lang="en-US"/></a:p>'
+    )
+    const out = rewrite(xml, scan(xml, 'drawing'), () => 'Plan de l’antenne & du mât\nÉdition 2', 'drawing')
+    expect(out).toContain(
+      '<a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="2400"/><a:t>Plan de l’antenne &amp; du mât</a:t></a:r><a:br/><a:r><a:rPr lang="en-US" sz="2400"/><a:t>Édition 2</a:t></a:r><a:endParaRPr lang="en-US"/></a:p>'
+    )
+    expect(out).not.toContain('b="1"')
+  })
+
+  it('has its language set on its text', async () => {
+    const { setDrawingLanguage } = await import('./docxTranslate')
+    expect(setDrawingLanguage('<a:rPr lang="en-US" altLang="en-GB" b="1"/><a:endParaRPr lang="en-US"/>', 'fr-FR')).toBe(
+      '<a:rPr lang="fr-FR" altLang="en-GB" b="1"/><a:endParaRPr lang="fr-FR"/>'
+    )
+  })
+})
+
+describe('a PowerPoint deck translated', () => {
+  it('lists its slides’ texts once, and is written back translated, every part kept', async () => {
+    const { buildPptx } = await import('../pptx')
+    const source = buildPptx({
+      title: 'Review',
+      slides: [
+        {
+          title: 'Antenna maintenance',
+          eyebrow: 'Ground segment',
+          body: [{ text: 'Preventive visit every 6 months', bullet: true }],
+          footer: 'CNES — Issue 2'
+        },
+        {
+          title: 'Deliverables',
+          body: [
+            { text: 'Maintenance plan', bullet: true },
+            { text: 'Visit report', bullet: true }
+          ]
+        }
+      ]
+    })
+    const opened = await openDocxForTranslation(source, 'fr')
+    expect(opened.texts).toEqual(
+      expect.arrayContaining(['Antenna maintenance', 'Preventive visit every 6 months', 'Deliverables', 'Visit report'])
+    )
+    const french: Record<string, string> = {
+      'Antenna maintenance': 'Maintenance de l’antenne',
+      'Preventive visit every 6 months': 'Visite préventive tous les 6 mois',
+      Deliverables: 'Livrables',
+      'Visit report': 'Rapport de visite'
+    }
+    const out = opened.build((text) => french[text])
+    const entries = await unzip(out)
+    const slides = entries
+      .filter((entry) => /^ppt\/slides\/slide\d+\.xml$/.test(entry.name))
+      .map((entry) => new TextDecoder().decode(entry.data))
+      .join('\n')
+    expect(slides).toContain('Maintenance de l’antenne')
+    expect(slides).toContain('Visite préventive tous les 6 mois')
+    expect(slides).toContain('Rapport de visite')
+    expect(slides).not.toContain('Visit report')
+    expect(slides).toContain('Maintenance plan')
+    expect(entries.map((entry) => entry.name)).toEqual((await unzip(source)).map((entry) => entry.name))
+  })
+})

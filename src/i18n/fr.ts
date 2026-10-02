@@ -319,17 +319,20 @@ export const fr: Catalog = {
   'agendas.delete': 'Supprimer l’ordre du jour',
   'agendas.deleteConfirm': 'Mettre l’ordre du jour « {name} » à la corbeille ?',
   'translate.menu': 'Traduire…',
-  'translate.picked': { one: 'Traduire {count} document Word', other: 'Traduire les {count} documents Word' },
+  'translate.picked': {
+    one: 'Traduire {count} document Word ou PowerPoint',
+    other: 'Traduire les {count} documents Word ou PowerPoint'
+  },
   'translate.titleOne': 'Traduire « {title} »',
   'translate.titleMany': { one: 'Traduire {count} document', other: 'Traduire {count} documents' },
   'translate.intro':
-    'Le document Word est traduit par le modèle, paragraphe par paragraphe, dans le document lui-même : styles, tableaux, images, en-têtes et pieds de page sont conservés. La traduction est versée dans la bibliothèque, à côté de l’original.',
+    'Le document est traduit par le modèle, paragraphe par paragraphe, dans le fichier lui-même : styles, tableaux, images, mises en page, en-têtes, pieds de page et notes de l’orateur sont conservés. La traduction est versée dans la bibliothèque, à côté de l’original.',
   'translate.language': 'Traduire en',
   'translate.useGlossary': 'Utiliser le glossaire',
   'translate.glossaryDesc': 'Les termes imposés de la note « {path} ».',
   'translate.openGlossary': 'Ouvrir le glossaire',
   'translate.limits':
-    'À savoir : un mot en gras ou en italique au milieu d’une phrase peut perdre sa mise en forme ; le texte dans les images n’est pas traduit ; le sommaire et les renvois se mettent à jour dans Word (F9).',
+    'À savoir : un mot en gras ou en italique au milieu d’une phrase peut perdre sa mise en forme ; le texte dans les images n’est pas traduit ; dans Word, le sommaire et les renvois se mettent à jour avec F9 ; dans PowerPoint, un texte traduit plus long peut déborder de sa zone.',
   'translate.go': 'Traduire',
   'translate.noModel':
     'Aucun modèle n’est configuré pour traduire : renseigne le modèle de traduction (ou de texte) dans les réglages du modèle de langage.',
@@ -409,7 +412,7 @@ export const fr: Catalog = {
   'tip.library.read':
     'Fait lire par le modèle les PDF et images cochés (scans), pour que la recherche et le chat trouvent leur texte. Ceux déjà lus sont relus.',
   'tip.library.translate':
-    'Traduit les documents Word cochés dans la langue choisie, mise en forme conservée ; la traduction est versée à côté de l’original.',
+    'Traduit les documents Word et PowerPoint cochés dans la langue choisie, mise en forme conservée ; la traduction est versée à côté de l’original.',
   'tip.library.remove':
     'Retire les documents cochés de la bibliothèque, après confirmation : fiches et fichiers conservés par la bibliothèque vont à la corbeille.',
   'tip.library.unpick': 'Décoche tous les documents.',

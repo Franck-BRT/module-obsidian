@@ -1,7 +1,6 @@
 import { normalizePath, Notice, TFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { LibraryDoc } from '../../store/library/libraryDoc'
-import { familyOf } from '../../store/library/libraryDoc'
 import { LlmClient } from '../../store/llm/client'
 import { chatModel } from '../../store/chat/chatModels'
 import { openDocxForTranslation, translatedName } from '../../store/translate/docxTranslate'
@@ -15,9 +14,9 @@ import { ensureFolder, folderOf } from '../../store/vaultFs'
 import { today } from '../../dates'
 import { t } from '../../i18n'
 
-/** The documents that can be translated: Word ones, for now. */
+/** The documents that can be translated: Word documents and PowerPoint decks, for now. */
 export function translatable(doc: LibraryDoc): boolean {
-  return !!doc.file && familyOf(doc.file) === 'word' && /\.docx$/i.test(doc.file)
+  return !!doc.file && /\.(docx|pptx)$/i.test(doc.file)
 }
 
 /** The glossary note's path. */
