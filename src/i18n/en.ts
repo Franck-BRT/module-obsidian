@@ -1329,6 +1329,15 @@ export const en = {
   'chat.preset.summaryQ': 'Summarise this note in a few points, keeping the figures, dates and decisions.',
   'chat.preset.actions': 'Actions to take',
   'chat.preset.actionTickets': 'Actions → tickets',
+  'chat.preset.deadlines': 'Deadlines → milestones',
+  'chat.preset.deadlinesQ':
+    'List the deadlines this document sets ({files}): delivery dates, meetings, starts, receptions, delays. For each, give the date, what is due and by whom, with the document’s sentence. Then propose for each a milestone to create, with a creation block: type milestone, due = the date, the fitting project and lot, and in "description" the original sentence followed by “Source:” and the document’s link. When an existing ticket already matches the deadline, propose to change its date rather than to create one. For a relative delay (“within 15 days”), work the date out only when the document gives where it runs from, and say how; otherwise point it out without proposing a milestone. Never propose a date the document does not hold.',
+  'chat.deadlinesIntro':
+    'Dates and delays found by the tool in the documents, with the sentence each stands in — build on them, add none; a date of no use to the plan (an edition date, a reference) may be left aside:',
+  'chat.deadlinesGuessed': 'year not written, assumed',
+  'chat.deadlinesDelays': 'Relative delays:',
+  'chat.deadlinesNone': '(no date found)',
+  'library.deadlines': 'Deadlines → milestones',
   'chat.actionTicketsPick': 'Choose the project to create this note’s tickets in.',
   'chat.actionTicketsProjects': 'Project attached to create the tickets in: {list}.',
   'chat.preset.actionTicketsQ':

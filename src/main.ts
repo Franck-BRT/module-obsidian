@@ -1520,6 +1520,14 @@ export default class PMPlugin extends Plugin {
     if (view instanceof ChatView) view.attachFiles(paths)
   }
 
+  /** The chat, opened on documents to find the deadlines they set and propose them as milestones. */
+  async chatDeadlines(paths: string[]): Promise<void> {
+    if (!paths.length) return
+    await this.openChat()
+    const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
+    if (view instanceof ChatView) await view.askDeadlines(paths)
+  }
+
   /** The chat, opened on a branch of a saved conversation, picked in its note. */
   async chatOnBranch(path: string, index: number): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(path)

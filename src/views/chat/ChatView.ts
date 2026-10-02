@@ -87,6 +87,7 @@ import {
 import { chunkText } from '../../store/rag/ragChunk'
 import { noteBody } from '../../store/notes/NoteLibrary'
 import { pdfPages } from './pdfPages'
+import { asksForDeadlines, deadlinesBlock } from '../../store/chat/deadlines'
 import { noteProjects } from '../../store/chat/noteProjects'
 import {
   documentSource,
@@ -2303,7 +2304,7 @@ export class ChatView extends ItemView {
   private async askPreset(preset: ChatPrompt): Promise<void> {
     // Tickets to make need a project to make them in: the note's own, or one picked first.
     if (makesTickets(preset) && !this.projects.length && !this.collections.length) {
-      const found = this.contextProjects()
+      const found = preset.scope === 'file' ? this.filesProjects() : this.contextProjects()
       if (!found.length) {
         new Notice(t('chat.actionTicketsPick'), 8000)
         this.pickProject(safeAsync(() => this.askPreset(preset)))
@@ -2335,7 +2336,30 @@ export class ChatView extends ItemView {
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const file = this.useNote ? this.contextFile : null
     const note = file ? `[[${file.path}|${file.basename.replace(/[[\]|]/g, ' ')}]]` : ''
-    await this.send(fillPrompt(preset.question, values, { today, projects, note }))
+    const files = this.files
+      .map((path) => `[[${path}|${path.slice(path.lastIndexOf('/') + 1).replace(/[[\]|]/g, ' ')}]]`)
+      .join(', ')
+    await this.send(fillPrompt(preset.question, values, { today, projects, note, files }))
+  }
+
+  /** The projects the documents attached belong to, as the library files them. */
+  private filesProjects(): string[] {
+    const library = new Map(this.plugin.library.docs().map((doc) => [doc.file, doc]))
+    const found = this.files.flatMap((path) => library.get(path)?.projects ?? [])
+    return [...new Set(found)].filter((path) => {
+      const ref = this.plugin.index.projectRef(path)
+      return !!ref && !ref.template
+    })
+  }
+
+  /**
+   * The documents given, attached, and their deadlines asked for at once — from the
+   * library's menu: the question that finds them and proposes them as milestones.
+   */
+  async askDeadlines(paths: string[]): Promise<void> {
+    this.attachFiles(paths)
+    const preset = builtinPrompts().find((one) => one.question === t('chat.preset.deadlinesQ'))
+    if (preset) await this.askPreset(preset)
   }
 
   /** The projects the note asked about belongs to: those it names, or the one whose folder holds it. */
@@ -2489,6 +2513,22 @@ export class ChatView extends ItemView {
         : []
       // A status point asked for: its facts worked out here, against the plan at the last one.
       const status = project && asksForStatus(asked) ? await this.statusBlock(currentProjects(this.turns)) : ''
+      // Deadlines asked for: every date and delay the documents write, found by the plugin,
+      // so the model misses none and makes none up.
+      const dated = [
+        ...attached.read.map((file) => ({ name: file.name, text: file.text })),
+        ...(note ? [{ name: note.title, text: note.content }] : [])
+      ]
+      const deadlines =
+        dated.length && asksForDeadlines(asked)
+          ? deadlinesBlock(dated, {
+              intro: t('chat.deadlinesIntro'),
+              file: (name) => name,
+              guessed: t('chat.deadlinesGuessed'),
+              delays: t('chat.deadlinesDelays'),
+              none: t('chat.deadlinesNone')
+            })
+          : ''
       const written = await this.writtenNotes()
       const how = [
         this.changeInstructions(requirements.length > 0, project, paths.length > 0, places),
@@ -2509,6 +2549,7 @@ export class ChatView extends ItemView {
             status,
             block,
             this.filesText(attached, fileBudget, asked, !told),
+            deadlines,
             library,
             skills,
             how

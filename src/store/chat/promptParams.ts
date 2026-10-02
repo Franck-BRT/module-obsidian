@@ -39,7 +39,7 @@ const KINDS: Record<string, ParamKind> = {
 }
 
 /** The blanks filled without asking, by their folded name. */
-export const AUTO_PARAMS: Record<string, 'today' | 'projects' | 'note'> = {
+export const AUTO_PARAMS: Record<string, 'today' | 'projects' | 'note' | 'files'> = {
   "aujourd'hui": 'today',
   'aujourd’hui': 'today',
   'date du jour': 'today',
@@ -49,7 +49,11 @@ export const AUTO_PARAMS: Record<string, 'today' | 'projects' | 'note'> = {
   project: 'projects',
   projects: 'projects',
   note: 'note',
-  'la note': 'note'
+  'la note': 'note',
+  fichiers: 'files',
+  fichier: 'files',
+  files: 'files',
+  documents: 'files'
 }
 
 const BLANK = /\{([^{}\n]+)\}/g
@@ -87,7 +91,7 @@ export function promptParams(question: string): PromptParam[] {
 export function fillPrompt(
   question: string,
   values: Record<string, string>,
-  known: { today: string; projects: string; note?: string }
+  known: { today: string; projects: string; note?: string; files?: string }
 ): string {
   return question.replace(BLANK, (whole, raw: string) => {
     const auto = AUTO_PARAMS[fold(raw.trim())]

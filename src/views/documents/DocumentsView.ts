@@ -914,6 +914,14 @@ export class DocumentsView extends ItemView {
         .setDisabled(!doc.file)
         .onClick(safeAsync(() => this.plugin.chatAboutDocuments([doc.file])))
     )
+    // What the document fixes — dates, delays —, proposed as the project's milestones.
+    menu.addItem((item) =>
+      item
+        .setTitle(t('library.deadlines'))
+        .setIcon('calendar-clock')
+        .setDisabled(!doc.file)
+        .onClick(safeAsync(() => this.plugin.chatDeadlines([doc.file])))
+    )
     menu.addItem((item) =>
       item
         .setTitle(t('library.openRecord'))
