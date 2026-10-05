@@ -213,3 +213,73 @@
 .pm-doc-sheet-open {
   color: var(--text-warning, var(--color-orange));
 }
+
+.pm-visa-waits-modal {
+  width: min(820px, 94vw);
+}
+
+.pm-visa-wait-group {
+  margin-bottom: var(--size-4-4);
+}
+
+.pm-visa-wait-head {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
+  font-weight: var(--font-semibold);
+}
+
+.pm-visa-wait-late,
+.pm-visa-wait-row.is-late .pm-visa-wait-state,
+.pm-doc-visa-due.is-late {
+  color: var(--text-error, var(--color-red));
+}
+
+.pm-visa-wait-late {
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-visa-wait-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-2) var(--size-4-3);
+  padding: var(--size-2-3) var(--size-4-2);
+  border-left: 3px solid var(--text-faint);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  margin-bottom: var(--size-2-3);
+}
+
+.pm-visa-wait-row.is-late {
+  border-left-color: var(--color-red, #e5534b);
+}
+
+.pm-visa-wait-doc {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  text-decoration: none;
+}
+
+.pm-visa-wait-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-visa-wait-sheet {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  margin-left: auto;
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-doc-visa-due {
+  margin-left: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}

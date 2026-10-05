@@ -18,7 +18,9 @@ import {
   DEMO_CONTACTS,
   DEMO_REQUIREMENTS,
   demoGuide,
-  englishSow
+  englishSow,
+  executionPlan,
+  executionPlanTask
 } from './demoContent'
 
 /** The library's folder the demonstration's documents go in. */
@@ -98,6 +100,13 @@ export async function createDemo(plugin: PMPlugin): Promise<void> {
     buildDocx(calculationNote('B'))
   )
   await plugin.store.insertTask(b12, calculationTask(day, notePath))
+  // A drawing received three weeks ago, nobody has signed yet: its visa is late.
+  const planPath = await writeBytes(
+    plugin,
+    normalizePath(`${docs}/PEX-03 Plan d execution des voiles indice A.docx`),
+    buildDocx(executionPlan())
+  )
+  await plugin.store.insertTask(b12, executionPlanTask(day, planPath))
   // Its next issue, arrived and waiting to be deposited.
   await writeBytes(
     plugin,

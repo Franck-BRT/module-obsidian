@@ -133,6 +133,7 @@ function serializeProjectConfig(config: ProjectConfig | undefined): Record<strin
   if (config.pullForwardOnEarlyFinish !== undefined) out.pullForwardOnEarlyFinish = config.pullForwardOnEarlyFinish
   if (config.respectWorkingDays !== undefined) out.respectWorkingDays = config.respectWorkingDays
   if (config.autoArchiveDays !== undefined) out.autoArchiveDays = config.autoArchiveDays
+  if (config.visaDays !== undefined) out.visaDays = config.visaDays
   if (config.showSubtreeConnections !== undefined) out.showSubtreeConnections = config.showSubtreeConnections
   if (config.lineBorders) out.lineBorders = config.lineBorders
   if (config.kanbanShowSubtasks !== undefined) out.kanbanShowSubtasks = config.kanbanShowSubtasks
@@ -302,6 +303,7 @@ function serializeDocument(meta: DocumentMeta | undefined): Record<string, unkno
   if (meta.approvals.length) out.approvals = meta.approvals
   if (meta.versions.length) out.versions = meta.versions
   if (meta.chases?.length) out.chases = meta.chases
+  if (meta.visaDays) out.visaDays = meta.visaDays
   return out
 }
 

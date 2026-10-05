@@ -423,6 +423,41 @@ export function calculationTask(today: string, file: string): Task {
   })
 }
 
+/** A drawing received three weeks ago that nobody has signed yet: its visa is late. */
+export function executionPlan(): DocxDocument {
+  return {
+    title: 'PEX-03 — Plan d’exécution des voiles du rez-de-chaussée — indice A',
+    blocks: [
+      para('Title', 'Plan d’exécution — Voiles du rez-de-chaussée'),
+      para('Meta', 'Référence PEX-03 — Indice A — Garonne Bâtiment'),
+      para(
+        'Normal',
+        'Voiles en béton C25/30 XC1, épaisseur 20 cm, enrobage 30 mm, armatures HA10 e = 20 cm en deux nappes.'
+      )
+    ]
+  }
+}
+
+export function executionPlanTask(today: string, file: string): Task {
+  return makeTask({
+    title: 'Plan d’exécution des voiles',
+    type: 'document',
+    start: '',
+    due: addDays(today, -21),
+    document: makeDocument({
+      state: 'received',
+      file,
+      reference: 'PEX-03',
+      issue: 'A',
+      issuer: 'Garonne Bâtiment',
+      approvers: ['Paul Martin'],
+      versions: [
+        { version: 1, file, at: `${addDays(today, -20)}T09:00:00.000Z`, by: 'Paul Martin', note: 'Indice A reçu' }
+      ]
+    })
+  })
+}
+
 /** The technical centre's tickets: work that, added to the building's, overloads the same people. */
 export function c7Tasks(today: string): Task[] {
   const d = (days: number): string => addDays(today, days)
@@ -462,6 +497,12 @@ Ce projet et le projet « ${DEMO_C7} » sont fictifs. La commande **« Supprimer
 - [ ] Onglet **Documents** : la note de calcul NDC-04 indice B, reçue, en attente de deux visas.
 - [ ] Sur la pastille d’Anne Leroy → **Fiche de visa assistée** : le CCTP est coché, les 3 exigences aussi ; « Analyser » doit trouver le béton C25/30 au lieu de C30/37 XC2, l’enrobage de 30 mm au lieu de 40, et la charge des locaux techniques.
 - [ ] Valider : la fiche, son Word et son PDF dans « Visas », et l’avis dans le circuit.
+
+## Délais de visa
+- [ ] À l’ouverture d’Obsidian (ou commande **Visas en attente**) : le plan d’exécution PEX-03, reçu il y a 20 jours, a 5 jours de retard chez Paul Martin.
+- [ ] Onglet **Documents** : sur les pastilles des viseurs, « J-11 » pour la note de calcul, le retard en rouge pour le plan d’exécution.
+- [ ] Fiche du document : le **délai de visa** (15 jours par défaut, réglable par projet dans ses paramètres, ou par document) et la date d’échéance.
+- [ ] Ordre du jour « Revue documentaire » : le bloc des visas en attente ; rapport d’état **PDF** : la section « Visas en attente ».
 
 ## Levée des observations (indice suivant)
 - [ ] Dans la fiche du ticket « Note de calcul du radier », bouton **Déposer** : choisir **NDC-04 Note de calcul radier indice C** dans le dossier \`_inbox\` du projet, puis passer l’indice à **C**.

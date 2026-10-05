@@ -132,7 +132,7 @@ Pour chacun : probabilité et impact toujours justes ? parade engagée ? respons
 {{documents-attendus}}
 
 ## 4. Documents reçus, en attente de visa (15 min)
-{{documents-en-revue}}
+{{visas-en-attente}}
 
 ## 5. Intervenants concernés
 {{intervenants}}
@@ -440,7 +440,7 @@ For each: are probability and impact still right? Is the mitigation under way? W
 {{expected-documents}}
 
 ## 4. Documents received, awaiting approval (15 min)
-{{documents-in-review}}
+{{pending-visas}}
 
 ## 5. Contacts concerned
 {{contacts}}

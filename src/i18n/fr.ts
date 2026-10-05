@@ -877,6 +877,43 @@ export const fr: Catalog = {
   'visa.previousSheet': 'Fiche précédente',
   'visa.sheets': 'Fiches de visa',
   'visa.openCount': { one: '{count} observation ouverte', other: '{count} observations ouvertes' },
+  'visa.wait.left': { one: 'J-{count}', other: 'J-{count}' },
+  'visa.wait.today': 'dû aujourd’hui',
+  'visa.wait.late': { one: '{count} j de retard', other: '{count} j de retard' },
+  'visa.waitNone': 'Aucun visa en attente.',
+  'visa.waitsTitle': 'Visas en attente',
+  'visa.waitsIntro': {
+    one: '{count} visa en attente, dont {late} en retard. Par viseur, le plus en retard d’abord :',
+    other: '{count} visas en attente, dont {late} en retard. Par viseur, le plus en retard d’abord :'
+  },
+  'visa.noReviewerNamed': 'Viseur non désigné',
+  'visa.lateCount': { one: '{count} en retard', other: '{count} en retard' },
+  'visa.receivedOn': 'reçu le {date}',
+  'visa.dueOn': 'visa dû le {date}',
+  'visa.lateItem': {
+    one: '{document} — {who}, {count} jour de retard',
+    other: '{document} — {who}, {count} jours de retard'
+  },
+  'visa.lateNotice': { one: '{count} visa a dépassé son délai :', other: '{count} visas ont dépassé leur délai :' },
+  'visa.lateGo': 'Voir les visas en attente',
+  'command.visaWaits': 'Visas en attente',
+  'settings.group.visa': 'Visas',
+  'settings.visaDays.name': 'Délai de visa (jours)',
+  'settings.visaDays.desc':
+    'Le temps laissé aux viseurs pour signer un document, compté à partir du dépôt de son fichier. Un projet ou un document peut fixer le sien.',
+  'settings.visaReminder.name': 'Rappel des visas en retard',
+  'settings.visaReminder.desc':
+    'À l’ouverture d’Obsidian, une fois par jour, signale les visas qui ont dépassé leur délai, avec la liste par viseur.',
+  'settings.aliases.visa': 'visa, visas, délai, viseur, approbation, retard',
+  'projectEdit.days': { one: '{count} jour', other: '{count} jours' },
+  'visa.delay': 'Délai de visa',
+  'visa.daysWord': 'jours',
+  'visa.delayProject': { one: '{count} jour (projet)', other: '{count} jours (projet)' },
+  'visa.reviewer': 'Viseur',
+  'visa.received': 'Reçu',
+  'visa.due': 'Échéance',
+  'agenda.block.pendingVisas':
+    'Les visas en attente sur les documents reçus : viseur, date de réception, échéance, retard.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

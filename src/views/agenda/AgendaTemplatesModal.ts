@@ -62,6 +62,8 @@ export function blockDescription(block: AgendaBlock): string {
       return t('agenda.block.pendingDecisions')
     case 'recent-decisions':
       return t('agenda.block.recentDecisions')
+    case 'pending-visas':
+      return t('agenda.block.pendingVisas')
     case 'late-documents':
       return t('agenda.block.lateDocuments')
     case 'expected-documents':

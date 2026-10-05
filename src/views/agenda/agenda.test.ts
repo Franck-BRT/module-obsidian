@@ -233,6 +233,25 @@ describe('the blocks', () => {
     expect(agendaBlock('décisions à prendre')).toBe('pending-decisions')
   })
 
+  it('list the visas owed, the late ones said so, from the deposit and the project’s delay', () => {
+    const note = makeTask({
+      title: 'Note de calcul radier',
+      type: 'document',
+      start: '',
+      document: makeDocument({
+        state: 'received',
+        file: 'n.pdf',
+        reference: 'NDC-04',
+        approvers: ['Anne Leroy'],
+        versions: [{ version: 1, file: 'n.pdf', at: '2026-09-10T09:00:00.000Z', by: '', note: '' }]
+      })
+    })
+    const tasks = [...flattenTasks(project()).map((flat) => flat.task), note]
+    const visas = filler({ tasks, visaDays: 15 }).render('pending-visas')
+    expect(visas).toContain('| NDC-04 — Note de calcul radier | Anne Leroy | 10 sept. | 25 sept. | **7 j de retard** |')
+    expect(agendaBlock('visas en attente')).toBe('pending-visas')
+  })
+
   it('chase the documents by issuer, and list those expected and in review', () => {
     const late = f.render('late-documents')
     expect(late).toContain('**Garonne Bâtiment** (interlocuteur : Paul Martin)')

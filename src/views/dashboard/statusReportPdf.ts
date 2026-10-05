@@ -1,6 +1,8 @@
 import type { Task } from '../../types'
 import type { ProjectMetrics } from '../../store/Metrics'
 import type { ChaseItem } from '../../store/chasing'
+import type { VisaWait } from '../../store/visaDelay'
+import { waitText } from '../visa/visaWaitWords'
 import { decisionDay, decisionOf } from '../../store/decision'
 import { BLACK, fit, GREY, LIGHT, PdfCanvas, rgb, tint, WHITE, type Rgb } from '../../store/pdfCanvas'
 import { niceTicks } from './chartGeometry'
@@ -26,6 +28,8 @@ export interface StatusReportInput {
   metrics: ProjectMetrics
   decisions: { recent: Task[]; pending: Task[] }
   lateDocuments: ChaseItem[]
+  /** The visas owed on documents received, the latest past its day first. */
+  visas?: VisaWait[]
 }
 
 const NAVY: Rgb = [0.12, 0.23, 0.37]
@@ -515,6 +519,36 @@ class Report {
     }
   }
 
+  /** The visas owed on the documents received: by whom, since when, by when. */
+  visas(waits: VisaWait[]): void {
+    this.section(t('visa.waitsTitle'))
+    const c = this.c
+    for (const wait of waits.slice(0, 20)) {
+      c.need(14)
+      const meta = wait.task.document
+      const name = [meta?.reference, wait.task.title, meta?.issue ? t('chase.mail.issue', { issue: meta.issue }) : '']
+        .filter(Boolean)
+        .join(' — ')
+      c.text(this.left, c.y, fit(name, 9, this.width * 0.46), { size: 9 })
+      c.text(
+        this.left + this.width * 0.48,
+        c.y,
+        fit(wait.approver ? displayName(wait.approver) : t('visa.noReviewerNamed'), 8.5, this.width * 0.2),
+        { size: 8.5, color: GREY }
+      )
+      c.text(
+        this.left + this.width,
+        c.y,
+        `${t('visa.received')} ${formatDateShort(wait.received)} · ${t('visa.due')} ${formatDateShort(wait.due)} · ${waitText(wait)}`,
+        { size: 8.5, color: wait.late > 0 ? RED : GREY, align: 'right' }
+      )
+      c.y += 14
+    }
+    if (waits.length > 20) {
+      c.text(this.left, c.y, t('report.more', { count: waits.length - 20 }), { size: 8, color: GREY })
+    }
+  }
+
   /** What others still owe, past its date: by whom, since when, how often chased. */
   documents(): void {
     const late = this.input.lateDocuments
@@ -544,6 +578,13 @@ class Report {
   }
 }
 
+/** The visas owed, by document and reviewer, the late ones in red. */
+function visas(report: Report, input: StatusReportInput): void {
+  const waits = input.visas ?? []
+  if (!waits.length) return
+  report.visas(waits)
+}
+
 /** The status report, as a PDF file. */
 export function statusReportPdf(input: StatusReportInput, at = new Date()): Uint8Array {
   const report = new Report(input)
@@ -557,5 +598,6 @@ export function statusReportPdf(input: StatusReportInput, at = new Date()): Uint
   report.decisions()
   report.people()
   report.documents()
+  visas(report, input)
   return report.c.build(`${t('kpi.reportTitle')} — ${input.title}`, at)
 }

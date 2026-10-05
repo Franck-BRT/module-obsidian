@@ -9,7 +9,9 @@ import { openVisaSheet } from '../views/visa/VisaModal'
 import { documentSheets } from '../views/visa/visaRun'
 import { verdictLabel } from '../views/visa/visaDocument'
 import { readVerdict } from '../store/visa/visaSheet'
-import { formatDate } from '../dates'
+import { formatDate, today } from '../dates'
+import { visaWaitsOf } from '../store/visaDelay'
+import { waitText } from '../views/visa/visaWaitWords'
 import { renderPropRow } from '../ui/FormField'
 import { renderInputControl, renderSelectControl } from '../ui/composites/properties'
 import { renderPersonPicker } from '../ui/PersonPicker'
@@ -134,6 +136,39 @@ export function renderDocumentPanel(container: HTMLElement, ctx: DocumentPanelCo
       return cell
     },
     'stamp'
+  )
+
+  // How long its reviewers have, and by when they are due to sign this issue.
+  renderPropRow(
+    grid,
+    t('visa.delay'),
+    () => {
+      const cell = createDiv('pm-prop-value')
+      const projectDays = plugin.store.configFor(project).visaDays
+      renderInputControl({
+        container: cell,
+        value: meta.visaDays ? String(meta.visaDays) : '',
+        inputType: 'number',
+        suffix: ` ${t('visa.daysWord')}`,
+        placeholder: t('visa.delayProject', { count: projectDays }),
+        number: { min: 1, max: 365 },
+        onChange: (value) => {
+          const days = Math.round(Number(value))
+          task.document = { ...documentOf(task), visaDays: Number.isFinite(days) && days > 0 ? days : undefined }
+          rerender()
+        }
+      })
+      const waits = visaWaitsOf(task, today().toString(), projectDays)
+      if (waits.length) {
+        const latest = waits[0]
+        cell.createSpan({
+          cls: `pm-doc-visa-due${latest.late > 0 ? ' is-late' : ''}`,
+          text: `${t('visa.dueOn', { date: formatDate(latest.due) })} · ${waitText(latest)}`
+        })
+      }
+      return cell
+    },
+    'timer'
   )
 
   renderFileRow(section, ctx)

@@ -44,6 +44,7 @@ export function resolveProjectConfig(
         ? makeWorkCalendar(settings.workingWeekdays, settings.holidays)
         : ALL_DAYS,
     autoArchiveDays: config?.autoArchiveDays ?? settings.autoArchiveDays,
+    visaDays: config?.visaDays ?? settings.visaDays,
     showSubtreeConnections: config?.showSubtreeConnections ?? settings.showSubtreeConnections,
     lineBorders: config?.lineBorders ?? settings.lineBorders,
     kanbanShowSubtasks: config?.kanbanShowSubtasks ?? settings.kanbanShowSubtasks,

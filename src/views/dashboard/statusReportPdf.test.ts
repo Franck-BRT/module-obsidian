@@ -96,7 +96,21 @@ describe('the status report', () => {
           today: TODAY,
           metrics,
           decisions: { recent: [decision], pending: [] },
-          lateDocuments: awaitedDocuments(tasks, TODAY)
+          lateDocuments: awaitedDocuments(tasks, TODAY),
+          visas: [
+            {
+              task: makeTask({
+                title: 'Plan d’exécution',
+                type: 'document',
+                start: '',
+                document: makeDocument({ reference: 'PEX-03' })
+              }),
+              approver: 'Paul Martin',
+              received: '2026-09-12',
+              due: '2026-09-27',
+              late: 5
+            }
+          ]
         },
         new Date('2026-10-02T08:00:00Z')
       )
@@ -109,7 +123,10 @@ describe('the status report', () => {
       'Radier coulé',
       'Accès chantier bloqué',
       'Béton C30/37',
-      'PL-002 — Plan de coffrage'
+      'PL-002 — Plan de coffrage',
+      'Visas en attente',
+      'PEX-03 — Plan d’exécution',
+      '5 j de retard'
     ]) {
       expect(text).toContain(pdfString(words).slice(1, -1))
     }

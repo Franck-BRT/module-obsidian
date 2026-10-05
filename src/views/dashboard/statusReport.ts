@@ -7,6 +7,7 @@ import { decidedSince, isDecision, isPending, orderDecisions } from '../../store
 import { awaitedDocuments } from '../../store/chasing'
 import { addDays } from '../../store/Metrics'
 import { statusReportPdf } from './statusReportPdf'
+import { projectWaits } from '../visa/visaWaits'
 import type { ProjectMetrics } from '../../store/Metrics'
 import { ensureFolder, folderOf } from '../../store/vaultFs'
 import { displayName, sanitizeFileName } from '../../utils'
@@ -159,7 +160,8 @@ export async function writeStatusReportPdf(plugin: PMPlugin, scope: ProjectScope
       recent: decidedSince(decisions, addDays(stamp, -30)),
       pending: orderDecisions(decisions.filter(isPending))
     },
-    lateDocuments: awaitedDocuments(tasks, stamp)
+    lateDocuments: awaitedDocuments(tasks, stamp),
+    visas: projectWaits(plugin, scope.projects, stamp).map((one) => one.wait)
   })
   const folder = project ? folderOf(project.filePath) : ''
   if (folder) await ensureFolder(plugin.app, folder)

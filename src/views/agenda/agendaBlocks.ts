@@ -11,6 +11,8 @@ import { isPhase } from '../../store/Phase'
 import { isRisk } from '../../store/risk'
 import { decidedSince, decisionDay, decisionOf, isDecision, isPending, orderDecisions } from '../../store/decision'
 import { flattenTasks } from '../../store/TaskTreeOps'
+import { visaWaits } from '../../store/visaDelay'
+import { waitText } from '../visa/visaWaitWords'
 import { formatDateLetter, formatDateShort } from '../../dates'
 import { displayName, isTerminalStatus } from '../../utils'
 import { bandLabel, impactLabel, probabilityLabel } from '../risks/riskLabels'
@@ -36,6 +38,8 @@ export interface AgendaContext {
   keyOf?: (raw: string) => string
   /** A link to a note, as the vault writes it. */
   link: (path: string, title: string) => string
+  /** Days a document's reviewers have to sign; the plugin's default when not given. */
+  visaDays?: number
 }
 
 /** Days between two days, the second later when above zero. */
@@ -187,6 +191,8 @@ export class AgendaFiller {
         return this.pendingDecisions()
       case 'recent-decisions':
         return this.recentDecisions()
+      case 'pending-visas':
+        return this.pendingVisas()
       case 'late-documents':
         return this.lateDocuments()
       case 'expected-documents':
@@ -454,6 +460,28 @@ export class AgendaFiller {
       docs.map((task) => {
         const meta = documentOf(task)
         return [meta.reference, task.title, displayName(meta.issuer), formatDateShort(task.due)]
+      })
+    )
+  }
+
+  /** The visas owed on the documents received, the latest past its day first. */
+  private pendingVisas(): string {
+    const c = this.context
+    const waits = visaWaits(this.flat, c.date, () => c.visaDays ?? 15)
+    if (!waits.length) return nothing()
+    return table(
+      [t('agenda.document'), t('visa.reviewer'), t('visa.received'), t('visa.due'), t('agenda.state')],
+      waits.map((wait) => {
+        const meta = documentOf(wait.task)
+        return [
+          [meta.reference, wait.task.title, meta.issue ? t('chase.mail.issue', { issue: meta.issue }) : '']
+            .filter(Boolean)
+            .join(' — '),
+          wait.approver ? displayName(wait.approver) : t('visa.noReviewerNamed'),
+          formatDateShort(wait.received),
+          formatDateShort(wait.due),
+          wait.late > 0 ? `**${waitText(wait)}**` : waitText(wait)
+        ]
       })
     )
   }

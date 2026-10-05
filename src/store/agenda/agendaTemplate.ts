@@ -31,6 +31,7 @@ export const AGENDA_BLOCKS = [
   ['matrice-risques', 'risk-matrix'],
   ['décisions-à-prendre', 'pending-decisions'],
   ['décisions-récentes', 'recent-decisions'],
+  ['visas-en-attente', 'pending-visas'],
   ['documents-en-retard', 'late-documents'],
   ['documents-attendus', 'expected-documents'],
   ['documents-en-revue', 'documents-in-review'],

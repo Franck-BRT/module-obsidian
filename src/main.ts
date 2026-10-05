@@ -44,6 +44,7 @@ import { PMSettingTab } from './settings'
 import { openChase } from './views/chase/ChaseModal'
 import { remindUnansweredChases } from './views/chase/chaseReminder'
 import { createDemo, removeDemo } from './views/demo/demo'
+import { remindLateVisas } from './views/visa/visaWaits'
 import { configureExplain } from './ui/explain'
 import { openAgendas } from './views/agenda/AgendasModal'
 import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
@@ -597,6 +598,12 @@ export default class PMPlugin extends Plugin {
         }
         openChase(this, scope.projects, () => view.refreshProject())
       }
+    })
+
+    this.addCommand({
+      id: 'visa-waits',
+      name: t('command.visaWaits'),
+      callback: safeAsync(() => remindLateVisas(this, true))
     })
 
     this.addCommand({
@@ -1836,6 +1843,7 @@ export default class PMPlugin extends Plugin {
     this.notifier.check()
     await this.autoArchiver.check()
     await remindUnansweredChases(this)
+    await remindLateVisas(this)
   }
 
   async cleanupStaleProjectFilters(): Promise<void> {

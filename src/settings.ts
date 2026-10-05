@@ -432,6 +432,24 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
+        heading: t('settings.group.visa'),
+        items: [
+          {
+            name: t('settings.visaDays.name'),
+            desc: t('settings.visaDays.desc'),
+            aliases: searchAliases('settings.aliases.visa'),
+            control: { type: 'slider', key: 'visaDays', min: 1, max: 60, step: 1 }
+          },
+          {
+            name: t('settings.visaReminder.name'),
+            desc: t('settings.visaReminder.desc'),
+            aliases: searchAliases('settings.aliases.visa'),
+            control: { type: 'toggle', key: 'visaReminder' }
+          }
+        ]
+      },
+      {
+        type: 'group',
         heading: t('settings.group.workload'),
         items: [
           {

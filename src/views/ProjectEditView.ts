@@ -505,6 +505,13 @@ export class ProjectEditView extends ItemView {
       { value: 30, label: t('projectEdit.after30') },
       { value: 90, label: t('projectEdit.after90') }
     ])
+    row(t('settings.visaDays.name'), 'visaDays', [
+      { value: 8, label: t('projectEdit.days', { count: 8 }) },
+      { value: 10, label: t('projectEdit.days', { count: 10 }) },
+      { value: 15, label: t('projectEdit.days', { count: 15 }) },
+      { value: 21, label: t('projectEdit.days', { count: 21 }) },
+      { value: 30, label: t('projectEdit.days', { count: 30 }) }
+    ])
     row(t('view.subtreeInTable'), 'showSubtreeConnections', [
       { value: true, label: t('common.show') },
       { value: false, label: t('common.hide') }

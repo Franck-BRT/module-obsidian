@@ -1,3 +1,5 @@
+import { visaWaitsOf } from '../../store/visaDelay'
+import { waitText } from '../visa/visaWaitWords'
 import { openVisaSheet } from '../visa/VisaModal'
 import { explain } from '../../ui/explain'
 import { Menu, Notice, TFile, type EventRef, type TAbstractFile } from 'obsidian'
@@ -8,7 +10,7 @@ import { personKeyer, type ProjectScope } from '../../store'
 import { flattenTasks } from '../../store/TaskTreeOps'
 import { matchesFilter } from '../../store/TaskFilter'
 import { documentOf, isAwaited, isDocument } from '../../store/Document'
-import { formatDateShort, today } from '../../dates'
+import { formatDate, formatDateShort, today } from '../../dates'
 import { displayName, safeAsync } from '../../utils'
 import { confirmDialog, openTaskModal } from '../../ui/ModalFactory'
 import { buildTaskContextMenu } from '../../ui/TaskContextMenu'
@@ -509,10 +511,13 @@ export class LibraryView implements SubView {
       } else parent.createSpan({ cls: 'pm-overview-muted', text: '—' })
       return
     }
+    // Who still owes this issue's visa, and by when: a visa given to the issue before is owed again.
+    const waits = project ? visaWaitsOf(task, today().toString(), this.plugin.store.configFor(project).visaDays) : []
     for (const approver of meta.approvers) {
-      const verdict = meta.approvals.find((approval) => approval.by === approver)
+      const wait = waits.find((one) => one.approver === approver)
+      const verdict = wait ? undefined : meta.approvals.find((approval) => approval.by === approver)
       const chip = new Chip(parent)
-        .setLabel(displayName(approver))
+        .setLabel(wait ? `${displayName(approver)} · ${waitText(wait)}` : displayName(approver))
         .setSize('sm')
         .setVariant(verdict ? 'solid' : 'outline')
         .setColor(
@@ -520,23 +525,25 @@ export class LibraryView implements SubView {
             ? 'var(--color-green)'
             : verdict?.verdict === 'observations'
               ? 'var(--color-orange)'
-              : verdict
+              : verdict || (wait && wait.late > 0)
                 ? 'var(--text-error, var(--color-red))'
                 : 'var(--text-muted)'
         )
         .setTooltip(
-          verdict
-            ? [
-                verdict.verdict === 'approved'
-                  ? t('doc.approvedBy', { who: displayName(approver) })
-                  : verdict.verdict === 'observations'
-                    ? t('doc.observedBy', { who: displayName(approver) })
-                    : t('doc.rejectedBy', { who: displayName(approver) }),
-                verdict.note
-              ]
-                .filter(Boolean)
-                .join('\n')
-            : t('doc.pendingFrom', { who: displayName(approver) })
+          wait
+            ? `${t('doc.pendingFrom', { who: displayName(approver) })}\n${t('visa.dueOn', { date: formatDate(wait.due) })} · ${waitText(wait)}`
+            : verdict
+              ? [
+                  verdict.verdict === 'approved'
+                    ? t('doc.approvedBy', { who: displayName(approver) })
+                    : verdict.verdict === 'observations'
+                      ? t('doc.observedBy', { who: displayName(approver) })
+                      : t('doc.rejectedBy', { who: displayName(approver) }),
+                  verdict.note
+                ]
+                  .filter(Boolean)
+                  .join('\n')
+              : t('doc.pendingFrom', { who: displayName(approver) })
         )
       if (!project) continue
       chip.el.addClass('pm-clickable')

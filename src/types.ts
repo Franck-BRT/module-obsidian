@@ -172,6 +172,8 @@ export interface DocumentMeta {
   versions: DocVersion[]
   /** The days it was chased on while expected, YYYY-MM-DD, the latest last. */
   chases?: string[]
+  /** Days its reviewers have to sign, from the deposit of its file; none for the project's. */
+  visaDays?: number
 }
 
 export function makeDocument(overrides: Partial<DocumentMeta> = {}): DocumentMeta {
@@ -444,6 +446,8 @@ export interface ProjectConfig {
   /** The working week and holidays stay global; a project only opts in or out. */
   respectWorkingDays?: boolean
   autoArchiveDays?: number
+  /** Days a document's reviewers have to sign, from the deposit of its file. */
+  visaDays?: number
   showSubtreeConnections?: boolean
   lineBorders?: LineBorders
   kanbanShowSubtasks?: boolean
@@ -465,6 +469,7 @@ export interface ResolvedProjectConfig {
   /** Working days this project schedules against, already resolved from the settings. */
   workCalendar: WorkCalendar
   autoArchiveDays: number
+  visaDays: number
   showSubtreeConnections: boolean
   lineBorders: LineBorders
   kanbanShowSubtasks: boolean
@@ -838,6 +843,12 @@ export interface PMSettings {
   chaseReminderDays: string
   /** The day it was last said, YYYY-MM-DD: once a day is enough. */
   chaseReminderShown: string
+  /** Days a document's reviewers have to sign, from the deposit of its file, unless the project says otherwise. */
+  visaDays: number
+  /** Whether Obsidian, opening, says which visas are late. */
+  visaReminder: boolean
+  /** The day it was last said, YYYY-MM-DD. */
+  visaReminderShown: string
   /** Hours a week a person can give, unless their contact says otherwise. */
   workloadCapacity: number
   /** Hours a day a ticket with no estimate holds each of its people: '0', '1', '2', '4' or '7'. */
@@ -1164,6 +1175,9 @@ export const DEFAULT_SETTINGS: PMSettings = {
   chaseReminder: true,
   chaseReminderDays: '7',
   chaseReminderShown: '',
+  visaDays: 15,
+  visaReminder: true,
+  visaReminderShown: '',
   workloadCapacity: 35,
   workloadDefaultHours: '4',
   workloadWeeks: 12,

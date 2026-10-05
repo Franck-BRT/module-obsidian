@@ -140,7 +140,10 @@ function readDocument(raw: unknown): DocumentMeta | undefined {
           }))
           .sort((a, b) => a.version - b.version)
       : [],
-    ...(chases.length ? { chases } : {})
+    ...(chases.length ? { chases } : {}),
+    ...(typeof r.visaDays === 'number' && Number.isFinite(r.visaDays) && r.visaDays > 0
+      ? { visaDays: Math.floor(r.visaDays) }
+      : {})
   })
 }
 
@@ -331,6 +334,9 @@ function hydrateProjectConfig(raw: unknown): ProjectConfig | undefined {
   if (typeof r.respectWorkingDays === 'boolean') config.respectWorkingDays = r.respectWorkingDays
   if (typeof r.autoArchiveDays === 'number' && Number.isFinite(r.autoArchiveDays) && r.autoArchiveDays >= 0) {
     config.autoArchiveDays = Math.floor(r.autoArchiveDays)
+  }
+  if (typeof r.visaDays === 'number' && Number.isFinite(r.visaDays) && r.visaDays > 0) {
+    config.visaDays = Math.floor(r.visaDays)
   }
   if (typeof r.showSubtreeConnections === 'boolean') config.showSubtreeConnections = r.showSubtreeConnections
   if (
