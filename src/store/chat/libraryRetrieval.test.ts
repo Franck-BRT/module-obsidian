@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  citedSections,
+  headedSections,
   passagesOf,
   retrievalContext,
   retrieve,
@@ -218,5 +220,48 @@ describe('a section named by its number', () => {
     const [found] = retrieve([source], 'que dit le paragraphe 6.3.5 ?')
     expect(found.passages[0].startsWith('### 6.3.5 Essais de réception')).toBe(true)
     expect(found.passages[0]).toContain('Les écarts restent sous 5 %.')
+  })
+})
+
+describe('a section the question does not number', () => {
+  const text = [
+    '## 2. DÉFINITIONS',
+    '',
+    'Essais de type 1 : essais sur le premier équipement de série, voir paragraphe 6.3.5.',
+    '',
+    '### 6.3 ESSAIS',
+    '',
+    'Généralités sur les essais.',
+    '',
+    '### 6.3.5 ESSAIS DE TYPE 1',
+    '',
+    'Les essais de type 1 qualifient la conception.',
+    '',
+    'Critères d’acceptation : aucun claquage.',
+    '',
+    '### 6.3.6 ESSAIS DE TYPE 2',
+    '',
+    'Les essais de type 2 sont faits en série.'
+  ].join('\n')
+
+  it('is found by its heading, every word of it asked, a figure counting', () => {
+    expect(headedSections(text, searchTerms('qu’est-ce qu’un essai de type 1 ?'))).toEqual(['6.3.5'])
+    expect(headedSections(text, searchTerms('les essais'))).toEqual([])
+  })
+
+  it('is found where a passage sends the reader to it', () => {
+    expect(citedSections('voir paragraphe 6.3.5, cf. § 4.2 et l’article 7.1 ; 2.5 kN/m²')).toEqual([
+      '6.3.5',
+      '4.2',
+      '7.1'
+    ])
+  })
+
+  it('is given whole, its criteria with it', () => {
+    const source: LibrarySource = { path: 'spec.pdf', title: 'Spécification', kind: 'document', detail: '', text }
+    const [found] = retrieve([source], 'donne-moi la définition complète des essais de type 1')
+    expect(found.passages[0]).toBe(
+      '### 6.3.5 ESSAIS DE TYPE 1\n\nLes essais de type 1 qualifient la conception.\n\nCritères d’acceptation : aucun claquage.'
+    )
   })
 })

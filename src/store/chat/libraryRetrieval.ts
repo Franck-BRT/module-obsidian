@@ -69,11 +69,11 @@ export function sectionRefs(text: string): string[] {
   return [...new Set(text.match(SECTION_REF) ?? [])]
 }
 
-/** A text's words as they are compared: folded, stemmed, those of one letter left out — its section numbers whole. */
+/** A text's words as they are compared: folded, stemmed, those of one letter left out but a figure — « type 1 » —, its section numbers whole. */
 export function tokens(text: string): string[] {
   const words = fold(text)
     .split(/[^\p{L}\p{N}]+/u)
-    .filter((word) => word.length >= 2)
+    .filter((word) => word.length >= 2 || /\d/.test(word))
     .map(stem)
   return [...words, ...(text.match(SECTION_REF) ?? [])]
 }
@@ -190,6 +190,44 @@ export function sectionText(text: string, ref: string, limit = SECTION_LIMIT): s
   return whole.length > limit ? `${whole.slice(0, limit)} […]` : whole
 }
 
+/** A heading's words, as a question's are taken: « 6.3.5 ESSAIS DE TYPE 1 » → essai, type, 1. */
+function headingTerms(line: string): string[] {
+  const title = line
+    .replace(/^\s*#{0,6}\s*(?:§|art\.?|article)?\s*/i, '')
+    .replace(/^\d{1,3}(?:\.\d{1,3})*\.?/, '')
+    .slice(0, 120)
+  return searchTerms(title)
+}
+
+/**
+ * The sections of a text whose heading says what the question asks: every word of the
+ * heading, or nearly, among the question's, two of them at least — « essais de type 1 »
+ * finds « 6.3.5 ESSAIS DE TYPE 1 », not « 6.3.6 ESSAIS DE TYPE 2 » nor « 6.3 ESSAIS ».
+ * The best two at most, their numbers.
+ */
+export function headedSections(text: string, terms: string[]): string[] {
+  const asked = new Set(terms)
+  const scored: { ref: string; matched: number; share: number }[] = []
+  for (const line of text.split('\n')) {
+    const ref = headingRef(line)
+    if (!ref) continue
+    const words = headingTerms(line)
+    if (!words.length) continue
+    const matched = words.filter((word) => asked.has(word)).length
+    const share = matched / words.length
+    if (matched >= 2 && share >= 0.75) scored.push({ ref, matched, share })
+  }
+  scored.sort((a, b) => b.matched - a.matched || b.share - a.share)
+  return [...new Set(scored.map((one) => one.ref))].slice(0, 2)
+}
+
+/** The sections a passage sends its reader to: « voir 6.3.5 », « cf. § 4.2 », « l’article 7.1 ». */
+export function citedSections(text: string): string[] {
+  const cue =
+    /(?:§|\bart(?:icle|\.)?|\bparagraphe|\bchapitre|\bsection|\bcf\.?|\bvoir|\bselon|\bpoint)\s*(\d{1,3}(?:\.\d{1,3}){1,5})(?![\d])/giu
+  return [...new Set([...text.matchAll(cue)].map((found) => found[1]))]
+}
+
 /** The most of a section given whole, in characters. */
 const SECTION_LIMIT = 8000
 
@@ -223,15 +261,25 @@ export function retrieve(
     const passages = source.text.trim() ? passagesOf(source.text) : [[source.title, source.detail].join(' — ')]
     passages.forEach((text, at) => candidates.push({ source, at, text, words: tokens(text), score: 0 }))
   }
-  // A section the question names, given whole and first: what it asks is all in it.
+  // A section the question names by its number, or whose heading says what it asks, given
+  // whole and first: what it asks is all in it.
   const refs = sectionRefs(question)
+  const words = terms.filter((term) => !refs.includes(term))
   const sections: Candidate[] = []
-  for (const source of refs.length ? named.keys() : []) {
-    for (const ref of refs) {
-      const text = source.text ? sectionText(source.text, ref) : null
-      if (text && text.length > ref.length + 20) {
-        sections.push({ source, at: -1, text, words: [], score: Number.MAX_VALUE })
-      }
+  const given = new Set<string>()
+  const giveSection = (source: LibrarySource, ref: string, list: Candidate[]): Candidate | null => {
+    const key = `${source.path}#${ref}`
+    if (given.has(key) || !source.text) return null
+    const text = sectionText(source.text, ref)
+    if (!text || text.length <= ref.length + 20) return null
+    given.add(key)
+    const section = { source, at: -1, text, words: [], score: Number.MAX_VALUE }
+    list.push(section)
+    return section
+  }
+  for (const source of named.keys()) {
+    for (const ref of [...refs, ...(words.length >= 2 ? headedSections(source.text, words) : [])]) {
+      giveSection(source, ref, sections)
     }
   }
   if (!candidates.length) return []
@@ -284,6 +332,21 @@ export function retrieve(
     spent += candidate.text.length
     if (already) already.push(candidate)
     else taken.set(candidate.source, [candidate])
+  }
+  // A passage that sends its reader to a section of its own document — « voir 6.3.5 » —
+  // brings that section too, whole: the answer is often there rather than where it is named.
+  for (const [source, list] of taken) {
+    const cited = list.filter((each) => each.at >= 0).flatMap((each) => citedSections(each.text))
+    let added = 0
+    for (const ref of cited) {
+      if (added >= 2) break
+      const extra: Candidate[] = []
+      const section = giveSection(source, ref, extra)
+      if (!section || spent + section.text.length > options.budget) continue
+      spent += section.text.length
+      list.push(section)
+      added++
+    }
   }
   return [...taken].map(([source, passages]) => ({
     source,
