@@ -12,6 +12,7 @@ import { isRisk } from '../../store/risk'
 import { decidedSince, decisionDay, decisionOf, isDecision, isPending, orderDecisions } from '../../store/decision'
 import { flattenTasks } from '../../store/TaskTreeOps'
 import { visaWaits } from '../../store/visaDelay'
+import { isLateReserve, isReserve, orderReserves, reserveCompany, reserveOf, reserveSummary } from '../../store/reserve'
 import { waitText } from '../visa/visaWaitWords'
 import { formatDateLetter, formatDateShort } from '../../dates'
 import { displayName, isTerminalStatus } from '../../utils'
@@ -130,6 +131,7 @@ export class AgendaFiller {
         !isPhase(task) &&
         !isRisk(task) &&
         !isDecision(task) &&
+        !isReserve(task) &&
         !isDocument(task) &&
         !isMeeting(task) &&
         task.type !== 'milestone' &&
@@ -193,6 +195,8 @@ export class AgendaFiller {
         return this.recentDecisions()
       case 'pending-visas':
         return this.pendingVisas()
+      case 'reserves':
+        return this.reserves()
       case 'late-documents':
         return this.lateDocuments()
       case 'expected-documents':
@@ -484,6 +488,40 @@ export class AgendaFiller {
         ]
       })
     )
+  }
+
+  /** The reserves still to lift, by contractor, then the late ones named: the punch list's state at the meeting. */
+  private reserves(): string {
+    const date = this.context.date
+    const summary = reserveSummary(this.flat, date)
+    const owed = summary.byCompany.filter((one) => one.open + one.declared > 0)
+    if (!owed.length) return nothing()
+    const lines = [
+      table(
+        [t('reserve.company'), t('reserve.state.open'), t('reserve.state.declared'), t('reserve.filter.late')],
+        owed.map((one) => [
+          one.company || t('reserve.noCompany'),
+          String(one.open),
+          String(one.declared),
+          one.late ? `**${one.late}**` : '0'
+        ])
+      )
+    ]
+    const late = orderReserves(
+      this.flat.filter((task) => isReserve(task) && !task.archived && isLateReserve(task, date))
+    )
+    if (late.length) {
+      lines.push('', t('agenda.lateReserves'))
+      for (const task of late) {
+        const reserve = reserveOf(task)
+        const name = task.filePath ? this.context.link(task.filePath, task.title) : task.title
+        const where = [reserve.location, reserveCompany(task)].filter(Boolean).join(', ')
+        lines.push(
+          `- ${[reserve.number, name].filter(Boolean).join(' ')}${where ? ` (${where})` : ''} — ${t('reserve.lateSince', { date: formatDateShort(task.due) })}`
+        )
+      }
+    }
+    return lines.join('\n')
   }
 
   /** The decisions still to take, the soonest due first: what the meeting is asked to settle. */

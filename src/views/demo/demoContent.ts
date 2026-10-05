@@ -1,4 +1,4 @@
-import { makeDocument, makeTask, type Task, type TaskDecision } from '../../types'
+import { makeDocument, makeTask, type Task, type TaskDecision, type TaskReserve } from '../../types'
 import { para, type DocxDocument } from '../../store/docx'
 import { addDays } from '../../store/Metrics'
 
@@ -49,6 +49,13 @@ export const DEMO_CONTACTS: DemoContact[] = [
     role: 'Électricité CFO / CFA',
     email: 'etudes@elec-sud.example',
     lots: ['Lot 08 Électricité']
+  },
+  {
+    name: 'Terrassements du Lauragais',
+    kind: 'company',
+    role: 'Terrassements',
+    email: 'chantiers@tp-lauragais.example',
+    lots: ['Lot 01 Terrassements']
   },
   { name: 'Bureau Structure Ouest', kind: 'company', role: 'Bureau d’études structure', email: 'contact@bso.example' }
 ]
@@ -194,6 +201,21 @@ const decision = (over: Partial<TaskDecision>): TaskDecision => ({
   decidedBy: '',
   rationale: '',
   affects: [],
+  ...over
+})
+
+const reserve = (over: Partial<TaskReserve>): TaskReserve => ({
+  number: '',
+  phase: 'reception',
+  location: '',
+  lot: 'Lot 01 Terrassements',
+  severity: 'minor',
+  state: 'open',
+  raisedOn: '',
+  declaredOn: '',
+  liftedOn: '',
+  photos: [],
+  chases: [],
   ...over
 })
 
@@ -347,6 +369,67 @@ export function b12Tasks(today: string): Task[] {
       start: '',
       due: d(-2),
       decision: decision({ state: 'proposed', decidedBy: 'Maîtrise d’ouvrage' })
+    }),
+    // The reserves of the excavation's handover, twenty days ago: one late and chased, one said lifted, one lifted.
+    makeTask({
+      title: 'Remblai insuffisamment compacté en pied de talus',
+      type: 'reserve',
+      start: '',
+      due: d(-5),
+      assignees: ['Terrassements du Lauragais'],
+      reserve: reserve({
+        number: 'R-001',
+        location: 'Talus nord',
+        severity: 'major',
+        raisedOn: d(-20),
+        chases: [d(-3)]
+      })
+    }),
+    makeTask({
+      title: 'Regard d’eaux pluviales non dégagé',
+      type: 'reserve',
+      start: '',
+      due: d(5),
+      assignees: ['Terrassements du Lauragais'],
+      reserve: reserve({
+        number: 'R-002',
+        location: 'Angle sud-est',
+        state: 'declared',
+        raisedOn: d(-20),
+        declaredOn: d(-1)
+      })
+    }),
+    makeTask({
+      title: 'Déblais excédentaires à évacuer',
+      type: 'reserve',
+      start: '',
+      due: d(-6),
+      status: 'done',
+      progress: 100,
+      completed: d(-8),
+      assignees: ['Terrassements du Lauragais'],
+      reserve: reserve({
+        number: 'R-003',
+        location: 'Zone de stockage ouest',
+        state: 'lifted',
+        raisedOn: d(-20),
+        declaredOn: d(-10),
+        liftedOn: d(-8)
+      })
+    }),
+    makeTask({
+      title: 'Fourreau d’attente oublié en fond de fouille',
+      type: 'reserve',
+      start: '',
+      due: d(4),
+      assignees: ['Garonne Bâtiment'],
+      reserve: reserve({
+        number: 'R-004',
+        location: 'Fond de fouille, file C',
+        lot: 'Lot 02 Gros œuvre',
+        severity: 'blocking',
+        raisedOn: d(-20)
+      })
     }),
     makeTask({
       title: 'Réunion de chantier n°4',
@@ -508,6 +591,16 @@ Ce projet et le projet « ${DEMO_C7} » sont fictifs. La commande **« Supprimer
 - [ ] Dans la fiche du ticket « Note de calcul du radier », bouton **Déposer** : choisir **NDC-04 Note de calcul radier indice C** dans le dossier \`_inbox\` du projet, puis passer l’indice à **C**.
 - [ ] **Fiche de visa assistée** de nouveau : les observations de l’indice B sont reprises ; le béton et les charges doivent ressortir « Levée », l’enrobage « Partiellement levée » (35 mm en rive).
 - [ ] La fiche du ticket liste les fiches de visa par indice, avec les observations encore ouvertes.
+
+## Réserves
+- [ ] Onglet **Réserves** : quatre réserves de la réception des terrassements ; R-001 en retard (relancée il y a 3 jours), R-002 déclarée levée, R-003 levée, R-004 bloquante chez Garonne Bâtiment.
+- [ ] Barre de saisie : taper une réserve, Entrée, puis une autre ; localisation, lot et entreprise restent remplis. Copier une capture d’écran, cliquer dans la barre et coller (Ctrl+V) : la photo part avec la réserve suivante.
+- [ ] Cliquer l’état d’une réserve : À lever → Déclarée levée → Levée constatée (le ticket passe à « Terminé »).
+- [ ] Regrouper **par lot** ou **par localisation** ; filtrer « En retard ».
+- [ ] **Relancer** sur Terrassements du Lauragais : le mail liste R-001 puis R-002 ; la relance est notée.
+- [ ] Ouvrir une réserve : la fiche Réserve, cliquer dans le cadre et coller une photo.
+- [ ] **PV de réception** : le Word et le PDF dans le dossier « Réserves » du projet, les réserves par entreprise et les cadres de signature.
+- [ ] Ordre du jour « Réunion de chantier » : le bloc des réserves ; rapport d’état **PDF** : la section « Réserves ».
 
 ## Bibliothèque et traduction
 - [ ] Bibliothèque, dossier **Démo** : le CCTP et un *Statement of work* en anglais.

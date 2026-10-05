@@ -6,6 +6,7 @@ import { documentOf, isDocument } from './Document'
 import { docStateConfigOf } from './TicketPalette'
 import { totalLoggedHours } from './TaskTreeOps'
 import { isDecision } from './decision'
+import { isReserve } from './reserve'
 import { isRisk, orderRisks, riskBand, riskMatrix, riskScore, type RiskBand } from './risk'
 
 /** One class of a breakdown: what it is, how many, and the colour it already wears. */
@@ -167,7 +168,7 @@ export function projectMetrics(input: MetricsInput): ProjectMetrics {
   const soonDays = input.soonDays ?? 7
   const horizon = addDays(today, soonDays)
 
-  const work = tasks.filter((task) => !isPhase(task) && !isRisk(task) && !isDecision(task))
+  const work = tasks.filter((task) => !isPhase(task) && !isRisk(task) && !isDecision(task) && !isReserve(task))
   const isDone = (task: Task): boolean => isTerminalStatus(task.status, statuses)
 
   let done = 0

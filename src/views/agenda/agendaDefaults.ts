@@ -179,13 +179,16 @@ Pour chacun : probabilité et impact toujours justes ? parade engagée ? respons
 ### Attendus prochainement
 {{documents-attendus}}
 
-## 6. Hygiène et sécurité
+## 6. Réserves
+{{réserves}}
+
+## 7. Hygiène et sécurité
 -
 
-## 7. Points divers
+## 8. Points divers
 -
 
-## 8. Prochaine réunion
+## 9. Prochaine réunion
 -
 `
   },
@@ -486,13 +489,16 @@ For each: are probability and impact still right? Is the mitigation under way? W
 ### Expected soon
 {{expected-documents}}
 
-## 6. Health and safety
+## 6. Snags
+{{reserves}}
+
+## 7. Health and safety
 -
 
-## 7. Any other business
+## 8. Any other business
 -
 
-## 8. Next meeting
+## 9. Next meeting
 -
 `
   },

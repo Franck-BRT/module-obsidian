@@ -1,6 +1,7 @@
 import { ButtonComponent, ExtraButtonComponent, ItemView, Menu, Scope, WorkspaceLeaf } from 'obsidian'
 import { RisksView } from './risks/RisksView'
 import { DecisionsView } from './decisions/DecisionsView'
+import { ReservesView } from './reserves/ReservesView'
 import { WorkloadView } from './workload/WorkloadView'
 import type PMPlugin from '../main'
 import {
@@ -525,6 +526,7 @@ export class ProjectView extends ItemView {
         { id: 'impacts', icon: 'triangle-alert', label: t('view.impacts'), help: t('tip.view.impacts') },
         { id: 'risks', icon: 'shield-alert', label: t('view.risks'), help: t('tip.view.risks') },
         { id: 'decisions', icon: 'gavel', label: t('view.decisions'), help: t('tip.view.decisions') },
+        { id: 'reserves', icon: 'clipboard-x', label: t('view.reserves'), help: t('tip.view.reserves') },
         { id: 'workload', icon: 'calendar-range', label: t('view.workload'), help: t('tip.view.workload') },
         { id: 'dashboard', icon: 'gauge', label: t('kpi.title'), help: t('tip.view.dashboard') }
       ],
@@ -935,6 +937,9 @@ export class ProjectView extends ItemView {
         break
       case 'decisions':
         this.subview = new DecisionsView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)
+        break
+      case 'reserves':
+        this.subview = new ReservesView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)
         break
       case 'workload':
         this.subview = new WorkloadView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)

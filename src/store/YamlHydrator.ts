@@ -194,6 +194,30 @@ function readDecision(raw: unknown): Task['decision'] {
   }
 }
 
+/** A reserve, as written in its note; none when it is not there. */
+function readReserve(raw: unknown): Task['reserve'] {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  const text = (value: unknown): string =>
+    typeof value === 'string' ? value : typeof value === 'number' ? String(value) : ''
+  const day = (value: unknown): string => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '')
+  const list = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((one): one is string => typeof one === 'string' && !!one.trim()) : []
+  return {
+    number: text(r.number),
+    phase: r.phase === 'reception' || r.phase === 'gpa' ? r.phase : 'opr',
+    location: text(r.location),
+    lot: text(r.lot),
+    severity: r.severity === 'major' || r.severity === 'blocking' ? r.severity : 'minor',
+    state: r.state === 'declared' || r.state === 'lifted' ? r.state : 'open',
+    raisedOn: day(r.raisedOn),
+    declaredOn: day(r.declaredOn),
+    liftedOn: day(r.liftedOn),
+    photos: list(r.photos),
+    chases: list(r.chases)
+  }
+}
+
 /** A ticket's reference dates, as written in its note; none when they are not there. */
 function readBaseline(raw: unknown): Task['baseline'] {
   if (!raw || typeof raw !== 'object') return undefined
@@ -245,6 +269,7 @@ export function mapRawToTask(r: Record<string, unknown>, overrides?: Partial<Tas
     baseline: readBaseline(r.baseline),
     risk: readRisk(r.risk),
     decision: readDecision(r.decision),
+    reserve: readReserve(r.reserve),
     collapsed: r.collapsed === true,
     createdAt: (r.createdAt as string) ?? new Date().toISOString(),
     updatedAt: (r.updatedAt as string) ?? new Date().toISOString(),

@@ -25,6 +25,8 @@ import { renderTimeTrackingPanel } from './TimeTrackingPanel'
 import { renderDocumentPanel } from './DocumentPanel'
 import { renderDecisionPanel } from './DecisionPanel'
 import { isDecision } from '../store/decision'
+import { isReserve } from '../store/reserve'
+import { renderReservePanel } from './ReservePanel'
 import { isDocument } from '../store/Document'
 import { renderSubtasksPanel } from './SubtasksPanel'
 import { NoteLinkSuggest } from './NoteLinkSuggest'
@@ -613,6 +615,15 @@ export class TaskEditor {
         plugin: this.plugin,
         rerender: () => this.render(),
         save: () => this.saveInPlace()
+      })
+    }
+
+    if (isReserve(this.task)) {
+      renderReservePanel(body, {
+        task: this.task,
+        project: this.project,
+        plugin: this.plugin,
+        rerender: () => this.render()
       })
     }
 

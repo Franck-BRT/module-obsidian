@@ -2,6 +2,7 @@ import type { StatusConfig, Task } from '../types'
 import { Temporal } from '../dates'
 import { isTerminalStatus } from '../utils'
 import { isDecision } from './decision'
+import { isReserve } from './reserve'
 import { isDocument } from './Document'
 import { isMeeting } from './Meeting'
 import { isPhase } from './Phase'
@@ -94,7 +95,7 @@ export function weekStarts(today: string, count: number): string[] {
 
 /** Whether a ticket is work the plan counts, and how. */
 function kindOf(task: Task): 'work' | 'meeting' | null {
-  if (isPhase(task) || isRisk(task) || isDecision(task) || task.type === 'milestone') return null
+  if (isPhase(task) || isRisk(task) || isDecision(task) || isReserve(task) || task.type === 'milestone') return null
   if (isMeeting(task)) return 'meeting'
   if (isDocument(task) && !(task.timeEstimate && task.timeEstimate > 0)) return null
   return 'work'

@@ -23,6 +23,7 @@ export const SUBVIEW_CLASS = {
   impacts: 'pm-impacts-view',
   risks: 'pm-risks-view',
   decisions: 'pm-decisions-view',
+  reserves: 'pm-reserves-view',
   workload: 'pm-load-view',
   dashboard: 'pm-kpi-view'
 } as const satisfies Record<ViewMode, string>

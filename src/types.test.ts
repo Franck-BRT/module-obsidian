@@ -75,7 +75,17 @@ describe('a palette saved before a kind of ticket existed', () => {
   })
 
   it('lists every kind the tool can make', () => {
-    expect(TASK_TYPES).toEqual(['task', 'subtask', 'milestone', 'phase', 'document', 'meeting', 'risk', 'decision'])
+    expect(TASK_TYPES).toEqual([
+      'task',
+      'subtask',
+      'milestone',
+      'phase',
+      'document',
+      'meeting',
+      'risk',
+      'decision',
+      'reserve'
+    ])
     expect(DEFAULT_TYPES.map((type) => type.id).sort()).toEqual([...TASK_TYPES].sort())
   })
 

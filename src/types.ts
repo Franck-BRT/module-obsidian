@@ -25,6 +25,7 @@ export const VIEW_MODES = [
   'impacts',
   'risks',
   'decisions',
+  'reserves',
   'workload',
   'dashboard'
 ] as const
@@ -33,7 +34,16 @@ export type LineBorders = 'none' | 'horizontal' | 'vertical' | 'both'
 export const IMPACT_ROLES = ['both', 'emitter', 'receiver'] as const
 export const IMPACT_LEVELS = ['blocking', 'caution', 'info'] as const
 export type DueDateFilter = 'any' | 'overdue' | 'this-week' | 'this-month' | 'no-date'
-export type TaskType = 'task' | 'milestone' | 'subtask' | 'phase' | 'document' | 'meeting' | 'risk' | 'decision'
+export type TaskType =
+  | 'task'
+  | 'milestone'
+  | 'subtask'
+  | 'phase'
+  | 'document'
+  | 'meeting'
+  | 'risk'
+  | 'decision'
+  | 'reserve'
 
 /**
  * Every kind of ticket, in the order they are offered.
@@ -51,7 +61,8 @@ const TASK_TYPE_ORDER = {
   document: true,
   meeting: true,
   risk: true,
-  decision: true
+  decision: true,
+  reserve: true
 } satisfies Record<TaskType, true>
 
 export const TASK_TYPES = Object.keys(TASK_TYPE_ORDER) as TaskType[]
@@ -231,6 +242,34 @@ export interface DemoManifest {
   notes: string[]
 }
 
+/** When a reserve was raised: before handover, at it, or within the year of perfect completion after. */
+export type ReservePhase = 'opr' | 'reception' | 'gpa'
+
+/** Where a reserve stands: open, said lifted by the contractor, seen lifted. */
+export type ReserveState = 'open' | 'declared' | 'lifted'
+
+/**
+ * A reserve as the punch list keeps it: its number, where it is, which trade, how
+ * serious, and the days it moved — raised, said lifted, seen lifted —, with its photos.
+ * Who must lift it is the ticket's assignee, the contractor; by when, its due date.
+ */
+export interface TaskReserve {
+  number: string
+  phase: ReservePhase
+  /** Where it is: building, level, room. */
+  location: string
+  lot: string
+  severity: 'minor' | 'major' | 'blocking'
+  state: ReserveState
+  raisedOn: string
+  declaredOn: string
+  liftedOn: string
+  /** Its photos, by their paths in the vault. */
+  photos: string[]
+  /** The days the contractor was chased about it. */
+  chases: string[]
+}
+
 /** A ticket's dates in the reference plan; '' where it had none. */
 export interface TaskBaseline {
   start: string
@@ -296,6 +335,8 @@ export interface Task {
   risk?: TaskRisk
   /** Set on a ticket of type `decision`: where it stands, when, by whom, why, and what it bears on. */
   decision?: TaskDecision
+  /** Set on a ticket of type `reserve`: its number, where it is, how serious, where it stands. */
+  reserve?: TaskReserve
   /** UI state, persisted per project in plugin settings (data.json), not in frontmatter. */
   collapsed: boolean
   createdAt: string
@@ -999,7 +1040,8 @@ export const DEFAULT_TYPES: TypeConfig[] = [
   { id: 'document', label: 'Document', color: '#0369a1', icon: 'file-text' },
   { id: 'meeting', label: 'Meeting', color: '#db2777', icon: 'users' },
   { id: 'risk', label: 'Risk', color: '#c2410c', icon: 'shield-alert' },
-  { id: 'decision', label: 'Decision', color: '#0f766e', icon: 'gavel' }
+  { id: 'decision', label: 'Decision', color: '#0f766e', icon: 'gavel' },
+  { id: 'reserve', label: 'Reserve', color: '#be123c', icon: 'clipboard-x' }
 ]
 
 /**
@@ -1048,7 +1090,8 @@ export function seedTypes(): TypeConfig[] {
     document: t('task.type.document'),
     meeting: t('task.type.meeting'),
     risk: t('task.type.risk'),
-    decision: t('task.type.decision')
+    decision: t('task.type.decision'),
+    reserve: t('task.type.reserve')
   }
   return DEFAULT_TYPES.map((type) => ({ ...type, label: labels[type.id] ?? type.label }))
 }

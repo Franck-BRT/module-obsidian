@@ -1,0 +1,295 @@
+/* ---- A project's reserves: the punch list -------------------------------- */
+
+.pm-reserves {
+  padding: var(--size-4-4) var(--size-4-5);
+  overflow: auto;
+  height: 100%;
+}
+
+.pm-reserves-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-3) var(--size-4-4);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-reserves-title {
+  margin: 0;
+}
+
+.pm-reserves-count,
+.pm-reserves-group-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-reserves-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.pm-reserves-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pm-reserves-report,
+.pm-reserves-chase,
+.pm-reserve-photos-button,
+.pm-reserve-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+}
+
+/* The line a site walk types into. */
+.pm-reserves-quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-3);
+  padding: var(--size-4-2);
+  margin-bottom: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.pm-reserves-quick:focus-within {
+  border-color: var(--interactive-accent);
+}
+
+.pm-reserves-quick input[type='text'] {
+  min-width: 0;
+}
+
+.pm-reserves-what {
+  flex: 3 1 220px;
+}
+
+.pm-reserves-where,
+.pm-reserves-lot,
+.pm-reserves-company {
+  flex: 1 1 120px;
+}
+
+.pm-reserves-days {
+  width: 4.5em;
+}
+
+.pm-reserves-photo-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-reserves-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2) var(--size-4-4);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-reserves-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2);
+}
+
+.pm-reserves-chip {
+  padding: 2px var(--size-4-2);
+  border-radius: var(--radius-l);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-reserves-chip.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.pm-reserves-empty {
+  padding: var(--size-4-6) var(--size-4-4);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.pm-reserves-empty-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  margin-bottom: var(--size-2-2);
+}
+
+.pm-reserves-group {
+  margin-bottom: var(--size-4-4);
+}
+
+.pm-reserves-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-3) var(--size-4-3);
+  padding: var(--size-2-3) 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pm-reserves-group-name {
+  font-weight: var(--font-semibold);
+}
+
+.pm-reserves-chase {
+  margin-left: auto;
+}
+
+.pm-reserve-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-3);
+  padding: var(--size-2-3) var(--size-2-2);
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+}
+
+.pm-reserve-row.is-lifted .pm-reserve-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.pm-reserve-number {
+  flex: 0 0 4.5em;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.pm-reserve-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pm-reserve-title {
+  color: var(--text-normal);
+  text-decoration: none;
+}
+
+.pm-reserve-title:hover {
+  text-decoration: underline;
+}
+
+.pm-reserve-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-1) var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-reserve-severity.is-major {
+  color: var(--color-orange);
+}
+
+.pm-reserve-severity.is-blocking,
+.pm-reserve-late {
+  color: var(--color-red);
+  font-weight: var(--font-semibold);
+}
+
+.pm-reserve-state {
+  flex: 0 0 auto;
+  border: 1px solid var(--pm-reserve-color);
+  color: var(--pm-reserve-color);
+  font-size: var(--font-ui-smaller);
+}
+
+/* The reserve half of a ticket's editor. */
+.pm-reserve-panel:focus {
+  outline: none;
+}
+
+.pm-reserve-panel:focus-within {
+  box-shadow: inset 2px 0 0 var(--interactive-accent);
+}
+
+.pm-reserve-days {
+  margin-left: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-reserve-photos {
+  margin-top: var(--size-4-3);
+}
+
+.pm-reserve-label {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  margin-bottom: var(--size-2-2);
+}
+
+.pm-reserve-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+}
+
+.pm-reserve-photo {
+  position: relative;
+  width: 112px;
+  height: 84px;
+  border-radius: var(--radius-s);
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pm-reserve-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: zoom-in;
+}
+
+.pm-reserve-missing {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  padding: var(--size-2-2);
+  text-align: center;
+}
+
+.pm-reserve-photo-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  padding: 2px;
+  height: auto;
+  opacity: 0;
+}
+
+.pm-reserve-photo:hover .pm-reserve-photo-remove,
+.pm-reserve-photo-remove:focus-visible {
+  opacity: 1;
+}
+
+.pm-reserve-add {
+  width: 112px;
+  height: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--size-2-2);
+  border: 1px dashed var(--background-modifier-border-hover);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.pm-reserve-add:hover {
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}

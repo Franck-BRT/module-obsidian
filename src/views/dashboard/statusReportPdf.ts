@@ -2,6 +2,7 @@ import type { Task } from '../../types'
 import type { ProjectMetrics } from '../../store/Metrics'
 import type { ChaseItem } from '../../store/chasing'
 import type { VisaWait } from '../../store/visaDelay'
+import type { ReserveSummary } from '../../store/reserve'
 import { waitText } from '../visa/visaWaitWords'
 import { decisionDay, decisionOf } from '../../store/decision'
 import { BLACK, fit, GREY, LIGHT, PdfCanvas, rgb, tint, WHITE, type Rgb } from '../../store/pdfCanvas'
@@ -30,6 +31,8 @@ export interface StatusReportInput {
   lateDocuments: ChaseItem[]
   /** The visas owed on documents received, the latest past its day first. */
   visas?: VisaWait[]
+  /** The punch list: how many reserves stand where, by contractor. */
+  reserves?: ReserveSummary
 }
 
 const NAVY: Rgb = [0.12, 0.23, 0.37]
@@ -549,6 +552,40 @@ class Report {
     }
   }
 
+  /** The reserves still to lift, by contractor, the late ones in red. */
+  reserves(summary: ReserveSummary): void {
+    this.section(t('report.reserves'))
+    const c = this.c
+    c.need(16)
+    c.text(
+      this.left,
+      c.y,
+      t('reserve.count', {
+        count: summary.open,
+        declared: summary.declared,
+        lifted: summary.lifted,
+        late: summary.late
+      }),
+      { size: 9, color: summary.late ? RED : GREY }
+    )
+    c.y += 16
+    const owed = summary.byCompany.filter((one) => one.open + one.declared > 0)
+    for (const one of owed.slice(0, 20)) {
+      c.need(14)
+      c.text(this.left, c.y, fit(one.company || t('reserve.noCompany'), 9, this.width * 0.5), { size: 9 })
+      c.text(
+        this.left + this.width,
+        c.y,
+        t('reserve.count', { count: one.open, declared: one.declared, lifted: one.lifted, late: one.late }),
+        { size: 8.5, color: one.late ? RED : GREY, align: 'right' }
+      )
+      c.y += 14
+    }
+    if (owed.length > 20) {
+      c.text(this.left, c.y, t('report.more', { count: owed.length - 20 }), { size: 8, color: GREY })
+    }
+  }
+
   /** What others still owe, past its date: by whom, since when, how often chased. */
   documents(): void {
     const late = this.input.lateDocuments
@@ -585,6 +622,13 @@ function visas(report: Report, input: StatusReportInput): void {
   report.visas(waits)
 }
 
+/** The punch list, when there is one still to lift. */
+function reserves(report: Report, input: StatusReportInput): void {
+  const summary = input.reserves
+  if (!summary || summary.open + summary.declared === 0) return
+  report.reserves(summary)
+}
+
 /** The status report, as a PDF file. */
 export function statusReportPdf(input: StatusReportInput, at = new Date()): Uint8Array {
   const report = new Report(input)
@@ -599,5 +643,6 @@ export function statusReportPdf(input: StatusReportInput, at = new Date()): Uint
   report.people()
   report.documents()
   visas(report, input)
+  reserves(report, input)
   return report.c.build(`${t('kpi.reportTitle')} — ${input.title}`, at)
 }

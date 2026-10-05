@@ -252,6 +252,41 @@ describe('the blocks', () => {
     expect(agendaBlock('visas en attente')).toBe('pending-visas')
   })
 
+  it('list the reserves still to lift by contractor, then the late ones', () => {
+    const reserve = (title: string, number: string, due: string, state: 'open' | 'declared' | 'lifted'): Task =>
+      makeTask({
+        title,
+        type: 'reserve',
+        start: '',
+        due,
+        assignees: ['Garonne Bâtiment'],
+        reserve: {
+          number,
+          phase: 'reception',
+          location: 'Talus nord',
+          lot: '',
+          severity: 'minor',
+          state,
+          raisedOn: '',
+          declaredOn: '',
+          liftedOn: '',
+          photos: [],
+          chases: []
+        }
+      })
+    const tasks = [
+      reserve('Remblai', 'R-001', '2026-09-28', 'open'),
+      reserve('Regard', 'R-002', '2026-10-09', 'declared'),
+      reserve('Déblais', 'R-003', '2026-09-20', 'lifted')
+    ]
+    const block = filler({ tasks }).render('reserves')
+    expect(block).toContain('| Garonne Bâtiment | 1 | 1 | **1** |')
+    expect(block).toContain('- R-001 Remblai (Talus nord, Garonne Bâtiment) — à lever depuis le 28 sept.')
+    expect(block).not.toContain('Déblais')
+    expect(filler({ tasks: [] }).render('reserves')).not.toContain('|')
+    expect(agendaBlock('réserves')).toBe('reserves')
+  })
+
   it('chase the documents by issuer, and list those expected and in review', () => {
     const late = f.render('late-documents')
     expect(late).toContain('**Garonne Bâtiment** (interlocuteur : Paul Martin)')

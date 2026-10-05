@@ -63,6 +63,12 @@ describe('the demonstration', () => {
     const tasks = flattenTasks(b12?.tasks ?? []).map((flat) => flat.task)
     expect(tasks.filter((task) => task.type === 'risk')).toHaveLength(4)
     expect(tasks.filter((task) => task.type === 'decision')).toHaveLength(3)
+    expect(tasks.filter((task) => task.type === 'reserve').map((task) => task.reserve?.number)).toEqual([
+      'R-001',
+      'R-002',
+      'R-003',
+      'R-004'
+    ])
     expect(tasks.find((task) => task.title === 'Fournir le plan de réservations')?.type).toBe('subtask')
     const note = tasks.find((task) => task.title === 'Note de calcul du radier')
     expect(documentOf(note!).approvers).toEqual(['Anne Leroy', 'Paul Martin'])

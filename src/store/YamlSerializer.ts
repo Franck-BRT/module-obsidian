@@ -86,6 +86,7 @@ export const TASK_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'baseline',
   'risk',
   'decision',
+  'reserve',
   'collapsed'
 ])
 
@@ -259,6 +260,7 @@ export function buildTaskFrontmatter(
     const { state, date, decidedBy, rationale, affects } = task.decision
     fm.decision = { state, date, decidedBy, rationale, affects: [...affects] }
   }
+  if (task.reserve) fm.reserve = { ...task.reserve, photos: [...task.reserve.photos], chases: [...task.reserve.chases] }
   if (task.timeLogs?.length) fm.timeLogs = task.timeLogs
   if (Object.keys(task.customFields).length) fm.customFields = task.customFields
   const document = serializeDocument(task.document)

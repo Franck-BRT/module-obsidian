@@ -32,6 +32,7 @@ export const AGENDA_BLOCKS = [
   ['décisions-à-prendre', 'pending-decisions'],
   ['décisions-récentes', 'recent-decisions'],
   ['visas-en-attente', 'pending-visas'],
+  ['réserves', 'reserves'],
   ['documents-en-retard', 'late-documents'],
   ['documents-attendus', 'expected-documents'],
   ['documents-en-revue', 'documents-in-review'],
