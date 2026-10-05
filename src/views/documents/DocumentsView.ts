@@ -1331,7 +1331,13 @@ export class DocumentsView extends ItemView {
     if (unread.length) new Notice(t('library.unreadable', { list: unread.join(', ') }))
     if (!items.length) return
     const preset = this.query.project && this.query.project !== NO_PROJECT ? [this.query.project] : []
-    await this.plugin.pourIntoLibrary(items, preset, filteredFolder(this.query.folder))
+    // Poured while a collection is shown, they go in it unless the reader says otherwise.
+    await this.plugin.pourIntoLibrary(
+      items,
+      preset,
+      filteredFolder(this.query.folder),
+      this.query.collection ? [this.query.collection] : []
+    )
   }
 
   /** A folder made in the one on screen — or at the root —, then shown. */

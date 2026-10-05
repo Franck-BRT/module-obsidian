@@ -1295,6 +1295,7 @@ export const fr: Catalog = {
     'Par l’index : la recherche par le sens et par les mots dans l’index du coffre. Par les mots : la recherche dans la bibliothèque seule, par les mots de la question, les numéros de paragraphe et les titres de section.',
   'chat.mode.index': 'Par l’index (sens et mots)',
   'chat.mode.words': 'Par les mots (bibliothèque)',
+  'collection.docs.pourLabel': 'Collections',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

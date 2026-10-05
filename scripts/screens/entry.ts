@@ -24,6 +24,7 @@ import { weeklyNote } from '../../src/views/weekly/weeklyText'
 import { projectMetrics } from '../../src/store/Metrics'
 import { SAMPLE_MSPDI } from './sample'
 import { CollectionsModal, DocPickModal } from '../../src/views/documents/collections'
+import { chooseProjects } from '../../src/views/documents/ProjectChooser'
 
 const query = new URLSearchParams(location.search)
 const screen = query.get('screen') ?? 'reserves'
@@ -119,6 +120,18 @@ async function main(): Promise<void> {
       const docs = library.docs()
       if (docs[0]) await library.setCollections(docs[0], ['Normes'])
       new DocPickModal(plugin, docs.slice(0, 1).map((doc) => doc.file), (p: string) => p, () => {}).open()
+      break
+    }
+    case 'pour': {
+      void chooseProjects(app, {
+        heading: 'Ajouter 2 documents à la bibliothèque',
+        names: ['CCTP Lot 02.pdf', 'NF C 15-100.pdf'],
+        projects: [{ path: project.filePath, title: project.title, detail: 'Projects' }],
+        chosen: [],
+        classify: { categories: ['CCTP', 'Plan'], lots: ['Lot 02'], issuers: ['MOE'], tags: [] },
+        collections: { known: ['Normes', 'CCTP Lot 02'], chosen: ['Normes'] },
+        confirm: 'Ajouter'
+      })
       break
     }
     case 'weekly': {

@@ -110,7 +110,7 @@ import {
 } from './views/documents/ProjectChooser'
 import { DocLibrary, type PourItem } from './store/library/DocLibrary'
 import { DocTextIndex, folderShelf } from './store/library/DocTextIndex'
-import { isLibraryDoc, type LibraryDoc } from './store/library/libraryDoc'
+import { collectionNames, isLibraryDoc, type LibraryDoc } from './store/library/libraryDoc'
 import { cleanTranscriptIn, TRANSCRIPT_KEY, type Furniture } from './store/chat/ocr'
 import {
   guessCategory,
@@ -1408,7 +1408,12 @@ export default class PMPlugin extends Plugin {
    * Pours documents into the library once the reader has said which projects they belong
    * to, telling how far it has got on a long pour and what came of it at the end.
    */
-  async pourIntoLibrary(items: PourItem[], preset: string[] = [], folder = ''): Promise<void> {
+  async pourIntoLibrary(
+    items: PourItem[],
+    preset: string[] = [],
+    folder = '',
+    collections: string[] = []
+  ): Promise<void> {
     if (!items.length) return
     const inVault = items.some((item) => item.kind === 'vault' && this.library.movable(item.file))
     const answer = await this.askLibraryProjects({
@@ -1419,6 +1424,7 @@ export default class PMPlugin extends Plugin {
       chosen: preset,
       offerMove: inVault,
       classify: this.libraryChoices(),
+      collections: { known: collectionNames(this.library.docs()), chosen: collections },
       confirm: t('library.pourConfirm')
     })
     if (!answer) return
@@ -1432,7 +1438,8 @@ export default class PMPlugin extends Plugin {
         today: today().toString(),
         classification: answer.classification,
         categories: this.libraryCategories(),
-        folder
+        folder,
+        collections: answer.collections ?? []
       },
       (done, total) => progress?.setMessage(t('library.pouring', { done, total }))
     )

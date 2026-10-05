@@ -1255,6 +1255,7 @@ export const en = {
     'By the index: searching by meaning and by words in the vault index. By words: searching the library alone, by the question’s words, section numbers and section headings.',
   'chat.mode.index': 'By the index (meaning and words)',
   'chat.mode.words': 'By words (library)',
+  'collection.docs.pourLabel': 'Collections',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

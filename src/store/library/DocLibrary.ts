@@ -17,8 +17,10 @@ import {
   baseNameOf,
   extensionOf,
   fingerprint,
+  fold,
   isLibraryDoc,
   linkPath,
+  nextCollections,
   recordContent,
   stringList,
   titleFromName,
@@ -68,6 +70,8 @@ export interface PourOptions {
   categories?: Category[]
   /** The library's folder the new documents go in, by its path under the library's; '' or none for its root. */
   folder?: string
+  /** The collections every poured document is gathered in; one already there is added to them. */
+  collections?: string[]
 }
 
 export interface PourReport {
@@ -83,6 +87,16 @@ export interface PourReport {
    * bytes —, with that one: linked as its version once the reader says so.
    */
   versions: { doc: LibraryDoc; previous: LibraryDoc }[]
+}
+
+/** The collections a pour gathers its documents in: named once each, blanks left out. */
+function collectionsOf(options: PourOptions): string[] {
+  const out: string[] = []
+  for (const name of options.collections ?? []) {
+    const clean = name.trim()
+    if (clean && !out.some((one) => fold(one) === fold(clean))) out.push(clean)
+  }
+  return out
 }
 
 export class DocLibrary {
@@ -252,7 +266,11 @@ export class DocLibrary {
           const projects = await this.addProjects(known, [...options.projects, ...(item.projects ?? [])])
           // Poured again, it keeps how it was filed; only what it lacked is given.
           const filed = await this.fillClassification(known, this.classificationFor(item, name, options))
-          const updated = { ...known, ...filed, projects }
+          const collections = options.collections?.length
+            ? nextCollections(known, new Set(options.collections), new Set())
+            : (known.collections ?? [])
+          if (collections.length !== (known.collections ?? []).length) await this.setCollections(known, collections)
+          const updated = { ...known, ...filed, projects, collections }
           byHash.set(hash, updated)
           if (known.file) byFile.set(known.file, updated)
           if (!report.known.includes(known.record)) report.known.push(known.record)
@@ -316,7 +334,8 @@ export class DocLibrary {
           added: options.today,
           size: bytes.byteLength,
           hash,
-          ...filed
+          ...filed,
+          collections: collectionsOf(options)
         },
         this.words().notesHeading
       )
@@ -330,7 +349,8 @@ export class DocLibrary {
       added: options.today,
       size: bytes.byteLength,
       hash,
-      ...filed
+      ...filed,
+      collections: collectionsOf(options)
     }
   }
 

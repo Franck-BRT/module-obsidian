@@ -97,6 +97,9 @@ E.show = function () {
 E.hide = function () {
   this.style.display = 'none'
 }
+E.toggle = function (show: boolean) {
+  this.style.display = show ? '' : 'none'
+}
 E.isShown = function () {
   return this.style.display !== 'none'
 }
@@ -411,6 +414,68 @@ export class Setting {
   }
   addButton(cb: (b: ButtonComponent) => void): this {
     cb(new ButtonComponent(this.controlEl))
+    return this
+  }
+  private control(tag: string, type?: string): any {
+    const el = this.controlEl.createEl(tag, type ? { attr: { type } } : undefined) as any
+    const c: any = {
+      inputEl: el,
+      selectEl: el,
+      toggleEl: el,
+      setValue: (v: unknown) => {
+        if (type === 'checkbox') el.checked = !!v
+        else el.value = v
+        return c
+      },
+      getValue: () => (type === 'checkbox' ? el.checked : el.value),
+      setPlaceholder: (p: string) => {
+        el.placeholder = p
+        return c
+      },
+      addOption: (v: string, label: string) => {
+        el.createEl('option', { value: v, text: label })
+        return c
+      },
+      addOptions: (o: Record<string, string>) => {
+        for (const [v, label] of Object.entries(o)) el.createEl('option', { value: v, text: label })
+        return c
+      },
+      onChange: (cb: (v: unknown) => void) => {
+        el.addEventListener('change', () => cb(c.getValue()))
+        return c
+      },
+      setDisabled: (d: boolean) => {
+        el.disabled = d
+        return c
+      }
+    }
+    return c
+  }
+  addText(cb: (c: any) => void): this {
+    cb(this.control('input', 'text'))
+    return this
+  }
+  addSearch(cb: (c: any) => void): this {
+    cb(this.control('input', 'search'))
+    return this
+  }
+  addDropdown(cb: (c: any) => void): this {
+    cb(this.control('select'))
+    return this
+  }
+  addToggle(cb: (c: any) => void): this {
+    cb(this.control('input', 'checkbox'))
+    return this
+  }
+  addTextArea(cb: (c: any) => void): this {
+    cb(this.control('textarea'))
+    return this
+  }
+  setClass(c: string): this {
+    this.settingEl.addClass(c)
+    return this
+  }
+  setDisabled(): this {
     return this
   }
 }

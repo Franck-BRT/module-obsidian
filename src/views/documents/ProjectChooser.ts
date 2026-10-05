@@ -27,6 +27,8 @@ export interface ChooserRequest {
   offerMove?: boolean
   /** Asked too when documents are poured: how they are filed. */
   classify?: ClassifyChoices
+  /** Asked too when documents are poured: the collections they go in — those known, those ticked to start with. */
+  collections?: { known: string[]; chosen: string[] }
   confirm: string
 }
 
@@ -34,6 +36,7 @@ export interface ChooserAnswer {
   projects: string[]
   move: boolean
   classification?: Classification
+  collections?: string[]
 }
 
 export function chooseProjects(app: App, request: ChooserRequest): Promise<ChooserAnswer | null> {
@@ -52,6 +55,9 @@ class ProjectChooser extends Modal {
   private countEl!: HTMLElement
   /** How the documents are filed, when asked: its lot among the projects ticked. */
   private form: ClassifyForm | null = null
+  /** The collections ticked, by name; the names offered, new ones among them. */
+  private collections = new Set<string>()
+  private collectionNames: string[] = []
 
   constructor(
     app: App,
@@ -102,6 +108,12 @@ class ProjectChooser extends Modal {
         )
       : null
 
+    if (request.collections) {
+      this.collections = new Set(request.collections.chosen)
+      this.collectionNames = [...new Set([...request.collections.known, ...request.collections.chosen])]
+      this.renderCollections(this.contentEl.createDiv('pm-docs-chooser-collections'))
+    }
+
     if (request.offerMove) {
       new Setting(this.contentEl)
         .setName(t('library.moveIn'))
@@ -126,12 +138,51 @@ class ProjectChooser extends Modal {
             this.resolve({
               projects,
               move: this.move,
-              ...(this.form ? { classification: this.form.read() } : {})
+              ...(this.form ? { classification: this.form.read() } : {}),
+              ...(request.collections
+                ? { collections: this.collectionNames.filter((name) => this.collections.has(name)) }
+                : {})
             })
             this.close()
           })
       )
     window.setTimeout(() => search.focus(), 0)
+  }
+
+  /** The collections the documents go in: those known ticked or not, and one made by its name. */
+  private renderCollections(box: HTMLElement): void {
+    box.empty()
+    box.createDiv({ cls: 'pm-docs-classify-head', text: t('collection.docs.pourLabel') })
+    const list = box.createDiv('pm-collections-list')
+    for (const name of this.collectionNames) {
+      const row = list.createEl('label', { cls: 'pm-collections-row' })
+      const tick = row.createEl('input', { attr: { type: 'checkbox' } })
+      tick.checked = this.collections.has(name)
+      setIcon(row.createSpan({ cls: 'pm-collections-icon' }), 'library')
+      row.createSpan({ text: name })
+      tick.addEventListener('change', () => {
+        if (tick.checked) this.collections.add(name)
+        else this.collections.delete(name)
+      })
+    }
+    const make = box.createDiv('pm-collections-new')
+    const input = make.createEl('input', { attr: { type: 'text', placeholder: t('collection.docs.newPlaceholder') } })
+    const add = make.createEl('button', { text: t('collection.docs.add') })
+    const create = (): void => {
+      const name = input.value.trim()
+      if (!name) return
+      const same = this.collectionNames.find((one) => fold(one) === fold(name))
+      if (!same) this.collectionNames.push(name)
+      this.collections.add(same ?? name)
+      this.renderCollections(box)
+    }
+    add.addEventListener('click', create)
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        create()
+      }
+    })
   }
 
   private renderCount(): void {

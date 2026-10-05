@@ -138,6 +138,7 @@ export interface RecordFields {
   lot?: string
   issuer?: string
   tags?: string[]
+  collections?: string[]
 }
 
 /** The record's text: its fields up top, and a place for the reader's own notes. */
@@ -154,7 +155,8 @@ export function recordContent(fields: RecordFields, notesHeading: string): strin
     category: fields.category ?? '',
     lot: fields.lot ?? '',
     issuer: fields.issuer ?? '',
-    tags: fields.tags ?? []
+    tags: fields.tags ?? [],
+    ...(fields.collections?.length ? { collections: fields.collections } : {})
   }
   return `---\n${stringifyYaml(frontmatter).trimEnd()}\n---\n\n## ${notesHeading}\n\n`
 }
