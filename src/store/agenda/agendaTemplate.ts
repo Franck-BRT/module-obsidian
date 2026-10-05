@@ -20,6 +20,7 @@ export const AGENDA_BLOCKS = [
   ['intervenants', 'contacts'],
   ['avancement', 'progress'],
   ['jalons', 'milestones'],
+  ['chemin-critique', 'critical-path'],
   ['lots', 'phases'],
   ['retards', 'late'],
   ['à-venir', 'upcoming'],

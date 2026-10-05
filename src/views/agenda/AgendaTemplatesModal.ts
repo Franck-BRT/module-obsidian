@@ -40,6 +40,8 @@ export function blockDescription(block: AgendaBlock): string {
       return t('agenda.block.progress')
     case 'milestones':
       return t('agenda.block.milestones')
+    case 'critical-path':
+      return t('agenda.block.criticalPath')
     case 'phases':
       return t('agenda.block.phases')
     case 'late':

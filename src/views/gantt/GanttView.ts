@@ -10,6 +10,7 @@ import type { SubView } from '../SubView'
 import type { TimelineCfg } from './TimelineConfig'
 import { buildTimelineConfig, dateToX, xToDate, HEADER_HEIGHT, ROW_HEIGHT, LABEL_WIDTH } from './TimelineConfig'
 import { relativePlan } from '../../store/RelativePlan'
+import { criticalPath, type CriticalPath } from '../../store/criticalPath'
 import { projectOntoDays, realTasksById, relativeTimelineConfig, relativeWeek, RELATIVE_ANCHOR } from './relativeChart'
 import { makeDragState } from './GanttDragHandler'
 import type { DragState } from './GanttDragHandler'
@@ -67,6 +68,7 @@ export class GanttView implements SubView {
   }
   private cleanupFns: (() => void)[] = []
   private relative: RendererContext['relative'] = null
+  private critical: CriticalPath | null = null
   private pendingScroll: { top: number; anchorDate: Temporal.PlainDate } | null = null
 
   constructor(
@@ -116,6 +118,8 @@ export class GanttView implements SubView {
     this.relative = plan ? { realById: realTasksById(activeTasks), plan, week: relativeWeek(calendar) } : null
     const charted = plan ? projectOntoDays(activeTasks, plan, RELATIVE_ANCHOR) : activeTasks
     this.flatTasks = flattenTasks(charted).filter((f) => f.visible || f.depth === 0)
+    // Read off the whole plan, not what the filter leaves: a hidden ticket still holds the next up.
+    this.critical = this.plugin.settings.ganttCritical ? this.criticalOf(plan ? charted : this.scope.tasks()) : null
     this.rows = this.buildRows(charted)
     // The ordinary axis reaches from today to the work and back; a template's counts
     // from its own day one, so it gets one built from the plan instead.
@@ -189,6 +193,50 @@ export class GanttView implements SubView {
       t('tip.gantt.collapseAll')
     )
     if (!this.relative) this.renderBaselineControl(bar)
+    this.renderCriticalControl(bar)
+  }
+
+  /** Each project's critical path, its own statuses and working days, side by side. */
+  private criticalOf(tasks: Task[]): CriticalPath {
+    const byProject = new Map<Project | null, Task[]>()
+    for (const task of tasks) {
+      const project = this.scope.projectOf(task.id)
+      byProject.set(project, [...(byProject.get(project) ?? []), task])
+    }
+    const out: CriticalPath = { end: '', floats: new Map(), path: [] }
+    for (const [project, list] of byProject) {
+      const config = project ? this.plugin.store.configFor(project) : this.scope.config
+      const one = criticalPath(list, config.statuses, config.workCalendar)
+      for (const [id, float] of one.floats) out.floats.set(id, float)
+      out.path.push(...one.path)
+      if (one.end > out.end) out.end = one.end
+    }
+    return out
+  }
+
+  /** The critical path shown or not, and — shown — where the plan ends and how many tickets hold it. */
+  private renderCriticalControl(bar: HTMLElement): void {
+    const on = this.plugin.settings.ganttCritical
+    const button = new ButtonComponent(bar).setButtonText(t('gantt.critical')).onClick(
+      safeAsync(async () => {
+        this.plugin.settings.ganttCritical = !on
+        await this.plugin.saveSettings()
+        this.refresh()
+      })
+    ).buttonEl
+    button.toggleClass('is-active', on)
+    button.setAttr('aria-pressed', String(on))
+    explain(button, t('gantt.critical'), t('tip.gantt.critical'))
+    const critical = this.critical
+    if (!on || !critical) return
+    bar.createSpan({
+      cls: 'pm-gantt-critical-legend',
+      text: critical.end
+        ? this.relative
+          ? t('gantt.criticalCount', { count: critical.path.length })
+          : t('gantt.criticalLegend', { count: critical.path.length, date: formatDate(critical.end) })
+        : t('gantt.criticalNone')
+    })
   }
 
   /** The projects the chart draws, a ticket's own each: those a reference is frozen for. */
@@ -583,6 +631,7 @@ export class GanttView implements SubView {
       link: this.link,
       relative: this.relative,
       baseline: this.plugin.settings.ganttBaseline,
+      critical: this.critical,
       onRefresh: this.onRefresh,
       cleanupFns: this.cleanupFns
     }

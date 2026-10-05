@@ -1013,6 +1013,33 @@ export const fr: Catalog = {
     'Les réserves non levées, par entreprise (à lever, déclarées levées, en retard), puis la liste des réserves en retard.',
   'agenda.lateReserves': 'Réserves en retard :',
   'report.reserves': 'Réserves',
+  'gantt.critical': 'Chemin critique',
+  'tip.gantt.critical':
+    'Surligne en rouge les tickets dont le moindre retard repousse la fin du projet, et trace après chaque autre ticket sa marge : le nombre de jours ouvrés qu’il peut glisser sans rien décaler. Calculé sur les dates et les liens de dépendance (FD, DD, FF, DF, décalages) ; les tickets terminés, réunions, risques, décisions et réserves n’en font pas partie.',
+  'gantt.criticalLegend': {
+    one: 'Fin le {date} · {count} ticket critique',
+    other: 'Fin le {date} · {count} tickets critiques'
+  },
+  'gantt.criticalCount': { one: '{count} ticket critique', other: '{count} tickets critiques' },
+  'gantt.criticalNone': 'Aucun ticket daté à suivre',
+  'gantt.criticalTip': 'Chemin critique : chaque jour de retard repousse la fin du projet ({date}).',
+  'gantt.criticalTipShort': 'Chemin critique : chaque jour de retard repousse la fin du projet.',
+  'gantt.floatTip': {
+    one: 'Marge : {count} jour ouvré (fin au plus tard le {date}). Au-delà, chaque jour de retard repousse la fin du projet.',
+    other:
+      'Marge : {count} jours ouvrés (fin au plus tard le {date}). Au-delà, chaque jour de retard repousse la fin du projet.'
+  },
+  'gantt.floatTipShort': {
+    one: 'Marge : {count} jour ouvré. Au-delà, chaque jour de retard repousse la fin du projet.',
+    other: 'Marge : {count} jours ouvrés. Au-delà, chaque jour de retard repousse la fin du projet.'
+  },
+  'agenda.block.criticalPath':
+    'Les tickets du chemin critique, ceux dont le moindre retard repousse la fin du projet, avec la date de fin prévue.',
+  'agenda.criticalEnd': {
+    one: 'Fin prévue le {date} ; {count} ticket ne peut prendre aucun retard sans la repousser :',
+    other: 'Fin prévue le {date} ; {count} tickets ne peuvent prendre aucun retard sans la repousser :'
+  },
+  'report.criticalPath': 'Chemin critique',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

@@ -12,6 +12,8 @@ import { isRisk } from '../../store/risk'
 import { decidedSince, decisionDay, decisionOf, isDecision, isPending, orderDecisions } from '../../store/decision'
 import { flattenTasks } from '../../store/TaskTreeOps'
 import { visaWaits } from '../../store/visaDelay'
+import { criticalPath } from '../../store/criticalPath'
+import type { WorkCalendar } from '../../store/WorkCalendar'
 import { isLateReserve, isReserve, orderReserves, reserveCompany, reserveOf, reserveSummary } from '../../store/reserve'
 import { waitText } from '../visa/visaWaitWords'
 import { formatDateLetter, formatDateShort } from '../../dates'
@@ -41,6 +43,8 @@ export interface AgendaContext {
   link: (path: string, title: string) => string
   /** Days a document's reviewers have to sign; the plugin's default when not given. */
   visaDays?: number
+  /** The project's working days, which margins are counted in. */
+  calendar?: WorkCalendar
 }
 
 /** Days between two days, the second later when above zero. */
@@ -161,6 +165,8 @@ export class AgendaFiller {
         return this.progress(m)
       case 'milestones':
         return this.milestones(m)
+      case 'critical-path':
+        return this.criticalPath()
       case 'phases':
         return m.phases.length
           ? table(
@@ -488,6 +494,26 @@ export class AgendaFiller {
         ]
       })
     )
+  }
+
+  /** The open tickets that hold the end of the plan: any day lost on one is lost at the end. */
+  private criticalPath(): string {
+    const c = this.context
+    const path = criticalPath(this.flat, c.statuses, c.calendar)
+    if (!path.path.length) return nothing()
+    return [
+      t('agenda.criticalEnd', { date: formatDateLetter(path.end), count: path.path.length }),
+      '',
+      table(
+        [t('agenda.ticket'), t('task.assignees'), t('gantt.tooltipStart'), t('common.due')],
+        path.path.map((task) => [
+          task.title,
+          task.assignees.map(displayName).join(', '),
+          task.start ? formatDateShort(task.start) : '',
+          task.due ? formatDateShort(task.due) : ''
+        ])
+      )
+    ].join('\n')
   }
 
   /** The reserves still to lift, by contractor, then the late ones named: the punch list's state at the meeting. */

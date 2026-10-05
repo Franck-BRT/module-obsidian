@@ -980,6 +980,33 @@ export const en = {
     'The snags not cleared yet, by contractor (open, said cleared, late), then the late snags listed.',
   'agenda.lateReserves': 'Late snags:',
   'report.reserves': 'Snags',
+  'gantt.critical': 'Critical path',
+  'tip.gantt.critical':
+    'Rings in red the tickets whose slightest delay pushes the end of the project, and draws after each other ticket its margin: how many working days it may slip without moving anything. Read off the dates and the dependency links (FS, SS, FF, SF, lags); tickets done, meetings, risks, decisions and snags are left out.',
+  'gantt.criticalLegend': {
+    one: 'Ends {date} · {count} critical ticket',
+    other: 'Ends {date} · {count} critical tickets'
+  },
+  'gantt.criticalCount': { one: '{count} critical ticket', other: '{count} critical tickets' },
+  'gantt.criticalNone': 'No dated ticket to follow',
+  'gantt.criticalTip': 'Critical path: every day late pushes the end of the project ({date}).',
+  'gantt.criticalTipShort': 'Critical path: every day late pushes the end of the project.',
+  'gantt.floatTip': {
+    one: 'Margin: {count} working day (finish by {date} at the latest). Past that, every day late pushes the end of the project.',
+    other:
+      'Margin: {count} working days (finish by {date} at the latest). Past that, every day late pushes the end of the project.'
+  },
+  'gantt.floatTipShort': {
+    one: 'Margin: {count} working day. Past that, every day late pushes the end of the project.',
+    other: 'Margin: {count} working days. Past that, every day late pushes the end of the project.'
+  },
+  'agenda.block.criticalPath':
+    'The tickets on the critical path, those whose slightest delay pushes the end of the project, with the planned end.',
+  'agenda.criticalEnd': {
+    one: 'Planned end {date}; {count} ticket cannot slip a day without pushing it:',
+    other: 'Planned end {date}; {count} tickets cannot slip a day without pushing it:'
+  },
+  'report.criticalPath': 'Critical path',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

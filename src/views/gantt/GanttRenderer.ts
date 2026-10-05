@@ -1,6 +1,7 @@
 import type PMPlugin from '../../main'
 import type { StatusConfig, Task } from '../../types'
 import type { RelativePlan } from '../../store/RelativePlan'
+import type { CriticalPath } from '../../store/criticalPath'
 import type { ProjectScope } from '../../store'
 import type { FlatTask } from '../../store/TaskTreeOps'
 import type { TimelineCfg } from './TimelineConfig'
@@ -37,6 +38,8 @@ export interface RendererContext {
   relative: { realById: Map<string, Task>; plan: RelativePlan; week: number } | null
   /** Whether the reference plan is drawn under the bars, with how far each moved from it. */
   baseline: boolean
+  /** The critical path and each ticket's margin, when the reader asked to see them. */
+  critical: CriticalPath | null
   onRefresh: () => Promise<void>
   cleanupFns: (() => void)[]
 }

@@ -276,6 +276,44 @@
   opacity: 0.5;
 }
 
+/* The critical path: its bars ringed in red, its links drawn solid, and each other
+   ticket's margin as a thin line out to the latest day it may finish. */
+.pm-gantt-bar-group.is-critical .pm-gantt-bar {
+  stroke: var(--color-red);
+  stroke-width: 2;
+  opacity: 0.55;
+}
+.pm-gantt-milestone.is-critical {
+  stroke: var(--color-red);
+  stroke-width: 2;
+}
+.pm-gantt-arrow.is-critical {
+  stroke: var(--color-red);
+  stroke-dasharray: none;
+  opacity: 0.8;
+}
+.pm-gantt-arrowhead.is-critical {
+  fill: var(--color-red);
+  opacity: 0.9;
+}
+.pm-gantt-float {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+.pm-gantt-float:hover {
+  stroke-width: 3;
+}
+.pm-gantt-controls button.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.pm-gantt-critical-legend {
+  color: var(--color-red);
+  font-size: var(--font-ui-small);
+}
+
 /* A project heading takes a whole row of the chart, so the label column and the bars
    stay on the same grid. The band across the timeline carries the eye over to it. */
 .pm-gantt-group-row {

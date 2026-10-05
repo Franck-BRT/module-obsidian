@@ -3,6 +3,7 @@ import type { ProjectMetrics } from '../../store/Metrics'
 import type { ChaseItem } from '../../store/chasing'
 import type { VisaWait } from '../../store/visaDelay'
 import type { ReserveSummary } from '../../store/reserve'
+import type { CriticalPath } from '../../store/criticalPath'
 import { waitText } from '../visa/visaWaitWords'
 import { decisionDay, decisionOf } from '../../store/decision'
 import { BLACK, fit, GREY, LIGHT, PdfCanvas, rgb, tint, WHITE, type Rgb } from '../../store/pdfCanvas'
@@ -33,6 +34,8 @@ export interface StatusReportInput {
   visas?: VisaWait[]
   /** The punch list: how many reserves stand where, by contractor. */
   reserves?: ReserveSummary
+  /** The open tickets that hold the end of the plan, and that end. */
+  critical?: Pick<CriticalPath, 'end' | 'path'>
 }
 
 const NAVY: Rgb = [0.12, 0.23, 0.37]
@@ -552,6 +555,49 @@ class Report {
     }
   }
 
+  /** The tickets that hold the end of the plan: any day lost on one is lost at the end. */
+  criticalPath(critical: Pick<CriticalPath, 'end' | 'path'>): void {
+    this.section(t('report.criticalPath'))
+    const c = this.c
+    c.need(16)
+    c.text(
+      this.left,
+      c.y,
+      t('agenda.criticalEnd', { date: formatDateLetter(critical.end), count: critical.path.length }),
+      {
+        size: 9,
+        color: GREY
+      }
+    )
+    c.y += 16
+    for (const task of critical.path.slice(0, 15)) {
+      c.need(14)
+      const late = !!task.due && task.due < this.input.today
+      c.text(this.left, c.y, fit(task.title, 9, this.width * 0.5), { size: 9 })
+      c.text(
+        this.left + this.width * 0.52,
+        c.y,
+        fit(task.assignees.map(displayName).join(', ') || '—', 8.5, this.width * 0.22),
+        {
+          size: 8.5,
+          color: GREY
+        }
+      )
+      c.text(
+        this.left + this.width,
+        c.y,
+        [task.start ? formatDateShort(task.start) : '', task.due ? formatDateShort(task.due) : '']
+          .filter(Boolean)
+          .join(' – '),
+        { size: 8.5, color: late ? RED : GREY, align: 'right' }
+      )
+      c.y += 14
+    }
+    if (critical.path.length > 15) {
+      c.text(this.left, c.y, t('report.more', { count: critical.path.length - 15 }), { size: 8, color: GREY })
+    }
+  }
+
   /** The reserves still to lift, by contractor, the late ones in red. */
   reserves(summary: ReserveSummary): void {
     this.section(t('report.reserves'))
@@ -638,6 +684,7 @@ export function statusReportPdf(input: StatusReportInput, at = new Date()): Uint
   report.burnAndStatus()
   report.phases()
   report.milestones()
+  if (input.critical?.path.length) report.criticalPath(input.critical)
   report.risks()
   report.decisions()
   report.people()

@@ -2,7 +2,7 @@ import { Notice } from 'obsidian'
 import type { Task } from '../../types'
 import { openTaskModal } from '../../ui/ModalFactory'
 import { svgEl, displayName, getStatusConfig, safeAsync } from '../../utils'
-import { parsePlainDate } from '../../dates'
+import { formatDate, parsePlainDate } from '../../dates'
 import {
   ROW_HEIGHT,
   HEADER_HEIGHT,
@@ -21,6 +21,19 @@ import { handleLinkDotClick } from './GanttLinkHandler'
 import type { RendererContext } from './GanttRenderer'
 import { t } from '../../i18n'
 import { baselineGap, gapText } from '../../store/baseline'
+import type { TaskFloat } from '../../store/criticalPath'
+
+/** What its margin means, as its tooltip says: critical, or how many days it may slip. */
+function floatLine(float: TaskFloat, ctx: RendererContext): string {
+  if (float.critical) {
+    return ctx.relative || !ctx.critical?.end
+      ? t('gantt.criticalTipShort')
+      : t('gantt.criticalTip', { date: formatDate(ctx.critical.end) })
+  }
+  return ctx.relative
+    ? t('gantt.floatTipShort', { count: float.float })
+    : t('gantt.floatTip', { count: float.float, date: formatDate(float.latestDue) })
+}
 
 /** Below the bar, in the row's bottom margin: where the reference plan is drawn. */
 const BASELINE_HEIGHT = 4
@@ -155,6 +168,24 @@ export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: n
     class: 'pm-gantt-bar'
   })
   barGroup.appendChild(rect)
+  const float = ctx.critical?.floats.get(task.id)
+  if (float?.critical) barGroup.classList.add('is-critical')
+  // Its margin, drawn as a thin line after the bar out to the latest day it may finish.
+  const latest = float && !float.critical ? parsePlainDate(float.latestDue) : null
+  if (float && latest) {
+    const reach = Math.min(ctx.cfg.totalWidth, dateToX(ctx.cfg, latest.add({ days: 1 })))
+    if (reach > x + width) {
+      const mid = y + height / 2
+      const line = svgEl('path', {
+        d: `M ${x + width} ${mid} H ${reach} M ${reach} ${mid - 4} V ${mid + 4}`,
+        class: 'pm-gantt-float'
+      })
+      const tip = svgEl('title', {})
+      tip.textContent = floatLine(float, ctx)
+      line.appendChild(tip)
+      barGroup.appendChild(line)
+    }
+  }
 
   if (task.progress > 0) {
     const pw = (task.progress / 100) * width
@@ -209,7 +240,8 @@ export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: n
     `${task.title}\n${statusConfig?.label ?? task.status} \u00b7 ${task.priority}\n` +
     whenStr +
     `${t('gantt.tooltipProgress')}: ${task.progress}%${assigneesStr}` +
-    (showBaseline ? `\n${baselineLine(task)}` : '')
+    (showBaseline ? `\n${baselineLine(task)}` : '') +
+    (float ? `\n${floatLine(float, ctx)}` : '')
   rect.appendChild(ttEl)
 
   // Dragging writes dates. In a template there are none to write: the bar is where the
@@ -395,11 +427,14 @@ function renderMilestoneDiamond(g: SVGGElement, task: Task, row: number, color: 
     cursor: 'pointer'
   })
   g.appendChild(diamond)
+  const float = ctx.critical?.floats.get(task.id)
+  if (float?.critical) diamond.classList.add('is-critical')
 
   const tt = svgEl('title', {})
   tt.textContent =
     `${t('gantt.tooltipMilestone', { title: task.title })}\n` +
-    `${t('gantt.tooltipDate')}: ${task.due || task.start || '\u2014'}`
+    `${t('gantt.tooltipDate')}: ${task.due || task.start || '\u2014'}` +
+    (float ? `\n${floatLine(float, ctx)}` : '')
   diamond.appendChild(tt)
 
   diamond.addEventListener('click', () => {
@@ -478,11 +513,13 @@ export function renderDependencyArrows(ctx: RendererContext): void {
       const fromY = HEADER_HEIGHT + fromRow * ROW_HEIGHT + ROW_HEIGHT / 2
 
       const midX = (fromX + toX) / 2
+      // A link between two critical tickets is the path itself.
+      const critical = !!ctx.critical?.floats.get(task.id)?.critical && !!ctx.critical.floats.get(depId)?.critical
       arrowGroup.appendChild(
         svgEl('path', {
           d: `M ${fromX} ${fromY} C ${midX} ${fromY}, ${midX} ${toY}, ${toX} ${toY}`,
-          class: 'pm-gantt-arrow',
-          'marker-end': 'url(#pm-arrowhead)'
+          class: critical ? 'pm-gantt-arrow is-critical' : 'pm-gantt-arrow',
+          'marker-end': critical ? 'url(#pm-arrowhead-critical)' : 'url(#pm-arrowhead)'
         })
       )
     }
@@ -504,6 +541,16 @@ export function renderDependencyArrows(ctx: RendererContext): void {
     })
   )
   defs.appendChild(marker)
+  const criticalMarker = svgEl('marker', {
+    id: 'pm-arrowhead-critical',
+    markerWidth: 8,
+    markerHeight: 8,
+    refX: 6,
+    refY: 3,
+    orient: 'auto'
+  })
+  criticalMarker.appendChild(svgEl('path', { d: 'M0,0 L0,6 L8,3 z', class: 'pm-gantt-arrowhead is-critical' }))
+  defs.appendChild(criticalMarker)
 
   ctx.svgEl.appendChild(arrowGroup)
 }

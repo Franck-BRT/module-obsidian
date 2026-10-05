@@ -9,6 +9,7 @@ import { addDays } from '../../store/Metrics'
 import { statusReportPdf } from './statusReportPdf'
 import { projectWaits } from '../visa/visaWaits'
 import { reserveSummary } from '../../store/reserve'
+import { criticalPath, type CriticalPath } from '../../store/criticalPath'
 import type { ProjectMetrics } from '../../store/Metrics'
 import { ensureFolder, folderOf } from '../../store/vaultFs'
 import { displayName, sanitizeFileName } from '../../utils'
@@ -141,6 +142,14 @@ function section(lines: string[], heading: string, header: string[]): void {
   lines.push(`## ${heading}`, '', ...header)
 }
 
+/** The critical path of the scope's main project, read with its own statuses and working days. */
+function scopeCriticalPath(plugin: PMPlugin, scope: ProjectScope): CriticalPath | undefined {
+  const project = scope.primary
+  if (!project || project.template || project.program) return undefined
+  const config = plugin.store.configFor(project)
+  return criticalPath(project.tasks, config.statuses, config.workCalendar)
+}
+
 /**
  * Writes the status report as a PDF beside the project, to send to whoever has no
  * Obsidian, and opens it. Its path comes back.
@@ -163,7 +172,8 @@ export async function writeStatusReportPdf(plugin: PMPlugin, scope: ProjectScope
     },
     lateDocuments: awaitedDocuments(tasks, stamp),
     visas: projectWaits(plugin, scope.projects, stamp).map((one) => one.wait),
-    reserves: reserveSummary(tasks, stamp)
+    reserves: reserveSummary(tasks, stamp),
+    critical: scopeCriticalPath(plugin, scope)
   })
   const folder = project ? folderOf(project.filePath) : ''
   if (folder) await ensureFolder(plugin.app, folder)

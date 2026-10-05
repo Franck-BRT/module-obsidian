@@ -256,6 +256,7 @@ export function b12Tasks(today: string): Task[] {
       due: d(50),
       subtasks: [
         makeTask({
+          id: 'demo-b12-coffrage',
           title: 'Coffrage du radier',
           start: d(-15),
           due: d(-3),
@@ -265,26 +266,42 @@ export function b12Tasks(today: string): Task[] {
           assignees: ['Paul Martin']
         }),
         makeTask({
+          id: 'demo-b12-ferraillage',
           title: 'Ferraillage du radier',
           start: d(-5),
           due: d(6),
+          // The links make the critical path: the slab, the walls, the floor, out of the weather.
+          dependencies: ['demo-b12-coffrage'],
+          dependencyOptions: { 'demo-b12-coffrage': { type: 'SS', lag: 10 } },
           status: 'in-progress',
           progress: 30,
           timeEstimate: 60,
           assignees: ['Garonne Bâtiment']
         }),
-        makeTask({ title: 'Coulage du radier', start: d(7), due: d(11), assignees: ['Garonne Bâtiment'] }),
         makeTask({
+          id: 'demo-b12-coulage',
+          title: 'Coulage du radier',
+          start: d(7),
+          due: d(11),
+          assignees: ['Garonne Bâtiment'],
+          dependencies: ['demo-b12-ferraillage', 'demo-b12-reservations']
+        }),
+        makeTask({
+          id: 'demo-b12-voiles',
           title: 'Voiles du rez-de-chaussée',
           start: d(14),
           due: d(35),
+          dependencies: ['demo-b12-radier'],
+          dependencyOptions: { 'demo-b12-radier': { type: 'FS', lag: 2 } },
           timeEstimate: 120,
           assignees: ['Garonne Bâtiment']
         }),
         makeTask({
+          id: 'demo-b12-plancher',
           title: 'Plancher haut du rez-de-chaussée',
           start: d(36),
           due: d(50),
+          dependencies: ['demo-b12-voiles'],
           assignees: ['Garonne Bâtiment']
         }),
         makeTask({
@@ -303,6 +320,7 @@ export function b12Tasks(today: string): Task[] {
       due: d(20),
       subtasks: [
         makeTask({
+          id: 'demo-b12-reservations',
           title: 'Réservations électriques du radier',
           start: d(-10),
           due: d(-2),
@@ -316,8 +334,24 @@ export function b12Tasks(today: string): Task[] {
     }),
     makeTask({ title: 'Démarrage du chantier', type: 'milestone', start: '', due: d(-45), ...done, completed: d(-45) }),
     makeTask({ title: 'Réception des fonds de fouille', type: 'milestone', start: '', due: d(-20) }),
-    makeTask({ title: 'Radier coulé', type: 'milestone', start: '', due: d(11) }),
-    makeTask({ title: 'Hors d’eau', type: 'milestone', start: '', due: d(75) }),
+    makeTask({
+      id: 'demo-b12-radier',
+      title: 'Radier coulé',
+      type: 'milestone',
+      start: '',
+      due: d(11),
+      dependencies: ['demo-b12-coulage'],
+      dependencyOptions: { 'demo-b12-coulage': { type: 'FF', lag: 0 } }
+    }),
+    // The frame and the roof, not planned in detail yet: twenty-four days after the floor.
+    makeTask({
+      title: 'Hors d’eau',
+      type: 'milestone',
+      start: '',
+      due: d(75),
+      dependencies: ['demo-b12-plancher'],
+      dependencyOptions: { 'demo-b12-plancher': { type: 'FS', lag: 24 } }
+    }),
     makeTask({
       title: 'Retard de livraison du béton (centrale en panne)',
       type: 'risk',
@@ -591,6 +625,12 @@ Ce projet et le projet « ${DEMO_C7} » sont fictifs. La commande **« Supprimer
 - [ ] Dans la fiche du ticket « Note de calcul du radier », bouton **Déposer** : choisir **NDC-04 Note de calcul radier indice C** dans le dossier \`_inbox\` du projet, puis passer l’indice à **C**.
 - [ ] **Fiche de visa assistée** de nouveau : les observations de l’indice B sont reprises ; le béton et les charges doivent ressortir « Levée », l’enrobage « Partiellement levée » (35 mm en rive).
 - [ ] La fiche du ticket liste les fiches de visa par indice, avec les observations encore ouvertes.
+
+## Chemin critique
+- [ ] Onglet **Gantt** → bouton **Chemin critique** : coffrage, ferraillage et coulage du radier, voiles, plancher haut et les jalons « Radier coulé » et « Hors d’eau » cerclés de rouge, leurs liens en trait plein ; « Fin le … » dans la barre.
+- [ ] Après les réservations électriques (8 jours de marge) et le schéma unifilaire, un trait fin montre jusqu’où ils peuvent glisser ; le survoler donne la marge et la date de fin au plus tard.
+- [ ] Repousser le coulage du radier de deux jours (glisser la barre) : les voiles, le plancher et « Hors d’eau » suivent, la fin aussi.
+- [ ] Ordre du jour « Revue générale d’avancement » : le bloc du chemin critique ; rapport d’état **PDF** : la section « Chemin critique ».
 
 ## Réserves
 - [ ] Onglet **Réserves** : quatre réserves de la réception des terrassements ; R-001 en retard (relancée il y a 3 jours), R-002 déclarée levée, R-003 levée, R-004 bloquante chez Garonne Bâtiment.

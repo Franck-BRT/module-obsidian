@@ -38,8 +38,11 @@ const FR: DefaultTemplate[] = [
 ## 2. Avancement global (10 min)
 {{avancement}}
 
-## 3. Jalons (10 min)
+## 3. Jalons et chemin critique (10 min)
 {{jalons}}
+
+### Chemin critique
+{{chemin-critique}}
 
 ## 4. Avancement par lot (15 min)
 {{lots}}
@@ -349,8 +352,11 @@ const EN: DefaultTemplate[] = [
 ## 2. Overall progress (10 min)
 {{progress}}
 
-## 3. Milestones (10 min)
+## 3. Milestones and critical path (10 min)
 {{milestones}}
+
+### Critical path
+{{critical-path}}
 
 ## 4. Progress by phase (15 min)
 {{phases}}

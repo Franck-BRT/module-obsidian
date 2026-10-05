@@ -848,6 +848,8 @@ export interface PMSettings {
   ganttWeekLabel: GanttWeekLabel
   /** Whether the Gantt draws the reference plan under the bars, where a project has one. */
   ganttBaseline: boolean
+  /** Whether the Gantt shows the critical path and each ticket's margin. */
+  ganttCritical: boolean
   statuses: StatusConfig[]
   priorities: PriorityConfig[]
   /**
@@ -1193,6 +1195,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   ganttGranularity: 'week',
   ganttWeekLabel: 'weekNumber',
   ganttBaseline: true,
+  ganttCritical: false,
   statuses: DEFAULT_STATUSES,
   types: DEFAULT_TYPES,
   docStates: DEFAULT_DOC_STATES,

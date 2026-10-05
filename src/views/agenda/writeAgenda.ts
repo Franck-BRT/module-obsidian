@@ -34,6 +34,7 @@ export async function writeAgenda(
     statuses: config.statuses,
     priorities: config.priorities,
     visaDays: config.visaDays,
+    calendar: config.workCalendar,
     date,
     horizon: template.horizon,
     meeting,

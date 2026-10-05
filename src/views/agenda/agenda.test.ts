@@ -252,6 +252,19 @@ describe('the blocks', () => {
     expect(agendaBlock('visas en attente')).toBe('pending-visas')
   })
 
+  it('list the tickets on the critical path, with the planned end', () => {
+    const tasks = [
+      makeTask({ id: 'a', title: 'Coffrage', start: '2026-10-05', due: '2026-10-09', assignees: ['Paul Martin'] }),
+      makeTask({ id: 'b', title: 'Coulage', start: '2026-10-10', due: '2026-10-12', dependencies: ['a'] }),
+      makeTask({ id: 'c', title: 'Nettoyage', start: '2026-10-05', due: '2026-10-06' })
+    ]
+    const block = filler({ tasks }).render('critical-path')
+    expect(block).toContain('Fin prévue le 12 octobre 2026 ; 2 tickets ne peuvent prendre aucun retard')
+    expect(block).toContain('| Coffrage | Paul Martin | 5 oct. | 9 oct. |')
+    expect(block).not.toContain('Nettoyage')
+    expect(agendaBlock('chemin critique')).toBe('critical-path')
+  })
+
   it('list the reserves still to lift by contractor, then the late ones', () => {
     const reserve = (title: string, number: string, due: string, state: 'open' | 'declared' | 'lifted'): Task =>
       makeTask({
