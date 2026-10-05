@@ -119,6 +119,8 @@ function ragTip(state: RagDocState, passages: number): string {
 
 export class DocumentsView extends ItemView {
   private query: DocQuery = { text: '', project: '', family: '' }
+  /** Only the documents whose text is not there to search, with why. */
+  private onlyUnread = false
   private sort: DocSort = 'added'
   /** Whether the finer filters — kind, category, lot, issuer, tag — are shown. */
   private moreFilters = false
@@ -566,14 +568,17 @@ export class DocumentsView extends ItemView {
       }
     })
     const texts = this.plugin.libraryText
+    if (this.onlyUnread && !all.some((doc) => texts.unreadReason(doc))) this.onlyUnread = false
     const found = sortDocs(
-      all.filter((doc) =>
-        matchesDoc(
-          doc,
-          this.query,
-          (path) => this.projectTitle(path),
-          (each) => texts.folded(each)
-        )
+      all.filter(
+        (doc) =>
+          matchesDoc(
+            doc,
+            this.query,
+            (path) => this.projectTitle(path),
+            (each) => texts.folded(each)
+          ) &&
+          (!this.onlyUnread || texts.unreadReason(doc) !== null)
       ),
       this.sort
     )
@@ -607,6 +612,7 @@ export class DocumentsView extends ItemView {
           : t('library.found', { count: found.length, total: all.length })
     })
     this.renderTextStatus(summary, all)
+    if (this.onlyUnread) this.renderUnread(all)
     this.renderScanQueue()
     this.renderRegistersOutside(all)
     if (this.picked.size) this.renderPickedBar(all)
@@ -820,6 +826,22 @@ export class DocumentsView extends ItemView {
     }
     const counts = texts.counts(all)
     status.createSpan({ text: t('library.textRead', { count: counts.read, total: all.length }) })
+    // Those not read: shown alone, each with why and what to do.
+    const unread = all.length - counts.read
+    if (unread) {
+      const toggle = status.createEl('a', {
+        cls: 'pm-docs-unread-link',
+        href: '#',
+        text: this.onlyUnread ? t('library.unreadAll') : t('library.unreadLink', { count: unread })
+      })
+      explain(toggle, t('library.unreadLink', { count: unread }), t('library.unreadHint'))
+      toggle.addEventListener('click', (event) => {
+        event.preventDefault()
+        this.onlyUnread = !this.onlyUnread
+        this.shown = PAGE
+        this.renderBody()
+      })
+    }
     const scans = all.filter((doc) => texts.entry(doc)?.state === 'scan')
     if (scans.length) {
       const link = status.createEl('a', {
@@ -832,6 +854,52 @@ export class DocumentsView extends ItemView {
         event.preventDefault()
         this.confirmReadScans(scans)
       })
+    }
+  }
+
+  /** Why the documents shown are not read, by reason, with what can be done about each. */
+  private renderUnread(all: LibraryDoc[]): void {
+    const texts = this.plugin.libraryText
+    const box = this.bodyEl.createDiv('pm-docs-unread')
+    box.createDiv({ cls: 'pm-docs-unread-title', text: t('library.unreadTitle') })
+    const list = box.createEl('ul')
+    for (const { reason, docs, formats } of texts.unread(all)) {
+      const line = list.createEl('li')
+      const count = docs.length
+      const shown = formats
+        .slice(0, 6)
+        .map(([ext, many]) => `.${ext} × ${many}`)
+        .join(', ')
+      line.createSpan({
+        text:
+          reason === 'scan'
+            ? t('library.unread.scan', { count })
+            : reason === 'unsupported'
+              ? t('library.unread.unsupported', { count, formats: shown })
+              : reason === 'unreadable'
+                ? t('library.unread.unreadable', { count })
+                : reason === 'empty'
+                  ? t('library.unread.empty', { count })
+                  : reason === 'missing'
+                    ? t('library.unread.missing', { count })
+                    : t('library.unread.pending', { count })
+      })
+      if (reason === 'scan') {
+        const act = line.createEl('a', { cls: 'pm-docs-unread-act', href: '#', text: t('library.readScans') })
+        act.addEventListener('click', (event) => {
+          event.preventDefault()
+          this.confirmReadScans(docs)
+        })
+      } else if (reason === 'unreadable' || reason === 'pending') {
+        const act = line.createEl('a', { cls: 'pm-docs-unread-act', href: '#', text: t('library.unreadReread') })
+        act.addEventListener(
+          'click',
+          safeAsync(async (event: MouseEvent) => {
+            event.preventDefault()
+            for (const doc of docs) await texts.reread(doc)
+          })
+        )
+      }
     }
   }
 

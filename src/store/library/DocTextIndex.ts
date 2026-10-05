@@ -1,6 +1,22 @@
 import { normalizePath, TFile, type App } from 'obsidian'
 import { decodeText, encodeText, extractText, TEXT_LIMIT, type DocText, type MailWords } from './docText'
-import { fold, type LibraryDoc } from './libraryDoc'
+import { extensionOf, fold, type LibraryDoc } from './libraryDoc'
+
+/**
+ * Why a document's text is not there to search: a record with no file, a file not read
+ * yet, a scan waiting for a model, a format with no reader, a file that would not read,
+ * one with no text in it.
+ */
+export type UnreadReason = 'missing' | 'pending' | 'scan' | 'unsupported' | 'unreadable' | 'empty'
+
+export const UNREAD_REASONS: UnreadReason[] = ['scan', 'unsupported', 'unreadable', 'empty', 'missing', 'pending']
+
+export interface UnreadSummary {
+  reason: UnreadReason
+  docs: LibraryDoc[]
+  /** For the formats with no reader: their extensions, the most frequent first, with how many. */
+  formats: [string, number][]
+}
 
 /**
  * What every document in the library says, read once and kept.
@@ -213,6 +229,34 @@ export class DocTextIndex {
     const text = await read(file, new Uint8Array(await this.app.vault.readBinary(file)))
     await this.keep(doc.hash, { state: 'ok', text: text.slice(0, TEXT_LIMIT), mtime: file.stat.mtime, ocr: true })
     this.changed()
+  }
+
+  /** Why this document's text is not there to search; null when it is. */
+  unreadReason(doc: LibraryDoc): UnreadReason | null {
+    if (!doc.hash || !doc.file) return 'missing'
+    const entry = this.entry(doc)
+    if (!entry) return 'pending'
+    return entry.state === 'ok' ? null : entry.state
+  }
+
+  /** The documents whose text is not there, by why — and for each, what can be done about it. */
+  unread(docs: LibraryDoc[]): UnreadSummary[] {
+    const by = new Map<UnreadReason, LibraryDoc[]>()
+    for (const doc of docs) {
+      const reason = this.unreadReason(doc)
+      if (reason) by.set(reason, [...(by.get(reason) ?? []), doc])
+    }
+    return UNREAD_REASONS.filter((reason) => by.has(reason)).map((reason) => {
+      const list = by.get(reason) ?? []
+      const formats = new Map<string, number>()
+      if (reason === 'unsupported') {
+        for (const doc of list) {
+          const ext = extensionOf(doc.file) || '?'
+          formats.set(ext, (formats.get(ext) ?? 0) + 1)
+        }
+      }
+      return { reason, docs: list, formats: [...formats].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])) }
+    })
   }
 
   /** How the library's texts stand: read, scans waiting for a model, and the rest. */

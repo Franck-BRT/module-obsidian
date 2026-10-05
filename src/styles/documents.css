@@ -73,8 +73,33 @@
   color: var(--text-accent);
 }
 
-.pm-docs-scans {
+.pm-docs-scans,
+.pm-docs-unread-link,
+.pm-docs-unread-act {
   color: var(--text-accent);
+}
+
+/* Why the documents shown are not read, and what to do about each kind. */
+.pm-docs-unread {
+  margin: var(--size-4-2) 0;
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  font-size: var(--font-ui-small);
+}
+
+.pm-docs-unread-title {
+  font-weight: var(--font-semibold);
+}
+
+.pm-docs-unread ul {
+  margin: var(--size-4-1) 0 0;
+  padding-left: var(--size-4-5);
+}
+
+.pm-docs-unread-act {
+  margin-left: var(--size-4-2);
 }
 
 /* Where the words searched for are in what the document says. */

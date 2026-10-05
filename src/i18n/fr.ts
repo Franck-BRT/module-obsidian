@@ -1300,6 +1300,31 @@ export const fr: Catalog = {
     one: 'Aucun document directement dans ce dossier : {count} document est dans ses sous-dossiers, ci-dessus.',
     other: 'Aucun document directement dans ce dossier : {count} documents sont dans ses sous-dossiers, ci-dessus.'
   },
+  'library.unreadLink': { one: '{count} non lu : voir pourquoi', other: '{count} non lus : voir pourquoi' },
+  'library.unreadAll': 'Voir tous les documents',
+  'library.unreadHint':
+    'Affiche seulement les documents dont le texte n’a pas été lu, avec la raison et ce qu’on peut faire. La recherche ne les trouve que par leur titre, leurs projets et leurs étiquettes.',
+  'library.unreadTitle': 'Pourquoi ces documents ne sont pas lus :',
+  'library.unread.scan': {
+    one: '{count} scan, sans texte : à faire lire par le modèle.',
+    other: '{count} scans, sans texte : à faire lire par le modèle.'
+  },
+  'library.unread.unsupported': {
+    one: '{count} document dans un format sans lecteur ({formats}) : l’enregistrer en PDF, Word, Excel ou texte pour qu’il soit lu.',
+    other:
+      '{count} documents dans un format sans lecteur ({formats}) : les enregistrer en PDF, Word, Excel ou texte pour qu’ils soient lus.'
+  },
+  'library.unread.unreadable': {
+    one: '{count} fichier illisible (abîmé, ou protégé par un mot de passe) : le relire, sinon le réexporter.',
+    other: '{count} fichiers illisibles (abîmés, ou protégés par un mot de passe) : les relire, sinon les réexporter.'
+  },
+  'library.unread.empty': { one: '{count} fichier sans aucun texte.', other: '{count} fichiers sans aucun texte.' },
+  'library.unread.missing': {
+    one: '{count} fiche dont le fichier est introuvable (déplacé ou supprimé hors de la bibliothèque).',
+    other: '{count} fiches dont le fichier est introuvable (déplacé ou supprimé hors de la bibliothèque).'
+  },
+  'library.unread.pending': { one: '{count} document pas encore lu.', other: '{count} documents pas encore lus.' },
+  'library.unreadReread': 'Relire',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

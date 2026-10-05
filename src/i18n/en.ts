@@ -1260,6 +1260,31 @@ export const en = {
     one: 'No document right in this folder: {count} document is in its folders, above.',
     other: 'No document right in this folder: {count} documents are in its folders, above.'
   },
+  'library.unreadLink': { one: '{count} not read: see why', other: '{count} not read: see why' },
+  'library.unreadAll': 'Show all documents',
+  'library.unreadHint':
+    'Shows only the documents whose text was not read, with why and what can be done. The search finds them only by their title, projects and tags.',
+  'library.unreadTitle': 'Why these documents are not read:',
+  'library.unread.scan': {
+    one: '{count} scan, with no text: have the model read it.',
+    other: '{count} scans, with no text: have the model read them.'
+  },
+  'library.unread.unsupported': {
+    one: '{count} document in a format with no reader ({formats}): save it as PDF, Word, Excel or text for it to be read.',
+    other:
+      '{count} documents in a format with no reader ({formats}): save them as PDF, Word, Excel or text for them to be read.'
+  },
+  'library.unread.unreadable': {
+    one: '{count} unreadable file (damaged, or protected by a password): read it again, or export it again.',
+    other: '{count} unreadable files (damaged, or protected by a password): read them again, or export them again.'
+  },
+  'library.unread.empty': { one: '{count} file with no text at all.', other: '{count} files with no text at all.' },
+  'library.unread.missing': {
+    one: '{count} record whose file cannot be found (moved or deleted outside the library).',
+    other: '{count} records whose files cannot be found (moved or deleted outside the library).'
+  },
+  'library.unread.pending': { one: '{count} document not read yet.', other: '{count} documents not read yet.' },
+  'library.unreadReread': 'Read again',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

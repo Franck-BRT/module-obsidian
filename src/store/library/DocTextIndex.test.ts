@@ -75,6 +75,40 @@ describe('DocTextIndex', () => {
     expect(index.counts(docs)).toEqual({ read: 1, scans: 1, unread: 0, pending: 0 })
   })
 
+  it('says why each document unread is, and which formats have no reader', async () => {
+    await vault.createBinary('L/_files/cr.txt', bytes('Lu'))
+    await vault.createBinary('L/_files/photo.jpg', bytes('jpeg'))
+    await vault.createBinary('L/_files/a.dwg', bytes('plan'))
+    await vault.createBinary('L/_files/b.dwg', bytes('plan'))
+    await vault.createBinary('L/_files/c.doc', bytes('ancien'))
+    await vault.createBinary('L/_files/vide.txt', bytes('  '))
+    const read = [
+      docOf('a', 'L/_files/cr.txt'),
+      docOf('b', 'L/_files/photo.jpg'),
+      docOf('c', 'L/_files/a.dwg'),
+      docOf('d', 'L/_files/b.dwg'),
+      docOf('e', 'L/_files/c.doc'),
+      docOf('f', 'L/_files/vide.txt')
+    ]
+    await index.refresh(read)
+    const docs = [...read, docOf('g', ''), docOf('h', 'L/_files/later.txt')]
+    expect(index.unreadReason(docs[0])).toBeNull()
+    expect(index.unread(docs).map(({ reason, docs: list, formats }) => [reason, list.length, formats])).toEqual([
+      ['scan', 1, []],
+      [
+        'unsupported',
+        3,
+        [
+          ['dwg', 2],
+          ['doc', 1]
+        ]
+      ],
+      ['empty', 1, []],
+      ['missing', 1, []],
+      ['pending', 1, []]
+    ])
+  })
+
   it('loads what was kept at once, without reading a document never read nor one changed since', async () => {
     const file = await vault.createBinary('L/_files/cr.txt', bytes('Nouveau texte'))
     await vault.createBinary('L/_files/new.txt', bytes('Jamais lu'))
