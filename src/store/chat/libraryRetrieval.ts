@@ -51,7 +51,8 @@ const STOP = new Set(
     'dit dire fait faire etre avoir quand comment pourquoi combien peux peut dois doit entre apres avant ' +
     'aussi encore deja tres bien selon chez vers the and for with what which who how when where why does ' +
     'this that these those from are was were have has can about into document documents note notes ' +
-    'bibliotheque fichier fichiers dans donne donner resume resumer explique expliquer cherche trouve'
+    'bibliotheque fichier fichiers dans donne donner resume resumer explique expliquer cherche trouve ' +
+    'moi toi paragraphe paragraphes article articles section sections chapitre alinea'
   ).split(' ')
 )
 
@@ -60,12 +61,21 @@ function stem(word: string): string {
   return word.length > 4 && word.endsWith('s') ? word.slice(0, -1) : word
 }
 
-/** A text's words as they are compared: folded, stemmed, those of one letter left out. */
+/** Section numbers as written — « 6.3.5 », « 4.2 » —, two levels at least, not a date's. */
+const SECTION_REF = /(?<![\d.])\d{1,3}(?:\.\d{1,3}){1,5}(?![\d])/g
+
+/** The section numbers a text cites, once each: « 6.3.5 », « 12.1 ». */
+export function sectionRefs(text: string): string[] {
+  return [...new Set(text.match(SECTION_REF) ?? [])]
+}
+
+/** A text's words as they are compared: folded, stemmed, those of one letter left out — its section numbers whole. */
 export function tokens(text: string): string[] {
-  return fold(text)
+  const words = fold(text)
     .split(/[^\p{L}\p{N}]+/u)
     .filter((word) => word.length >= 2)
     .map(stem)
+  return [...words, ...(text.match(SECTION_REF) ?? [])]
 }
 
 /**
@@ -73,11 +83,13 @@ export function tokens(text: string): string[] {
  * with a figure in them, « P3 », « 12 » — without those that only ask.
  */
 export function searchTerms(question: string): string[] {
-  const words = fold(question)
+  // A section number is looked for whole: « 6.3.5 », not « 6 », « 3 » and « 5 ».
+  const sections = sectionRefs(question)
+  const words = fold(question.replace(SECTION_REF, ' '))
     .split(/[^\p{L}\p{N}]+/u)
     .filter((word) => (word.length >= 3 || /\d/.test(word)) && !STOP.has(word))
     .map(stem)
-  return [...new Set(words)]
+  return [...new Set([...sections, ...words])]
 }
 
 /**
@@ -118,6 +130,69 @@ export function passagesOf(text: string, size = PASSAGE): string[] {
   return out
 }
 
+/**
+ * The section number a line heads, when it is a heading: « 6.3.5 Essais », « ### 6.3.5 »,
+ * « § 6.3.5 – Essais », « Article 6.3.5 » — a short line, the number at its start.
+ */
+function headingRef(line: string): string | null {
+  const bare = line.replace(/^\s*#{0,6}\s*(?:§|art\.?|article)?\s*/i, '')
+  const found = /^(\d{1,3}(?:\.\d{1,3})*)\.?(?=\s|$|[-–—)])/.exec(bare)
+  if (!found) return null
+  // A long line is a heading only when a title follows its number — the reader of some
+  // PDF runs the heading into its first sentence —, not « 7 jours après… ».
+  if (bare.length > 160 && !/^[\s\-–—)]*\p{Lu}/u.test(bare.slice(found[0].length))) return null
+  return found[1]
+}
+
+/** Whether section `a` comes after `b` in a document's order: 6.4 after 6.3.5, 7 after 6.3.5. */
+function after(a: string, b: string): boolean {
+  const x = a.split('.').map(Number)
+  const y = b.split('.').map(Number)
+  for (let at = 0; at < Math.max(x.length, y.length); at++) {
+    const left = x[at] ?? -1
+    const right = y[at] ?? -1
+    if (left !== right) return left > right
+  }
+  return false
+}
+
+/**
+ * A numbered section of a text, whole: from its heading to the next heading that is not
+ * one of its own subsections — its sibling, its parent's sibling. A numbered list inside
+ * it, « 1. », « 2. », does not end it: those come before it in the document's order. Of
+ * the lines heading it — a table of contents names it too —, the one with the longest
+ * section is it. Null when no line heads it.
+ */
+export function sectionText(text: string, ref: string, limit = SECTION_LIMIT): string | null {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n')
+  let best: string | null = null
+  lines.forEach((line, start) => {
+    if (headingRef(line) !== ref) return
+    let end = lines.length
+    for (let at = start + 1; at < lines.length; at++) {
+      const other = headingRef(lines[at])
+      // Its sibling or what follows ends it; so does its own number or its parent's met
+      // again — the contents' line for it ending where the document itself begins.
+      if (
+        other &&
+        !other.startsWith(`${ref}.`) &&
+        (after(other, ref) || other === ref || ref.startsWith(`${other}.`))
+      ) {
+        end = at
+        break
+      }
+    }
+    const section = lines.slice(start, end).join('\n').trim()
+    if (!best || section.length > best.length) best = section
+  })
+  if (!best) return null
+  const whole: string = best
+  return whole.length > limit ? `${whole.slice(0, limit)} […]` : whole
+}
+
+/** The most of a section given whole, in characters. */
+const SECTION_LIMIT = 8000
+
 interface Candidate {
   source: LibrarySource
   at: number
@@ -147,6 +222,17 @@ export function retrieve(
     named.set(source, heading)
     const passages = source.text.trim() ? passagesOf(source.text) : [[source.title, source.detail].join(' — ')]
     passages.forEach((text, at) => candidates.push({ source, at, text, words: tokens(text), score: 0 }))
+  }
+  // A section the question names, given whole and first: what it asks is all in it.
+  const refs = sectionRefs(question)
+  const sections: Candidate[] = []
+  for (const source of refs.length ? named.keys() : []) {
+    for (const ref of refs) {
+      const text = source.text ? sectionText(source.text, ref) : null
+      if (text && text.length > ref.length + 20) {
+        sections.push({ source, at: -1, text, words: [], score: Number.MAX_VALUE })
+      }
+    }
   }
   if (!candidates.length) return []
 
@@ -178,11 +264,18 @@ export function retrieve(
     candidate.score = score * (matched / terms.length) ** 2
   }
 
-  const ranked = candidates.filter((each) => each.score > 0).sort((a, b) => b.score - a.score || a.at - b.at)
+  const ranked = [
+    ...sections,
+    ...candidates.filter((each) => each.score > 0).sort((a, b) => b.score - a.score || a.at - b.at)
+  ]
   const taken = new Map<LibrarySource, Candidate[]>()
   let spent = 0
   for (const candidate of ranked) {
     const already = taken.get(candidate.source)
+    // A passage the section given whole holds already is not given twice.
+    if (candidate.at >= 0 && already?.some((one) => one.at < 0 && one.text.includes(candidate.text.slice(0, 120)))) {
+      continue
+    }
     if (!already && taken.size >= options.maxSources) continue
     if (already && already.length >= options.perSource) continue
     if (spent + candidate.text.length > options.budget) {

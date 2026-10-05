@@ -153,6 +153,10 @@ const MAX_PAGES_SEARCHED = 400
  * Every exchange is kept in a note as soon as the reply arrives, so closing the panel —
  * or Obsidian — loses nothing, and any conversation can be taken up again from its note.
  */
+
+/** How long a question waits for documents just added to be read, in milliseconds. */
+const READ_WAIT = 30_000
+
 export class ChatView extends ItemView {
   private turns: ChatTurn[] = []
   private pending = false
@@ -764,9 +768,12 @@ export class ChatView extends ItemView {
   /** The library's documents and notes as sources to look through, with what they say. */
   private async librarySources(): Promise<LibrarySource[]> {
     const docs = this.plugin.library.docs()
-    // What was read already, at once; what never was is read meanwhile, for the next question.
+    // What was read already, at once. A document never read yet — one just added — is
+    // waited for, a while: a question about it would otherwise find only its title.
     await this.plugin.libraryText.load(docs)
-    void this.plugin.libraryText.refresh(docs)
+    const unread = docs.some((doc) => doc.file && doc.hash && !this.plugin.libraryText.entry(doc))
+    const reading = this.plugin.libraryText.refresh(docs)
+    if (unread) await Promise.race([reading, new Promise<void>((resolve) => window.setTimeout(resolve, READ_WAIT))])
     const projectTitle = (path: string): string =>
       this.plugin.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, '')
     const words = {

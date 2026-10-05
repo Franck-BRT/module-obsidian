@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { passagesOf, retrievalContext, retrieve, searchTerms, sourceLink, type LibrarySource } from './libraryRetrieval'
+import {
+  passagesOf,
+  retrievalContext,
+  retrieve,
+  searchTerms,
+  sectionRefs,
+  sectionText,
+  sourceLink,
+  type LibrarySource
+} from './libraryRetrieval'
 
 const doc = (title: string, text: string, over: Partial<LibrarySource> = {}): LibrarySource => ({
   path: `Library/_files/${title}.pdf`,
@@ -154,5 +163,60 @@ describe('retrievalContext', () => {
     )
     expect(retrievalContext([], words)).toBe('NONE')
     expect(sourceLink(doc('', '', { path: 'N/x.md' }))).toBe('[[N/x.md|N/x.md]]')
+  })
+})
+
+describe('a section named by its number', () => {
+  const text = [
+    'Sommaire',
+    '6.3.4 Essais à vide ........ 11',
+    '6.3.5 Essais de réception ........ 12',
+    '',
+    '## 6.3 Essais',
+    '',
+    '### 6.3.4 Essais à vide',
+    '',
+    'Les essais à vide sont faits machine découplée.',
+    '',
+    '### 6.3.5 Essais de réception',
+    '',
+    'Objet : vérifier les performances contractuelles.',
+    '',
+    '1. Le titulaire convoque le maître d’œuvre quinze jours avant.',
+    '2. Il fournit les appareils étalonnés.',
+    '',
+    '6.3.5.1 Critères d’acceptation',
+    '',
+    'Les écarts restent sous 5 %.',
+    '',
+    '6.4 Mise en service',
+    '',
+    'La mise en service suit la réception.'
+  ].join('\n')
+
+  it('is looked for whole, not as its digits', () => {
+    expect(searchTerms('que dit le paragraphe 6.3.5 ?')).toEqual(['6.3.5'])
+    expect(searchTerms('Donne-moi la définition complète du § 6.3.5')).toEqual(['6.3.5', 'definition', 'complete'])
+    expect(sectionRefs('le 12/10/2026, articles 4.2 et 6.3.5')).toEqual(['4.2', '6.3.5'])
+  })
+
+  it('runs from its heading to the next that is not its own, lists and subsections kept, the contents left', () => {
+    const section = sectionText(text, '6.3.5') ?? ''
+    expect(section.startsWith('### 6.3.5 Essais de réception')).toBe(true)
+    expect(section).toContain('2. Il fournit les appareils étalonnés.')
+    expect(section).toContain('Les écarts restent sous 5 %.')
+    expect(section).not.toContain('Mise en service')
+    expect(sectionText(text, '6.3')).toContain('6.3.5.1 Critères')
+    expect(sectionText(text, '9.9')).toBeNull()
+    // A heading run into its first sentence, as some PDFs are read, still heads it.
+    const runOn = `6.3.5 Essais de réception ${'Objet : vérifier les performances contractuelles. '.repeat(5)}\n6.4 Mise en service`
+    expect(sectionText(runOn, '6.3.5')).toContain('Objet')
+  })
+
+  it('is given whole and first to a question that names it', () => {
+    const source: LibrarySource = { path: 'cctp.pdf', title: 'CCTP', kind: 'document', detail: '', text }
+    const [found] = retrieve([source], 'que dit le paragraphe 6.3.5 ?')
+    expect(found.passages[0].startsWith('### 6.3.5 Essais de réception')).toBe(true)
+    expect(found.passages[0]).toContain('Les écarts restent sous 5 %.')
   })
 })
