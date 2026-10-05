@@ -611,7 +611,24 @@ export class DocumentsView extends ItemView {
     this.renderRegistersOutside(all)
     if (this.picked.size) this.renderPickedBar(all)
     if (!found.length) {
-      this.bodyEl.createDiv({ cls: 'pm-docs-none', text: t('library.nothingFound') })
+      // A folder that holds only folders says so: its documents are in them, one click away.
+      const folder = filteredFolder(this.query.folder)
+      const below = folder
+        ? all.filter(
+            (doc) =>
+              doc.folder.startsWith(`${folder}/`) &&
+              matchesDoc(
+                doc,
+                { ...this.query, folder: '' },
+                (path) => this.projectTitle(path),
+                (each) => texts.folded(each)
+              )
+          ).length
+        : 0
+      this.bodyEl.createDiv({
+        cls: 'pm-docs-none',
+        text: below ? t('library.onlyInSubfolders', { count: below }) : t('library.nothingFound')
+      })
       return
     }
     const list = this.bodyEl.createDiv('pm-docs-list')

@@ -167,7 +167,7 @@ describe('libraryDoc', () => {
     )
   })
 
-  it('filters by folder: the root alone, or a folder with those it holds', () => {
+  it('filters by folder: the root alone, or a folder alone — with those it holds when words are searched', () => {
     const root = doc({ title: 'a' })
     const plans = doc({ title: 'b', folder: 'Plans' })
     const lot = doc({ title: 'c', folder: 'Plans/Lot 2' })
@@ -179,8 +179,11 @@ describe('libraryDoc', () => {
         .map((each) => each.title)
     expect(inFolder('')).toEqual(['a', 'b', 'c', 'd'])
     expect(inFolder(AT_ROOT)).toEqual(['a'])
-    expect(inFolder('Plans')).toEqual(['b', 'c'])
+    expect(inFolder('Plans')).toEqual(['b'])
     expect(inFolder('Plans/Lot 2')).toEqual(['c'])
+    const searched = (folder: string, text: string): string[] =>
+      all.filter((each) => matchesDoc(each, { text, project: '', family: '', folder }, title)).map((each) => each.title)
+    expect(searched('Plans', 'c')).toEqual(['c'])
     // A folder's name is found by a search too.
     expect(matchesDoc(lot, { text: 'lot 2', project: '', family: '' }, title)).toBe(true)
   })

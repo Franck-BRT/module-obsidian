@@ -1296,6 +1296,10 @@ export const fr: Catalog = {
   'chat.mode.index': 'Par l’index (sens et mots)',
   'chat.mode.words': 'Par les mots (bibliothèque)',
   'collection.docs.pourLabel': 'Collections',
+  'library.onlyInSubfolders': {
+    one: 'Aucun document directement dans ce dossier : {count} document est dans ses sous-dossiers, ci-dessus.',
+    other: 'Aucun document directement dans ce dossier : {count} documents sont dans ses sous-dossiers, ci-dessus.'
+  },
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

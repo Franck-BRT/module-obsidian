@@ -1256,6 +1256,10 @@ export const en = {
   'chat.mode.index': 'By the index (meaning and words)',
   'chat.mode.words': 'By words (library)',
   'collection.docs.pourLabel': 'Collections',
+  'library.onlyInSubfolders': {
+    one: 'No document right in this folder: {count} document is in its folders, above.',
+    other: 'No document right in this folder: {count} documents are in its folders, above.'
+  },
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

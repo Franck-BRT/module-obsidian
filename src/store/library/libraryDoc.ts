@@ -223,7 +223,7 @@ export interface DocQuery {
   tag?: string
   /** '' for any collection; or a collection's name. */
   collection?: string
-  /** '' for every folder, `AT_ROOT`, or a folder of the library — its own folders included. */
+  /** '' for every folder, `AT_ROOT`, or a folder of the library — alone, its own folders with it when words are searched. */
   folder?: string
 }
 
@@ -257,7 +257,9 @@ export function matchesDoc(
   }
   if (query.tag && !doc.tags.some((tag) => fold(tag) === fold(query.tag ?? ''))) return false
   if (query.collection && !inCollection(doc, query.collection)) return false
-  if (!inFolder(doc.folder, query.folder)) return false
+  // A folder shows what is in it, not what its own folders hold — unless words are searched,
+  // which look through them too.
+  if (!inFolder(doc.folder, query.folder, !!query.text.trim())) return false
   const words = fold(query.text).split(/\s+/).filter(Boolean)
   if (!words.length) return true
   const name = doc.file.slice(doc.file.lastIndexOf('/') + 1)
