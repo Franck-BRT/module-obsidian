@@ -21,7 +21,7 @@ import { t } from '../../i18n'
 import { SUBVIEW_CLASS } from '../subviewClasses'
 import type { SubView } from '../SubView'
 import { budgetChart } from './budgetChart'
-import { formatMoney } from './money'
+import { formatAmount, formatMoney } from './money'
 
 type LineKind = 'commitments' | 'invoices'
 
@@ -185,7 +185,7 @@ export class BudgetView implements SubView {
     amountField(
       t('budget.budget'),
       t('tip.budget.budget'),
-      budget.amount ? String(budget.amount) : '',
+      budget.amount ? formatAmount(budget.amount) : '',
       '0',
       async (raw) => {
         const amount = parseAmount(raw)
@@ -196,7 +196,7 @@ export class BudgetView implements SubView {
     amountField(
       t('budget.toCommitEstimate'),
       t('tip.budget.toCommitEstimate'),
-      budget.toCommit === undefined ? '' : String(budget.toCommit),
+      budget.toCommit === undefined ? '' : formatAmount(budget.toCommit),
       t('budget.automatic', { amount: formatMoney(automatic) }),
       async (raw) => {
         const amount = parseAmount(raw)

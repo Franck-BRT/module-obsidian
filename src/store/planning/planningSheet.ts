@@ -2,7 +2,7 @@ import type { DependencyType } from '../../types'
 import { fold } from '../library/libraryDoc'
 import { parseAmount } from '../YamlHydrator'
 import type { XlsxReadSheet } from '../xlsxRead'
-import type { Plan, PlanLine, PlanLink } from './plan'
+import type { Plan, PlanLine, PlanLink, PlanWarning } from './plan'
 
 /**
  * Reading a planning kept in a spreadsheet — one exported from MS Project, or made by
@@ -171,7 +171,7 @@ export function readPlanningSheet(sheets: XlsxReadSheet[], fileName: string): Pl
       return index === undefined ? '' : (row[index] ?? '').trim()
     }
     const lines: PlanLine[] = []
-    const warnings: string[] = []
+    const warnings: PlanWarning[] = []
     sheet.rows.slice(header.at + 1).forEach((row, at) => {
       const raw = row[columns.name ?? 0] ?? ''
       const title = raw.trim()
@@ -184,8 +184,8 @@ export function readPlanningSheet(sheets: XlsxReadSheet[], fileName: string): Pl
         1 + Math.floor((raw.length - raw.trimStart().length) / 2)
       const start = readSheetDate(cell(row, 'start'))
       const due = readSheetDate(cell(row, 'finish'))
-      if (cell(row, 'start') && !start) warnings.push(`${title}: ${cell(row, 'start')}`)
-      if (cell(row, 'finish') && !due) warnings.push(`${title}: ${cell(row, 'finish')}`)
+      if (cell(row, 'start') && !start) warnings.push({ line: title, kind: 'date', value: cell(row, 'start') })
+      if (cell(row, 'finish') && !due) warnings.push({ line: title, kind: 'date', value: cell(row, 'finish') })
       const duration = cell(row, 'duration')
       const milestone = cell(row, 'milestone') ? yes(cell(row, 'milestone')) : /^0+([.,]0+)?\s*\D*$/.test(duration)
       lines.push({
@@ -209,7 +209,7 @@ export function readPlanningSheet(sheets: XlsxReadSheet[], fileName: string): Pl
     const keys = new Set(lines.map((line) => line.key))
     for (const line of lines) {
       const missing = line.links.filter((link) => !keys.has(link.key))
-      if (missing.length) warnings.push(`${line.title}: ${missing.map((link) => link.key).join(', ')}`)
+      for (const link of missing) warnings.push({ line: line.title, kind: 'link', value: link.key })
     }
     return { name: fileName.replace(/\.[^.]+$/, ''), lines, warnings }
   }

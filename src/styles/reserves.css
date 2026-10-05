@@ -293,3 +293,9 @@
   color: var(--text-normal);
   border-color: var(--interactive-accent);
 }
+
+.pm-reserves-days-unit {
+  margin-left: calc(-1 * var(--size-2-2));
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}

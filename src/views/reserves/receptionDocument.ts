@@ -3,7 +3,7 @@ import { DOCX_TEXT_WIDTH, para, type DocxBlock, type DocxCell, type DocxDocument
 import { isLateReserve, orderReserves, reserveCompany, reserveOf, reserveSummary } from '../../store/reserve'
 import { formatDateLetter, formatDateShort } from '../../dates'
 import { t } from '../../i18n'
-import { phaseLabel, severityLabel, stateLabel } from './reserveLabels'
+import { phaseLabel, reserveCountText, severityLabel, stateLabel } from './reserveLabels'
 
 export interface ReceptionContext {
   project: string
@@ -31,15 +31,7 @@ export function receptionDocument(tasks: Task[], context: ReceptionContext): Doc
     para('Heading2', context.project),
     para(
       'Meta',
-      [
-        t('reception.date', { date: formatDateLetter(context.date) }),
-        t('reserve.count', {
-          count: summary.open,
-          declared: summary.declared,
-          lifted: summary.lifted,
-          late: summary.late
-        })
-      ].join(' · ')
+      [t('reception.date', { date: formatDateLetter(context.date) }), reserveCountText(summary)].join(' · ')
     ),
     para('Normal', t('reception.intro'))
   ]
@@ -48,18 +40,8 @@ export function receptionDocument(tasks: Task[], context: ReceptionContext): Doc
   for (const company of summary.byCompany) {
     const list = reserves.filter((task) => reserveCompany(task) === company.company)
     blocks.push(para('Heading1', company.company || t('reserve.noCompany')))
-    blocks.push(
-      para(
-        'Meta',
-        t('reserve.count', {
-          count: company.open,
-          declared: company.declared,
-          lifted: company.lifted,
-          late: company.late
-        })
-      )
-    )
-    const cell = columns([800, 1400, 1100, 2400, 1200, 1200, 1400], 3)
+    blocks.push(para('Meta', reserveCountText(company)))
+    const cell = columns([800, 1400, 1500, 2400, 1200, 1100, 1300], 3)
     blocks.push({
       kind: 'table',
       header: [
@@ -103,19 +85,26 @@ export function receptionDocument(tasks: Task[], context: ReceptionContext): Doc
   // The signatures: the client and the architect, then each contractor named.
   blocks.push(para('Heading1', t('reception.signatures')))
   const space = `${t('reception.signHere')}\n\n\n\n`
-  const sign = columns([3213, 3213, 3212], 0)
   const companies = summary.byCompany.map((one) => one.company).filter(Boolean)
   const signers = [
     t('reception.client'),
     t('reception.architect'),
     ...(companies.length ? companies : [t('reception.contractor')])
   ]
-  for (let at = 0; at < signers.length; at += 3) {
-    const three = signers.slice(at, at + 3)
+  // Rows of three, or of two when three would leave a last row with a single block.
+  const across = signers.length <= 3 ? signers.length : signers.length % 3 === 1 ? 2 : 3
+  const width = Math.floor(DOCX_TEXT_WIDTH / across)
+  const sign = columns(
+    Array.from({ length: across }, () => width),
+    0
+  )
+  const slots = Array.from({ length: across }, (_, at) => at)
+  for (let at = 0; at < signers.length; at += across) {
+    const row = signers.slice(at, at + across)
     blocks.push({
       kind: 'table',
-      header: [0, 1, 2].map((one) => sign(three[one] ?? '', one, true)),
-      rows: [[0, 1, 2].map((one) => sign(three[one] ? space : '', one))]
+      header: slots.map((one) => sign(row[one] ?? '', one, true)),
+      rows: [slots.map((one) => sign(row[one] ? space : '', one))]
     })
   }
   blocks.push(para('Meta', t('reception.footer')))

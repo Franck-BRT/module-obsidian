@@ -84,12 +84,12 @@ export class PlanningImportModal extends Modal {
     const counts = planCounts(plan)
     const facts = root.createEl('ul', { cls: 'pm-planning-facts' })
     facts.createEl('li', {
-      text: t('planning.counts', {
-        lots: counts.lots,
-        tasks: counts.tasks,
-        milestones: counts.milestones,
-        count: counts.links
-      })
+      text: [
+        t('planning.count.lots', { count: counts.lots }),
+        t('planning.count.tasks', { count: counts.tasks }),
+        t('planning.count.milestones', { count: counts.milestones }),
+        t('planning.count.links', { count: counts.links })
+      ].join(', ')
     })
     if (counts.start) {
       facts.createEl('li', {
@@ -101,7 +101,14 @@ export class PlanningImportModal extends Modal {
       const warn = root.createDiv('pm-planning-warning')
       warn.createDiv({ text: t('planning.warnings', { count: plan.warnings.length }) })
       const list = warn.createEl('ul')
-      for (const line of plan.warnings.slice(0, 5)) list.createEl('li', { text: line })
+      for (const one of plan.warnings.slice(0, 5)) {
+        list.createEl('li', {
+          text:
+            one.kind === 'link'
+              ? t('planning.warningLink', { line: one.line, key: one.value })
+              : t('planning.warningDate', { line: one.line, value: one.value })
+        })
+      }
     }
 
     // Where its tickets go: a new project, or the one open.

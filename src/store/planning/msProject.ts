@@ -1,6 +1,6 @@
 import type { DependencyType } from '../../types'
 import { childLocal, childrenLocal, parseXml, type XmlNode } from '../xmlParse'
-import type { Plan, PlanLine, PlanLink } from './plan'
+import type { Plan, PlanLine, PlanLink, PlanWarning } from './plan'
 
 /**
  * Reading a planning saved by MS Project as XML (« Enregistrer sous → Format XML », the
@@ -33,7 +33,7 @@ export function readMsProject(source: string): Plan {
     throw new MsProjectError(error instanceof Error ? error.message : String(error))
   }
   if (root.name.replace(/^.*:/, '') !== 'Project') throw new MsProjectError('Not an MS Project XML file.')
-  const warnings: string[] = []
+  const warnings: PlanWarning[] = []
   const resources = new Map<string, string>()
   for (const resource of childrenLocal(childLocal(root, 'Resources'), 'Resource')) {
     const name = text(resource, 'Name')
@@ -77,7 +77,7 @@ export function readMsProject(source: string): Plan {
   const keys = new Set(lines.map((line) => line.key))
   for (const line of lines) {
     const missing = line.links.filter((link) => !keys.has(link.key))
-    if (missing.length) warnings.push(`${line.title}: ${missing.map((link) => link.key).join(', ')}`)
+    for (const link of missing) warnings.push({ line: line.title, kind: 'link', value: link.key })
   }
   return { name: text(root, 'Title') || text(root, 'Name').replace(/\.(mpp|xml)$/i, ''), lines, warnings }
 }

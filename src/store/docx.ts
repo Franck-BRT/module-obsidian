@@ -79,7 +79,9 @@ function cellXml(cell: DocxCell, bold: boolean): string {
 function tableXml(table: DocxTable): string {
   const grid = table.header.map((cell) => `<w:gridCol w:w="${cell.width}"/>`).join('')
   const head = `<w:tr><w:trPr><w:tblHeader/></w:trPr>${table.header.map((cell) => cellXml(cell, true)).join('')}</w:tr>`
-  const rows = table.rows.map((row) => `<w:tr>${row.map((cell) => cellXml(cell, false)).join('')}</w:tr>`).join('')
+  const rows = table.rows
+    .map((row) => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${row.map((cell) => cellXml(cell, false)).join('')}</w:tr>`)
+    .join('')
   return [
     '<w:tbl>',
     '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/><w:tblLayout w:type="fixed"/></w:tblPr>',

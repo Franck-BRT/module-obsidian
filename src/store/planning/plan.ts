@@ -31,11 +31,19 @@ export interface PlanLine {
   links: PlanLink[]
 }
 
+/** What could not be read: a link to a line that is not there, or a date not understood. */
+export interface PlanWarning {
+  line: string
+  kind: 'link' | 'date'
+  /** The missing line's key, or the date as written. */
+  value: string
+}
+
 export interface Plan {
   name: string
   lines: PlanLine[]
   /** What could not be read as asked: a link to a line that is not there, a date not understood. */
-  warnings: string[]
+  warnings: PlanWarning[]
 }
 
 export interface PlanCounts {

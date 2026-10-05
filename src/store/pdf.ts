@@ -246,6 +246,9 @@ function layCells(cells: DocxCell[], bold: boolean): CellLayout[] {
  * The header comes back at the top of every page the table runs onto, because a column
  * nobody can name is a column nobody can read.
  */
+/** Rows of up to this many lines move whole to the next page rather than split. */
+const KEEP_ROW = 8
+
 function drawTable(sheet: Sheet, block: Extract<DocxBlock, { kind: 'table' }>): void {
   const leading = STYLES.Normal.size * LEADING
   const header = layCells(block.header, true)
@@ -279,11 +282,21 @@ function drawTable(sheet: Sheet, block: Extract<DocxBlock, { kind: 'table' }>): 
     drawSlice(header, 0, headerLines)
   }
 
-  if (sheet.room() < 3 * leading + 4 * CELL_PAD) sheet.break()
+  const linesOf = (row: CellLayout[]): number => Math.max(...row.map((cell) => cell.lines.length))
+  // A row short enough is never cut across two pages: a signature box split in half, its
+  // name on one page and its room to sign on the next, is no box at all.
+  const whole = (row: CellLayout[] | undefined): number => (row && linesOf(row) <= KEEP_ROW ? linesOf(row) : 1)
+
+  // Nor is the header left alone at the foot of a page, without the row it heads.
+  if (sheet.room() < 3 * leading + 4 * CELL_PAD || fits() < headerLines + whole(rows[0]) + 1) sheet.break()
   putHeader()
 
   for (const row of rows) {
-    const total = Math.max(...row.map((cell) => cell.lines.length))
+    const total = linesOf(row)
+    if (total <= KEEP_ROW && fits() < total) {
+      sheet.break()
+      putHeader()
+    }
     let done = 0
     while (done < total) {
       let room = fits()

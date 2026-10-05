@@ -51,7 +51,7 @@ describe('a planning from MS Project', () => {
     })
     expect(coulage.links).toEqual([{ key: '2', type: 'FS', lag: 2 }])
     expect(plan.lines[3].links[0]).toEqual({ key: '3', type: 'FF', lag: 0 })
-    expect(plan.warnings).toEqual(['Radier coulé: 99'])
+    expect(plan.warnings).toEqual([{ line: 'Radier coulé', kind: 'link', value: '99' }])
     expect(planCounts(plan)).toMatchObject({
       lots: 1,
       tasks: 3,

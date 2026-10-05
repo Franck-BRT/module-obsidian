@@ -6,6 +6,7 @@ import type { ReserveSummary } from '../../store/reserve'
 import type { CriticalPath } from '../../store/criticalPath'
 import type { BudgetFigures } from '../../store/budget'
 import { formatMoney } from '../budget/money'
+import { reserveCountText } from '../reserves/reserveLabels'
 import { waitText } from '../visa/visaWaitWords'
 import { decisionDay, decisionOf } from '../../store/decision'
 import { BLACK, fit, GREY, LIGHT, PdfCanvas, rgb, tint, WHITE, type Rgb } from '../../store/pdfCanvas'
@@ -610,7 +611,7 @@ class Report {
       t('budget.budget'),
       t('budget.committed'),
       t('budget.invoiced'),
-      t('budget.forecast'),
+      t('budget.forecastShort'),
       t('budget.variance')
     ]
     const nameWidth = this.width * 0.3
@@ -648,28 +649,17 @@ class Report {
     this.section(t('report.reserves'))
     const c = this.c
     c.need(16)
-    c.text(
-      this.left,
-      c.y,
-      t('reserve.count', {
-        count: summary.open,
-        declared: summary.declared,
-        lifted: summary.lifted,
-        late: summary.late
-      }),
-      { size: 9, color: summary.late ? RED : GREY }
-    )
+    c.text(this.left, c.y, reserveCountText(summary), { size: 9, color: summary.late ? RED : GREY })
     c.y += 16
     const owed = summary.byCompany.filter((one) => one.open + one.declared > 0)
     for (const one of owed.slice(0, 20)) {
       c.need(14)
       c.text(this.left, c.y, fit(one.company || t('reserve.noCompany'), 9, this.width * 0.5), { size: 9 })
-      c.text(
-        this.left + this.width,
-        c.y,
-        t('reserve.count', { count: one.open, declared: one.declared, lifted: one.lifted, late: one.late }),
-        { size: 8.5, color: one.late ? RED : GREY, align: 'right' }
-      )
+      c.text(this.left + this.width, c.y, reserveCountText(one), {
+        size: 8.5,
+        color: one.late ? RED : GREY,
+        align: 'right'
+      })
       c.y += 14
     }
     if (owed.length > 20) {

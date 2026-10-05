@@ -23,6 +23,8 @@ export interface TaskFloat {
   /** The latest day it may finish so. */
   latestDue: string
   critical: boolean
+  /** Whether it is linked to another ticket: alone, its margin runs to the end and says little. */
+  linked: boolean
 }
 
 export interface CriticalPath {
@@ -146,7 +148,12 @@ export function criticalPath(
     const node = nodes.get(id)
     if (!node) continue
     const float = bound - node.finish
-    floats.set(id, { float, latestDue: addWorkingDays(calendar, origin, bound), critical: float <= 0 })
+    floats.set(id, {
+      float,
+      latestDue: addWorkingDays(calendar, origin, bound),
+      critical: float <= 0,
+      linked: successors.has(id) || predecessors.has(id)
+    })
   }
   const path = [...nodes.values()]
     .filter((node) => floats.get(node.task.id)?.critical)

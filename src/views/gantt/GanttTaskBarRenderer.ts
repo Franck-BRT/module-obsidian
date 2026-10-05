@@ -171,7 +171,7 @@ export function renderTaskBar(g: SVGGElement, task: Task, row: number, _depth: n
   const float = ctx.critical?.floats.get(task.id)
   if (float?.critical) barGroup.classList.add('is-critical')
   // Its margin, drawn as a thin line after the bar out to the latest day it may finish.
-  const latest = float && !float.critical ? parsePlainDate(float.latestDue) : null
+  const latest = float && !float.critical && float.linked ? parsePlainDate(float.latestDue) : null
   if (float && latest) {
     const reach = Math.min(ctx.cfg.totalWidth, dateToX(ctx.cfg, latest.add({ days: 1 })))
     if (reach > x + width) {

@@ -946,10 +946,6 @@ export const fr: Catalog = {
   'tip.reserve.photo':
     'Choisissez une image, déposez-la ici, ou cliquez dans ce cadre puis collez (Ctrl+V) une photo du presse-papiers. Elle est rangée avec la fiche de la réserve.',
   'reserve.register': 'Réserves',
-  'reserve.count': {
-    one: '{count} à lever, {declared} déclarées levées, {lifted} levées, {late} en retard',
-    other: '{count} à lever, {declared} déclarées levées, {lifted} levées, {late} en retard'
-  },
   'reserve.report': 'PV de réception',
   'tip.reserve.report':
     'Rédige le procès-verbal de réception avec la liste des réserves par entreprise et les cadres de signature, en Word et en PDF, dans le dossier « Réserves » du projet.',
@@ -1132,7 +1128,7 @@ export const fr: Catalog = {
   'weekly.endLater': 'Fin prévue : {date}, repoussée de {days}',
   'weekly.endEarlier': 'Fin prévue : {date}, avancée de {days}',
   'weekly.budget': 'Budget : prévision {forecast} pour {budget}{variance}',
-  'weekly.money': 'Cette semaine : {committed} engagés, {invoiced} facturés',
+  'weekly.money': 'Cette semaine : {money}',
   'weekly.quiet': 'Semaine calme : rien n’a été terminé, décalé, décidé, reçu ou facturé.',
   'weekly.done': { one: 'Terminé cette semaine ({count})', other: 'Terminé cette semaine ({count})' },
   'weekly.late': { one: 'En retard ({count})', other: 'En retard ({count})' },
@@ -1152,10 +1148,6 @@ export const fr: Catalog = {
   'weekly.documentReceived': 'Reçu : {title}',
   'weekly.documentSigned': 'Visé : {title}',
   'weekly.reserves': 'Réserves',
-  'weekly.reserveCounts': {
-    one: '{raised} émise(s) et {lifted} levée(s) cette semaine ; {count} reste à lever, dont {late} en retard',
-    other: '{raised} émise(s) et {lifted} levée(s) cette semaine ; {count} restent à lever, dont {late} en retard'
-  },
   'weekly.upcoming': { one: 'La semaine prochaine ({count})', other: 'La semaine prochaine ({count})' },
   'weekly.noModel':
     'Pas de synthèse rédigée : aucun modèle de chat n’est configuré. Les faits ci-dessous restent à jour.',
@@ -1212,10 +1204,6 @@ export const fr: Catalog = {
   'planning.noColumn': 'aucune feuille n’a de colonne « Nom » ou « Tâche »',
   'planning.unreadable': 'Ce fichier ne se lit pas comme un planning : {reason}',
   'planning.empty': 'Ce planning ne contient aucune tâche.',
-  'planning.counts': {
-    one: '{lots} lots, {tasks} tâches, {milestones} jalons, {count} lien',
-    other: '{lots} lots, {tasks} tâches, {milestones} jalons, {count} liens'
-  },
   'planning.period': 'Du {start} au {due}',
   'planning.people': {
     one: '{count} ressource, reprise comme intervenant',
@@ -1233,6 +1221,28 @@ export const fr: Catalog = {
   'planning.done': {
     one: '{count} ticket importé dans « {project} ».',
     other: '{count} tickets importés dans « {project} ».'
+  },
+  'reserve.count.open': { one: '{count} à lever', other: '{count} à lever' },
+  'reserve.count.declared': { one: '{count} déclarée levée', other: '{count} déclarées levées' },
+  'reserve.count.lifted': { one: '{count} levée', other: '{count} levées' },
+  'reserve.count.late': { one: '{count} en retard', other: '{count} en retard' },
+  'reserve.count.none': 'aucune réserve',
+  'reserve.daysUnit': 'j',
+  'budget.forecastShort': 'Prévision',
+  'planning.count.lots': { one: '{count} lot', other: '{count} lots' },
+  'planning.count.tasks': { one: '{count} tâche', other: '{count} tâches' },
+  'planning.count.milestones': { one: '{count} jalon', other: '{count} jalons' },
+  'planning.count.links': { one: '{count} lien', other: '{count} liens' },
+  'planning.warningLink': '« {line} » suit la ligne {key}, absente du planning : ce lien est ignoré.',
+  'planning.warningDate': '« {line} » : date « {value} » non comprise, laissée vide.',
+  'weekly.committed': '{amount} engagés',
+  'weekly.invoiced': '{amount} facturés',
+  'weekly.reserveRaised': { one: '{count} émise cette semaine', other: '{count} émises cette semaine' },
+  'weekly.reserveLifted': { one: '{count} levée cette semaine', other: '{count} levées cette semaine' },
+  'weekly.reserveOpen': { one: '{count} reste à lever', other: '{count} restent à lever' },
+  'weekly.reserveOpenLate': {
+    one: '{count} reste à lever, en retard ({late})',
+    other: '{count} restent à lever, dont {late} en retard'
   },
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',

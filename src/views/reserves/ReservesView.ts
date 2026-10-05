@@ -33,7 +33,7 @@ import { t } from '../../i18n'
 import { SUBVIEW_CLASS } from '../subviewClasses'
 import type { SubView } from '../SubView'
 import { addReservePhotos, imagesOf } from '../../modals/ReservePanel'
-import { phaseLabel, severityLabel, STATE_COLOR, STATE_ICON, stateLabel } from './reserveLabels'
+import { phaseLabel, reserveCountText, severityLabel, STATE_COLOR, STATE_ICON, stateLabel } from './reserveLabels'
 import { openReceptionReport } from './receptionReport'
 
 type GroupBy = 'company' | 'lot' | 'location'
@@ -65,6 +65,8 @@ export class ReservesView implements SubView {
   private group: GroupBy = 'company'
   private state: StateFilter = 'all'
   private phase: 'all' | ReservePhase = 'all'
+  /** Whether the reserves span more than one phase: only then is each one's said. */
+  private mixedPhases = false
 
   constructor(
     private container: HTMLElement,
@@ -93,6 +95,7 @@ export class ReservesView implements SubView {
     this.container.addClass(SUBVIEW_CLASS.reserves)
     const root = this.container.createDiv('pm-reserves')
     const all = this.reserves()
+    this.mixedPhases = new Set(all.map((task) => reserveOf(task).phase)).size > 1
     const day = today().toString()
     this.renderHead(root, all, day)
     const project = this.scope.addableProjects[0]
@@ -134,12 +137,7 @@ export class ReservesView implements SubView {
     const summary = reserveSummary(all, day)
     titles.createDiv({
       cls: 'pm-reserves-count',
-      text: t('reserve.count', {
-        count: summary.open,
-        declared: summary.declared,
-        lifted: summary.lifted,
-        late: summary.late
-      })
+      text: reserveCountText(summary)
     })
     const project = this.scope.primary
     if (project && all.length) {
@@ -192,6 +190,7 @@ export class ReservesView implements SubView {
       const value = Math.round(Number(days.value))
       if (value > 0) draft.days = value
     })
+    bar.createSpan({ cls: 'pm-reserves-days-unit', text: t('reserve.daysUnit') })
     const photo = bar.createSpan({ cls: 'pm-reserves-photo-count' })
     const showPhotos = (): void => {
       photo.empty()
@@ -320,12 +319,7 @@ export class ReservesView implements SubView {
     const summary = reserveSummary(tasks, day)
     head.createSpan({
       cls: 'pm-reserves-group-count',
-      text: t('reserve.count', {
-        count: summary.open,
-        declared: summary.declared,
-        lifted: summary.lifted,
-        late: summary.late
-      })
+      text: reserveCountText(summary)
     })
     if (this.group === 'company' && key && summary.open + summary.declared > 0) {
       const chase = head.createEl('button', { cls: 'pm-reserves-chase' })
@@ -357,7 +351,7 @@ export class ReservesView implements SubView {
     if (reserve.lot && this.group !== 'lot') facts.createSpan({ text: reserve.lot })
     if (this.group !== 'company' && reserveCompany(task)) facts.createSpan({ text: reserveCompany(task) })
     facts.createSpan({ cls: `pm-reserve-severity is-${reserve.severity}`, text: severityLabel(reserve.severity) })
-    if (reserve.phase !== 'opr') facts.createSpan({ text: phaseLabel(reserve.phase) })
+    if (this.mixedPhases) facts.createSpan({ text: phaseLabel(reserve.phase) })
     if (task.due) {
       facts.createSpan({
         cls: late ? 'pm-reserve-late' : '',

@@ -916,10 +916,6 @@ export const en = {
   'tip.reserve.photo':
     'Pick an image, drop it here, or click in this frame and paste (Ctrl+V) a photo from the clipboard. It is kept with the snag’s ticket.',
   'reserve.register': 'Snags',
-  'reserve.count': {
-    one: '{count} open, {declared} said cleared, {lifted} cleared, {late} late',
-    other: '{count} open, {declared} said cleared, {lifted} cleared, {late} late'
-  },
   'reserve.report': 'Handover report',
   'tip.reserve.report':
     'Writes the handover report with the snags by contractor and the signature blocks, in Word and PDF, into the project’s « Snags » folder.',
@@ -1097,7 +1093,7 @@ export const en = {
   'weekly.endLater': 'Planned end: {date}, pushed back {days}',
   'weekly.endEarlier': 'Planned end: {date}, brought forward {days}',
   'weekly.budget': 'Budget: forecast {forecast} for {budget}{variance}',
-  'weekly.money': 'This week: {committed} committed, {invoiced} invoiced',
+  'weekly.money': 'This week: {money}',
   'weekly.quiet': 'A quiet week: nothing was finished, moved, decided, received or invoiced.',
   'weekly.done': { one: 'Finished this week ({count})', other: 'Finished this week ({count})' },
   'weekly.late': { one: 'Late ({count})', other: 'Late ({count})' },
@@ -1117,10 +1113,6 @@ export const en = {
   'weekly.documentReceived': 'Received: {title}',
   'weekly.documentSigned': 'Signed off: {title}',
   'weekly.reserves': 'Snags',
-  'weekly.reserveCounts': {
-    one: '{raised} raised and {lifted} cleared this week; {count} still open, {late} of them late',
-    other: '{raised} raised and {lifted} cleared this week; {count} still open, {late} of them late'
-  },
   'weekly.upcoming': { one: 'Next week ({count})', other: 'Next week ({count})' },
   'weekly.noModel': 'No summary written: no chat model is set up. The facts below are up to date.',
   'weekly.modelFailed': 'No summary written: the model did not answer. The facts below are up to date.',
@@ -1176,10 +1168,6 @@ export const en = {
   'planning.noColumn': 'no sheet has a « Name » or « Task » column',
   'planning.unreadable': 'This file does not read as a planning: {reason}',
   'planning.empty': 'This planning holds no task.',
-  'planning.counts': {
-    one: '{lots} phases, {tasks} tasks, {milestones} milestones, {count} link',
-    other: '{lots} phases, {tasks} tasks, {milestones} milestones, {count} links'
-  },
   'planning.period': 'From {start} to {due}',
   'planning.people': { one: '{count} resource, taken as assignee', other: '{count} resources, taken as assignees' },
   'planning.warnings': {
@@ -1194,6 +1182,28 @@ export const en = {
   'planning.done': {
     one: '{count} ticket imported into « {project} ».',
     other: '{count} tickets imported into « {project} ».'
+  },
+  'reserve.count.open': { one: '{count} open', other: '{count} open' },
+  'reserve.count.declared': { one: '{count} said cleared', other: '{count} said cleared' },
+  'reserve.count.lifted': { one: '{count} cleared', other: '{count} cleared' },
+  'reserve.count.late': { one: '{count} late', other: '{count} late' },
+  'reserve.count.none': 'no snag',
+  'reserve.daysUnit': 'd',
+  'budget.forecastShort': 'Forecast',
+  'planning.count.lots': { one: '{count} phase', other: '{count} phases' },
+  'planning.count.tasks': { one: '{count} task', other: '{count} tasks' },
+  'planning.count.milestones': { one: '{count} milestone', other: '{count} milestones' },
+  'planning.count.links': { one: '{count} link', other: '{count} links' },
+  'planning.warningLink': '« {line} » follows line {key}, which is not in the planning: the link is left out.',
+  'planning.warningDate': '« {line} »: date « {value} » not understood, left empty.',
+  'weekly.committed': '{amount} committed',
+  'weekly.invoiced': '{amount} invoiced',
+  'weekly.reserveRaised': { one: '{count} raised this week', other: '{count} raised this week' },
+  'weekly.reserveLifted': { one: '{count} cleared this week', other: '{count} cleared this week' },
+  'weekly.reserveOpen': { one: '{count} still open', other: '{count} still open' },
+  'weekly.reserveOpenLate': {
+    one: '{count} still open, late ({late})',
+    other: '{count} still open, {late} of them late'
   },
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',

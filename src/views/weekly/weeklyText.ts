@@ -61,11 +61,11 @@ export function factsMarkdown(facts: WeeklyFacts): string {
   const who = (names: string[]): string => (names.length ? ` (${names.map(displayName).join(', ')})` : '')
   const lines: string[] = keyFigures(facts).map((line) => `- ${line}`)
   const budget = facts.budget
-  if (budget.committed || budget.invoiced) {
-    lines.push(
-      `- ${t('weekly.money', { committed: formatMoney(budget.committed), invoiced: formatMoney(budget.invoiced) })}`
-    )
-  }
+  const money = [
+    budget.committed ? t('weekly.committed', { amount: formatMoney(budget.committed) }) : '',
+    budget.invoiced ? t('weekly.invoiced', { amount: formatMoney(budget.invoiced) }) : ''
+  ].filter(Boolean)
+  if (money.length) lines.push(`- ${t('weekly.money', { money: money.join(', ') })}`)
   if (isQuiet(facts)) lines.push('', t('weekly.quiet'))
   lines.push(
     ...list(
@@ -114,9 +114,16 @@ export function factsMarkdown(facts: WeeklyFacts): string {
     ])
   )
   const reserves = facts.reserves
-  if (reserves.raised || reserves.lifted || reserves.open) {
-    lines.push(...list(t('weekly.reserves'), [t('weekly.reserveCounts', { ...reserves, count: reserves.open })]))
-  }
+  const moves = [
+    reserves.raised ? t('weekly.reserveRaised', { count: reserves.raised }) : '',
+    reserves.lifted ? t('weekly.reserveLifted', { count: reserves.lifted }) : ''
+  ].filter(Boolean)
+  const left = reserves.open
+    ? reserves.late
+      ? t('weekly.reserveOpenLate', { count: reserves.open, late: reserves.late })
+      : t('weekly.reserveOpen', { count: reserves.open })
+    : ''
+  if (moves.length || left) lines.push(...list(t('weekly.reserves'), [[...moves, left].filter(Boolean).join(' ; ')]))
   lines.push(
     ...list(
       t('weekly.upcoming', { count: facts.upcoming.length }),

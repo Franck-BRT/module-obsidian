@@ -1,4 +1,5 @@
 import type { ReservePhase, ReserveState, TaskReserve } from '../../types'
+import type { ReserveCount } from '../../store/reserve'
 import { t } from '../../i18n'
 
 export function phaseLabel(phase: ReservePhase): string {
@@ -45,4 +46,15 @@ export const STATE_COLOR: Record<ReserveState, string> = {
   open: 'var(--color-red, #e5534b)',
   declared: 'var(--color-orange, #e0a458)',
   lifted: 'var(--color-green, #79b58d)'
+}
+
+/** Where reserves stand, in words, each count agreeing with its own number; zeros left out. */
+export function reserveCountText(count: ReserveCount): string {
+  const parts = [
+    count.open ? t('reserve.count.open', { count: count.open }) : '',
+    count.declared ? t('reserve.count.declared', { count: count.declared }) : '',
+    count.lifted ? t('reserve.count.lifted', { count: count.lifted }) : '',
+    count.late ? t('reserve.count.late', { count: count.late }) : ''
+  ].filter(Boolean)
+  return parts.length ? parts.join(', ') : t('reserve.count.none')
 }

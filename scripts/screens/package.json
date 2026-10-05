@@ -1,0 +1,9 @@
+{
+  "name": "black-projects-screens",
+  "private": true,
+  "description": "Renders the plugin's screens in Chromium, from the demonstration's data, to look at them without Obsidian.",
+  "dependencies": {
+    "esbuild": "0.25.0",
+    "lucide-static": "*"
+  }
+}

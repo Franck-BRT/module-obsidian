@@ -28,3 +28,8 @@ export function formatMoneyShort(amount: number): string {
     }).format(amount)
   )
 }
+
+/** A plain amount, grouped as the reader writes it, for a field to edit: « 1 450 000 ». */
+export function formatAmount(amount: number): string {
+  return tidy(new Intl.NumberFormat(dateLocale() ?? 'en', { maximumFractionDigits: 2 }).format(amount))
+}
