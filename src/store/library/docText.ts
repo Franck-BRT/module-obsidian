@@ -13,8 +13,11 @@ import { extensionOf, fold } from './libraryDoc'
  * no reader for, an old `.doc` say, is only found by its name.
  */
 
-/** Bumped when the readers improve, so what was read before is read again. */
-export const TEXT_VERSION = 1
+/**
+ * Bumped when the readers improve. What an older reader could not read is read again —
+ * a PDF locked against editing, say, which version 1 refused; what it did read is kept.
+ */
+export const TEXT_VERSION = 2
 
 /** The most kept of one document: five hundred dense pages or so, past which the start is enough to find it. */
 export const TEXT_LIMIT = 1_000_000
@@ -39,9 +42,11 @@ export function encodeText(entry: DocText): string {
 export function decodeText(raw: string): DocText | null {
   const end = raw.indexOf('\n')
   const head = (end < 0 ? raw : raw.slice(0, end)).split(' ')
-  if (head[0] !== 'pm-text' || Number(head[1]) !== TEXT_VERSION) return null
+  const version = Number(head[1])
+  if (head[0] !== 'pm-text' || !(version >= 1 && version <= TEXT_VERSION)) return null
   const state = head[2] as TextState
   if (!['ok', 'scan', 'empty', 'unreadable', 'unsupported'].includes(state)) return null
+  if (state === 'unreadable' && version < TEXT_VERSION) return null
   const mtime = Number(head[3])
   return {
     state,

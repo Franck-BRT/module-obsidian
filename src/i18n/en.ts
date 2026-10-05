@@ -2352,8 +2352,7 @@ export const en = {
   'req.importDocxNone':
     'No requirement found in this document: no table with an identifier or wording column, no paragraph opening with an identifier (REQ-SYS-0001, [SYS-12]…).',
   'req.importDocxFound': '{text} read from the text · {tables} from tables · texts read as {lang}',
-  'req.importPdfEncrypted':
-    'This PDF is encrypted (password or restrictions) and cannot be read. Export it again without protection.',
+  'req.importPdfEncrypted': 'This PDF needs a password to open and cannot be read. Export it again without a password.',
   'req.importPdfNoText': 'This PDF holds no text: it is probably a scanned document, made of images.',
   'req.importPdfTagged': 'document structure read',
   'req.importPdfLayout': 'untagged PDF: layout interpreted, worth checking',

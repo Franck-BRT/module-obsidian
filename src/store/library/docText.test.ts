@@ -25,7 +25,7 @@ const shown = (found: Snippet | null): string =>
     : ''
 
 describe('keeping a text', () => {
-  it('reads back what it wrote, and not what an older reader wrote', () => {
+  it('reads back what it wrote, and of an older reader only what it could read', () => {
     const entry = { state: 'ok' as const, text: 'ligne 1\nligne 2', mtime: 1727500000000 }
     expect(decodeText(encodeText(entry))).toEqual(entry)
     expect(decodeText(encodeText({ ...entry, state: 'scan', ocr: true }))).toEqual({
@@ -33,7 +33,11 @@ describe('keeping a text', () => {
       state: 'scan',
       ocr: true
     })
-    expect(decodeText(`pm-text ${TEXT_VERSION - 1} ok 1\ntexte`)).toBeNull()
+    expect(decodeText(`pm-text 1 ok 1\ntexte`)).toEqual({ state: 'ok', text: 'texte', mtime: 1 })
+    // What it could not read — a locked PDF — the reader of now tries again.
+    expect(decodeText(`pm-text 1 unreadable 1\n`)).toBeNull()
+    expect(decodeText(`pm-text ${TEXT_VERSION} unreadable 1\n`)).toEqual({ state: 'unreadable', text: '', mtime: 1 })
+    expect(decodeText(`pm-text ${TEXT_VERSION + 1} ok 1\ntexte`)).toBeNull()
     expect(decodeText(`pm-text ${TEXT_VERSION} what 1\ntexte`)).toBeNull()
     expect(decodeText('autre chose')).toBeNull()
     expect(decodeText(`pm-text ${TEXT_VERSION} empty 5`)).toEqual({ state: 'empty', text: '', mtime: 5 })

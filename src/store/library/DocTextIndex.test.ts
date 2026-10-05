@@ -99,11 +99,14 @@ describe('DocTextIndex', () => {
     expect(index.entry(docOf('b', ''))?.text).toBe('Autre texte')
   })
 
-  it('reads again what an older reader kept', async () => {
+  it('reads again what an older reader could not read, and keeps what it did', async () => {
     const file = await vault.createBinary('L/_files/cr.txt', bytes('Texte'))
-    shelf.kept.set('a', `pm-text ${TEXT_VERSION - 1} ok ${file.stat.mtime}\nvieux`)
-    await index.refresh([docOf('a', 'L/_files/cr.txt')])
+    const other = await vault.createBinary('L/_files/pv.txt', bytes('Neuf'))
+    shelf.kept.set('a', `pm-text ${TEXT_VERSION - 1} unreadable ${file.stat.mtime}\n`)
+    shelf.kept.set('b', `pm-text ${TEXT_VERSION - 1} ok ${other.stat.mtime}\nvieux`)
+    await index.refresh([docOf('a', 'L/_files/cr.txt'), docOf('b', 'L/_files/pv.txt')])
     expect(index.entry(docOf('a', ''))?.text).toBe('Texte')
+    expect(index.entry(docOf('b', ''))?.text).toBe('vieux')
   })
 
   it('reads the same bytes once, and leaves out a document with no file or no fingerprint', async () => {

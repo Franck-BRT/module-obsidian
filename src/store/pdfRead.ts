@@ -1,4 +1,5 @@
 import { charWidth } from './pdfFont'
+import { PdfDecipher, PdfLocked, type EncryptSpec } from './pdfCrypt'
 
 /**
  * Reading the text out of a PDF, by hand.
@@ -16,8 +17,10 @@ import { charWidth } from './pdfFont'
  * sit, what the author meant — and it is better kept apart from the part that must simply
  * be right.
  *
- * Not read: encrypted files (refused, by name), text drawn as outlines or pictures, and
- * the rarer compressions (LZW, run-length). A scanned document has no text at all.
+ * A file locked against editing, with no password to open it, is deciphered first
+ * (`pdfCrypt`). Not read: files that need a password to open (refused, by name), text
+ * drawn as outlines or pictures, and the rarer compressions (LZW, run-length). A scanned
+ * document has no text at all.
  */
 
 export class PdfError extends Error {}
@@ -389,6 +392,9 @@ function ascii85(data: Uint8Array): Uint8Array {
 class PdfFile {
   readonly objects = new Map<number, PObj>()
   readonly trailers: PDict[] = []
+  /** A locked file's: what deciphers its streams, and which object each stream is. */
+  decipher: PdfDecipher | null = null
+  readonly owners = new WeakMap<PStream, [number, number]>()
 
   constructor(readonly src: string) {}
 
@@ -415,6 +421,8 @@ class PdfFile {
 
   async decode(stream: PStream): Promise<Uint8Array | null> {
     let data = toBytes(stream.raw)
+    const owner = this.owners.get(stream)
+    if (this.decipher && owner) data = await this.decipher.stream(owner[0], owner[1], data)
     const filterObj = this.get(stream.dict, 'Filter')
     const filters = (Array.isArray(filterObj) ? filterObj : filterObj ? [filterObj] : []).map(
       (each) => this.nameOf(each) ?? ''
@@ -432,6 +440,8 @@ class PdfFile {
         data = unpredict(data, parms[index])
       } else if (filter === 'ASCIIHexDecode' || filter === 'AHx') data = asciiHex(data)
       else if (filter === 'ASCII85Decode' || filter === 'A85') data = ascii85(data)
+      // Deciphered already, by the file's own filter: the only kind written in practice.
+      else if (filter === 'Crypt') continue
       else return null
     }
     return data
@@ -471,6 +481,7 @@ async function load(bytes: Uint8Array): Promise<PdfFile> {
 
   OBJ.lastIndex = 0
   const streams: [number, PStream][] = []
+  const generations = new Map<number, number>()
   for (let match = OBJ.exec(src); match; match = OBJ.exec(src)) {
     const lexer = new Lexer(src, match.index + match[0].length)
     let value: PObj | undefined
@@ -488,6 +499,7 @@ async function load(bytes: Uint8Array): Promise<PdfFile> {
       OBJ.lastIndex = found.end
     } else OBJ.lastIndex = lexer.at
     file.objects.set(Number(match[1]), value)
+    generations.set(Number(match[1]), Number(match[2]))
   }
 
   // Trailers, the old kind and the cross-reference streams that replaced them.
@@ -498,6 +510,7 @@ async function load(bytes: Uint8Array): Promise<PdfFile> {
   for (const [, stream] of streams) {
     if (file.nameOf(stream.dict.get('Type')) === 'XRef') file.trailers.push(stream.dict)
   }
+  await unlock(file, generations)
 
   // Objects packed into object streams, unless the file also defines them directly.
   for (const [, stream] of streams) {
@@ -521,6 +534,79 @@ async function load(bytes: Uint8Array): Promise<PdfFile> {
     }
   }
   return file
+}
+
+/**
+ * A locked file deciphered where the empty password opens it: its streams as they are
+ * decoded, its strings here — those of the objects written directly, as the objects packed
+ * in a stream are deciphered with it. Its cross-reference streams and its encryption
+ * dictionary were never enciphered.
+ */
+async function unlock(file: PdfFile, generations: Map<number, number>): Promise<void> {
+  const trailer = file.trailers.find((each) => each.has('Encrypt'))
+  if (!trailer) return
+  const dict = file.dict(trailer.get('Encrypt'))
+  if (!dict) throw new PdfError('the PDF is encrypted, and its encryption could not be read')
+  const bytes = (key: string): Uint8Array => {
+    const found = file.get(dict, key)
+    return found instanceof PString ? toBytes(found.bytes) : new Uint8Array(0)
+  }
+  const number = (key: string, otherwise: number): number => {
+    const found = file.get(dict, key)
+    return typeof found === 'number' ? found : otherwise
+  }
+  const filters = new Map<string, { method: string; length?: number }>()
+  for (const [name, each] of file.dict(dict.get('CF')) ?? []) {
+    const filter = file.dict(each)
+    const length = file.get(filter, 'Length')
+    filters.set(name, {
+      method: file.nameOf(filter?.get('CFM')) ?? 'None',
+      ...(typeof length === 'number' ? { length } : {})
+    })
+  }
+  const ids = file.trailers.map((each) => file.resolve(each.get('ID'))).find(Array.isArray)
+  const id = ids && ids[0] instanceof PString ? toBytes(ids[0].bytes) : new Uint8Array(0)
+  const spec: EncryptSpec = {
+    filter: file.nameOf(dict.get('Filter')) ?? '',
+    v: number('V', 0),
+    r: number('R', 0),
+    length: number('Length', 40),
+    o: bytes('O'),
+    u: bytes('U'),
+    ue: bytes('UE'),
+    p: number('P', 0),
+    encryptMetadata: file.get(dict, 'EncryptMetadata') !== false,
+    filters,
+    stmF: file.nameOf(dict.get('StmF')) ?? 'Identity',
+    strF: file.nameOf(dict.get('StrF')) ?? 'Identity',
+    id
+  }
+  try {
+    file.decipher = await PdfDecipher.open(spec)
+  } catch (error) {
+    if (error instanceof PdfLocked) throw new PdfError(`the PDF is encrypted: ${error.message}`)
+    throw error
+  }
+  const decipher = file.decipher
+  const skip = trailer.get('Encrypt')
+  for (const [num, value] of file.objects) {
+    if (skip instanceof PRef && skip.num === num) continue
+    const gen = generations.get(num) ?? 0
+    const open = async (obj: PObj): Promise<PObj> => {
+      if (obj instanceof PString) return new PString(toBinary(await decipher.string(num, gen, toBytes(obj.bytes))))
+      if (Array.isArray(obj)) {
+        for (const [at, item] of obj.entries()) obj[at] = await open(item)
+      } else if (obj instanceof Map) {
+        for (const [key, item] of obj) obj.set(key, await open(item))
+      }
+      return obj
+    }
+    if (value instanceof PStream) {
+      if (file.nameOf(value.dict.get('Type')) === 'XRef') continue
+      file.owners.set(value, [num, gen])
+      await open(value.dict)
+    } else file.objects.set(num, await open(value))
+  }
 }
 
 /* ---- Fonts -------------------------------------------------------------------- */
@@ -1071,9 +1157,6 @@ async function readPage(
 /** The text and boxes of every page, in page order. */
 export async function readPdf(bytes: Uint8Array): Promise<PdfContent> {
   const file = await load(bytes)
-  if (file.trailers.some((trailer) => trailer.has('Encrypt'))) {
-    throw new PdfError('the PDF is encrypted')
-  }
   const out: PdfContent = { pages: 0, items: [], rects: [], problems: [] }
   const pages = pagesOf(file)
   out.pages = pages.length

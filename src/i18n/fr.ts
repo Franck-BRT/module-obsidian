@@ -2378,7 +2378,7 @@ export const fr: Catalog = {
     'Aucune exigence trouvée dans ce document : ni tableau avec une colonne d’identifiant ou de texte, ni paragraphe commençant par un identifiant (REQ-SYS-0001, [SYS-12]…).',
   'req.importDocxFound': '{text} lues dans le texte · {tables} dans des tableaux · textes lus en {lang}',
   'req.importPdfEncrypted':
-    'Ce PDF est chiffré (mot de passe ou restrictions) et ne peut pas être lu. Réexporte-le sans protection.',
+    'Ce PDF demande un mot de passe pour être ouvert et ne peut pas être lu. Réexporte-le sans mot de passe.',
   'req.importPdfNoText': 'Ce PDF ne contient aucun texte : c’est probablement un document scanné, fait d’images.',
   'req.importPdfTagged': 'structure du document lue',
   'req.importPdfLayout': 'PDF sans structure : mise en page interprétée, à vérifier',
