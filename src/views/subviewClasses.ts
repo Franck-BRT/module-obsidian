@@ -24,6 +24,7 @@ export const SUBVIEW_CLASS = {
   risks: 'pm-risks-view',
   decisions: 'pm-decisions-view',
   reserves: 'pm-reserves-view',
+  budget: 'pm-budget-view',
   workload: 'pm-load-view',
   dashboard: 'pm-kpi-view'
 } as const satisfies Record<ViewMode, string>

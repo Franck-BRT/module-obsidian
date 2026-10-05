@@ -4,6 +4,8 @@ import type { ChaseItem } from '../../store/chasing'
 import type { VisaWait } from '../../store/visaDelay'
 import type { ReserveSummary } from '../../store/reserve'
 import type { CriticalPath } from '../../store/criticalPath'
+import type { BudgetFigures } from '../../store/budget'
+import { formatMoney } from '../budget/money'
 import { waitText } from '../visa/visaWaitWords'
 import { decisionDay, decisionOf } from '../../store/decision'
 import { BLACK, fit, GREY, LIGHT, PdfCanvas, rgb, tint, WHITE, type Rgb } from '../../store/pdfCanvas'
@@ -36,6 +38,8 @@ export interface StatusReportInput {
   reserves?: ReserveSummary
   /** The open tickets that hold the end of the plan, and that end. */
   critical?: Pick<CriticalPath, 'end' | 'path'>
+  /** The money lot by lot, and the total. */
+  budget?: { lots: { title: string; figures: BudgetFigures }[]; total: BudgetFigures }
 }
 
 const NAVY: Rgb = [0.12, 0.23, 0.37]
@@ -598,6 +602,47 @@ class Report {
     }
   }
 
+  /** The money lot by lot: budget, committed, invoiced, forecast, and the variance — overruns in red. */
+  budget(budget: NonNullable<StatusReportInput['budget']>): void {
+    this.section(t('report.budget'))
+    const c = this.c
+    const columns = [
+      t('budget.budget'),
+      t('budget.committed'),
+      t('budget.invoiced'),
+      t('budget.forecast'),
+      t('budget.variance')
+    ]
+    const nameWidth = this.width * 0.3
+    const step = (this.width - nameWidth) / columns.length
+    const right = (at: number): number => this.left + nameWidth + step * (at + 1)
+    const row = (name: string, figures: BudgetFigures, bold: boolean): void => {
+      c.need(14)
+      c.text(this.left, c.y, fit(name, 9, nameWidth - 6), { size: 9, bold })
+      const values = [figures.budget, figures.committed, figures.invoiced, figures.forecast]
+      values.forEach((value, at) => c.text(right(at), c.y, formatMoney(value), { size: 8.5, bold, align: 'right' }))
+      c.text(right(4), c.y, figures.variance ? formatMoney(figures.variance, true) : '—', {
+        size: 8.5,
+        bold,
+        color: figures.variance > 0 ? RED : GREY,
+        align: 'right'
+      })
+      c.y += 14
+    }
+    c.need(14)
+    columns.forEach((label, at) =>
+      c.text(right(at), c.y, fit(label, 7.5, step - 4), { size: 7.5, color: GREY, align: 'right' })
+    )
+    c.text(this.left, c.y, t('budget.excludingTax'), { size: 7.5, color: GREY })
+    c.y += 13
+    for (const lot of budget.lots.slice(0, 20)) row(lot.title, lot.figures, false)
+    if (budget.lots.length > 20) {
+      c.text(this.left, c.y, t('report.more', { count: budget.lots.length - 20 }), { size: 8, color: GREY })
+      c.y += 12
+    }
+    row(t('budget.total'), budget.total, true)
+  }
+
   /** The reserves still to lift, by contractor, the late ones in red. */
   reserves(summary: ReserveSummary): void {
     this.section(t('report.reserves'))
@@ -685,6 +730,7 @@ export function statusReportPdf(input: StatusReportInput, at = new Date()): Uint
   report.phases()
   report.milestones()
   if (input.critical?.path.length) report.criticalPath(input.critical)
+  if (input.budget?.lots.length) report.budget(input.budget)
   report.risks()
   report.decisions()
   report.people()

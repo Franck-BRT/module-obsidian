@@ -1,5 +1,6 @@
 import { readDecisionState } from './decision'
 import type {
+  BudgetLine,
   Collection,
   CustomFieldDef,
   DependencyOption,
@@ -218,6 +219,63 @@ function readReserve(raw: unknown): Task['reserve'] {
   }
 }
 
+/** An amount as people write it: « 12 500,50 € », « 12,500.50 », 12500.5; null when it is none. */
+export function parseAmount(raw: unknown): number | null {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null
+  if (typeof raw !== 'string') return null
+  let text = raw.replace(/[\s\u00a0\u202f€$£]|EUR|HT|TTC/gi, '')
+  if (!text) return null
+  const comma = text.lastIndexOf(',')
+  const dot = text.lastIndexOf('.')
+  if (comma >= 0 && dot >= 0) {
+    // Both: the last one is the decimal mark, the other groups thousands.
+    text = comma > dot ? text.replace(/\./g, '').replace(',', '.') : text.replace(/,/g, '')
+  } else if (comma >= 0) {
+    // One comma: decimal when two digits or fewer follow it, else thousands.
+    text = /,\d{1,2}$/.test(text) && text.split(',').length === 2 ? text.replace(',', '.') : text.replace(/,/g, '')
+  } else if (dot >= 0 && text.split('.').length > 2) {
+    text = text.replace(/\./g, '')
+  } else if (dot >= 0 && /\.\d{3}$/.test(text) && !/^-?0\./.test(text)) {
+    // « 12.500 » groups thousands, as a French reader writes it.
+    text = text.replace('.', '')
+  }
+  const number = Number(text)
+  return Number.isFinite(number) && /\d/.test(text) ? number : null
+}
+
+/** A lot's budget, as written in its note; none when it is not there. */
+function readBudget(raw: unknown): Task['budget'] {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  const text = (value: unknown): string =>
+    typeof value === 'string' ? value : typeof value === 'number' ? String(value) : ''
+  const lines = (value: unknown): BudgetLine[] =>
+    Array.isArray(value)
+      ? value.flatMap((one): BudgetLine[] => {
+          if (!one || typeof one !== 'object') return []
+          const line = one as Record<string, unknown>
+          const amount = parseAmount(line.amount)
+          if (amount === null) return []
+          const date = text(line.date).trim()
+          return [
+            {
+              date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '',
+              label: text(line.label),
+              company: text(line.company),
+              amount
+            }
+          ]
+        })
+      : []
+  const toCommit = parseAmount(r.toCommit)
+  return {
+    amount: parseAmount(r.amount) ?? 0,
+    ...(toCommit === null ? {} : { toCommit }),
+    commitments: lines(r.commitments),
+    invoices: lines(r.invoices)
+  }
+}
+
 /** A ticket's reference dates, as written in its note; none when they are not there. */
 function readBaseline(raw: unknown): Task['baseline'] {
   if (!raw || typeof raw !== 'object') return undefined
@@ -270,6 +328,7 @@ export function mapRawToTask(r: Record<string, unknown>, overrides?: Partial<Tas
     risk: readRisk(r.risk),
     decision: readDecision(r.decision),
     reserve: readReserve(r.reserve),
+    budget: readBudget(r.budget),
     collapsed: r.collapsed === true,
     createdAt: (r.createdAt as string) ?? new Date().toISOString(),
     updatedAt: (r.updatedAt as string) ?? new Date().toISOString(),

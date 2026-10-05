@@ -222,7 +222,7 @@ Pour chacun : probabilité et impact toujours justes ? parade engagée ? respons
 {{risques-critiques}}
 
 ## 5. Budget et ressources (10 min)
--
+{{budget}}
 
 ## 6. Décisions attendues du comité (15 min)
 {{décisions-à-prendre}}
@@ -535,7 +535,7 @@ For each: are probability and impact still right? Is the mitigation under way? W
 {{critical-risks}}
 
 ## 5. Budget and resources (10 min)
--
+{{budget}}
 
 ## 6. Decisions expected from the committee (15 min)
 {{pending-decisions}}

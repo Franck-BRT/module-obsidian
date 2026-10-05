@@ -26,6 +26,7 @@ export const VIEW_MODES = [
   'risks',
   'decisions',
   'reserves',
+  'budget',
   'workload',
   'dashboard'
 ] as const
@@ -248,6 +249,31 @@ export type ReservePhase = 'opr' | 'reception' | 'gpa'
 /** Where a reserve stands: open, said lifted by the contractor, seen lifted. */
 export type ReserveState = 'open' | 'declared' | 'lifted'
 
+/** One line of a lot's money: a contract, an amendment or an order committed; an invoice paid. */
+export interface BudgetLine {
+  /** YYYY-MM-DD. */
+  date: string
+  label: string
+  company: string
+  /** Excluding tax. */
+  amount: number
+}
+
+/**
+ * A lot's money, set on its phase: what it was given, what has been committed to the
+ * companies — contracts, amendments, orders —, what they have invoiced, and, when someone
+ * has weighed it, what still remains to commit. Without that estimate, what the budget
+ * leaves is taken as what remains.
+ */
+export interface TaskBudget {
+  /** Excluding tax. */
+  amount: number
+  /** What remains to commit, as estimated; absent, what the budget leaves. */
+  toCommit?: number
+  commitments: BudgetLine[]
+  invoices: BudgetLine[]
+}
+
 /**
  * A reserve as the punch list keeps it: its number, where it is, which trade, how
  * serious, and the days it moved — raised, said lifted, seen lifted —, with its photos.
@@ -337,6 +363,8 @@ export interface Task {
   decision?: TaskDecision
   /** Set on a ticket of type `reserve`: its number, where it is, how serious, where it stands. */
   reserve?: TaskReserve
+  /** Set on a phase: its budget, what is committed and invoiced against it. */
+  budget?: TaskBudget
   /** UI state, persisted per project in plugin settings (data.json), not in frontmatter. */
   collapsed: boolean
   createdAt: string

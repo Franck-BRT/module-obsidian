@@ -1,6 +1,6 @@
 import { normalizePath } from 'obsidian'
 import type PMPlugin from '../../main'
-import type { Project } from '../../types'
+import type { Project, Task } from '../../types'
 import type { ProjectScope } from '../../store'
 import { flattenTasks } from '../../store/TaskTreeOps'
 import { decidedSince, isDecision, isPending, orderDecisions } from '../../store/decision'
@@ -10,6 +10,8 @@ import { statusReportPdf } from './statusReportPdf'
 import { projectWaits } from '../visa/visaWaits'
 import { reserveSummary } from '../../store/reserve'
 import { criticalPath, type CriticalPath } from '../../store/criticalPath'
+import { addFigures, hasBudget, projectBudget } from '../../store/budget'
+import type { StatusReportInput } from './statusReportPdf'
 import type { ProjectMetrics } from '../../store/Metrics'
 import { ensureFolder, folderOf } from '../../store/vaultFs'
 import { displayName, sanitizeFileName } from '../../utils'
@@ -142,6 +144,16 @@ function section(lines: string[], heading: string, header: string[]): void {
   lines.push(`## ${heading}`, '', ...header)
 }
 
+/** The lots that carry money, and their total; none when no lot does. */
+function reportBudget(tasks: Task[]): StatusReportInput['budget'] {
+  const lots = projectBudget(tasks).lots.filter((lot) => hasBudget(lot.task))
+  if (!lots.length) return undefined
+  return {
+    lots: lots.map((lot) => ({ title: lot.task.title, figures: lot.figures })),
+    total: addFigures(lots.map((lot) => lot.figures))
+  }
+}
+
 /** The critical path of the scope's main project, read with its own statuses and working days. */
 function scopeCriticalPath(plugin: PMPlugin, scope: ProjectScope): CriticalPath | undefined {
   const project = scope.primary
@@ -173,7 +185,8 @@ export async function writeStatusReportPdf(plugin: PMPlugin, scope: ProjectScope
     lateDocuments: awaitedDocuments(tasks, stamp),
     visas: projectWaits(plugin, scope.projects, stamp).map((one) => one.wait),
     reserves: reserveSummary(tasks, stamp),
-    critical: scopeCriticalPath(plugin, scope)
+    critical: scopeCriticalPath(plugin, scope),
+    budget: reportBudget(tasks)
   })
   const folder = project ? folderOf(project.filePath) : ''
   if (folder) await ensureFolder(plugin.app, folder)

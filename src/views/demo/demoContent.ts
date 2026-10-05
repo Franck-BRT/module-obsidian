@@ -229,6 +229,16 @@ export function b12Tasks(today: string): Task[] {
       type: 'phase',
       start: d(-45),
       due: d(-20),
+      // Its money: finished under budget, all invoiced, nothing left to commit.
+      budget: {
+        amount: 180_000,
+        toCommit: 0,
+        commitments: [{ date: d(-60), label: 'Marché', company: 'Terrassements du Lauragais', amount: 172_500 }],
+        invoices: [
+          { date: d(-30), label: 'Situation n°1', company: 'Terrassements du Lauragais', amount: 95_000 },
+          { date: d(-10), label: 'Situation n°2', company: 'Terrassements du Lauragais', amount: 77_500 }
+        ]
+      },
       subtasks: [
         makeTask({
           title: 'Décapage',
@@ -254,6 +264,16 @@ export function b12Tasks(today: string): Task[] {
       type: 'phase',
       start: d(-18),
       due: d(50),
+      // The clay pocket's amendment, and special foundations still to order: an overrun.
+      budget: {
+        amount: 1_450_000,
+        toCommit: 45_000,
+        commitments: [
+          { date: d(-40), label: 'Marché', company: 'Garonne Bâtiment', amount: 1_392_000 },
+          { date: d(-8), label: 'Avenant n°1 — purge d’argile', company: 'Garonne Bâtiment', amount: 38_500 }
+        ],
+        invoices: [{ date: d(-12), label: 'Situation n°1', company: 'Garonne Bâtiment', amount: 210_000 }]
+      },
       subtasks: [
         makeTask({
           id: 'demo-b12-coffrage',
@@ -318,6 +338,11 @@ export function b12Tasks(today: string): Task[] {
       type: 'phase',
       start: d(-10),
       due: d(20),
+      budget: {
+        amount: 320_000,
+        commitments: [{ date: d(-15), label: 'Marché', company: 'Électricité Sud', amount: 298_000 }],
+        invoices: [{ date: d(-5), label: 'Avance forfaitaire', company: 'Électricité Sud', amount: 15_000 }]
+      },
       subtasks: [
         makeTask({
           id: 'demo-b12-reservations',
@@ -631,6 +656,13 @@ Ce projet et le projet « ${DEMO_C7} » sont fictifs. La commande **« Supprimer
 - [ ] Après les réservations électriques (8 jours de marge) et le schéma unifilaire, un trait fin montre jusqu’où ils peuvent glisser ; le survoler donne la marge et la date de fin au plus tard.
 - [ ] Repousser le coulage du radier de deux jours (glisser la barre) : les voiles, le plancher et « Hors d’eau » suivent, la fin aussi.
 - [ ] Ordre du jour « Revue générale d’avancement » : le bloc du chemin critique ; rapport d’état **PDF** : la section « Chemin critique ».
+
+## Budget
+- [ ] Onglet **Budget** : 1 950 000 € de budget, 1 901 000 € engagés, 397 500 € facturés ; prévision 1 968 000 €, soit un dépassement de 18 000 € (en rouge).
+- [ ] Le Gros œuvre dépasse (avenant de purge d’argile et 45 000 € de fondations spéciales estimés), les Terrassements, terminés, finissent 7 500 € sous le budget.
+- [ ] Ouvrir le Lot 08 : ajouter une situation (« Situation n°1 », 60 000) ; la courbe et les totaux suivent. Vider le « reste à engager estimé » du Gros œuvre : la prévision revient au budget.
+- [ ] La courbe : le budget étalé sur les dates des lots, l’engagé et le facturé jusqu’à aujourd’hui ; survoler une semaine donne ses chiffres.
+- [ ] Ordre du jour « Comité de pilotage » : le bloc budget ; rapport d’état **PDF** : la section « Budget ».
 
 ## Réserves
 - [ ] Onglet **Réserves** : quatre réserves de la réception des terrassements ; R-001 en retard (relancée il y a 3 jours), R-002 déclarée levée, R-003 levée, R-004 bloquante chez Garonne Bâtiment.

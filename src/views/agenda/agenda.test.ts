@@ -28,16 +28,16 @@ describe('a template', () => {
     expect(agendaBlock('risques_a_revoir')).toBe('risks-to-review')
     expect(agendaBlock('réunion-précédente')).toBe('previous-meeting')
     expect(agendaBlock('critical-risks')).toBe('critical-risks')
-    expect(agendaBlock('budget')).toBeNull()
+    expect(agendaBlock('météo')).toBeNull()
   })
 
   it('is filled block by block, each once, what it does not know left as written', () => {
     let calls = 0
-    const filled = fillAgenda('# {{ projet }} — {{date}}\n{{retards}}\n{{late}}\n{{budget}}', (block) => {
+    const filled = fillAgenda('# {{ projet }} — {{date}}\n{{retards}}\n{{late}}\n{{météo}}', (block) => {
       calls++
       return `[${block}]`
     })
-    expect(filled).toBe('# [project] — [date]\n[late]\n[late]\n{{budget}}')
+    expect(filled).toBe('# [project] — [date]\n[late]\n[late]\n{{météo}}')
     expect(calls).toBe(3)
     expect(blocksIn('{{retards}} {{late}} {{risques}} {{x}}')).toEqual(['late', 'risks'])
   })
@@ -250,6 +250,29 @@ describe('the blocks', () => {
     const visas = filler({ tasks, visaDays: 15 }).render('pending-visas')
     expect(visas).toContain('| NDC-04 — Note de calcul radier | Anne Leroy | 10 sept. | 25 sept. | **7 j de retard** |')
     expect(agendaBlock('visas en attente')).toBe('pending-visas')
+  })
+
+  it('give the money lot by lot, the overrun in bold, with the total', () => {
+    const lot = (title: string, amount: number, committed: number): Task =>
+      makeTask({
+        title,
+        type: 'phase',
+        start: '',
+        budget: {
+          amount,
+          commitments: [{ date: '2026-09-01', label: 'Marché', company: 'X', amount: committed }],
+          invoices: []
+        }
+      })
+    const block = filler({ tasks: [lot('Gros œuvre', 100_000, 110_000), lot('Électricité', 50_000, 40_000)] }).render(
+      'budget'
+    )
+    expect(block).toContain(
+      '| Gros œuvre | 100\u00a0000\u00a0€ | 110\u00a0000\u00a0€ | 0\u00a0€ | 110\u00a0000\u00a0€ | **+10\u00a0000\u00a0€** |'
+    )
+    expect(block).toContain('| **Total** | 150\u00a0000\u00a0€ |')
+    expect(filler({ tasks: [] }).render('budget')).not.toContain('|')
+    expect(agendaBlock('budget')).toBe('budget')
   })
 
   it('list the tickets on the critical path, with the planned end', () => {

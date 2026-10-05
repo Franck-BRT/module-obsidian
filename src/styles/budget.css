@@ -1,0 +1,279 @@
+/* ---- A project's money, lot by lot ---------------------------------------- */
+
+.pm-budget {
+  padding: var(--size-4-4) var(--size-4-5);
+  overflow: auto;
+  height: 100%;
+}
+
+.pm-budget-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-4-3);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-budget-title {
+  margin: 0;
+}
+
+.pm-budget-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-budget-empty {
+  padding: var(--size-4-6) var(--size-4-4);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.pm-budget-empty-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  margin-bottom: var(--size-2-2);
+}
+
+.pm-budget-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-4);
+}
+
+.pm-budget-tile {
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.pm-budget-tile-label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.pm-budget-tile-value {
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-budget-tile-detail {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.pm-budget-tile.is-over .pm-budget-tile-value,
+.pm-budget-amount.is-over {
+  color: var(--color-red);
+}
+
+.pm-budget-tile.is-under .pm-budget-tile-value,
+.pm-budget-amount.is-under {
+  color: var(--color-green);
+}
+
+.pm-budget-card {
+  padding: var(--size-4-3) var(--size-4-4);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  margin-bottom: var(--size-4-4);
+}
+
+.pm-budget-card-title {
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--size-4-2);
+}
+
+.pm-budget-chart {
+  width: 100%;
+  height: auto;
+}
+
+.pm-budget-line-invoiced {
+  stroke: var(--color-cyan);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.pm-budget-dot-invoiced {
+  fill: var(--color-cyan);
+  stroke: var(--background-primary);
+  stroke-width: 2;
+}
+
+.pm-budget-key-invoiced {
+  --pm-kpi-color: var(--color-cyan);
+}
+
+.pm-budget-forecast-line {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.pm-budget-forecast-label {
+  fill: var(--text-muted);
+  font-size: 10px;
+}
+
+.pm-budget-hover {
+  fill: transparent;
+}
+
+.pm-budget-hover:hover {
+  fill: var(--background-modifier-hover);
+}
+
+/* The lots, as a table read across: the name, then the six figures. */
+.pm-budget-table {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) repeat(6, minmax(90px, 1fr));
+  overflow-x: auto;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.pm-budget-row {
+  display: contents;
+}
+
+.pm-budget-row > * {
+  padding: var(--size-2-3) var(--size-2-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pm-budget-row.is-head > * {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  font-weight: var(--font-semibold);
+  text-align: right;
+}
+
+.pm-budget-row.is-head > :first-child {
+  text-align: left;
+}
+
+.pm-budget-row.is-total > * {
+  font-weight: var(--font-semibold);
+  border-bottom: none;
+}
+
+.pm-budget-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pm-budget-lot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-2);
+  background: none;
+  box-shadow: none;
+  height: auto;
+  justify-content: flex-start;
+  text-align: left;
+  font-weight: var(--font-medium);
+  cursor: pointer;
+}
+
+.pm-budget-chevron {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.pm-budget-chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pm-budget-project {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-budget-track {
+  flex-basis: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--background-modifier-border);
+  overflow: hidden;
+}
+
+.pm-budget-fill {
+  display: block;
+  height: 100%;
+  width: var(--pm-budget-share);
+  background: var(--interactive-accent);
+}
+
+.pm-budget-fill.is-over {
+  background: var(--color-red);
+}
+
+.pm-budget-panel {
+  grid-column: 1 / -1;
+  padding: var(--size-4-3) var(--size-4-4);
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pm-budget-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-3);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-budget-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.pm-budget-lines {
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-budget-lines-title {
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--size-2-2);
+}
+
+.pm-budget-line {
+  display: grid;
+  grid-template-columns: 7em minmax(120px, 2fr) minmax(100px, 1fr) 8em 2em;
+  align-items: center;
+  gap: var(--size-2-3);
+  padding: var(--size-2-1) 0;
+  font-size: var(--font-ui-small);
+}
+
+.pm-budget-add {
+  grid-template-columns: 9em minmax(120px, 2fr) minmax(100px, 1fr) 8em auto;
+}
+
+.pm-budget-line-date,
+.pm-budget-line-company,
+.pm-budget-line-none {
+  color: var(--text-muted);
+}
+
+.pm-budget-line-remove {
+  padding: 2px;
+  height: auto;
+  background: none;
+  box-shadow: none;
+}
+
+@media (max-width: 700px) {
+  .pm-budget-line,
+  .pm-budget-add {
+    grid-template-columns: 1fr 1fr;
+  }
+}

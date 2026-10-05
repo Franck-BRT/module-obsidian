@@ -110,7 +110,30 @@ describe('the status report', () => {
               due: '2026-09-27',
               late: 5
             }
-          ]
+          ],
+          budget: {
+            lots: [
+              {
+                title: 'Gros œuvre',
+                figures: {
+                  budget: 100_000,
+                  committed: 110_000,
+                  invoiced: 20_000,
+                  toCommit: 0,
+                  forecast: 110_000,
+                  variance: 10_000
+                }
+              }
+            ],
+            total: {
+              budget: 100_000,
+              committed: 110_000,
+              invoiced: 20_000,
+              toCommit: 0,
+              forecast: 110_000,
+              variance: 10_000
+            }
+          }
         },
         new Date('2026-10-02T08:00:00Z')
       )
@@ -126,7 +149,10 @@ describe('the status report', () => {
       'PL-002 — Plan de coffrage',
       'Visas en attente',
       'PEX-03 — Plan d’exécution',
-      '5 j de retard'
+      '5 j de retard',
+      'Budget',
+      'Gros œuvre',
+      '+10\u00a0000\u00a0€'
     ]) {
       expect(text).toContain(pdfString(words).slice(1, -1))
     }

@@ -13,6 +13,8 @@ import { decidedSince, decisionDay, decisionOf, isDecision, isPending, orderDeci
 import { flattenTasks } from '../../store/TaskTreeOps'
 import { visaWaits } from '../../store/visaDelay'
 import { criticalPath } from '../../store/criticalPath'
+import { projectBudget, type BudgetFigures } from '../../store/budget'
+import { formatMoney } from '../budget/money'
 import type { WorkCalendar } from '../../store/WorkCalendar'
 import { isLateReserve, isReserve, orderReserves, reserveCompany, reserveOf, reserveSummary } from '../../store/reserve'
 import { waitText } from '../visa/visaWaitWords'
@@ -203,6 +205,8 @@ export class AgendaFiller {
         return this.pendingVisas()
       case 'reserves':
         return this.reserves()
+      case 'budget':
+        return this.budget()
       case 'late-documents':
         return this.lateDocuments()
       case 'expected-documents':
@@ -514,6 +518,38 @@ export class AgendaFiller {
         ])
       )
     ].join('\n')
+  }
+
+  /** The money lot by lot — budget, committed, invoiced, forecast, variance — and the total. */
+  private budget(): string {
+    const budget = projectBudget(this.context.tasks)
+    const lots = budget.lots.filter((lot) => lot.figures.budget || lot.figures.committed || lot.figures.invoiced)
+    if (!lots.length) return nothing()
+    const cells = (figures: BudgetFigures): string[] => [
+      formatMoney(figures.budget),
+      formatMoney(figures.committed),
+      formatMoney(figures.invoiced),
+      formatMoney(figures.forecast),
+      figures.variance > 0
+        ? `**${formatMoney(figures.variance, true)}**`
+        : figures.variance
+          ? formatMoney(figures.variance, true)
+          : '—'
+    ]
+    return table(
+      [
+        t('budget.lot'),
+        t('budget.budget'),
+        t('budget.committed'),
+        t('budget.invoiced'),
+        t('budget.forecast'),
+        t('budget.variance')
+      ],
+      [
+        ...lots.map((lot) => [lot.task.title, ...cells(lot.figures)]),
+        [`**${t('budget.total')}**`, ...cells(budget.total)]
+      ]
+    )
   }
 
   /** The reserves still to lift, by contractor, then the late ones named: the punch list's state at the meeting. */
