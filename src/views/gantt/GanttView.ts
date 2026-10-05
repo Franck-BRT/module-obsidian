@@ -11,6 +11,8 @@ import type { TimelineCfg } from './TimelineConfig'
 import { buildTimelineConfig, dateToX, xToDate, HEADER_HEIGHT, ROW_HEIGHT, LABEL_WIDTH } from './TimelineConfig'
 import { relativePlan } from '../../store/RelativePlan'
 import { criticalPath, type CriticalPath } from '../../store/criticalPath'
+import { IcsExportModal } from '../calendar/icsExport'
+import { PlanningImportModal } from '../planning/PlanningImportModal'
 import { projectOntoDays, realTasksById, relativeTimelineConfig, relativeWeek, RELATIVE_ANCHOR } from './relativeChart'
 import { makeDragState } from './GanttDragHandler'
 import type { DragState } from './GanttDragHandler'
@@ -194,6 +196,31 @@ export class GanttView implements SubView {
     )
     if (!this.relative) this.renderBaselineControl(bar)
     this.renderCriticalControl(bar)
+    this.renderExchangeControls(bar)
+  }
+
+  /** The planning to and from elsewhere: its dates to a calendar, a planning from MS Project or a sheet. */
+  private renderExchangeControls(bar: HTMLElement): void {
+    const projects = this.scope.projects.filter((project) => !project.program)
+    if (!projects.length) return
+    if (!this.relative) {
+      explain(
+        new ButtonComponent(bar)
+          .setButtonText(t('ics.button'))
+          .onClick(() => new IcsExportModal(this.plugin, projects, this.scope.label()).open()).buttonEl,
+        t('ics.button'),
+        t('tip.ics.button')
+      )
+    }
+    const current = !this.scope.isMulti ? this.scope.primary : null
+    if (!current || !this.scope.canAddTask) return
+    explain(
+      new ButtonComponent(bar)
+        .setButtonText(t('planning.button'))
+        .onClick(() => new PlanningImportModal(this.plugin, current, () => this.onRefresh()).open()).buttonEl,
+      t('planning.button'),
+      t('tip.planning.button')
+    )
   }
 
   /** Each project's critical path, its own statuses and working days, side by side. */

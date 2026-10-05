@@ -1171,6 +1171,69 @@ export const fr: Catalog = {
     one: '{count} rapport hebdomadaire prêt (semaine {week}) :',
     other: '{count} rapports hebdomadaires prêts (semaine {week}) :'
   },
+  'command.exportIcs': 'Exporter le calendrier du projet (.ics)',
+  'command.importPlanning': 'Importer un planning (MS Project XML ou Excel)',
+  'ics.button': 'Calendrier .ics',
+  'tip.ics.button':
+    'Exporte les réunions, jalons et échéances du projet dans un fichier .ics à ouvrir dans Outlook ou tout autre agenda. Réimporté, il met à jour les événements au lieu de les dupliquer.',
+  'ics.title': 'Exporter vers un agenda',
+  'ics.intro': 'Les dates de « {name} » à envoyer dans votre agenda :',
+  'ics.kind.meetings': 'Réunions, à leurs heures',
+  'ics.kind.milestones': 'Jalons',
+  'ics.kind.dues': 'Échéances des tâches en cours',
+  'ics.kind.decisions': 'Décisions attendues',
+  'ics.kind.documents': 'Documents attendus',
+  'ics.kind.reserves': 'Réserves à lever',
+  'ics.kind.phases': 'Lots, sur toute leur durée',
+  'ics.note':
+    'Le fichier est écrit dans le dossier du projet, toujours sous le même nom : ouvert de nouveau dans Outlook, il met les événements à jour. Les échéances sont des journées entières, marquées « disponible ».',
+  'ics.export': 'Exporter',
+  'ics.nothing': 'Choisissez au moins un type de dates.',
+  'ics.written': 'Calendrier écrit : {path}',
+  'ics.open': 'Ouvrir dans l’agenda',
+  'ics.cannotOpen': 'Impossible d’ouvrir le fichier ici : retrouvez-le dans le dossier du projet.',
+  'ics.openProject': 'Ouvrez d’abord un projet.',
+  'ics.fileName': 'Calendrier {name}',
+  'ics.milestone': 'Jalon : {title}',
+  'ics.due': 'Échéance : {title}',
+  'ics.decision': 'Décision attendue : {title}',
+  'ics.document': 'Document attendu : {title}',
+  'ics.reserve': 'Réserve à lever : {title}',
+  'ics.phase': 'Lot : {title}',
+  'planning.button': 'Importer un planning',
+  'tip.planning.button':
+    'Ajoute à ce projet un planning MS Project (enregistré au format XML) ou Excel : lots, tâches, jalons, dates, avancement, ressources et liens.',
+  'planning.title': 'Importer un planning',
+  'planning.intro':
+    'Un planning MS Project enregistré au format XML (Fichier → Enregistrer sous → Format XML), ou un tableau Excel avec une colonne de noms de tâches et, si possible, début, fin, prédécesseurs, niveau hiérarchique ou EDT, % achevé et ressources.',
+  'planning.pick': 'Choisir le fichier…',
+  'planning.mpp':
+    'Le format .mpp est fermé : dans MS Project, enregistrez le planning au format XML (Fichier → Enregistrer sous → Format XML), puis importez ce fichier.',
+  'planning.noColumn': 'aucune feuille n’a de colonne « Nom » ou « Tâche »',
+  'planning.unreadable': 'Ce fichier ne se lit pas comme un planning : {reason}',
+  'planning.empty': 'Ce planning ne contient aucune tâche.',
+  'planning.counts': {
+    one: '{lots} lots, {tasks} tâches, {milestones} jalons, {count} lien',
+    other: '{lots} lots, {tasks} tâches, {milestones} jalons, {count} liens'
+  },
+  'planning.period': 'Du {start} au {due}',
+  'planning.people': {
+    one: '{count} ressource, reprise comme intervenant',
+    other: '{count} ressources, reprises comme intervenants'
+  },
+  'planning.warnings': {
+    one: '{count} point n’a pas pu être lu (date incomprise ou lien vers une ligne absente) :',
+    other: '{count} points n’ont pas pu être lus (dates incomprises ou liens vers des lignes absentes) :'
+  },
+  'planning.intoCurrent': 'Ajouter au projet « {project} »',
+  'planning.intoNew': 'Créer un nouveau projet :',
+  'planning.untitled': 'Planning importé',
+  'planning.import': 'Importer',
+  'planning.working': 'Import du planning en cours…',
+  'planning.done': {
+    one: '{count} ticket importé dans « {project} ».',
+    other: '{count} tickets importés dans « {project} ».'
+  },
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

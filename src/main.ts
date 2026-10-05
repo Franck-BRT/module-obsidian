@@ -46,6 +46,8 @@ import { remindUnansweredChases } from './views/chase/chaseReminder'
 import { createDemo, removeDemo } from './views/demo/demo'
 import { remindLateVisas } from './views/visa/visaWaits'
 import { runWeeklyReports } from './views/weekly/weeklyReport'
+import { IcsExportModal } from './views/calendar/icsExport'
+import { PlanningImportModal } from './views/planning/PlanningImportModal'
 import { configureExplain } from './ui/explain'
 import { openAgendas } from './views/agenda/AgendasModal'
 import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
@@ -605,6 +607,32 @@ export default class PMPlugin extends Plugin {
       id: 'visa-waits',
       name: t('command.visaWaits'),
       callback: safeAsync(() => remindLateVisas(this, true))
+    })
+
+    this.addCommand({
+      id: 'export-ics',
+      name: t('command.exportIcs'),
+      callback: () => {
+        const scope = this.app.workspace.getActiveViewOfType(ProjectView)?.projectScope
+        if (!scope?.projects.length) {
+          this.showNotice(t('ics.openProject'))
+          return
+        }
+        new IcsExportModal(this, scope.projects, scope.label()).open()
+      }
+    })
+
+    this.addCommand({
+      id: 'import-planning',
+      name: t('command.importPlanning'),
+      callback: () => {
+        const view = this.app.workspace.getActiveViewOfType(ProjectView)
+        const scope = view?.projectScope
+        const current = scope && !scope.isMulti ? scope.primary : null
+        new PlanningImportModal(this, current && !current.program ? current : null, () =>
+          view ? view.refreshProject() : Promise.resolve()
+        ).open()
+      }
     })
 
     this.addCommand({

@@ -1135,6 +1135,66 @@ export const en = {
     one: '{count} weekly report ready (week {week}):',
     other: '{count} weekly reports ready (week {week}):'
   },
+  'command.exportIcs': 'Export the project calendar (.ics)',
+  'command.importPlanning': 'Import a planning (MS Project XML or Excel)',
+  'ics.button': 'Calendar .ics',
+  'tip.ics.button':
+    'Exports the project’s meetings, milestones and due dates to an .ics file to open in Outlook or any calendar. Imported again, it updates the events rather than doubling them.',
+  'ics.title': 'Export to a calendar',
+  'ics.intro': 'The dates of « {name} » to send to your calendar:',
+  'ics.kind.meetings': 'Meetings, at their hours',
+  'ics.kind.milestones': 'Milestones',
+  'ics.kind.dues': 'Due dates of open tasks',
+  'ics.kind.decisions': 'Decisions expected',
+  'ics.kind.documents': 'Documents awaited',
+  'ics.kind.reserves': 'Snags to clear',
+  'ics.kind.phases': 'Phases, over their whole span',
+  'ics.note':
+    'The file is written in the project’s folder, always under the same name: opened again in Outlook, it updates the events. Due dates are whole days, shown as free.',
+  'ics.export': 'Export',
+  'ics.nothing': 'Pick at least one kind of date.',
+  'ics.written': 'Calendar written: {path}',
+  'ics.open': 'Open in the calendar',
+  'ics.cannotOpen': 'The file cannot be opened from here: find it in the project’s folder.',
+  'ics.openProject': 'Open a project first.',
+  'ics.fileName': 'Calendar {name}',
+  'ics.milestone': 'Milestone: {title}',
+  'ics.due': 'Due: {title}',
+  'ics.decision': 'Decision expected: {title}',
+  'ics.document': 'Document awaited: {title}',
+  'ics.reserve': 'Snag to clear: {title}',
+  'ics.phase': 'Phase: {title}',
+  'planning.button': 'Import a planning',
+  'tip.planning.button':
+    'Adds to this project a planning from MS Project (saved as XML) or Excel: phases, tasks, milestones, dates, progress, resources and links.',
+  'planning.title': 'Import a planning',
+  'planning.intro':
+    'An MS Project planning saved as XML (File → Save as → XML format), or an Excel sheet with a column of task names and, where it can, start, finish, predecessors, outline level or WBS, % complete and resources.',
+  'planning.pick': 'Pick the file…',
+  'planning.mpp':
+    'The .mpp format is closed: in MS Project, save the planning as XML (File → Save as → XML format), then import that file.',
+  'planning.noColumn': 'no sheet has a « Name » or « Task » column',
+  'planning.unreadable': 'This file does not read as a planning: {reason}',
+  'planning.empty': 'This planning holds no task.',
+  'planning.counts': {
+    one: '{lots} phases, {tasks} tasks, {milestones} milestones, {count} link',
+    other: '{lots} phases, {tasks} tasks, {milestones} milestones, {count} links'
+  },
+  'planning.period': 'From {start} to {due}',
+  'planning.people': { one: '{count} resource, taken as assignee', other: '{count} resources, taken as assignees' },
+  'planning.warnings': {
+    one: '{count} point could not be read (a date not understood or a link to a missing line):',
+    other: '{count} points could not be read (dates not understood or links to missing lines):'
+  },
+  'planning.intoCurrent': 'Add to the project « {project} »',
+  'planning.intoNew': 'Create a new project:',
+  'planning.untitled': 'Imported planning',
+  'planning.import': 'Import',
+  'planning.working': 'Importing the planning…',
+  'planning.done': {
+    one: '{count} ticket imported into « {project} ».',
+    other: '{count} tickets imported into « {project} ».'
+  },
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

@@ -1,0 +1,75 @@
+/* ---- Dates to a calendar, a planning from elsewhere ----------------------- */
+
+.pm-ics-intro,
+.pm-planning-intro {
+  color: var(--text-muted);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-ics-kinds {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-ics-kind,
+.pm-planning-option {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-3);
+  cursor: pointer;
+}
+
+.pm-ics-note {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.pm-ics-foot,
+.pm-planning-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-4);
+}
+
+.pm-planning-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-3) var(--size-4-4);
+  border: 1px dashed var(--background-modifier-border-hover);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+}
+
+.pm-planning-pick:hover {
+  border-color: var(--interactive-accent);
+}
+
+.pm-planning-icon {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.pm-planning-facts {
+  margin: var(--size-4-3) 0;
+}
+
+.pm-planning-warning {
+  font-size: var(--font-ui-small);
+  color: var(--text-warning);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-planning-target {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+}
+
+.pm-planning-name {
+  margin-left: var(--size-4-6);
+  max-width: 360px;
+}

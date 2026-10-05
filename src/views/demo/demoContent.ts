@@ -680,6 +680,10 @@ Ce projet et le projet « ${DEMO_C7} » sont fictifs. La commande **« Supprimer
 - [ ] **PV de réception** : le Word et le PDF dans le dossier « Réserves » du projet, les réserves par entreprise et les cadres de signature.
 - [ ] Ordre du jour « Réunion de chantier » : le bloc des réserves ; rapport d’état **PDF** : la section « Réserves ».
 
+## Agenda et MS Project
+- [ ] Gantt → **Calendrier .ics** : choisir réunions, jalons, échéances… puis « Ouvrir dans l’agenda » ; dans Outlook, les événements apparaissent. Réexporter après un changement de date : l’événement est mis à jour, pas dupliqué.
+- [ ] Gantt → **Importer un planning** (ou commande « Importer un planning ») : un fichier MS Project enregistré au format XML, ou un export Excel (colonnes Nom, Début, Fin, Prédécesseurs, Niveau hiérarchique ou EDT, % achevé, Noms ressources). L’aperçu compte lots, tâches, jalons et liens avant d’importer, dans ce projet ou dans un nouveau.
+
 ## Bibliothèque et traduction
 - [ ] Bibliothèque, dossier **Démo** : le CCTP et un *Statement of work* en anglais.
 - [ ] Sélectionner le *Statement of work* → **Traduire** en français : la traduction arrive à côté.
