@@ -18,8 +18,20 @@ import { fold } from '../library/libraryDoc'
  * has no text to give, and an image is not something this plugin can read.
  */
 
-/** The extensions read as plain text, as they are. */
-const PLAIN = new Set(['md', 'txt', 'csv', 'tsv', 'json', 'xml', 'yaml', 'yml', 'ics', 'log', 'eml'])
+/** The extensions read as plain text, as they are — a test bench's `.result` among them. */
+const PLAIN = new Set(['md', 'txt', 'csv', 'tsv', 'json', 'xml', 'yaml', 'yml', 'ics', 'log', 'eml', 'result'])
+
+/**
+ * Plain text in UTF-8, or else in the Windows code page — what older tools and test
+ * benches still write, and what UTF-8 would turn into question marks.
+ */
+export function plainText(bytes: Uint8Array): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes)
+  }
+}
 
 /** Pictures, read by a model that sees, with the type a data URL gives them. */
 const IMAGES: Record<string, string> = {
@@ -122,8 +134,8 @@ export async function fileText(extension: string, bytes: Uint8Array): Promise<st
   const ext = extension.toLowerCase()
   let text: string
   try {
-    if (PLAIN.has(ext)) text = new TextDecoder().decode(bytes)
-    else if (ext === 'html' || ext === 'htm') text = blocksText(readHtml(new TextDecoder().decode(bytes)))
+    if (PLAIN.has(ext)) text = plainText(bytes)
+    else if (ext === 'html' || ext === 'htm') text = blocksText(readHtml(plainText(bytes)))
     else if (ext === 'pdf') text = blocksText(pdfBlocks(await readPdf(bytes)))
     else if (ext === 'docx') text = blocksText(await readDocx(bytes))
     else if (ext === 'xlsx') {

@@ -15,9 +15,10 @@ import { extensionOf, fold } from './libraryDoc'
 
 /**
  * Bumped when the readers improve. What an older reader could not read is read again —
- * a PDF locked against editing, say, which version 1 refused; what it did read is kept.
+ * a PDF locked against editing, which version 1 refused; a `.result`, which version 2 did
+ * not know —; what it did read is kept.
  */
-export const TEXT_VERSION = 2
+export const TEXT_VERSION = 3
 
 /** The most kept of one document: five hundred dense pages or so, past which the start is enough to find it. */
 export const TEXT_LIMIT = 1_000_000
@@ -46,7 +47,7 @@ export function decodeText(raw: string): DocText | null {
   if (head[0] !== 'pm-text' || !(version >= 1 && version <= TEXT_VERSION)) return null
   const state = head[2] as TextState
   if (!['ok', 'scan', 'empty', 'unreadable', 'unsupported'].includes(state)) return null
-  if (state === 'unreadable' && version < TEXT_VERSION) return null
+  if ((state === 'unreadable' || state === 'unsupported') && version < TEXT_VERSION) return null
   const mtime = Number(head[3])
   return {
     state,

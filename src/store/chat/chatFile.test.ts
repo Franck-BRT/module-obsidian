@@ -56,6 +56,13 @@ describe('fileText', () => {
     ).toBe('# Planning\n\n| Radier | 13/11/2026 |')
   })
 
+  it('reads a test bench’s .result as text, in UTF-8 or in the Windows code page', async () => {
+    expect(await fileText('result', bytes('Essai 6.3.5 : conforme\n'))).toBe('Essai 6.3.5 : conforme')
+    // « Température » as an older tool writes it: one byte for the é, which UTF-8 refuses.
+    const latin = Uint8Array.from('Température 25 °C', (char) => char.charCodeAt(0))
+    expect(await fileText('result', latin)).toBe('Température 25 °C')
+  })
+
   it('reads a workbook sheet by sheet', async () => {
     const workbook = buildXlsx([
       {
@@ -78,7 +85,7 @@ describe('fileText', () => {
   })
 
   it('knows which files it can read', () => {
-    expect(['pdf', 'PDF', 'docx', 'xlsx', 'pptx', 'md', 'csv', 'html'].every(isReadable)).toBe(true)
+    expect(['pdf', 'PDF', 'docx', 'xlsx', 'pptx', 'md', 'csv', 'html', 'result'].every(isReadable)).toBe(true)
     expect(['zip', 'msg', 'dwg', 'tiff'].some(isReadable)).toBe(false)
   })
 })

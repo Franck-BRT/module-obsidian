@@ -35,7 +35,7 @@ export interface SourceDeps {
 }
 
 /** The kinds of document read outside the library: those the library knows how to read. */
-export const DOCUMENT_EXTENSIONS = new Set(['pdf', 'docx', 'xlsx', 'pptx', 'msg', 'eml'])
+export const DOCUMENT_EXTENSIONS = new Set(['pdf', 'docx', 'xlsx', 'pptx', 'msg', 'eml', 'result'])
 
 /** Larger than this, a file is left out: reading it would hold the whole indexing up. */
 export const MAX_DOCUMENT_BYTES = 40 * 1024 * 1024

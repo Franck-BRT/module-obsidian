@@ -85,6 +85,7 @@ const FAMILY_OF: Record<string, DocFamily> = {
   eml: 'mail',
   md: 'note',
   txt: 'note',
+  result: 'note',
   html: 'note',
   htm: 'note'
 }

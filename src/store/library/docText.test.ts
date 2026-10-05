@@ -36,6 +36,7 @@ describe('keeping a text', () => {
     expect(decodeText(`pm-text 1 ok 1\ntexte`)).toEqual({ state: 'ok', text: 'texte', mtime: 1 })
     // What it could not read — a locked PDF — the reader of now tries again.
     expect(decodeText(`pm-text 1 unreadable 1\n`)).toBeNull()
+    expect(decodeText(`pm-text ${TEXT_VERSION - 1} unsupported 1\n`)).toBeNull()
     expect(decodeText(`pm-text ${TEXT_VERSION} unreadable 1\n`)).toEqual({ state: 'unreadable', text: '', mtime: 1 })
     expect(decodeText(`pm-text ${TEXT_VERSION + 1} ok 1\ntexte`)).toBeNull()
     expect(decodeText(`pm-text ${TEXT_VERSION} what 1\ntexte`)).toBeNull()

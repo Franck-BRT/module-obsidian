@@ -51,6 +51,7 @@ describe('libraryDoc', () => {
   it('sorts files into kinds by extension, whatever its case', () => {
     expect(familyOf('a/Plan.PDF')).toBe('pdf')
     expect(familyOf('CCTP.docx')).toBe('word')
+    expect(familyOf('Essais/banc.result')).toBe('note')
     expect(familyOf('Planning.xlsx')).toBe('sheet')
     expect(familyOf('Revue.pptx')).toBe('slides')
     expect(familyOf('photo.jpeg')).toBe('image')
