@@ -302,6 +302,14 @@ describe('DocLibrary', () => {
     expect(vault.modifyCount.get('Bibliothèque/x.md') ?? 0).toBe(before)
   })
 
+  it('gathers a document in collections, kept in its record, and takes it out again', async () => {
+    await library.pour([outside('x.pdf', 'x')], { projects: [], move: false, today: TODAY })
+    await library.setCollections(library.docs()[0], ['CCTP Lot 02', ' Normes ', 'CCTP Lot 02'])
+    expect(library.docs()[0].collections).toEqual(['CCTP Lot 02', 'Normes'])
+    await library.setCollections(library.docs()[0], [])
+    expect(library.docs()[0].collections).toEqual([])
+  })
+
   it('files a document again, the fields given replacing, tags added, and takes tags off', async () => {
     await library.pour([outside('x.pdf', 'x')], {
       projects: [],

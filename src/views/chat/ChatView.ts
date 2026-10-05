@@ -104,7 +104,8 @@ import {
   type LibrarySource
 } from '../../store/chat/libraryRetrieval'
 import { LibraryDocPicker } from '../documents/LibraryDocPicker'
-import { sortDocs, type LibraryDoc } from '../../store/library/libraryDoc'
+import { collectionNames, inCollection, sortDocs, type LibraryDoc } from '../../store/library/libraryDoc'
+import { DocPickModal } from '../documents/collections'
 import { keepDroppedFile } from '../../store/chat/keepFile'
 import { chatModel, chatModels } from '../../store/chat/chatModels'
 import { availablePrompts, parsePrompts, type ChatPrompt } from '../../store/chat/chatPrompts'
@@ -195,6 +196,12 @@ export class ChatView extends ItemView {
   private skills: string[] = []
   /** Whether each question is looked up in the whole library — documents and notes — first. */
   private searchLibrary = false
+  /** How the library is searched: by the vault index — meaning and words — when it is on, or by words in the library. */
+  private searchMode: 'auto' | 'words' = 'auto'
+  /** What the search is held to: the whole library, a collection, documents chosen by hand. */
+  private searchScope: { kind: 'all' } | { kind: 'collection'; name: string } | { kind: 'docs'; files: string[] } = {
+    kind: 'all'
+  }
   /** What each question was looked up as, when a follow-up was made to stand alone. */
   private lookedUp = new WeakMap<ChatTurn, string>()
   /** The passages each question was given, by the path of their source: what its replies cite. */
@@ -396,11 +403,13 @@ export class ChatView extends ItemView {
     if (this.searchLibrary) {
       const row = el.createDiv('pm-chat-context-row pm-chat-library-row')
       setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'library-big')
+      const byIndex = this.byIndex()
       row.createSpan({
         cls: 'pm-chat-context-name',
-        text: this.plugin.ragIndexer.ready ? t('chat.vaultOn') : t('chat.libraryOn'),
-        attr: { title: this.plugin.ragIndexer.ready ? t('chat.vaultOnDesc') : t('chat.libraryOnDesc') }
+        text: byIndex ? t('chat.vaultOn') : t('chat.libraryOn'),
+        attr: { title: byIndex ? t('chat.vaultOnDesc') : t('chat.libraryOnDesc') }
       })
+      this.renderSearchChoices(row)
       const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.libraryOff') } })
       explain(off, t('chat.libraryOff'), t('tip.chat.libraryOff'))
       setIcon(off, 'x')
@@ -756,6 +765,68 @@ export class ChatView extends ItemView {
     }
   }
 
+  /** Whether the questions are looked up in the vault index: on, and not set to the library's words. */
+  private byIndex(): boolean {
+    return this.searchMode === 'auto' && this.plugin.ragIndexer.ready
+  }
+
+  /** The files the search is held to; null for the whole library — and, by the index, the whole vault. */
+  private scopeFiles(): string[] | null {
+    const scope = this.searchScope
+    if (scope.kind === 'all') return null
+    if (scope.kind === 'docs') return scope.files
+    return this.plugin.library
+      .docs()
+      .filter((doc) => doc.file && inCollection(doc, scope.name))
+      .map((doc) => doc.file)
+  }
+
+  /** Where the search looks — all, a collection, documents chosen — and, with the index on, how. */
+  private renderSearchChoices(row: HTMLElement): void {
+    const scope = row.createEl('select', { cls: 'dropdown pm-chat-scope' })
+    scope.createEl('option', { value: 'all', text: t('chat.scope.all') })
+    const names = collectionNames(this.plugin.library.docs())
+    for (const name of names) {
+      scope.createEl('option', { value: `c:${name}`, text: t('chat.scope.collection', { name }) })
+    }
+    const chosen = this.searchScope.kind === 'docs' ? this.searchScope.files.length : 0
+    scope.createEl('option', {
+      value: 'docs',
+      text: chosen ? t('chat.scope.docs', { count: chosen }) : t('chat.scope.pick')
+    })
+    const current = this.searchScope
+    scope.value = current.kind === 'all' ? 'all' : current.kind === 'docs' ? 'docs' : `c:${current.name}`
+    explain(scope, t('chat.scope.title'), t('tip.chat.scope'))
+    scope.addEventListener('change', () => {
+      const value = scope.value
+      if (value === 'docs') {
+        const before = this.searchScope.kind === 'docs' ? this.searchScope.files : []
+        new DocPickModal(
+          this.plugin,
+          before,
+          (path) => this.plugin.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, ''),
+          (files) => {
+            this.searchScope = files.length ? { kind: 'docs', files } : { kind: 'all' }
+            this.renderContext()
+          }
+        ).open()
+        return
+      }
+      this.searchScope = value.startsWith('c:') ? { kind: 'collection', name: value.slice(2) } : { kind: 'all' }
+      this.renderContext()
+    })
+    if (!this.plugin.ragIndexer.ready) return
+    const mode = row.createEl('select', { cls: 'dropdown pm-chat-mode' })
+    mode.createEl('option', { value: 'auto', text: t('chat.mode.index') })
+    mode.createEl('option', { value: 'words', text: t('chat.mode.words') })
+    mode.value = this.searchMode
+    explain(mode, t('chat.mode.title'), t('tip.chat.mode'))
+    mode.addEventListener('change', () => {
+      this.searchMode = mode.value === 'words' ? 'words' : 'auto'
+      this.renderContext()
+    })
+  }
+
   /** Each question looked up in the whole library first, or no longer. */
   toggleLibrary(on = !this.searchLibrary): void {
     this.searchLibrary = on
@@ -797,11 +868,14 @@ export class ChatView extends ItemView {
    * libraries by their words otherwise.
    */
   private async libraryBlock(question: ChatTurn): Promise<string> {
-    if (this.plugin.ragIndexer.ready) {
+    const only = this.scopeFiles()
+    if (this.byIndex()) {
       await this.plugin.ragIndex.load(this.plugin.settings.llm.modelEmbed.trim())
-      if (this.plugin.ragIndex.passageCount) return this.vaultBlock(question)
+      if (this.plugin.ragIndex.passageCount) return this.vaultBlock(question, only)
     }
-    const sources = await this.librarySources()
+    // Held to some documents, the search looks through those alone: the notes are left.
+    const all = await this.librarySources()
+    const sources = only ? all.filter((source) => source.kind === 'document' && only.includes(source.path)) : all
     const asked = this.turns.filter((turn) => turn.role === 'user' && !turn.failed)
     const upTo = asked.slice(0, asked.indexOf(question) + 1).map((turn) => turn.content)
     const found = lookUp(sources, upTo.length ? upTo : [question.content])
@@ -819,7 +893,7 @@ export class ChatView extends ItemView {
    * the chat model, then searched by its words and its meaning, the best passages put in
    * order by the reranking model.
    */
-  private async vaultBlock(question: ChatTurn): Promise<string> {
+  private async vaultBlock(question: ChatTurn, only: string[] | null = null): Promise<string> {
     const llm = this.plugin.settings.llm
     const client = this.llm
     const at = this.turns.indexOf(question)
@@ -841,7 +915,7 @@ export class ChatView extends ItemView {
         embed: async (text) => (await client.embed([text], llm.modelEmbed))[0],
         rerank: llm.modelRerank.trim() ? (asked, texts) => client.rerank(asked, texts, llm.modelRerank) : undefined
       },
-      { ...SEARCH_DEFAULTS, projects: currentProjects(this.turns) }
+      { ...SEARCH_DEFAULTS, projects: currentProjects(this.turns), ...(only ? { only } : {}) }
     )
     question.library = report.found.map((each) => each.entry.path)
     // Those found first, then those given for what is around them.

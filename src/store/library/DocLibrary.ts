@@ -183,6 +183,7 @@ export class DocLibrary {
       lot: text(fm.lot),
       issuer: text(fm.issuer),
       tags: cleanTags(stringList(fm.tags)),
+      collections: [...new Set(stringList(fm.collections))],
       ...(typeof fm.previous === 'string' && this.resolve(fm.previous, record.path)
         ? { previous: this.resolve(fm.previous, record.path)?.path }
         : {}),
@@ -412,6 +413,17 @@ export class DocLibrary {
 
   private projectLink(path: string, from: string): string {
     return refLink(this.app, path, this.projectTitle(path), from)
+  }
+
+  /** Says which collections a document is gathered in, replacing what its record said; none, the property goes. */
+  async setCollections(doc: LibraryDoc, collections: string[]): Promise<void> {
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return
+    const names = [...new Set(collections.map((name) => name.trim()).filter(Boolean))]
+    await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+      if (names.length) fm.collections = names
+      else delete fm.collections
+    })
   }
 
   /** Gives a document the projects it did not have yet; returns all of them. */

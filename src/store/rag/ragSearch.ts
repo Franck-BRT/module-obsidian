@@ -4,6 +4,7 @@ import { embeddingInput } from './ragChunk'
 import type { RagEntry, RagIndex, RagKind } from './RagIndex'
 import { inProject } from './ragSources'
 import { fuseRanks, similarity, topIndexes, unit } from './ragVectors'
+import { withSections } from './ragSections'
 
 /**
  * A question looked up in the whole vault, as finely as the gateway allows.
@@ -33,6 +34,8 @@ export interface SearchOptions {
   keep: number
   /** Projects the conversation is about: what belongs to them comes a little ahead. */
   projects: string[]
+  /** The sources searched, by path, when the search is held to some — a collection, documents chosen; absent, all. */
+  only?: string[]
 }
 
 export const SEARCH_DEFAULTS: SearchOptions = { budget: 36000, candidates: 30, keep: 8, projects: [] }
@@ -127,7 +130,9 @@ export async function searchVault(
   options: SearchOptions = SEARCH_DEFAULTS
 ): Promise<SearchReport> {
   const hits: Hit[] = []
-  for (const entry of index.all()) entry.passages.forEach((_, at) => hits.push({ entry, at }))
+  const only = options.only ? new Set(options.only) : null
+  const entries = index.all().filter((entry) => !only || only.has(entry.path))
+  for (const entry of entries) entry.passages.forEach((_, at) => hits.push({ entry, at }))
   const used = { vectors: false, rerank: false }
   if (!hits.length || !query.trim()) return { found: [], used }
 
@@ -191,15 +196,14 @@ export async function searchVault(
     take(hits[at].entry, hits[at].at - 1, true)
     take(hits[at].entry, hits[at].at + 1, true)
   }
-  return {
-    found: order.map((entry) => ({
-      entry,
-      passages: [...(chosen.get(entry) ?? new Map<number, boolean>())]
-        .sort((a, b) => a[0] - b[0])
-        .map(([at, around]) => ({ at, heading: entry.passages[at].heading, text: entry.passages[at].text, around }))
-    })),
-    used
-  }
+  const found = order.map((entry) => ({
+    entry,
+    passages: [...(chosen.get(entry) ?? new Map<number, boolean>())]
+      .sort((a, b) => a[0] - b[0])
+      .map(([at, around]) => ({ at, heading: entry.passages[at].heading, text: entry.passages[at].text, around }))
+  }))
+  // Whole sections, as the question or what was found points to them.
+  return { found: withSections(found, entries, query, options.budget), used }
 }
 
 export interface VaultContextWords {

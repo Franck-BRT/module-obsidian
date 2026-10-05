@@ -23,6 +23,7 @@ import { weeklyFacts } from '../../src/store/weekly/weeklyFacts'
 import { weeklyNote } from '../../src/views/weekly/weeklyText'
 import { projectMetrics } from '../../src/store/Metrics'
 import { SAMPLE_MSPDI } from './sample'
+import { CollectionsModal, DocPickModal } from '../../src/views/documents/collections'
 
 const query = new URLSearchParams(location.search)
 const screen = query.get('screen') ?? 'reserves'
@@ -105,6 +106,19 @@ async function main(): Promise<void> {
       modal.fileName = 'Planning B12.xml'
       modal.plan = readMsProject(SAMPLE_MSPDI)
       modal.render()
+      break
+    }
+    case 'collections': {
+      const docs = library.docs()
+      if (docs[0]) await library.setCollections(docs[0], ['CCTP Lot 02', 'Normes'])
+      if (docs[1]) await library.setCollections(docs[1], ['Normes'])
+      new CollectionsModal(plugin, library.docs().slice(0, 2), () => {}).open()
+      break
+    }
+    case 'docpick': {
+      const docs = library.docs()
+      if (docs[0]) await library.setCollections(docs[0], ['Normes'])
+      new DocPickModal(plugin, docs.slice(0, 1).map((doc) => doc.file), (p: string) => p, () => {}).open()
       break
     }
     case 'weekly': {

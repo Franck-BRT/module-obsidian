@@ -1218,6 +1218,43 @@ export const en = {
   'tip.library.rag.missing': 'Not in the vault index yet: it comes in at the next indexing (Settings → Vault search).',
   'tip.library.rag.excluded':
     'In a folder left out of the vault index (Settings → Vault search): the chat finds it only through the library search.',
+  'collection.docs.button': 'Collections…',
+  'tip.library.collections':
+    'Gathers documents in collections — a phase, a trade, a tender — so the chat’s questions can be held to one.',
+  'collection.docs.title': { one: 'Collections of {count} document', other: 'Collections of {count} documents' },
+  'collection.docs.titleOne': 'Collections of « {title} »',
+  'collection.docs.intro':
+    'Tick the collections to gather these documents in; untick to take them out. A half-ticked box leaves each document as it is.',
+  'collection.docs.none': 'No collection yet: make one below.',
+  'collection.docs.newPlaceholder': 'New collection (e.g. Specs Phase 02)',
+  'collection.docs.add': 'Create',
+  'collection.docs.saved': { one: '{count} document updated.', other: '{count} documents updated.' },
+  'collection.docs.all': 'All collections',
+  'collection.docs.filterOn': 'Show the documents of the collection « {name} ».',
+  'chat.scope.title': 'Search in',
+  'tip.chat.scope':
+    'Holds the search to a collection of documents, or to documents chosen by hand. « Whole library » searches everywhere (and, with the index, the whole vault).',
+  'chat.scope.all': 'Whole library',
+  'chat.scope.collection': 'Collection: {name}',
+  'chat.scope.pick': 'Choose documents…',
+  'chat.scope.docs': { one: '{count} document chosen…', other: '{count} documents chosen…' },
+  'chat.scope.pickTitle': 'Documents to search',
+  'chat.scope.pickCount': { one: '{count} document ticked', other: '{count} documents ticked' },
+  'chat.scope.pickMore': {
+    one: '… and {count} more: narrow the search.',
+    other: '… and {count} more: narrow the search.'
+  },
+  'chat.scope.keepAs': 'Keep this choice as a collection (name, optional)',
+  'chat.scope.pickDone': 'Search these documents',
+  'chat.scope.kept': {
+    one: 'Collection « {name} »: {count} document.',
+    other: 'Collection « {name} »: {count} documents.'
+  },
+  'chat.mode.title': 'Search mode',
+  'tip.chat.mode':
+    'By the index: searching by meaning and by words in the vault index. By words: searching the library alone, by the question’s words, section numbers and section headings.',
+  'chat.mode.index': 'By the index (meaning and words)',
+  'chat.mode.words': 'By words (library)',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

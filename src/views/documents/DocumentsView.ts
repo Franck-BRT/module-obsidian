@@ -16,6 +16,7 @@ import type PMPlugin from '../../main'
 import { formatBytes } from '../../store/email/EmailMessage'
 import { openDocumentFile } from '../../store/DocumentStore'
 import {
+  collectionNames,
   DOC_FAMILIES,
   FAMILY_ICONS,
   familyOf,
@@ -56,6 +57,7 @@ import { explain } from '../../ui/explain'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
 import { ragDocState, type RagDocState } from './ragState'
+import { CollectionsModal } from './collections'
 import {
   dragRows,
   filteredFolder,
@@ -354,6 +356,23 @@ export class DocumentsView extends ItemView {
       }
       select(main, folderOptions(folders, t('library.rootFolder')), this.query.folder ?? '', (folder) =>
         this.openFolder(folder)
+      )
+    }
+    // The collections, once there is one: a set of documents shown, and asked, alone.
+    const collections = collectionNames(this.plugin.library.docs())
+    if (collections.length || this.query.collection) {
+      const current = this.query.collection ?? ''
+      if (current && !collections.includes(current)) collections.unshift(current)
+      select(
+        main,
+        [['', t('collection.docs.all')], ...collections.map((name): [string, string] => [name, name])],
+        current,
+        (collection) => {
+          this.query = { ...this.query, collection }
+          this.shown = PAGE
+          this.renderFilters()
+          this.renderBody()
+        }
       )
     }
     select(
@@ -662,6 +681,20 @@ export class DocumentsView extends ItemView {
     )
     tipped(
       new ButtonComponent(bar)
+        .setButtonText(t('collection.docs.button'))
+        .setIcon('library')
+        .onClick(() =>
+          new CollectionsModal(
+            this.plugin,
+            all.filter((doc) => this.picked.has(doc.record)),
+            () => this.redrawSoon()
+          ).open()
+        ),
+      t('collection.docs.button'),
+      t('tip.library.collections')
+    )
+    tipped(
+      new ButtonComponent(bar)
         .setButtonText(t('folders.moveTo'))
         .setIcon('folder-input')
         .onClick(() => this.moveToFolder(all.filter((doc) => this.picked.has(doc.record)))),
@@ -880,6 +913,19 @@ export class DocumentsView extends ItemView {
       explain(chip, this.projectTitle(path), t('library.filterOn', { project: this.projectTitle(path) }))
       chip.addEventListener('click', () => {
         this.query = { ...this.query, project: path }
+        this.shown = PAGE
+        this.renderFilters()
+        this.renderBody()
+      })
+    }
+    // Its collections, each one a filter.
+    for (const name of doc.collections ?? []) {
+      const chip = chips.createEl('button', { cls: 'pm-docs-chip pm-docs-collection' })
+      setIcon(chip.createSpan({ cls: 'pm-docs-rag-icon' }), 'library')
+      chip.createSpan({ text: name })
+      explain(chip, name, t('collection.docs.filterOn', { name }))
+      chip.addEventListener('click', () => {
+        this.query = { ...this.query, collection: name }
         this.shown = PAGE
         this.renderFilters()
         this.renderBody()
@@ -1113,6 +1159,12 @@ export class DocumentsView extends ItemView {
             await this.loadRegister()
           })
         )
+    )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('collection.docs.button'))
+        .setIcon('library')
+        .onClick(() => new CollectionsModal(this.plugin, [doc], () => this.redrawSoon()).open())
     )
     menu.addItem((item) =>
       item

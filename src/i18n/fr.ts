@@ -1258,6 +1258,43 @@ export const fr: Catalog = {
     'Pas encore dans l’index du coffre : il y entrera à la prochaine indexation (Réglages → Recherche dans le coffre).',
   'tip.library.rag.excluded':
     'Dans un dossier exclu de l’index du coffre (Réglages → Recherche dans le coffre) : le chat ne le trouve que par la recherche dans la bibliothèque.',
+  'collection.docs.button': 'Collections…',
+  'tip.library.collections':
+    'Range les documents dans des collections — un lot, un métier, une consultation — pour pouvoir limiter les questions du chat à une collection.',
+  'collection.docs.title': { one: 'Collections de {count} document', other: 'Collections de {count} documents' },
+  'collection.docs.titleOne': 'Collections de « {title} »',
+  'collection.docs.intro':
+    'Cochez les collections où ranger ces documents ; décochez pour les en retirer. Une case à moitié cochée laisse chaque document comme il est.',
+  'collection.docs.none': 'Aucune collection pour l’instant : créez-en une ci-dessous.',
+  'collection.docs.newPlaceholder': 'Nouvelle collection (ex. CCTP Lot 02)',
+  'collection.docs.add': 'Créer',
+  'collection.docs.saved': { one: '{count} document mis à jour.', other: '{count} documents mis à jour.' },
+  'collection.docs.all': 'Toutes les collections',
+  'collection.docs.filterOn': 'Afficher les documents de la collection « {name} ».',
+  'chat.scope.title': 'Rechercher dans',
+  'tip.chat.scope':
+    'Limite la recherche à une collection de documents, ou à des documents choisis à la main. « Toute la bibliothèque » cherche partout (et, avec l’index, dans tout le coffre).',
+  'chat.scope.all': 'Toute la bibliothèque',
+  'chat.scope.collection': 'Collection : {name}',
+  'chat.scope.pick': 'Choisir des documents…',
+  'chat.scope.docs': { one: '{count} document choisi…', other: '{count} documents choisis…' },
+  'chat.scope.pickTitle': 'Documents où chercher',
+  'chat.scope.pickCount': { one: '{count} document coché', other: '{count} documents cochés' },
+  'chat.scope.pickMore': {
+    one: '… et {count} autre : affinez la recherche.',
+    other: '… et {count} autres : affinez la recherche.'
+  },
+  'chat.scope.keepAs': 'Garder ce choix comme collection (nom, facultatif)',
+  'chat.scope.pickDone': 'Chercher dans ces documents',
+  'chat.scope.kept': {
+    one: 'Collection « {name} » : {count} document.',
+    other: 'Collection « {name} » : {count} documents.'
+  },
+  'chat.mode.title': 'Mode de recherche',
+  'tip.chat.mode':
+    'Par l’index : la recherche par le sens et par les mots dans l’index du coffre. Par les mots : la recherche dans la bibliothèque seule, par les mots de la question, les numéros de paragraphe et les titres de section.',
+  'chat.mode.index': 'Par l’index (sens et mots)',
+  'chat.mode.words': 'Par les mots (bibliothèque)',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

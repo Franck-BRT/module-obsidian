@@ -990,3 +990,16 @@ button.pm-chat-model-pick:not(.clickable-icon):disabled {
 .pm-history-undone {
   color: var(--text-faint);
 }
+
+/* Where the library search looks, and how: two small choices on its row. */
+.pm-chat-library-row {
+  flex-wrap: wrap;
+}
+
+.pm-chat-scope,
+.pm-chat-mode {
+  height: auto;
+  max-width: 220px;
+  padding: 0 var(--size-4-4) 0 var(--size-2-3);
+  font-size: var(--font-ui-smaller);
+}

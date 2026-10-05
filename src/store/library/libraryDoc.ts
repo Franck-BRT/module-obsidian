@@ -42,6 +42,8 @@ export interface LibraryDoc {
   /** Who issued it: a firm, a person. */
   issuer: string
   tags: string[]
+  /** The collections it is gathered in — sets of documents a search can be held to —, by their names. */
+  collections?: string[]
   /** The library's folder its record is in, by its path under the library's; '' at its root, or outside it. */
   folder: string
   /** The version it follows — the issue before it —, by its record's path; absent when none. */
@@ -171,6 +173,29 @@ export function linkPath(raw: string): string {
   return inner.split('|')[0].split('#')[0].trim()
 }
 
+/** Whether a document is gathered in a collection, the name's case and accents aside. */
+export function inCollection(doc: Pick<LibraryDoc, 'collections'>, name: string): boolean {
+  return (doc.collections ?? []).some((one) => fold(one) === fold(name))
+}
+
+/** The collections the library's documents are gathered in, by name, the fullest first. */
+export function collectionNames(docs: Pick<LibraryDoc, 'collections'>[]): string[] {
+  const counts = new Map<string, number>()
+  for (const doc of docs) for (const name of doc.collections ?? []) counts.set(name, (counts.get(name) ?? 0) + 1)
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name)
+}
+
+/** The collections each document gets: those ticked added, those unticked taken off, the others left. */
+export function nextCollections(
+  doc: Pick<LibraryDoc, 'collections'>,
+  ticked: Set<string>,
+  unticked: Set<string>
+): string[] {
+  const kept = (doc.collections ?? []).filter((name) => ![...unticked].some((off) => fold(off) === fold(name)))
+  for (const name of ticked) if (!kept.some((one) => fold(one) === fold(name))) kept.push(name)
+  return kept
+}
+
 /** Lower case, accents off: « Échéancier » is found by typing « echeancier ». */
 export function fold(text: string): string {
   return text
@@ -194,6 +219,8 @@ export interface DocQuery {
   issuer?: string
   /** '' for any tag. */
   tag?: string
+  /** '' for any collection; or a collection's name. */
+  collection?: string
   /** '' for every folder, `AT_ROOT`, or a folder of the library — its own folders included. */
   folder?: string
 }
@@ -227,6 +254,7 @@ export function matchesDoc(
     return false
   }
   if (query.tag && !doc.tags.some((tag) => fold(tag) === fold(query.tag ?? ''))) return false
+  if (query.collection && !inCollection(doc, query.collection)) return false
   if (!inFolder(doc.folder, query.folder)) return false
   const words = fold(query.text).split(/\s+/).filter(Boolean)
   if (!words.length) return true

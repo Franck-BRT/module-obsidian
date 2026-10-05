@@ -929,3 +929,103 @@ a.pm-docs-clear-filters {
   color: var(--text-faint);
   font-style: italic;
 }
+
+/* ---- Collections of documents ---------------------------------------------- */
+
+.pm-docs-chip.pm-docs-collection {
+  gap: var(--size-2-2);
+  border-color: color-mix(in srgb, var(--interactive-accent) 40%, transparent);
+}
+
+.pm-collections-intro {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-collections-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+  max-height: 320px;
+  overflow: auto;
+  margin-bottom: var(--size-4-3);
+}
+
+.pm-collections-row,
+.pm-docpick-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-3);
+  cursor: pointer;
+}
+
+.pm-collections-icon,
+.pm-docpick-icon {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.pm-collections-icon svg,
+.pm-docpick-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pm-collections-none,
+.pm-docpick-more,
+.pm-docpick-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-collections-new,
+.pm-docpick-keep {
+  display: flex;
+  gap: var(--size-2-3);
+  margin-top: var(--size-4-2);
+}
+
+.pm-collections-new input,
+.pm-docpick-keep input {
+  flex: 1;
+}
+
+.pm-collections-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-4);
+}
+
+.pm-docpick-search {
+  width: 100%;
+  margin-bottom: var(--size-4-2);
+}
+
+.pm-docpick-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+  max-height: 360px;
+  overflow: auto;
+  margin-bottom: var(--size-4-2);
+}
+
+.pm-docpick-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-docpick-detail {
+  flex: 0 1 auto;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40%;
+}

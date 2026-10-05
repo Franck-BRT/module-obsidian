@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { AT_ROOT } from '../folderFilter'
 import {
+  collectionNames,
   familyOf,
+  inCollection,
+  nextCollections,
   fingerprint,
   fold,
   isLibraryDoc,
@@ -180,5 +183,27 @@ describe('libraryDoc', () => {
     expect(inFolder('Plans/Lot 2')).toEqual(['c'])
     // A folder's name is found by a search too.
     expect(matchesDoc(lot, { text: 'lot 2', project: '', family: '' }, title)).toBe(true)
+  })
+})
+
+describe('collections of documents', () => {
+  const a = doc({ title: 'CCTP', collections: ['CCTP Lot 02', 'Normes'] })
+  const b = doc({ title: 'NF C 15-100', collections: ['Normes'] })
+  const c = doc({ title: 'Plan' })
+
+  it('are named by what the documents say, the fullest first, and filter, case and accents aside', () => {
+    expect(collectionNames([a, b, c])).toEqual(['Normes', 'CCTP Lot 02'])
+    expect(inCollection(a, 'cctp lot 02')).toBe(true)
+    expect(inCollection(c, 'Normes')).toBe(false)
+    const query = { text: '', project: '', family: '' as const, collection: 'normes' }
+    expect([a, b, c].filter((one) => matchesDoc(one, query, (p) => p)).map((one) => one.title)).toEqual([
+      'CCTP',
+      'NF C 15-100'
+    ])
+  })
+
+  it('change by what is ticked and unticked, the rest left as it was', () => {
+    expect(nextCollections(a, new Set(['Lot 03']), new Set(['normes']))).toEqual(['CCTP Lot 02', 'Lot 03'])
+    expect(nextCollections(c, new Set(['Normes']), new Set())).toEqual(['Normes'])
   })
 })
