@@ -55,6 +55,7 @@ import { translatable } from '../translate/translateDocs'
 import { explain } from '../../ui/explain'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
+import { ragDocState, type RagDocState } from './ragState'
 import {
   dragRows,
   filteredFolder,
@@ -80,6 +81,39 @@ const PAGE = 200
  */
 /** How long one page may take before the library says it is slow: models read a page in a minute or two. */
 const SLOW_PAGE_SECONDS = 300
+
+const RAG_ICON: Record<RagDocState, string> = {
+  indexed: 'database',
+  stale: 'refresh-cw',
+  missing: 'database-zap',
+  excluded: 'circle-slash'
+}
+
+function ragLabel(state: RagDocState): string {
+  switch (state) {
+    case 'indexed':
+      return t('library.rag.indexed')
+    case 'stale':
+      return t('library.rag.stale')
+    case 'missing':
+      return t('library.rag.missing')
+    case 'excluded':
+      return t('library.rag.excluded')
+  }
+}
+
+function ragTip(state: RagDocState, passages: number): string {
+  switch (state) {
+    case 'indexed':
+      return t('tip.library.rag.indexed', { count: passages })
+    case 'stale':
+      return t('tip.library.rag.stale')
+    case 'missing':
+      return t('tip.library.rag.missing')
+    case 'excluded':
+      return t('tip.library.rag.excluded')
+  }
+}
 
 export class DocumentsView extends ItemView {
   private query: DocQuery = { text: '', project: '', family: '' }
@@ -168,6 +202,11 @@ export class DocumentsView extends ItemView {
     this.registerInterval(window.setInterval(() => this.tickScan(), 1000))
     void this.plugin.libraryText.refresh(this.plugin.library.docs())
     void this.loadRegister()
+    // The vault index, where it is on: which documents it holds, said beside their projects.
+    this.register(this.plugin.ragIndexer.onChange(() => this.textSoon()))
+    if (this.plugin.settings.rag.enabled) {
+      void this.plugin.ragIndex.load(this.plugin.settings.llm.modelEmbed.trim()).then(() => this.textSoon())
+    }
 
     this.registerDomEvent(this.containerEl, 'dragover', (event) => {
       if (!event.dataTransfer?.types.includes('Files')) return
@@ -834,6 +873,7 @@ export class DocumentsView extends ItemView {
     this.renderRegister(main, doc)
 
     const chips = main.createDiv('pm-docs-projects')
+    this.renderRagChip(chips, doc)
     if (!doc.projects.length) chips.createSpan({ cls: 'pm-docs-chip is-none', text: t('library.noProject') })
     for (const path of doc.projects) {
       const chip = chips.createEl('button', { cls: 'pm-docs-chip', text: this.projectTitle(path) })
@@ -865,6 +905,16 @@ export class DocumentsView extends ItemView {
     const more = new ExtraButtonComponent(actions).setIcon('more-vertical')
     more.extraSettingsEl.addEventListener('click', (event) => this.showMenu(doc, event))
     explain(more.extraSettingsEl, t('library.more'), t('tip.library.more'))
+  }
+
+  /** Whether the vault index holds it — what the chat finds it by —, beside its projects. */
+  private renderRagChip(chips: HTMLElement, doc: LibraryDoc): void {
+    const rag = ragDocState(this.plugin, doc)
+    if (!rag) return
+    const chip = chips.createSpan({ cls: `pm-docs-chip pm-docs-rag is-${rag.state}` })
+    setIcon(chip.createSpan({ cls: 'pm-docs-rag-icon' }), RAG_ICON[rag.state])
+    chip.createSpan({ text: ragLabel(rag.state) })
+    explain(chip, ragLabel(rag.state), ragTip(rag.state, rag.passages))
   }
 
   /**

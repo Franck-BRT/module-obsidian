@@ -269,6 +269,38 @@ button.pm-docs-chip:not(.clickable-icon):hover {
   color: var(--text-faint);
 }
 
+/* Where the document stands in the vault index: a chip beside its projects, its state in
+   words and an icon, the colour only agreeing with them. */
+.pm-docs-rag {
+  gap: var(--size-2-2);
+}
+
+.pm-docs-rag-icon {
+  display: inline-flex;
+}
+
+.pm-docs-rag-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.pm-docs-chip.pm-docs-rag.is-indexed {
+  border-color: color-mix(in srgb, var(--color-green) 45%, transparent);
+  color: var(--color-green);
+}
+
+.pm-docs-chip.pm-docs-rag.is-stale {
+  border-color: color-mix(in srgb, var(--color-orange) 45%, transparent);
+  color: var(--color-orange);
+}
+
+.pm-docs-chip.pm-docs-rag.is-missing,
+.pm-docs-chip.pm-docs-rag.is-excluded {
+  border-style: dashed;
+  background: none;
+  color: var(--text-faint);
+}
+
 .pm-docs-actions {
   display: flex;
   flex: none;

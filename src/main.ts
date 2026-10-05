@@ -46,6 +46,7 @@ import { remindUnansweredChases } from './views/chase/chaseReminder'
 import { createDemo, removeDemo } from './views/demo/demo'
 import { remindLateVisas } from './views/visa/visaWaits'
 import { runWeeklyReports } from './views/weekly/weeklyReport'
+import { ragFilingWords } from './views/documents/ragState'
 import { IcsExportModal } from './views/calendar/icsExport'
 import { PlanningImportModal } from './views/planning/PlanningImportModal'
 import { configureExplain } from './ui/explain'
@@ -279,12 +280,7 @@ export default class PMPlugin extends Plugin {
           library: this.library,
           texts: this.libraryText,
           excluded: excludedFolders(this.settings.rag.exclude),
-          words: {
-            category: t('rag.category'),
-            lot: t('rag.lot'),
-            issuer: t('rag.issuer'),
-            tags: t('rag.tags')
-          },
+          words: ragFilingWords(),
           ...(this.settings.rag.files
             ? {
                 files: {

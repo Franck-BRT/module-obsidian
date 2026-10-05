@@ -2,8 +2,8 @@ import { normalizePath, type App, type TFile } from 'obsidian'
 import { isChatNote } from '../chat/chatNote'
 import type { DocLibrary } from '../library/DocLibrary'
 import type { DocTextIndex } from '../library/DocTextIndex'
-import { extractText, type MailWords } from '../library/docText'
-import { isLibraryDoc, linkPath, stringList, titleFromName } from '../library/libraryDoc'
+import { extractText, type DocText, type MailWords } from '../library/docText'
+import { isLibraryDoc, linkPath, stringList, titleFromName, type LibraryDoc } from '../library/libraryDoc'
 import { noteBody } from '../notes/NoteLibrary'
 import { FRONTMATTER_KEY, TASK_FRONTMATTER_KEY } from '../YamlParser'
 import { propertyLines } from './ragChunk'
@@ -62,6 +62,23 @@ function kindOf(frontmatter: Record<string, unknown> | undefined): RagKind {
   return 'note'
 }
 
+/** How a document is filed, as the index reads it with what it says. */
+export function libraryFiling(doc: LibraryDoc, words: SourceDeps['words']): string {
+  return [
+    doc.category ? `${words.category}: ${doc.category}` : '',
+    doc.lot ? `${words.lot}: ${doc.lot}` : '',
+    doc.issuer ? `${words.issuer}: ${doc.issuer}` : '',
+    doc.tags.length ? `${words.tags}: ${doc.tags.join(', ')}` : ''
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+/** What a document of the library is indexed under: what it says and how it is filed — either changed, it is read again. */
+export function libraryKey(doc: LibraryDoc, entry: DocText | undefined, words: SourceDeps['words']): string {
+  return [doc.hash, entry?.state ?? 'none', entry?.mtime ?? 0, doc.title, libraryFiling(doc, words)].join('|')
+}
+
 /** The sources to index, the library's documents first: they are what a search most often wants. */
 export function vaultSources(deps: SourceDeps): RagSourceSpec[] {
   const { app, library, texts, excluded, words } = deps
@@ -71,20 +88,12 @@ export function vaultSources(deps: SourceDeps): RagSourceSpec[] {
 
   for (const doc of docs) {
     const entry = texts.entry(doc)
-    const filing = [
-      doc.category ? `${words.category}: ${doc.category}` : '',
-      doc.lot ? `${words.lot}: ${doc.lot}` : '',
-      doc.issuer ? `${words.issuer}: ${doc.issuer}` : '',
-      doc.tags.length ? `${words.tags}: ${doc.tags.join(', ')}` : ''
-    ]
-      .filter(Boolean)
-      .join('\n')
+    const filing = libraryFiling(doc, words)
     sources.push({
       path: doc.file,
       title: doc.title,
       kind: 'document',
-      // What it says, and how it is filed: either changed, it is read again.
-      key: [doc.hash, entry?.state ?? 'none', entry?.mtime ?? 0, doc.title, filing].join('|'),
+      key: libraryKey(doc, entry, words),
       projects: doc.projects,
       // Nothing read nor filed yet: known by its title, at least.
       read: async () => [filing, entry?.text ?? ''].filter(Boolean).join('\n\n') || doc.title

@@ -1205,6 +1205,19 @@ export const en = {
     one: '{count} still open, late ({late})',
     other: '{count} still open, {late} of them late'
   },
+  'library.rag.indexed': 'Indexed',
+  'library.rag.stale': 'To reindex',
+  'library.rag.missing': 'Not indexed',
+  'library.rag.excluded': 'Left out of the index',
+  'tip.library.rag.indexed': {
+    one: 'In the vault index ({count} passage): the chat finds it by its meaning as well as its words.',
+    other: 'In the vault index ({count} passages): the chat finds it by its meaning as well as its words.'
+  },
+  'tip.library.rag.stale':
+    'In the index, but as it was: the document, the text read from it or its filing changed since. It is read again at the next indexing.',
+  'tip.library.rag.missing': 'Not in the vault index yet: it comes in at the next indexing (Settings → Vault search).',
+  'tip.library.rag.excluded':
+    'In a folder left out of the vault index (Settings → Vault search): the chat finds it only through the library search.',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

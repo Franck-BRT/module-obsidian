@@ -1244,6 +1244,20 @@ export const fr: Catalog = {
     one: '{count} reste à lever, en retard ({late})',
     other: '{count} restent à lever, dont {late} en retard'
   },
+  'library.rag.indexed': 'Indexé',
+  'library.rag.stale': 'À réindexer',
+  'library.rag.missing': 'Non indexé',
+  'library.rag.excluded': 'Exclu de l’index',
+  'tip.library.rag.indexed': {
+    one: 'Dans l’index du coffre ({count} passage) : le chat le retrouve par son sens comme par ses mots.',
+    other: 'Dans l’index du coffre ({count} passages) : le chat le retrouve par son sens comme par ses mots.'
+  },
+  'tip.library.rag.stale':
+    'Dans l’index, mais tel qu’il était : le document, son texte lu ou son classement a changé depuis. Il sera relu à la prochaine indexation.',
+  'tip.library.rag.missing':
+    'Pas encore dans l’index du coffre : il y entrera à la prochaine indexation (Réglages → Recherche dans le coffre).',
+  'tip.library.rag.excluded':
+    'Dans un dossier exclu de l’index du coffre (Réglages → Recherche dans le coffre) : le chat ne le trouve que par la recherche dans la bibliothèque.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',
