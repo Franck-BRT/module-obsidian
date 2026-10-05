@@ -664,6 +664,12 @@ Ce projet et le projet « ${DEMO_C7} » sont fictifs. La commande **« Supprimer
 - [ ] La courbe : le budget étalé sur les dates des lots, l’engagé et le facturé jusqu’à aujourd’hui ; survoler une semaine donne ses chiffres.
 - [ ] Ordre du jour « Comité de pilotage » : le bloc budget ; rapport d’état **PDF** : la section « Budget ».
 
+## Rapport hebdomadaire
+- [ ] Commande **Générer les rapports hebdomadaires maintenant** : pour le B12 et le C7, une note « Point hebdomadaire » et le rapport d’état PDF dans le dossier « Rapports » de chaque projet.
+- [ ] La note : la synthèse rédigée par le modèle (si Sidonie est configurée), ce qui a changé (terminé, retards, jalons, décisions, documents, réserves, budget), la semaine prochaine, et le brouillon de mail.
+- [ ] Réglages → **Rapport hebdomadaire** : l’activer, choisir le jour et les destinataires ; « Ouvrir le brouillon dans la messagerie » remplit le mail.
+- [ ] Repousser une échéance puis relancer la commande la semaine suivante : la note dit « repoussé de … » et l’écart de fin prévue.
+
 ## Réserves
 - [ ] Onglet **Réserves** : quatre réserves de la réception des terrassements ; R-001 en retard (relancée il y a 3 jours), R-002 déclarée levée, R-003 levée, R-004 bloquante chez Garonne Bâtiment.
 - [ ] Barre de saisie : taper une réserve, Entrée, puis une autre ; localisation, lot et entreprise restent remplis. Copier une capture d’écran, cliquer dans la barre et coller (Ctrl+V) : la photo part avec la réserve suivante.

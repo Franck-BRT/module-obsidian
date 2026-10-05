@@ -166,7 +166,13 @@ function scopeCriticalPath(plugin: PMPlugin, scope: ProjectScope): CriticalPath 
  * Writes the status report as a PDF beside the project, to send to whoever has no
  * Obsidian, and opens it. Its path comes back.
  */
-export async function writeStatusReportPdf(plugin: PMPlugin, scope: ProjectScope, m: ProjectMetrics): Promise<string> {
+export async function writeStatusReportPdf(
+  plugin: PMPlugin,
+  scope: ProjectScope,
+  m: ProjectMetrics,
+  /** Where to write it, rather than beside the project; and whether to open it once written. */
+  options: { folder?: string; open?: boolean } = {}
+): Promise<string> {
   const project = scope.primary
   const stamp = today().toString()
   const tasks = flattenTasks(scope.tasks()).map((flat) => flat.task)
@@ -188,7 +194,7 @@ export async function writeStatusReportPdf(plugin: PMPlugin, scope: ProjectScope
     critical: scopeCriticalPath(plugin, scope),
     budget: reportBudget(tasks)
   })
-  const folder = project ? folderOf(project.filePath) : ''
+  const folder = options.folder ?? (project ? folderOf(project.filePath) : '')
   if (folder) await ensureFolder(plugin.app, folder)
   const base = sanitizeFileName(`${t('kpi.reportTitle')} ${title} ${stamp}`)
   let path = normalizePath(folder ? `${folder}/${base}.pdf` : `${base}.pdf`)
@@ -196,6 +202,6 @@ export async function writeStatusReportPdf(plugin: PMPlugin, scope: ProjectScope
     path = normalizePath(folder ? `${folder}/${base} (${n}).pdf` : `${base} (${n}).pdf`)
   }
   const file = await plugin.app.vault.createBinary(path, bytes.slice().buffer)
-  await plugin.app.workspace.getLeaf('tab').openFile(file)
+  if (options.open !== false) await plugin.app.workspace.getLeaf('tab').openFile(file)
   return path
 }

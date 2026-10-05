@@ -45,6 +45,7 @@ import { openChase } from './views/chase/ChaseModal'
 import { remindUnansweredChases } from './views/chase/chaseReminder'
 import { createDemo, removeDemo } from './views/demo/demo'
 import { remindLateVisas } from './views/visa/visaWaits'
+import { runWeeklyReports } from './views/weekly/weeklyReport'
 import { configureExplain } from './ui/explain'
 import { openAgendas } from './views/agenda/AgendasModal'
 import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
@@ -604,6 +605,12 @@ export default class PMPlugin extends Plugin {
       id: 'visa-waits',
       name: t('command.visaWaits'),
       callback: safeAsync(() => remindLateVisas(this, true))
+    })
+
+    this.addCommand({
+      id: 'weekly-reports',
+      name: t('command.weeklyReports'),
+      callback: safeAsync(() => runWeeklyReports(this, true))
     })
 
     this.addCommand({
@@ -1844,6 +1851,14 @@ export default class PMPlugin extends Plugin {
     await this.autoArchiver.check()
     await remindUnansweredChases(this)
     await remindLateVisas(this)
+    await runWeeklyReports(this)
+    // Obsidian left open over the weekend still writes Monday's reports.
+    this.registerInterval(
+      window.setInterval(
+        safeAsync(() => runWeeklyReports(this)),
+        60 * 60 * 1000
+      )
+    )
   }
 
   async cleanupStaleProjectFilters(): Promise<void> {

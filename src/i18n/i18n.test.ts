@@ -115,7 +115,7 @@ describe('settings search aliases', () => {
   const ALIAS_KEYS = KEYS.filter((key) => key.startsWith('settings.aliases.'))
 
   it('are declared for every setting that had them', () => {
-    expect(ALIAS_KEYS.length).toBe(25)
+    expect(ALIAS_KEYS.length).toBe(26)
   })
 
   it('split into real words in both locales, with nothing empty', () => {

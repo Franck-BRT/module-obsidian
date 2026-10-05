@@ -3,6 +3,7 @@ import { DEFAULT_REQ_BLOCK_FIELDS, type ReqBlockField } from './store/requiremen
 import { today } from './dates'
 import type { TaskIndex } from './store/TaskIndex'
 import type { WorkCalendar } from './store/WorkCalendar'
+import type { WeeklySnapshot } from './store/weekly/weeklyFacts'
 import type { LanguageSetting } from './i18n'
 import { t } from './i18n'
 
@@ -920,6 +921,16 @@ export interface PMSettings {
   visaReminder: boolean
   /** The day it was last said, YYYY-MM-DD. */
   visaReminderShown: string
+  /** Whether a weekly report is written for each active project, the first time Obsidian opens in the week. */
+  weeklyReport: boolean
+  /** From which weekday it is written: '1' Monday … '5' Friday. */
+  weeklyReportDay: string
+  /** Who the mail drafted with it goes to: addresses, by commas. */
+  weeklyReportTo: string
+  /** The ISO week last reported, « 2026-W41 ». */
+  weeklyReportDone: string
+  /** Each project's state at its last report, by note path, for the next to compare against. */
+  weeklySnapshots: Record<string, WeeklySnapshot>
   /** Hours a week a person can give, unless their contact says otherwise. */
   workloadCapacity: number
   /** Hours a day a ticket with no estimate holds each of its people: '0', '1', '2', '4' or '7'. */
@@ -1252,6 +1263,11 @@ export const DEFAULT_SETTINGS: PMSettings = {
   visaDays: 15,
   visaReminder: true,
   visaReminderShown: '',
+  weeklyReport: false,
+  weeklyReportDay: '1',
+  weeklyReportTo: '',
+  weeklyReportDone: '',
+  weeklySnapshots: {},
   workloadCapacity: 35,
   workloadDefaultHours: '4',
   workloadWeeks: 12,

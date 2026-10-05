@@ -450,6 +450,41 @@ export class PMSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
+        heading: t('settings.group.weekly'),
+        items: [
+          {
+            name: t('settings.weeklyReport.name'),
+            desc: t('settings.weeklyReport.desc'),
+            aliases: searchAliases('settings.aliases.weekly'),
+            control: { type: 'toggle', key: 'weeklyReport' }
+          },
+          {
+            name: t('settings.weeklyReportDay.name'),
+            desc: t('settings.weeklyReportDay.desc'),
+            aliases: searchAliases('settings.aliases.weekly'),
+            control: {
+              type: 'dropdown',
+              key: 'weeklyReportDay',
+              options: {
+                '1': t('settings.weeklyReportDay.monday'),
+                '2': t('settings.weeklyReportDay.tuesday'),
+                '3': t('settings.weeklyReportDay.wednesday'),
+                '4': t('settings.weeklyReportDay.thursday'),
+                '5': t('settings.weeklyReportDay.friday')
+              },
+              disabled: () => !this.plugin.settings.weeklyReport
+            }
+          },
+          {
+            name: t('settings.weeklyReportTo.name'),
+            desc: t('settings.weeklyReportTo.desc'),
+            aliases: searchAliases('settings.aliases.weekly'),
+            control: { type: 'text', key: 'weeklyReportTo', placeholder: 'direction@exemple.fr, moa@exemple.fr' }
+          }
+        ]
+      },
+      {
+        type: 'group',
         heading: t('settings.group.workload'),
         items: [
           {
