@@ -30,6 +30,9 @@ import { renderFlag } from '../../src/ui/flags'
 import { PromptsView } from '../../src/views/prompts/PromptsView'
 import { PromptModal } from '../../src/views/prompts/PromptModal'
 import { DeliveryModal } from '../../src/views/library/DeliveryModal'
+import { PersonPicker } from '../../src/views/contacts/PersonPicker'
+import { ContactBook, readContacts } from '../../src/store/contacts'
+import { projectPeople } from '../../src/store/projectPeople'
 import { isDocument } from '../../src/store/Document'
 import { promptNoteContent } from '../../src/store/chat/promptLibrary'
 
@@ -183,6 +186,11 @@ async function main(): Promise<void> {
     case 'delivery': {
       const docs = tasks.filter(isDocument)
       new DeliveryModal(plugin, project, docs, new Set(docs.slice(0, 3).map((task) => task.id))).open()
+      break
+    }
+    case 'person-picker': {
+      const book = new ContactBook(readContacts(app, plugin.settings.peopleFolder))
+      new PersonPicker(app, book, projectPeople(book, project), () => {}).open()
       break
     }
     case 'flags': {

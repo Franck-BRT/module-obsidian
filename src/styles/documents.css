@@ -1287,3 +1287,55 @@ a.pm-docs-clear-filters {
   max-width: 100%;
   resize: vertical;
 }
+
+/* Someone found in the people folder: the project's own marked. */
+.pm-person-picker-bar {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-person-picker-bar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.pm-person-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pm-person-pick-icon {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.pm-person-pick-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pm-person-pick-detail {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-person-pick-tag {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: var(--radius-l);
+  background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-delivery-modal .setting-item-control {
+  flex-wrap: nowrap;
+}

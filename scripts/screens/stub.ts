@@ -299,9 +299,32 @@ export class Modal {
 }
 export class SuggestModal<T> extends Modal {
   inputEl = document.createElement('input')
-  setPlaceholder(): void {}
-  getSuggestions(): T[] {
+  resultContainerEl = document.createElement('div')
+  constructor(app: any) {
+    super(app)
+    this.modalEl.addClass('prompt')
+    const wrap = this.modalEl.createDiv('prompt-input-container')
+    this.inputEl.className = 'prompt-input'
+    wrap.appendChild(this.inputEl)
+    this.resultContainerEl.className = 'prompt-results'
+    this.modalEl.appendChild(this.resultContainerEl)
+    this.inputEl.addEventListener('input', () => this.drawResults())
+  }
+  setPlaceholder(p = ''): void {
+    this.inputEl.placeholder = p
+  }
+  getSuggestions(_q?: string): T[] {
     return []
+  }
+  renderSuggestion(_v: T, _el: HTMLElement): void {}
+  onOpen(): void {
+    this.drawResults()
+  }
+  private drawResults(): void {
+    this.resultContainerEl.empty()
+    for (const value of this.getSuggestions(this.inputEl.value)) {
+      this.renderSuggestion(value, this.resultContainerEl.createDiv('suggestion-item'))
+    }
   }
 }
 
@@ -450,6 +473,27 @@ export class Setting {
       }
     }
     return c
+  }
+  addExtraButton(cb: (c: any) => void): this {
+    const el = this.controlEl.createDiv('clickable-icon extra-setting-button')
+    const c: any = {
+      extraSettingsEl: el,
+      setIcon: (icon: string) => {
+        setIcon(el, icon)
+        return c
+      },
+      setTooltip: (tip: string) => {
+        el.setAttr('aria-label', tip)
+        return c
+      },
+      setDisabled: () => c,
+      onClick: (handler: () => void) => {
+        el.addEventListener('click', handler)
+        return c
+      }
+    }
+    cb(c)
+    return this
   }
   addText(cb: (c: any) => void): this {
     cb(this.control('input', 'text'))

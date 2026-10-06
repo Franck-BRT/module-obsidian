@@ -1,4 +1,4 @@
-import { Modal, Notice, Setting, TFile, normalizePath, type App } from 'obsidian'
+import { Modal, Notice, Setting, TFile, normalizePath, type App, type TextComponent } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Project, Task } from '../../types'
 import { documentOf, isDocument } from '../../store/Document'
@@ -18,6 +18,9 @@ import { formatDateLetter, today } from '../../dates'
 import { displayName, safeAsync, sanitizeFileName } from '../../utils'
 import { t } from '../../i18n'
 import { docStateLabel } from './docStateLabel'
+import { ContactBook, readContacts } from '../../store/contacts'
+import { contactLabel, projectPeople } from '../../store/projectPeople'
+import { PersonPicker } from '../contacts/PersonPicker'
 
 /** The words the delivery note is written with, in the reader's language. */
 function deliveryWords(): DeliveryWords {
@@ -115,12 +118,8 @@ export class DeliveryModal extends Modal {
       text.inputEl.type = 'date'
       text.setValue(this.date).onChange((value) => (this.date = value || today().toString()))
     })
-    new Setting(root)
-      .setName(t('delivery.senderField'))
-      .addText((text) => text.setValue(this.sender).onChange((value) => (this.sender = value)))
-    new Setting(root)
-      .setName(t('delivery.recipientField'))
-      .addText((text) => text.setValue(this.recipient).onChange((value) => (this.recipient = value)))
+    this.personField(root, t('delivery.senderField'), this.sender, (value) => (this.sender = value))
+    this.personField(root, t('delivery.recipientField'), this.recipient, (value) => (this.recipient = value))
     new Setting(root).setName(t('delivery.noteField')).addTextArea((area) => {
       area.setPlaceholder(t('delivery.notePlaceholder')).onChange((value) => (this.note = value))
       area.inputEl.rows = 2
@@ -149,6 +148,30 @@ export class DeliveryModal extends Modal {
         button.setCta().onClick(safeAsync(() => this.write()))
       })
     this.renderList()
+  }
+
+  /** A field for someone, written by hand or found in the people folder — the project's own first. */
+  private personField(root: HTMLElement, name: string, value: string, set: (value: string) => void): void {
+    let input: TextComponent | null = null
+    new Setting(root)
+      .setName(name)
+      .addText((text) => {
+        input = text
+        text.setValue(value).onChange(set)
+      })
+      .addExtraButton((button) =>
+        button
+          .setIcon('book-user')
+          .setTooltip(t('person.pick'))
+          .onClick(() => {
+            const book = new ContactBook(readContacts(this.app, this.plugin.settings.peopleFolder))
+            new PersonPicker(this.app, book, projectPeople(book, this.project), (choice) => {
+              const label = choice.contact ? contactLabel(choice.contact) : choice.name
+              input?.setValue(label)
+              set(label)
+            }).open()
+          })
+      )
   }
 
   private renderList(): void {
