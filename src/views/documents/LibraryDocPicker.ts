@@ -1,12 +1,16 @@
 import { SuggestModal, setIcon, type App } from 'obsidian'
 import { snippet } from '../../store/library/docText'
-import { FAMILY_ICONS, familyOf, matchesDoc, type LibraryDoc } from '../../store/library/libraryDoc'
+import { FAMILY_ICONS, familyOf, matchesDoc, matchesTitle, type LibraryDoc } from '../../store/library/libraryDoc'
 import { t } from '../../i18n'
+
+/** Whether the words are looked for in the title alone: kept from one search to the next. */
+let titleOnly = false
 
 /**
  * A document of the library, chosen by a few words: its title, its file's name, its
  * projects, or what it says — the passage where the words are shown under it, so the
- * right issue of a planning is told from the one before.
+ * right issue of a planning is told from the one before. Or, when that finds too much,
+ * in its title alone.
  */
 export class LibraryDocPicker extends SuggestModal<LibraryDoc> {
   private words: string[] = []
@@ -24,8 +28,25 @@ export class LibraryDocPicker extends SuggestModal<LibraryDoc> {
     this.limit = 100
   }
 
+  async onOpen(): Promise<void> {
+    await super.onOpen()
+    // The title alone, or everything the document is found by.
+    const bar = createDiv('pm-docs-pick-options')
+    const label = bar.createEl('label', { cls: 'pm-docs-pick-option' })
+    const box = label.createEl('input', { attr: { type: 'checkbox' } })
+    box.checked = titleOnly
+    label.createSpan({ text: t('library.pickTitleOnly') })
+    box.addEventListener('change', () => {
+      titleOnly = box.checked
+      this.inputEl.dispatchEvent(new Event('input'))
+      this.inputEl.focus()
+    })
+    this.resultContainerEl.before(bar)
+  }
+
   getSuggestions(query: string): LibraryDoc[] {
     this.words = query.split(/\s+/).filter(Boolean)
+    if (titleOnly) return this.docs.filter((doc) => matchesTitle(doc, query))
     return this.docs.filter((doc) =>
       matchesDoc(doc, { text: query, project: '', family: '' }, this.projectTitle, this.content)
     )
@@ -39,7 +60,8 @@ export class LibraryDocPicker extends SuggestModal<LibraryDoc> {
     line.createSpan({ cls: 'pm-docs-pick-title', text: doc.title })
     const detail = [doc.file.slice(doc.file.lastIndexOf('/') + 1), ...doc.projects.map(this.projectTitle)].join(' · ')
     el.createEl('small', { cls: 'pm-docs-pick-detail', text: detail })
-    const found = this.words.length ? snippet(this.text(doc), this.words, this.content(doc), 60) : null
+    // Found by its title alone, no passage of what it says is shown.
+    const found = this.words.length && !titleOnly ? snippet(this.text(doc), this.words, this.content(doc), 60) : null
     if (found) {
       const passage = el.createDiv('pm-docs-pick-snippet')
       if (found.before) passage.appendText('… ')

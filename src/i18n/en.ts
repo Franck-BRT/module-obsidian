@@ -1457,6 +1457,7 @@ export const en = {
   'library.refLabel': 'Ref:',
   'library.versionLabel': 'Version:',
   'library.versionHint': 'Edition {edition}, revision {revision}. Changed in the document’s record.',
+  'library.pickTitleOnly': 'Search the title only',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

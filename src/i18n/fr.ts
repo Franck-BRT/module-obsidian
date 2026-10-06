@@ -1503,6 +1503,7 @@ export const fr: Catalog = {
   'library.refLabel': 'Réf :',
   'library.versionLabel': 'Version :',
   'library.versionHint': 'Édition {edition}, révision {revision}. Se modifie dans la fiche du document.',
+  'library.pickTitleOnly': 'Chercher dans le titre seulement',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

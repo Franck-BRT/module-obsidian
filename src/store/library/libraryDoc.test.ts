@@ -10,6 +10,7 @@ import {
   isLibraryDoc,
   linkPath,
   matchesDoc,
+  matchesTitle,
   NO_PROJECT,
   NO_VALUE,
   revealQuery,
@@ -270,5 +271,14 @@ describe('versionLabel', () => {
   it('lets a document be found by its reference', () => {
     const found = doc({ title: 'Glossaire', reference: 'DLA-NM-0000000-01-PSP' })
     expect(matchesDoc(found, { text: 'dla-nm', project: '', family: '' }, (path) => path)).toBe(true)
+  })
+})
+
+describe('matchesTitle', () => {
+  it('looks through the title alone, every word, accents and case aside', () => {
+    const one = doc({ title: 'Spécification lot 02 indice B', tags: ['radier'] })
+    expect(matchesTitle(one, 'specification B')).toBe(true)
+    expect(matchesTitle(one, 'radier')).toBe(false)
+    expect(matchesTitle(one, '')).toBe(true)
   })
 })

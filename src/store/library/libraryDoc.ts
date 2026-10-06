@@ -415,3 +415,12 @@ export function versionLabel(doc: Pick<LibraryDoc, 'edition' | 'revision'>): str
   const revision = doc.revision?.trim() ?? ''
   return edition && revision ? `${edition}-${revision}` : edition || revision
 }
+
+/** Whether a document's title holds every word searched, accents and case aside: the title alone. */
+export function matchesTitle(doc: Pick<LibraryDoc, 'title'>, query: string): boolean {
+  const title = fold(doc.title)
+  return fold(query)
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => title.includes(word))
+}
