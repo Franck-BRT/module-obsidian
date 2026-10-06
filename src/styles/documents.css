@@ -164,6 +164,11 @@ a.pm-docs-badge.is-scan:hover {
   border-top: 1px solid var(--background-modifier-border);
 }
 
+/* A click on the card, but on its title or its controls, opens its record. */
+.pm-docs-row.opens-record {
+  cursor: pointer;
+}
+
 .pm-docs-row:hover {
   background: var(--background-primary-alt);
 }
@@ -560,7 +565,8 @@ button.pm-docs-chip:not(.clickable-icon):hover {
 }
 
 .pm-docs-title-line .pm-docs-title {
-  flex: 1;
+  /* As wide as its words: the rest of the line opens the record, not the document. */
+  flex: 0 1 auto;
   min-width: 0;
 }
 

@@ -1091,6 +1091,7 @@ export class DocumentsView extends ItemView {
     })
     if (tick.checked) row.addClass('is-picked')
     if (this.fresh.has(doc.record)) row.addClass('is-fresh')
+    this.openRecordOnClick(row, doc)
     const family = familyOf(doc.file || doc.title)
     setIcon(row.createDiv({ cls: `pm-docs-icon pm-docs-icon--${family}` }), FAMILY_ICONS[family])
 
@@ -1398,6 +1399,7 @@ export class DocumentsView extends ItemView {
   private renderGhostRow(list: HTMLElement, ghost: LibraryGhost, doc: LibraryDoc): void {
     const row = list.createDiv('pm-docs-row pm-docs-ghost')
     if (this.fresh.has(ghost.record)) row.addClass('is-fresh')
+    this.openRecordOnClick(row, doc)
     row.createSpan('pm-docs-tick pm-docs-tick-spacer')
     setIcon(row.createDiv('pm-docs-icon pm-docs-icon--ghost'), 'ghost')
     const main = row.createDiv('pm-docs-main')
@@ -1679,9 +1681,35 @@ export class DocumentsView extends ItemView {
     if (!(await openDocumentFile(this.app, file))) new Notice(t('library.cannotOpen', { name: file.name }))
   }
 
+  /**
+   * A click on a card, but on its title — which opens the document —, its links, its
+   * buttons, its box, its flag or the icons on its right: its record, to be read and changed.
+   * Not when the click ended a selection of its text, which was meant to be copied.
+   */
+  private openRecordOnClick(row: HTMLElement, doc: LibraryDoc): void {
+    row.addClass('opens-record')
+    row.addEventListener('click', (event) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const control = 'a, button, input, select, textarea, label, .pm-docs-actions, .clickable-icon, .pm-flag'
+      if (target.closest(control)) return
+      if (activeWindow.getSelection()?.toString()) return
+      void this.openRecord(doc)
+    })
+  }
+
+  /** A document's record, in a tab — the one it is open in already, when it is. */
   private async openRecord(doc: LibraryDoc): Promise<void> {
     const record = this.app.vault.getAbstractFileByPath(doc.record)
-    if (record instanceof TFile) await this.app.workspace.getLeaf('tab').openFile(record)
+    if (!(record instanceof TFile)) return
+    const open = this.app.workspace
+      .getLeavesOfType('markdown')
+      .find((leaf) => (leaf.view as { file?: TFile | null }).file?.path === record.path)
+    if (open) {
+      await this.app.workspace.revealLeaf(open)
+      return
+    }
+    await this.app.workspace.getLeaf('tab').openFile(record)
   }
 
   private async editProjects(doc: LibraryDoc): Promise<void> {
