@@ -151,4 +151,10 @@ describe('what changed from one version to the next', () => {
     expect(asksForComparison('What changed between them?')).toBe(true)
     expect(asksForComparison('Résume ce document')).toBe(false)
   })
+
+  it('does not take a document of another kind for its next issue: a PDF printed from a Word one', () => {
+    const word = { record: 'L/Spec.md', title: 'Spec', file: 'L/_f/Spec.docx', hash: '1', added: '2026-01-01' }
+    const pdf = { record: 'L/Spec 1.md', title: 'Spec', file: 'L/_f/Spec.pdf', hash: '2', added: '2026-01-02' }
+    expect(previousVersion(pdf, [word])).toBeNull()
+  })
 })

@@ -1,4 +1,4 @@
-import { fold } from './libraryDoc'
+import { familyOf, fold } from './libraryDoc'
 
 /**
  * The versions of one document, known by their names: « CCTP lot 02 ind A.pdf » and
@@ -44,16 +44,23 @@ export interface VersionCandidate {
 
 /**
  * The version a document newly in the library follows: of the documents already there
- * known by the same name and saying something else, the one no other follows yet — the
- * last of its line —, the latest added when there are several. Null when there is none.
+ * known by the same name, of the same kind and saying something else, the one no other
+ * follows yet — the last of its line —, the latest added when there are several. Null when
+ * there is none. A PDF of the same name as a Word document is not its next issue but, most
+ * often, what it was printed to: that is its source, not its version.
  */
 export function previousVersion(doc: VersionCandidate, others: VersionCandidate[]): VersionCandidate | null {
   const keys = (one: VersionCandidate): string[] =>
     [versionKey(one.title), versionKey(one.file.slice(one.file.lastIndexOf('/') + 1))].filter(Boolean)
   const own = new Set(keys(doc))
   if (!own.size) return null
+  const kind = familyOf(doc.file || doc.title)
   const same = others.filter(
-    (one) => one.record !== doc.record && one.hash !== doc.hash && keys(one).some((key) => own.has(key))
+    (one) =>
+      one.record !== doc.record &&
+      one.hash !== doc.hash &&
+      familyOf(one.file || one.title) === kind &&
+      keys(one).some((key) => own.has(key))
   )
   const followed = new Set(same.map((one) => one.previous).filter(Boolean))
   const heads = same.filter((one) => !followed.has(one.record))

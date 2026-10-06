@@ -220,8 +220,34 @@ export class DocLibrary {
       ...(typeof fm.translationOf === 'string' && this.resolve(fm.translationOf, record.path)
         ? { translationOf: this.resolve(fm.translationOf, record.path)?.path }
         : {}),
-      ...(typeof fm.language === 'string' && fm.language.trim() ? { language: fm.language.trim() } : {})
+      ...(typeof fm.language === 'string' && fm.language.trim() ? { language: fm.language.trim() } : {}),
+      ...(typeof fm.source === 'string' && this.resolve(fm.source, record.path)
+        ? { source: this.resolve(fm.source, record.path)?.path }
+        : {})
     }
+  }
+
+  /**
+   * The document a document was made from — the Word document of a PDF —, or none: written
+   * in its record, as a link to the other's. The other's own link back, which would make a
+   * loop, is taken off.
+   */
+  async setSource(doc: LibraryDoc, source: LibraryDoc | null): Promise<void> {
+    if (source?.record === doc.record) return
+    if (source?.source === doc.record) {
+      const back = this.app.vault.getAbstractFileByPath(source.record)
+      if (back instanceof TFile) {
+        await this.app.fileManager.processFrontMatter(back, (fm: Record<string, unknown>) => {
+          delete fm.source
+        })
+      }
+    }
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return
+    await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+      if (source) fm.source = `[[${source.record.replace(/\.md$/, '')}]]`
+      else delete fm.source
+    })
   }
 
   /** The language a document is in, said in its record; '' to say it is not known. */

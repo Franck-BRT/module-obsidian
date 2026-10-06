@@ -23,8 +23,11 @@ import {
   matchesDoc,
   NO_PROJECT,
   NO_VALUE,
+  derivedFrom,
+  extensionOf,
   otherLanguages,
   revealQuery,
+  sourceCandidates,
   sortDocs,
   type DocFamily,
   type DocQuery,
@@ -513,6 +516,19 @@ export class DocumentsView extends ItemView {
         text: t('library.versionBefore', { title: after.title })
       })
     }
+    // What it was made from — its Word document, for a PDF —, and what was made from it.
+    const source = doc.source ? all.find((one) => one.record === doc.source) : undefined
+    if (source) {
+      const line = meta.createSpan({ cls: 'pm-docs-source' })
+      line.createSpan({ text: t('library.sourceIs') })
+      this.renderDocLink(line, source)
+    }
+    const derived = derivedFrom(doc, all)
+    if (derived.length) {
+      const line = meta.createSpan({ cls: 'pm-docs-source' })
+      line.createSpan({ text: t('library.derivedAre') })
+      for (const one of derived) this.renderDocLink(line, one)
+    }
     // The same document in its other languages: a flag each, which opens it.
     const others = otherLanguages(doc, all)
     if (others.length) {
@@ -530,6 +546,44 @@ export class DocumentsView extends ItemView {
         })
       }
     }
+  }
+
+  /** A document named on another's line: its kind's icon and its extension, which open it. */
+  private renderDocLink(parent: HTMLElement, doc: LibraryDoc): void {
+    const family = familyOf(doc.file || doc.title)
+    const link = parent.createEl('a', { cls: 'pm-docs-lang pm-docs-source-link', href: '#' })
+    setIcon(link.createSpan({ cls: `pm-docs-source-icon pm-docs-icon--${family}` }), FAMILY_ICONS[family])
+    link.createSpan({ text: extensionOf(doc.file || doc.title).toUpperCase() || doc.title })
+    explain(link, doc.title, t('library.sourceOpen'))
+    link.addEventListener('click', (event) => {
+      event.preventDefault()
+      void this.openDoc(doc)
+    })
+  }
+
+  /**
+   * Links a document to the one it was made from — or to one made from it —, picked among
+   * the others, those of its name in another kind first.
+   */
+  private pickSource(doc: LibraryDoc, made: boolean): void {
+    const all = this.plugin.library.docs()
+    const texts = this.plugin.libraryText
+    const candidates = made
+      ? sourceCandidates(doc, all).filter((one) => one.source !== doc.record && doc.source !== one.record)
+      : sourceCandidates(doc, all)
+    new LibraryDocPicker(
+      this.app,
+      candidates,
+      (path) => this.projectTitle(path),
+      (each) => texts.folded(each),
+      safeAsync(async (other: LibraryDoc) => {
+        if (made) await this.plugin.library.setSource(other, doc)
+        else await this.plugin.library.setSource(doc, other)
+        const [from, to] = made ? [doc, other] : [other, doc]
+        new Notice(t('library.sourceLinked', { source: from.title, derived: to.title }))
+        this.redrawSoon()
+      })
+    ).open()
   }
 
   /** The language a document is in: said in its record, else guessed from its text. */
@@ -1508,6 +1562,32 @@ export class DocumentsView extends ItemView {
         .setIcon('pencil')
         .onClick(safeAsync(() => this.renameDoc(doc)))
     )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('library.sourceMenu'))
+        .setIcon('file-input')
+        .onClick(() => this.pickSource(doc, false))
+    )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('library.derivedMenu'))
+        .setIcon('file-output')
+        .onClick(() => this.pickSource(doc, true))
+    )
+    if (doc.source) {
+      menu.addItem((item) =>
+        item
+          .setTitle(t('library.sourceUnlinkMenu'))
+          .setIcon('unlink')
+          .onClick(
+            safeAsync(async () => {
+              await this.plugin.library.setSource(doc, null)
+              new Notice(t('library.sourceUnlinked', { title: doc.title }))
+              this.redrawSoon()
+            })
+          )
+      )
+    }
     menu.addItem((item) =>
       item
         .setTitle(t('library.langMenu'))

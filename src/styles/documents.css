@@ -539,6 +539,23 @@ button.pm-docs-chip:not(.clickable-icon):hover {
   text-decoration: none;
 }
 
+/* What it was made from, and what was made from it: a kind's icon and an extension each. */
+.pm-docs-source {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-1);
+}
+
+.pm-docs-source-icon {
+  display: inline-flex;
+}
+
+.pm-docs-source-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
 .pm-docs-lang:hover {
   color: var(--text-accent);
 }

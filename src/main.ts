@@ -113,7 +113,7 @@ import {
 } from './views/documents/ProjectChooser'
 import { DocLibrary, type PourItem } from './store/library/DocLibrary'
 import { DocTextIndex, folderShelf } from './store/library/DocTextIndex'
-import { collectionNames, isLibraryDoc, type LibraryDoc } from './store/library/libraryDoc'
+import { collectionNames, isLibraryDoc, likelyPair, type LibraryDoc } from './store/library/libraryDoc'
 import { cleanTranscriptIn, TRANSCRIPT_KEY, type Furniture } from './store/chat/ocr'
 import {
   guessCategory,
@@ -1588,6 +1588,25 @@ export default class PMPlugin extends Plugin {
       await this.library.setPrevious(doc, previous)
       if (choice === 'compare' && doc.file && previous.file) await this.chatCompare(previous.file, doc.file)
       else new Notice(t('library.versionLinked', { title: doc.title, previous: previous.title }), 8000)
+    }
+    // A PDF and the Word, Excel or PowerPoint document of the same name: the one printed from
+    // the other, most often — offered to be linked so.
+    const pairs = new Set<string>()
+    for (const doc of report.docs) {
+      const pair = likelyPair(doc, this.library.docs())
+      if (!pair || pairs.has(pair.derived.record)) continue
+      pairs.add(pair.derived.record)
+      const choice = await chooseDialog(
+        this.app,
+        t('library.sourceAsk', { derived: pair.derived.title, source: pair.source.title }),
+        [
+          { id: 'link', label: t('library.sourceLink'), primary: true },
+          { id: 'no', label: t('library.sourceNo') }
+        ]
+      )
+      if (choice !== 'link') continue
+      await this.library.setSource(pair.derived, pair.source)
+      new Notice(t('library.sourceLinked', { source: pair.source.title, derived: pair.derived.title }))
     }
     // Those that look like documents a register is waiting for, offered to be filed as them.
     if (report.docs.length) await proposeRegisterMatches(this, report.docs, false)

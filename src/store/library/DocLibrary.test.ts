@@ -2,7 +2,7 @@ import { TFile, type App } from 'obsidian'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { makeFakeApp, type FakeVault } from '../../../test/fakeVault'
 import { DocLibrary, findVaultFile, type PourItem } from './DocLibrary'
-import { otherLanguages } from './libraryDoc'
+import { derivedFrom, likelyPair, otherLanguages, sourceCandidates } from './libraryDoc'
 import { parseCategories } from './libraryClass'
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
@@ -758,6 +758,52 @@ describe('DocLibrary', () => {
       expect(others('Spec EN')).toEqual(['Spec DE:de'])
       await library.setLanguage(byTitle('Spec FR'), '')
       expect(byTitle('Spec FR').language).toBeUndefined()
+    })
+  })
+
+  describe('sources', () => {
+    const byFile = (name: string) => {
+      const found = library.docs().find((doc) => doc.file.endsWith(`/${name}`))
+      if (!found) throw new Error(`no ${name}`)
+      return found
+    }
+
+    it('links a PDF to the Word document it was printed from, and back again unlinked', async () => {
+      await library.pour([outside('Spec.docx', 'word'), outside('Spec.pdf', 'pdf')], {
+        projects: [],
+        move: false,
+        today: TODAY
+      })
+      expect(likelyPair(byFile('Spec.pdf'), library.docs())).toMatchObject({
+        source: { file: 'Bibliothèque/Fichiers/Spec.docx' },
+        derived: { file: 'Bibliothèque/Fichiers/Spec.pdf' }
+      })
+      expect(likelyPair(byFile('Spec.docx'), library.docs())?.derived.file).toBe('Bibliothèque/Fichiers/Spec.pdf')
+      await library.setSource(byFile('Spec.pdf'), byFile('Spec.docx'))
+      expect(byFile('Spec.pdf').source).toBe(byFile('Spec.docx').record)
+      expect(derivedFrom(byFile('Spec.docx'), library.docs()).map((doc) => doc.file)).toEqual([
+        'Bibliothèque/Fichiers/Spec.pdf'
+      ])
+      // Linked already: no longer offered.
+      expect(likelyPair(byFile('Spec.docx'), library.docs())).toBeNull()
+      // The other way round, the loop it would make is undone.
+      await library.setSource(byFile('Spec.docx'), byFile('Spec.pdf'))
+      expect(byFile('Spec.pdf').source).toBeUndefined()
+      expect(byFile('Spec.docx').source).toBe(byFile('Spec.pdf').record)
+      await library.setSource(byFile('Spec.docx'), null)
+      expect(byFile('Spec.docx').source).toBeUndefined()
+    })
+
+    it('offers the documents of the same name in another kind first, and never one made from it', async () => {
+      await library.pour([outside('Note.pdf', 'p'), outside('Autre.docx', 'a'), outside('Note.xlsx', 'x')], {
+        projects: [],
+        move: false,
+        today: TODAY
+      })
+      await library.setSource(byFile('Autre.docx'), byFile('Note.pdf'))
+      expect(sourceCandidates(byFile('Note.pdf'), library.docs()).map((doc) => doc.file)).toEqual([
+        'Bibliothèque/Fichiers/Note.xlsx'
+      ])
     })
   })
 })
