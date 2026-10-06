@@ -22,6 +22,7 @@ import {
   isLibraryDoc,
   linkPath,
   nextCollections,
+  HAND_FIELDS,
   recordContent,
   stringList,
   titleFromName,
@@ -221,6 +222,9 @@ export class DocLibrary {
         ? { translationOf: this.resolve(fm.translationOf, record.path)?.path }
         : {}),
       ...(typeof fm.language === 'string' && fm.language.trim() ? { language: fm.language.trim() } : {}),
+      ...(text(fm.reference ?? fm['référence']) ? { reference: text(fm.reference ?? fm['référence']) } : {}),
+      ...(text(fm.edition ?? fm['édition']) ? { edition: text(fm.edition ?? fm['édition']) } : {}),
+      ...(text(fm.revision ?? fm['révision']) ? { revision: text(fm.revision ?? fm['révision']) } : {}),
       ...(typeof fm.source === 'string' && this.resolve(fm.source, record.path)
         ? { source: this.resolve(fm.source, record.path)?.path }
         : {})
@@ -247,6 +251,22 @@ export class DocLibrary {
     await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
       if (source) fm.source = `[[${source.record.replace(/\.md$/, '')}]]`
       else delete fm.source
+    })
+  }
+
+  /**
+   * The fields filled in by hand — reference, edition, revision — written into a record that
+   * lacks them, empty, so Obsidian's properties show where they go: records made before
+   * them have none.
+   */
+  async ensureHandFields(doc: LibraryDoc): Promise<void> {
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return
+    const fm = this.app.metadataCache.getFileCache(record)?.frontmatter ?? {}
+    const missing = HAND_FIELDS.filter((key) => !(key in fm))
+    if (!missing.length) return
+    await this.app.fileManager.processFrontMatter(record, (fields: Record<string, unknown>) => {
+      for (const key of missing) if (!(key in fields)) fields[key] = ''
     })
   }
 

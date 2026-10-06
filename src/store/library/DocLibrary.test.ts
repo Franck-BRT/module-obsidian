@@ -806,4 +806,33 @@ describe('DocLibrary', () => {
       ])
     })
   })
+
+  describe('reference, edition, revision', () => {
+    it('writes them empty in a new record, and reads them once filled in', async () => {
+      await library.pour([outside('Glossaire.pdf', 'g')], { projects: [], move: false, today: TODAY })
+      const [doc] = library.docs()
+      const content = vault.contentAt(doc.record) ?? ''
+      expect(content).toContain('reference: ""')
+      expect(content).toContain('edition: ""')
+      expect(content).toContain('revision: ""')
+      await vault.modify(
+        fileAt(doc.record),
+        content
+          .replace('reference: ""', 'reference: DLA-NM-0000000-01-PSP')
+          .replace('edition: ""', 'edition: 2')
+          .replace('revision: ""', 'revision: 15')
+      )
+      expect(library.docs()[0]).toMatchObject({ reference: 'DLA-NM-0000000-01-PSP', edition: '2', revision: '15' })
+    })
+
+    it('adds them, empty, to a record made before them, and leaves those it has', async () => {
+      await vault.create('Bibliothèque/Ancien.md', '---\npm-library-doc: true\ntitle: Ancien\nedition: 4\n---\n')
+      const [doc] = library.docs()
+      await library.ensureHandFields(doc)
+      const content = vault.contentAt(doc.record) ?? ''
+      expect(content).toMatch(/edition: "?4"?/)
+      expect(content).toContain('reference: ""')
+      expect(content).toContain('revision: ""')
+    })
+  })
 })

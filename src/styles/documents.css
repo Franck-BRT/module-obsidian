@@ -539,6 +539,18 @@ button.pm-docs-chip:not(.clickable-icon):hover {
   text-decoration: none;
 }
 
+/* Its reference and its version, as its record says them. */
+.pm-docs-ref {
+  display: inline-flex;
+  gap: 3px;
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-docs-ref-label {
+  color: var(--text-muted);
+}
+
 /* What it was made from, and what was made from it: a kind's icon and an extension each. */
 .pm-docs-source {
   display: inline-flex;

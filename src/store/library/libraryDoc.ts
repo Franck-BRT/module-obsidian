@@ -52,6 +52,11 @@ export interface LibraryDoc {
   translationOf?: string
   /** The document it was made from — the Word document a PDF was printed from —, by its record's path. */
   source?: string
+  /** Its reference, as its issuer numbers it: « DLA-NM-0000000-01-PSP ». */
+  reference?: string
+  /** Its edition and its revision within it: « 2 » and « 15 ». */
+  edition?: string
+  revision?: string
   /** The language it is in, as a code — set on a translation —; absent when not known. */
   language?: string
 }
@@ -159,6 +164,9 @@ export function recordContent(fields: RecordFields, notesHeading: string): strin
     category: fields.category ?? '',
     lot: fields.lot ?? '',
     issuer: fields.issuer ?? '',
+    reference: '',
+    edition: '',
+    revision: '',
     tags: fields.tags ?? [],
     ...(fields.collections?.length ? { collections: fields.collections } : {})
   }
@@ -271,6 +279,7 @@ export function matchesDoc(
     [
       doc.title,
       name,
+      doc.reference ?? '',
       doc.category,
       doc.lot,
       doc.issuer,
@@ -395,4 +404,14 @@ export function sourceCandidates(doc: LibraryDoc, docs: LibraryDoc[]): LibraryDo
   const alike = (one: LibraryDoc): boolean =>
     !!name && bareName(one) === name && familyOf(one.file || one.title) !== kind
   return [...others.filter(alike), ...others.filter((one) => !alike(one))]
+}
+
+/** The fields a record is filled in by hand, written even empty so Obsidian's properties show them. */
+export const HAND_FIELDS = ['reference', 'edition', 'revision'] as const
+
+/** Its version as people say it: « 2-15 » for edition 2, revision 15; the one given alone; '' for none. */
+export function versionLabel(doc: Pick<LibraryDoc, 'edition' | 'revision'>): string {
+  const edition = doc.edition?.trim() ?? ''
+  const revision = doc.revision?.trim() ?? ''
+  return edition && revision ? `${edition}-${revision}` : edition || revision
 }

@@ -14,6 +14,7 @@ import {
   NO_VALUE,
   revealQuery,
   sortDocs,
+  versionLabel,
   stringList,
   titleFromName,
   type DocQuery,
@@ -255,5 +256,19 @@ describe('revealQuery', () => {
     const query: DocQuery = { text: 'x', project: 'P.md', family: '' }
     expect(revealQuery([docAt('a', 'A'), docAt('b', 'B')], query, shows)).toMatchObject({ folder: '', project: '' })
     expect(revealQuery([docAt('a', '')], query, shows)).toMatchObject({ folder: AT_ROOT })
+  })
+})
+
+describe('versionLabel', () => {
+  it('says the edition and the revision as people do, or the one given alone', () => {
+    expect(versionLabel({ edition: '2', revision: '15' })).toBe('2-15')
+    expect(versionLabel({ edition: ' 3 ' })).toBe('3')
+    expect(versionLabel({ revision: 'B' })).toBe('B')
+    expect(versionLabel({})).toBe('')
+  })
+
+  it('lets a document be found by its reference', () => {
+    const found = doc({ title: 'Glossaire', reference: 'DLA-NM-0000000-01-PSP' })
+    expect(matchesDoc(found, { text: 'dla-nm', project: '', family: '' }, (path) => path)).toBe(true)
   })
 })

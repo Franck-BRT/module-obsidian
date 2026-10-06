@@ -28,6 +28,7 @@ import {
   otherLanguages,
   revealQuery,
   sourceCandidates,
+  versionLabel,
   sortDocs,
   type DocFamily,
   type DocQuery,
@@ -545,6 +546,26 @@ export class DocumentsView extends ItemView {
           void this.openDoc(other)
         })
       }
+    }
+  }
+
+  /** Its reference and its version — edition-revision —, as its record says them. */
+  private renderReference(meta: HTMLElement, doc: LibraryDoc): void {
+    if (doc.reference) {
+      const ref = meta.createSpan({ cls: 'pm-docs-ref' })
+      ref.createSpan({ cls: 'pm-docs-ref-label', text: t('library.refLabel') })
+      ref.createSpan({ text: doc.reference })
+    }
+    const version = versionLabel(doc)
+    if (version) {
+      const line = meta.createSpan({ cls: 'pm-docs-ref' })
+      line.createSpan({ cls: 'pm-docs-ref-label', text: t('library.versionLabel') })
+      line.createSpan({ text: version })
+      explain(
+        line,
+        t('library.versionLabel'),
+        t('library.versionHint', { edition: doc.edition || '—', revision: doc.revision || '—' })
+      )
     }
   }
 
@@ -1175,6 +1196,7 @@ export class DocumentsView extends ItemView {
         this.renderBody()
       })
     }
+    this.renderReference(meta, doc)
     if (doc.category) meta.createSpan({ cls: 'pm-docs-category', text: doc.category })
     if (doc.file) {
       meta.createSpan({ cls: 'pm-docs-name', text: doc.file.slice(doc.file.lastIndexOf('/') + 1) })
@@ -1466,6 +1488,7 @@ export class DocumentsView extends ItemView {
       void this.openDoc(doc)
     })
     const meta = main.createDiv('pm-docs-meta')
+    this.renderReference(meta, doc)
     const badge = meta.createSpan({ cls: 'pm-docs-badge is-ghost', text: t('library.ghost') })
     explain(badge, t('library.ghost'), t('library.ghostHint'))
     const where = meta.createEl('a', {
@@ -1782,6 +1805,8 @@ export class DocumentsView extends ItemView {
   private async openRecord(doc: LibraryDoc): Promise<void> {
     const record = this.app.vault.getAbstractFileByPath(doc.record)
     if (!(record instanceof TFile)) return
+    // A record made before its reference, edition and revision were: given them, to be filled in.
+    await this.plugin.library.ensureHandFields(doc)
     const open = this.app.workspace
       .getLeavesOfType('markdown')
       .find((leaf) => (leaf.view as { file?: TFile | null }).file?.path === record.path)
