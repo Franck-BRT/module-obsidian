@@ -1420,6 +1420,11 @@ export const en = {
   'library.referenceStar': 'Reference document',
   'library.referenceStarHint':
     'Kept in the reference folder “{reference}”: shared by several folders, which show it by a ghost.',
+  'library.renameMenu': 'Rename…',
+  'library.renameTitle': 'New title of the document (the file takes the same name)',
+  'library.renamePlaceholder': 'Title of the document',
+  'library.renamed': 'Renamed “{title}”: the title, the record and the file.',
+  'library.renameEmpty': 'This title gives no file name: write at least one word.',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

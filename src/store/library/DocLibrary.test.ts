@@ -641,4 +641,75 @@ describe('DocLibrary', () => {
       expect(library.ghosts()).toEqual([])
     })
   })
+
+  describe('rename', () => {
+    it('gives a document another title, and names its record and its file after it', async () => {
+      await library.pour([outside('scan_0042.pdf', 'plan')], {
+        projects: [],
+        move: false,
+        today: TODAY,
+        folder: 'Plans'
+      })
+      const [doc] = library.docs()
+      const moves = await library.rename(doc, '  Plan RDC  indice B ')
+      const [renamed] = library.docs()
+      expect(renamed).toMatchObject({
+        title: 'Plan RDC indice B',
+        record: 'Bibliothèque/Plans/Plan RDC indice B.md',
+        file: 'Bibliothèque/Plans/Fichiers/Plan RDC indice B.pdf',
+        hash: doc.hash
+      })
+      expect(moves.get('Bibliothèque/Plans/Fichiers/scan_0042.pdf')).toBe(
+        'Bibliothèque/Plans/Fichiers/Plan RDC indice B.pdf'
+      )
+      expect(vault.contentAt(renamed.record)).toContain('file: "[[Bibliothèque/Plans/Fichiers/Plan RDC indice B.pdf]]"')
+    })
+
+    it('takes out what a file name cannot hold, and never writes over another file', async () => {
+      await library.pour([outside('a.pdf', 'un'), outside('b.pdf', 'deux')], {
+        projects: [],
+        move: false,
+        today: TODAY
+      })
+      const [first, second] = library.docs()
+      await library.rename(first, 'Note : lot 2/3 ?')
+      await library.rename(second, 'Note : lot 2/3 ?')
+      const titles = library.docs().map((doc) => [doc.title, doc.file])
+      expect(titles).toContainEqual(['Note : lot 2/3 ?', 'Bibliothèque/Fichiers/Note lot 2 3.pdf'])
+      expect(titles).toContainEqual(['Note : lot 2/3 ?', 'Bibliothèque/Fichiers/Note lot 2 3-1.pdf'])
+      expect(new Set(library.docs().map((doc) => doc.file)).size).toBe(2)
+    })
+
+    it('renames a file the library only records, where it lives, and its ghosts say the new title', async () => {
+      await vault.createBinary('Chantier/photo.pdf', bytes('pv').buffer as ArrayBuffer)
+      await library.pour([{ kind: 'vault', file: fileAt('Chantier/photo.pdf') }], {
+        projects: [],
+        move: false,
+        today: TODAY,
+        folder: 'PV'
+      })
+      await library.pour([outside('copie.pdf', 'pv')], {
+        projects: [],
+        move: false,
+        today: TODAY,
+        folder: 'Lot 2',
+        ghosts: true
+      })
+      const [doc] = library.docs()
+      await library.rename(doc, 'PV de réception')
+      expect(library.docs()[0].file).toBe('Chantier/PV de réception.pdf')
+      const [entry] = library.ghosts()
+      expect(entry.doc?.title).toBe('PV de réception')
+      const ghost = vault.contentAt(entry.ghost.record) ?? ''
+      expect(ghost).toContain('title: PV de réception')
+      expect(ghost).toContain('[[Bibliothèque/PV/PV de réception.md|PV de réception]]')
+    })
+
+    it('leaves all as it was for a title that says nothing', async () => {
+      await library.pour([outside('a.pdf', 'un')], { projects: [], move: false, today: TODAY })
+      const [doc] = library.docs()
+      expect((await library.rename(doc, '  / ? ')).size).toBe(0)
+      expect(library.docs()[0].title).toBe(doc.title)
+    })
+  })
 })

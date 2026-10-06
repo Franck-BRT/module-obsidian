@@ -1466,6 +1466,11 @@ export const fr: Catalog = {
   'library.referenceStar': 'Document de référence',
   'library.referenceStarHint':
     'Rangé dans le dossier de référence « {reference} » : commun à plusieurs dossiers, qui le montrent par un fantôme.',
+  'library.renameMenu': 'Renommer…',
+  'library.renameTitle': 'Nouveau titre du document (le fichier prend le même nom)',
+  'library.renamePlaceholder': 'Titre du document',
+  'library.renamed': 'Renommé en « {title} » : le titre, la fiche et le fichier.',
+  'library.renameEmpty': 'Ce titre ne donne aucun nom de fichier : écrivez au moins un mot.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

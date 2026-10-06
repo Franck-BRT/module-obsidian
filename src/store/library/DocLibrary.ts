@@ -531,6 +531,51 @@ export class DocLibrary {
     return moves
   }
 
+  /**
+   * A document given another title, and its record and file named after it, where they
+   * are — the file whether the library keeps it or only records it, Obsidian taking the
+   * links to it along —; its ghosts say the new title too. Returns the files moved, by the
+   * path they had, for the registers that follow them; none when the title says nothing.
+   */
+  async rename(doc: LibraryDoc, title: string): Promise<Moves> {
+    const moves: Moves = new Map()
+    const clean = title.replace(/\s+/g, ' ').trim()
+    const name = fileNameOf(clean)
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!clean || !name || !(record instanceof TFile)) return moves
+    const ghosts = this.ghostsOf(doc)
+    await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+      fm.title = clean
+    })
+    if (record.basename !== name) {
+      const from = record.path
+      await this.app.fileManager.renameFile(
+        record,
+        await freePath(this.app, record.parent?.path ?? this.root, name, 'md')
+      )
+      moves.set(from, record.path)
+    }
+    const file = doc.file ? this.app.vault.getAbstractFileByPath(doc.file) : null
+    if (file instanceof TFile && file.basename !== name) {
+      const from = file.path
+      const folder = file.parent?.path ?? ''
+      await this.app.fileManager.renameFile(file, await freePath(this.app, folder, name, file.extension))
+      moves.set(from, file.path)
+      await this.pointAt(record, file.path)
+    }
+    // Its ghosts written again: the new title, and the record where it now is.
+    const line = this.ghostLine()
+    for (const { ghost } of ghosts) {
+      const note = this.app.vault.getAbstractFileByPath(ghost.record)
+      if (!(note instanceof TFile)) continue
+      await this.app.vault.modify(
+        note,
+        ghostContent({ record: record.path, title: clean, hash: doc.hash, folder: doc.folder }, { line })
+      )
+    }
+    return moves
+  }
+
   /** Every ghost of the library, with the document each stands for. */
   ghosts(docs: LibraryDoc[] = this.docs()): GhostEntry[] {
     const byRecord = new Map(docs.map((doc) => [doc.record, doc]))
@@ -574,9 +619,15 @@ export class DocLibrary {
     const target = this.pathOf(subfolder)
     await ensureFolder(this.app, target)
     const name = doc.record.slice(doc.record.lastIndexOf('/') + 1).replace(/\.md$/, '')
-    const line = this.words().ghostLine ?? ((link: string, folder: string) => `${link} — ${folder || '/'}`)
-    const note = await this.app.vault.create(await freePath(this.app, target, name, 'md'), ghostContent(doc, { line }))
+    const note = await this.app.vault.create(
+      await freePath(this.app, target, name, 'md'),
+      ghostContent(doc, { line: this.ghostLine() })
+    )
     return note.path
+  }
+
+  private ghostLine(): (link: string, folder: string) => string {
+    return this.words().ghostLine ?? ((link, folder) => `${link} — ${folder || '/'}`)
   }
 
   async removeGhost(ghost: LibraryGhost): Promise<void> {
@@ -645,6 +696,17 @@ export class DocLibrary {
       if (fm.file !== link) fm.file = link
     })
   }
+}
+
+/**
+ * A title made a file's name: what a file name cannot hold, and what Obsidian's links would
+ * read as something else (`#`, `^`, `[`, `]`, `|`), made spaces; no dot nor space at either end.
+ */
+export function fileNameOf(title: string): string {
+  return title
+    .replace(/[\\/:*?"<>|#^[\]]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[.\s]+|[.\s]+$/g, '')
 }
 
 /** A frontmatter field as text: a number written bare in YAML — a lot « 2 » — read as one too. */

@@ -43,7 +43,7 @@ import {
   type MissingRegisterFile,
   type RegisterEntry
 } from '../../store/library/libraryRegister'
-import { findVaultFile } from '../../store/library/DocLibrary'
+import { fileNameOf, findVaultFile } from '../../store/library/DocLibrary'
 import { documentOf } from '../../store/Document'
 import { confirmDialog, openTaskModal, promptText } from '../../ui/ModalFactory'
 import { docStateLabel } from '../library/docStateLabel'
@@ -1346,6 +1346,25 @@ export class DocumentsView extends ItemView {
     explain(star, t('library.referenceStar'), t('library.referenceStarHint', { reference }))
   }
 
+  /**
+   * A document given another title: its record and its file named after it, the registers
+   * that follow the file told where it now is.
+   */
+  private async renameDoc(doc: LibraryDoc): Promise<void> {
+    const title = await promptText(this.app, t('library.renameTitle'), t('library.renamePlaceholder'), doc.title)
+    if (title === null || title.trim() === doc.title) return
+    if (!fileNameOf(title)) {
+      new Notice(t('library.renameEmpty'))
+      return
+    }
+    const moves = await this.plugin.library.rename(doc, title)
+    const told = await this.plugin.followLibraryMoves(moves)
+    const parts = [t('library.renamed', { title: title.replace(/\s+/g, ' ').trim() })]
+    if (told) parts.push(t('library.registersFollowed', { count: told }))
+    new Notice(parts.join('\n'), told ? 8000 : 4000)
+    this.redrawSoon()
+  }
+
   /** The document a ghost stands for, shown in its own folder. */
   private goToOriginal(doc: LibraryDoc): void {
     this.openFolder(doc.folder || AT_ROOT)
@@ -1360,6 +1379,12 @@ export class DocumentsView extends ItemView {
         .setIcon('file-search')
         .setDisabled(!doc.file)
         .onClick(safeAsync(() => this.openDoc(doc)))
+    )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('library.renameMenu'))
+        .setIcon('pencil')
+        .onClick(safeAsync(() => this.renameDoc(doc)))
     )
     menu.addItem((item) =>
       item
