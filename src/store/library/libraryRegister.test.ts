@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { makeDocument, makeProject, makeTask, type DocumentMeta, type Task } from '../../types'
+import type { LibraryDoc } from './libraryDoc'
 import {
+  identityFromRegister,
   likeness,
   matchScore,
   proposeMatches,
   registerCandidates,
   missingRegisterFiles,
   registerEntries,
+  registerFieldsOf,
   registerFilesOutside,
-  repointedDocument
+  repointedDocument,
+  withRegisterFields
 } from './libraryRegister'
 
 const ticket = (title: string, document: Partial<DocumentMeta>, subtasks: Task[] = []): Task =>
@@ -190,6 +194,8 @@ describe('registerFilesOutside', () => {
     ticket('Plan de coffrage', {
       file: 'GC/_docs/Plan.pdf',
       issuer: 'Setec',
+      reference: 'GC-PL-001',
+      issue: 'B',
       versions: [version(1, 'GC/_docs/_versions/Plan-v1.pdf'), version(2, 'GC/_docs/Plan.pdf')]
     }),
     ticket('Note de calcul', { file: 'Library/_files/NDC.pdf', versions: [version(1, 'Library/_files/NDC.pdf')] }),
@@ -209,10 +215,20 @@ describe('registerFilesOutside', () => {
         file: 'GC/_docs/Plan.pdf',
         title: 'Plan de coffrage',
         issuer: 'Setec',
+        reference: 'GC-PL-001',
+        issue: 'B',
         projects: ['GC.md', 'T.md'],
         current: true
       },
-      { file: 'T/_docs/Nouveau.pdf', title: 'Ancien plan', issuer: '', projects: ['T.md'], current: true }
+      {
+        file: 'T/_docs/Nouveau.pdf',
+        title: 'Ancien plan',
+        issuer: '',
+        reference: '',
+        issue: '',
+        projects: ['T.md'],
+        current: true
+      }
     ])
   })
 
@@ -222,6 +238,9 @@ describe('registerFilesOutside', () => {
       file: 'GC/_docs/_versions/Plan-v1.pdf',
       title: 'Plan de coffrage (v1)',
       issuer: 'Setec',
+      // An earlier version keeps its reference; its issue is not kept.
+      reference: 'GC-PL-001',
+      issue: '',
       projects: ['GC.md', 'T.md'],
       current: false
     })
@@ -279,5 +298,44 @@ describe('repointedDocument', () => {
     expect(repointedDocument(composed, decomposed)?.file).toBe('L/A/Réception.pdf')
     // An expected document, with no file, has nothing to follow.
     expect(repointedDocument(makeDocument(), new Map([['', 'x']]))).toBeNull()
+  })
+})
+
+describe('fields between the library and the registers', () => {
+  const doc = (over: Partial<LibraryDoc>): LibraryDoc => ({
+    record: 'L/Plan.md',
+    folder: '',
+    title: 'Plan',
+    file: 'L/_f/Plan.pdf',
+    projects: [],
+    added: '',
+    size: 1,
+    hash: 'h',
+    category: '',
+    lot: '',
+    issuer: '',
+    tags: [],
+    ...over
+  })
+
+  it('gives a ticket the library’s reference, issue and issuer, never over its own', () => {
+    const fields = registerFieldsOf(doc({ reference: 'GC-PL-001', edition: '2', revision: '15', issuer: 'Setec' }))
+    expect(fields).toEqual({ reference: 'GC-PL-001', issue: '2-15', issuer: 'Setec' })
+    expect(withRegisterFields(makeDocument(), fields, false)).toMatchObject(fields)
+    const own = makeDocument({ reference: 'GC-PL-9', issue: 'A', issuer: 'Egis' })
+    expect(withRegisterFields(own, fields, false)).toMatchObject({ reference: 'GC-PL-9', issue: 'A', issuer: 'Egis' })
+    // Its new version: the document's issue is the ticket's now.
+    expect(withRegisterFields(own, fields, true)).toMatchObject({ reference: 'GC-PL-9', issue: '2-15', issuer: 'Egis' })
+    expect(withRegisterFields(own, { ...fields, issue: '' }, true).issue).toBe('A')
+  })
+
+  it('gives the library a ticket’s reference and issue: an edition and a revision, or a revision', () => {
+    expect(identityFromRegister({ reference: ' GC-PL-001 ', issue: '2-15' })).toEqual({
+      reference: 'GC-PL-001',
+      edition: '2',
+      revision: '15'
+    })
+    expect(identityFromRegister({ reference: '', issue: 'B' })).toEqual({ revision: 'B' })
+    expect(identityFromRegister({ reference: '', issue: '' })).toEqual({})
   })
 })

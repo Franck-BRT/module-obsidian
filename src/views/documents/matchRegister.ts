@@ -3,7 +3,12 @@ import type PMPlugin from '../../main'
 import { documentOf } from '../../store/Document'
 import { fileAsVersion } from '../../store/library/fileInRegister'
 import type { LibraryDoc } from '../../store/library/libraryDoc'
-import { proposeMatches, type MatchCandidate, type MatchProposal } from '../../store/library/libraryRegister'
+import {
+  proposeMatches,
+  type MatchCandidate,
+  type MatchProposal,
+  registerFieldsOf
+} from '../../store/library/libraryRegister'
 import { formatDateShort } from '../../dates'
 import { t } from '../../i18n'
 
@@ -46,10 +51,17 @@ export async function proposeRegisterMatches(plugin: PMPlugin, docs: LibraryDoc[
     // A ticket chosen twice is given the first file only: the second would be its version 2.
     if (!doc || !(file instanceof TFile) || used.has(match.task.id)) continue
     used.add(match.task.id)
-    await fileAsVersion(deps, match.project, match.task, file, {
-      by: match.project.teamMembers[0] ?? plugin.settings.globalTeamMembers[0] ?? '',
-      note: t('library.registerNote')
-    })
+    await fileAsVersion(
+      deps,
+      match.project,
+      match.task,
+      file,
+      {
+        by: match.project.teamMembers[0] ?? plugin.settings.globalTeamMembers[0] ?? '',
+        note: t('library.registerNote')
+      },
+      registerFieldsOf(doc)
+    )
     if (!doc.projects.includes(match.project.filePath)) await plugin.library.addProjects(doc, [match.project.filePath])
     filed++
   }

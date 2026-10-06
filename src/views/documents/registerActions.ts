@@ -1,7 +1,7 @@
 import { Notice, SuggestModal, TFile, setIcon, type App } from 'obsidian'
 import type PMPlugin from '../../main'
 import { documentOf } from '../../store/Document'
-import { registerCandidates } from '../../store/library/libraryRegister'
+import { registerCandidates, registerFieldsOf } from '../../store/library/libraryRegister'
 import { fileAsNew, fileAsVersion } from '../../store/library/fileInRegister'
 import type { LibraryDoc } from '../../store/library/libraryDoc'
 import type { Project, Task } from '../../types'
@@ -72,7 +72,8 @@ async function fileAs(plugin: PMPlugin, doc: LibraryDoc, file: TFile, chosen: Ch
     note: t('library.registerNote')
   }
   if (chosen.kind === 'ticket') {
-    const meta = await fileAsVersion(deps, project, chosen.task, file, deposit)
+    // The ticket told its reference, issue and issuer, where it says none, and its new issue.
+    const meta = await fileAsVersion(deps, project, chosen.task, file, deposit, registerFieldsOf(doc))
     new Notice(
       t('library.registerFiled', {
         title: chosen.task.title,
@@ -81,7 +82,7 @@ async function fileAs(plugin: PMPlugin, doc: LibraryDoc, file: TFile, chosen: Ch
       })
     )
   } else {
-    const task = await fileAsNew(deps, project, doc.title, file, deposit)
+    const task = await fileAsNew(deps, project, doc.title, file, deposit, registerFieldsOf(doc))
     new Notice(t('library.registerCreated', { title: task.title, project: project.title }))
     // Its reference and issue are the register's to say: asked for straight away.
     openTaskModal(plugin, project, { task, onSave: () => Promise.resolve() })

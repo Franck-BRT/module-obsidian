@@ -1,7 +1,7 @@
 import { Modal, Notice, Setting, type App } from 'obsidian'
 import type PMPlugin from '../../main'
 import { findVaultFile, type PourItem } from '../../store/library/DocLibrary'
-import { registerFilesOutside, type RegisterFile } from '../../store/library/libraryRegister'
+import { identityFromRegister, registerFilesOutside, type RegisterFile } from '../../store/library/libraryRegister'
 import type { Project } from '../../types'
 import { today } from '../../dates'
 import { t } from '../../i18n'
@@ -75,6 +75,13 @@ export async function pourRegisterFiles(plugin: PMPlugin, only?: string): Promis
     (done, total) => progress?.setMessage(t('library.pouring', { done, total }))
   )
   progress?.hide()
+  // Each record told its ticket's reference and issue, where it says none.
+  const byFile = new Map(plugin.library.docs().map((doc) => [doc.file.normalize('NFC'), doc]))
+  for (const entry of chosen) {
+    const doc = byFile.get(entry.file.normalize('NFC'))
+    const found = identityFromRegister(entry)
+    if (doc && (found.reference || found.edition || found.revision)) await plugin.library.fillIdentity(doc, found)
+  }
   const parts = [t('library.poured', { count: report.added.length })]
   if (report.known.length) parts.push(t('library.alreadyThere', { count: report.known.length }))
   if (report.failed.length) {

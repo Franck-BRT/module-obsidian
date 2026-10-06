@@ -116,6 +116,33 @@ describe('a library document followed in a register', () => {
     expect(fileAt(b).path).toBe(b)
   })
 
+  it('gives the ticket the library’s reference, issue and issuer, and a new version its issue', async () => {
+    await library.pour(
+      [
+        { kind: 'bytes', name: 'Plan A.pdf', bytes: bytes('A') },
+        { kind: 'bytes', name: 'Plan B.pdf', bytes: bytes('B') }
+      ],
+      { projects: [project.filePath], move: false, today: '2026-09-28' }
+    )
+    const [a, b] = ['Library/_files/Plan A.pdf', 'Library/_files/Plan B.pdf']
+    const created = await fileAsNew(deps, await reload(), 'Plan', fileAt(a), DEPOSIT, {
+      reference: 'GC-PL-001',
+      issue: 'A',
+      issuer: 'Setec'
+    })
+    expect(created.document).toMatchObject({ reference: 'GC-PL-001', issue: 'A', issuer: 'Setec' })
+    const ticket = (await reload()).tasks.find((task) => task.id === created.id)
+    if (!ticket) throw new Error('ticket not written')
+    await fileAsVersion(deps, await reload(), ticket, fileAt(b), DEPOSIT, {
+      reference: 'AUTRE',
+      issue: 'B',
+      issuer: ''
+    })
+    const after = (await reload()).tasks.find((task) => task.id === created.id)
+    // Its own reference and issuer kept; the new version's issue taken.
+    expect(after?.document).toMatchObject({ reference: 'GC-PL-001', issue: 'B', issuer: 'Setec' })
+  })
+
   it('adds a new document to the register, received, under the title it has in the library', async () => {
     await library.pour([{ kind: 'bytes', name: 'Note de calcul.pdf', bytes: bytes('ndc') }], {
       projects: [],

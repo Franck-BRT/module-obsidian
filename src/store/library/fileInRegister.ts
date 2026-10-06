@@ -2,7 +2,7 @@ import type { TFile } from 'obsidian'
 import { makeDocument, makeTask, type DocumentMeta, type Project, type Task } from '../../types'
 import { documentOf, isDocument, statusForState } from '../Document'
 import { flattenTasks } from '../TaskTreeOps'
-import { repointedDocument } from './libraryRegister'
+import { repointedDocument, withRegisterFields, type RegisterFields } from './libraryRegister'
 import type { DocumentStore } from '../DocumentStore'
 import type { TaskSource } from '../TaskSource'
 
@@ -31,10 +31,13 @@ export async function fileAsVersion(
   project: Project,
   task: Task,
   file: TFile,
-  deposit: Deposit
+  deposit: Deposit,
+  /** The library document's reference, issue and issuer: what the ticket lacks, and its new issue. */
+  fields?: RegisterFields
 ): Promise<DocumentMeta> {
   const before = documentOf(task).state
-  const meta = await deps.documents.link(task, file, deposit)
+  const linked = await deps.documents.link(task, file, deposit)
+  const meta = fields ? withRegisterFields(linked, fields, true) : linked
   const patch: Partial<Task> = { document: meta }
   if (meta.state !== before) {
     const status = statusForState(meta.state, deps.store.configFor(project).statuses)
@@ -51,9 +54,11 @@ export async function fileAsNew(
   project: Project,
   title: string,
   file: TFile,
-  deposit: Deposit
+  deposit: Deposit,
+  /** The library document's reference, issue and issuer, for the new ticket. */
+  fields?: RegisterFields
 ): Promise<Task> {
-  const draft = makeTask({ title, type: 'document', start: '', document: makeDocument() })
+  const draft = makeTask({ title, type: 'document', start: '', document: makeDocument(fields ?? {}) })
   const meta = await deps.documents.link(draft, file, deposit)
   const status = statusForState(meta.state, deps.store.configFor(project).statuses)
   const task: Task = { ...draft, document: meta, ...(status ? { status } : {}) }

@@ -1,7 +1,8 @@
 import type { DocumentMeta, Project, Task } from '../../types'
 import { documentOf, isDocument } from '../Document'
 import { flattenTasks } from '../TaskTreeOps'
-import { fold } from './libraryDoc'
+import { fold, versionLabel, type LibraryDoc } from './libraryDoc'
+import type { DocIdentity } from './docIdentity'
 
 /**
  * The library's documents as the projects' registers know them.
@@ -215,6 +216,9 @@ export interface RegisterFile {
   /** The register document's title — with its version when it is an earlier one. */
   title: string
   issuer: string
+  /** The register document's reference, and its issue — '' for an earlier version, whose issue is not kept. */
+  reference: string
+  issue: string
   /** Every project whose register holds it. */
   projects: string[]
   /** The register document's current file, rather than an earlier version. */
@@ -240,7 +244,13 @@ export function registerFilesOutside(
       for (const path of entry.projects) if (!known.projects.includes(path)) known.projects.push(path)
       // Current somewhere is current: its own title rather than a version's.
       if (entry.current && !known.current) {
-        Object.assign(known, { title: entry.title, issuer: entry.issuer, current: true })
+        Object.assign(known, {
+          title: entry.title,
+          issuer: entry.issuer,
+          reference: entry.reference,
+          issue: entry.issue,
+          current: true
+        })
       }
     }
   }
@@ -249,7 +259,15 @@ export function registerFilesOutside(
       if (!isDocument(task)) continue
       const meta = documentOf(task)
       if (meta.file) {
-        add({ file: meta.file, title: task.title, issuer: meta.issuer, projects: [project.filePath], current: true })
+        add({
+          file: meta.file,
+          title: task.title,
+          issuer: meta.issuer,
+          reference: meta.reference,
+          issue: meta.issue,
+          projects: [project.filePath],
+          current: true
+        })
       }
       if (!withVersions) continue
       for (const version of meta.versions) {
@@ -258,6 +276,8 @@ export function registerFilesOutside(
           file: version.file,
           title: `${task.title} (v${version.version})`,
           issuer: meta.issuer,
+          reference: meta.reference,
+          issue: '',
           projects: [project.filePath],
           current: false
         })
@@ -305,4 +325,39 @@ export function repointedDocument(meta: DocumentMeta, moves: Map<string, string>
   })
   if (!file && versions.every((version, at) => version === meta.versions[at])) return null
   return { ...meta, file: file ?? meta.file, versions }
+}
+
+/** What a register's ticket is told of a document of the library: its reference, its issue, its issuer. */
+export type RegisterFields = Pick<DocumentMeta, 'reference' | 'issue' | 'issuer'>
+
+/** A library document's reference, version — edition-revision, as the ticket's issue — and issuer. */
+export function registerFieldsOf(doc: LibraryDoc): RegisterFields {
+  return { reference: doc.reference ?? '', issue: versionLabel(doc), issuer: doc.issuer }
+}
+
+/**
+ * A ticket's fields completed with a library document's: what the ticket leaves empty — its
+ * own never written over —, but for its issue when the document is its new version, which
+ * comes with an issue of its own.
+ */
+export function withRegisterFields(meta: DocumentMeta, fields: RegisterFields, newVersion: boolean): DocumentMeta {
+  return {
+    ...meta,
+    reference: meta.reference || fields.reference,
+    issuer: meta.issuer || fields.issuer,
+    issue: (newVersion && fields.issue) || meta.issue || fields.issue
+  }
+}
+
+/** A ticket's reference and issue, as the library keeps them: « 2-15 » an edition and a revision, « B » a revision. */
+export function identityFromRegister(meta: Pick<DocumentMeta, 'reference' | 'issue'>): DocIdentity {
+  const out: DocIdentity = {}
+  if (meta.reference.trim()) out.reference = meta.reference.trim()
+  const issue = meta.issue.trim()
+  const pair = /^([^\s-]+)\s*-\s*([^\s-]+)$/.exec(issue)
+  if (pair) {
+    out.edition = pair[1]
+    out.revision = pair[2]
+  } else if (issue) out.revision = issue
+  return out
 }
