@@ -1,3 +1,4 @@
+import { projectLots } from '../../store/projectLots'
 import { Modal, Notice, setIcon } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Project } from '../../types'
@@ -149,7 +150,7 @@ export class PlanningImportModal extends Modal {
     let project = this.target === 'current' ? this.current : null
     if (!project) {
       const folder = plugin.settings.projectsFolder.trim() || 'Projects'
-      project = await plugin.store.createProject(title, folder)
+      project = await plugin.store.createProject(title, folder, undefined, projectLots(plugin.settings))
     }
     const working = new Notice(t('planning.working'), 0)
     let count = 0

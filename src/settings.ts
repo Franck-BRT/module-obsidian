@@ -31,6 +31,7 @@ import { renderPersonPicker } from './ui/PersonPicker'
 import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
 import { LOCALES, searchAliases, t } from './i18n'
 import { invalidHolidays, renderHolidays, renderWorkingWeekdays } from './ui/WorkCalendarEditor'
+import { renderProjectLots } from './ui/ProjectLotsEditor'
 import { OCR_STEPS, stepDesc, stepName } from './views/documents/scanOptions'
 
 /** Exhaustive, so a new mode cannot reach the interface without a name. */
@@ -130,6 +131,17 @@ export class PMSettingTab extends PluginSettingTab {
               key: 'libraryFolder',
               defaultValue: 'Library',
               placeholder: 'Library'
+            }
+          },
+          {
+            name: t('settings.projectLots.name'),
+            desc: t('settings.projectLots.desc'),
+            render: (setting: Setting) => {
+              renderProjectLots(setting.controlEl, this.plugin.settings, () => {
+                // An empty name is no lot: taken off as it is saved.
+                this.plugin.settings.projectLots = this.plugin.settings.projectLots.filter((lot) => lot.trim())
+                this.persist()
+              })
             }
           },
           {

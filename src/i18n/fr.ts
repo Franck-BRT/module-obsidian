@@ -1504,6 +1504,17 @@ export const fr: Catalog = {
   'library.versionLabel': 'Version :',
   'library.versionHint': 'Édition {edition}, révision {revision}. Se modifie dans la fiche du document.',
   'library.pickTitleOnly': 'Chercher dans le titre seulement',
+  'lots.documents': 'Documents',
+  'lots.reserves': 'Réserves',
+  'settings.projectLots.name': 'Lots d’un nouveau projet',
+  'settings.projectLots.desc':
+    'Chaque nouveau projet est créé avec ces lots. Documents est toujours là : les documents versés dans un projet y vont. Les réserves vont dans le lot Réserves.',
+  'settings.projectLots.locked': 'Lot obligatoire',
+  'settings.projectLots.lockedHint':
+    'Tout projet a un lot Documents : les documents qui y sont déposés, depuis la bibliothèque, la boîte de réception ou le chat, y sont rangés.',
+  'settings.projectLots.placeholder': 'Nom du lot',
+  'settings.projectLots.remove': 'Retirer ce lot',
+  'settings.projectLots.add': 'Ajouter un lot',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

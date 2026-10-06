@@ -1,3 +1,4 @@
+import { ensureLot, reservesLot } from '../../store/projectLots'
 import { Notice, setIcon, TFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { FilterState, Project, ReservePhase, ReserveState, Task, TaskReserve } from '../../types'
@@ -248,7 +249,8 @@ export class ReservesView implements SubView {
         raisedOn: day
       })
     })
-    await this.plugin.store.insertTask(project, task)
+    // In the project's Reserves lot, made when it has none.
+    await this.plugin.store.insertTask(project, task, await ensureLot(this.plugin.store, project, reservesLot()))
     if (draft.photos.length) {
       await addReservePhotos(this.plugin, project, task, draft.photos)
       await this.plugin.store.updateTask(project, task.id, { reserve: task.reserve })

@@ -1,3 +1,4 @@
+import { ensureLot, projectLots } from '../store/projectLots'
 import { App, ButtonComponent, ExtraButtonComponent, Keymap, Modal, Notice, setIcon } from 'obsidian'
 import type PMPlugin from '../main'
 import { DEFAULT_PROJECT_COLOR, DEFAULT_PROJECT_ICON } from '../types'
@@ -390,20 +391,30 @@ export class ProjectCreateModal extends Modal {
         ...(this.draft.description ? { description: this.draft.description } : {}),
         ...(this.draft.teamMembers.length ? { teamMembers: this.draft.teamMembers } : {})
       })
+      // The lots every project has, those the template did not bring.
+      const lots = projectLots(this.plugin.settings)
+      const loaded = await this.plugin.store.loadProjectByPath(made.filePath)
+      if (loaded) for (const name of lots) await ensureLot(this.plugin.store, loaded, name)
       new Notice(t('template.madeFrom', { title: fromTemplate.title }))
       this.close()
       await this.plugin.router.openProjectLink(made.filePath)
       return
     }
-    const project = await this.plugin.store.createProject(title, this.targetFolder(), {
-      icon: this.draft.icon,
-      color: this.draft.color,
-      description: this.draft.description,
-      teamMembers: this.draft.teamMembers,
-      parentPath: this.draft.parentPath || undefined,
-      ...(this.program ? { program: true } : {}),
-      ...(this.template ? { template: true } : {})
-    })
+    const project = await this.plugin.store.createProject(
+      title,
+      this.targetFolder(),
+      {
+        icon: this.draft.icon,
+        color: this.draft.color,
+        description: this.draft.description,
+        teamMembers: this.draft.teamMembers,
+        parentPath: this.draft.parentPath || undefined,
+        ...(this.program ? { program: true } : {}),
+        ...(this.template ? { template: true } : {})
+      },
+      // Documents and the settings' lots: every project has them from the start.
+      projectLots(this.plugin.settings)
+    )
     this.close()
     await this.plugin.router.openProjectLink(project.filePath)
   })

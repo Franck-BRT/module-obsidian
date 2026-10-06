@@ -861,6 +861,11 @@ export interface PMSettings {
    * '' for the default, named in the reader's language.
    */
   libraryReferenceFolder: string
+  /**
+   * The lots a new project is made with, after Documents, which it always has: Reserves
+   * by default, and the reader's own.
+   */
+  projectLots: string[]
   /** The library's categories, one a line with the words that recognise them; empty is the shipped list. */
   libraryCategories: string
   /** The notes library: notes of no project yet, and the inbox new notes land in. */
@@ -1231,6 +1236,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   projectsFolder: 'Projects',
   libraryFolder: 'Library',
   libraryReferenceFolder: '',
+  projectLots: [],
   libraryCategories: '',
   notesFolder: 'Notes',
   peopleFolder: 'People',

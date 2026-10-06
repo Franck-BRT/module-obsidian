@@ -9,6 +9,11 @@ import { VaultIndex } from '../VaultIndex'
 import { DocLibrary } from './DocLibrary'
 import { fileAsNew, fileAsVersion, followMoves, type RegisterDeps } from './fileInRegister'
 import { proposeMatches, registerCandidates, registerEntries } from './libraryRegister'
+import { flattenTasks } from '../TaskTreeOps'
+import { findLot } from '../projectLots'
+
+/** Every ticket of a project, at whatever depth: a document filed goes in its Documents lot. */
+const all = (project: Project) => flattenTasks(project.tasks).map((flat) => flat.task)
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
 const DEPOSIT = { by: 'Anne', note: 'Versé depuis la bibliothèque' }
@@ -72,7 +77,7 @@ describe('a library document followed in a register', () => {
     expect(meta).toMatchObject({ state: 'received', file: doc.file, linked: true })
 
     // Kept in the project's note, and the file never moved into its _docs.
-    const ticket = (await reload()).tasks.find((task) => task.title === 'Planning génie civil')
+    const ticket = all(await reload()).find((task) => task.title === 'Planning génie civil')
     expect(documentOf(ticket ?? makeTask())).toMatchObject({ state: 'received', file: doc.file, linked: true })
     expect(ticket?.document?.versions).toHaveLength(1)
     expect(ticket?.document?.versions[0]).toMatchObject({
@@ -104,7 +109,7 @@ describe('a library document followed in a register', () => {
     )
     const [a, b] = ['Library/_files/Plan indice A.pdf', 'Library/_files/Plan indice B.pdf']
     const created = await fileAsNew(deps, await reload(), 'Plan de coffrage', fileAt(a), DEPOSIT)
-    const ticket = (await reload()).tasks.find((task) => task.id === created.id)
+    const ticket = all(await reload()).find((task) => task.id === created.id)
     if (!ticket) throw new Error('ticket not written')
     await fileAsVersion(deps, await reload(), ticket, fileAt(b), DEPOSIT)
 
@@ -131,14 +136,14 @@ describe('a library document followed in a register', () => {
       issuer: 'Setec'
     })
     expect(created.document).toMatchObject({ reference: 'GC-PL-001', issue: 'A', issuer: 'Setec' })
-    const ticket = (await reload()).tasks.find((task) => task.id === created.id)
+    const ticket = all(await reload()).find((task) => task.id === created.id)
     if (!ticket) throw new Error('ticket not written')
     await fileAsVersion(deps, await reload(), ticket, fileAt(b), DEPOSIT, {
       reference: 'AUTRE',
       issue: 'B',
       issuer: ''
     })
-    const after = (await reload()).tasks.find((task) => task.id === created.id)
+    const after = all(await reload()).find((task) => task.id === created.id)
     // Its own reference and issuer kept; the new version's issue taken.
     expect(after?.document).toMatchObject({ reference: 'GC-PL-001', issue: 'B', issuer: 'Setec' })
   })
@@ -151,13 +156,19 @@ describe('a library document followed in a register', () => {
     })
     const [doc] = library.docs()
     const task = await fileAsNew(deps, await reload(), doc.title, fileAt(doc.file), DEPOSIT)
-    const written = (await reload()).tasks.find((each) => each.id === task.id)
+    const written = all(await reload()).find((each) => each.id === task.id)
     expect(written).toMatchObject({
       title: 'Note de calcul',
       type: 'document',
       status: statusForState('received', store.configFor(await reload()).statuses)
     })
     expect(documentOf(written ?? makeTask())).toMatchObject({ state: 'received', file: doc.file, linked: true })
+    // In the project's Documents lot, made once for it: a second one goes in the same.
+    const lot = findLot(await reload(), 'Documents')
+    expect(lot?.subtasks.map((each) => each.id)).toEqual([task.id])
+    const second = await fileAsNew(deps, await reload(), 'Autre', fileAt(doc.file), DEPOSIT)
+    expect((await reload()).tasks.filter((each) => each.type === 'phase')).toHaveLength(1)
+    expect(findLot(await reload(), 'documents')?.subtasks.map((each) => each.id)).toEqual([task.id, second.id])
   })
 
   it('proposes, right after a pour, the awaited document a file is, and files it there once chosen', async () => {
@@ -188,7 +199,7 @@ describe('a library document followed in a register', () => {
     const match = proposal.chosen
     if (!match) throw new Error('no match')
     await fileAsVersion(deps, match.project, match.task, fileAt(proposal.subject.file), DEPOSIT)
-    const ticket = (await reload()).tasks.find((task) => task.title === 'Plan de coffrage radier')
+    const ticket = all(await reload()).find((task) => task.title === 'Plan de coffrage radier')
     expect(documentOf(ticket ?? makeTask())).toMatchObject({ state: 'received', file: proposal.subject.file })
   })
 
@@ -202,7 +213,7 @@ describe('a library document followed in a register', () => {
     )
     const [a, b] = ['Library/_files/Plan indice A.pdf', 'Library/_files/Plan indice B.pdf']
     const created = await fileAsNew(deps, await reload(), 'Plan de coffrage', fileAt(a), DEPOSIT)
-    const ticket = (await reload()).tasks.find((task) => task.id === created.id)
+    const ticket = all(await reload()).find((task) => task.id === created.id)
     if (!ticket) throw new Error('ticket not written')
     await fileAsVersion(deps, await reload(), ticket, fileAt(b), DEPOSIT)
     // Its first issue moved first, then its folder renamed with its current one in it.
@@ -217,10 +228,10 @@ describe('a library document followed in a register', () => {
     const shown = await reload()
     expect(await followMoves(store, [shown], renamed?.moves ?? new Map<string, string>())).toBe(1)
     // The project as the caller holds it says so at once, before it is read again.
-    const held = shown.tasks.find((task) => task.id === created.id)
+    const held = all(shown).find((task) => task.id === created.id)
     expect(documentOf(held ?? makeTask()).file).toBe('Library/Coffrage/_files/Plan indice B.pdf')
 
-    const after = documentOf((await reload()).tasks.find((task) => task.id === created.id) ?? makeTask())
+    const after = documentOf(all(await reload()).find((task) => task.id === created.id) ?? makeTask())
     expect(after.file).toBe('Library/Coffrage/_files/Plan indice B.pdf')
     expect(after.versions.map((version) => version.file)).toEqual([
       'Library/Coffrage/_files/Plan indice A.pdf',

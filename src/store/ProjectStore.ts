@@ -63,6 +63,7 @@ import {
 import type { CreateFromTemplateOptions, ImportNoteOptions, ScheduleMove, TaskSource } from './TaskSource'
 import { tasksFromTemplate } from './Template'
 import { t } from '../i18n'
+import { ensureLot } from './projectLots'
 
 /** 'fm' writes via processFrontMatter; 'full' rewrites the body too, via vault.process. */
 type DirtyKind = 'fm' | 'full'
@@ -830,7 +831,7 @@ export class ProjectStore implements TaskSource {
     return existing instanceof TFile ? new TaskFileNameConflictError(desired) : null
   }
 
-  async createProject(title: string, folder: string, patch?: ProjectPatch): Promise<Project> {
+  async createProject(title: string, folder: string, patch?: ProjectPatch, lots?: string[]): Promise<Project> {
     const project = makeProject(title, projectFilePath(title, folder))
     if (patch) Object.assign(project, patch)
     await this.saveProject(project)
@@ -838,6 +839,11 @@ export class ProjectStore implements TaskSource {
     // `_inbox` is the one a reader is asked to put something in, and a folder that only
     // appears once the plugin has had a reason to write to it can never be that.
     await ensureProjectFolders(this.app, project.filePath, DOCS_FOLDER_NAME)
+    // Its lots from the start, when asked: Documents always, then the settings' own. A
+    // programme holds no tickets, and a template its own shape.
+    if (lots?.length && !project.program && !project.template) {
+      for (const name of lots) await ensureLot(this, project, name)
+    }
     return project
   }
 

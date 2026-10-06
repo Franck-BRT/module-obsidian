@@ -46,6 +46,7 @@ import { renderGlyph } from '../ui/composites/properties'
 import { showAddTicketMenu } from '../ui/composites/addTicketButton'
 import { attachEmailDrop } from './emailDrop'
 import { affectsInbox, inboxFiles, sweepInbox } from '../store/Inbox'
+import { documentsLot, ensureLot } from '../store/projectLots'
 import { ensureProjectFolders, projectInboxFolder } from '../store/vaultFs'
 import { DOCS_FOLDER_NAME } from '../store/DocumentStore'
 import { emailToMarkdown } from '../store/email'
@@ -671,7 +672,13 @@ export class ProjectView extends ItemView {
     if (!project) return
     const labels = { from: t('email.from'), to: t('email.to'), cc: t('email.cc'), date: t('email.date') }
     const result = await sweepInbox(this.app, project, {
-      insert: (task) => this.plugin.store.insertTask(project, task),
+      // A document filed from the inbox goes in the Documents lot; a message's ticket at the top.
+      insert: async (task) =>
+        this.plugin.store.insertTask(
+          project,
+          task,
+          task.type === 'document' ? await ensureLot(this.plugin.store, project, documentsLot()) : null
+        ),
       deposit: async (task, source) => ({
         ...task,
         document: await this.plugin.documents.deposit(project, task, source, {

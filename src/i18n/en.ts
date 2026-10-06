@@ -1458,6 +1458,17 @@ export const en = {
   'library.versionLabel': 'Version:',
   'library.versionHint': 'Edition {edition}, revision {revision}. Changed in the document’s record.',
   'library.pickTitleOnly': 'Search the title only',
+  'lots.documents': 'Documents',
+  'lots.reserves': 'Reserves',
+  'settings.projectLots.name': 'Lots of a new project',
+  'settings.projectLots.desc':
+    'Each new project is made with these lots. Documents is always there: the documents filed into a project go in it. Reserves go in the Reserves lot.',
+  'settings.projectLots.locked': 'Required lot',
+  'settings.projectLots.lockedHint':
+    'Every project has a Documents lot: the documents filed into it, from the library, the inbox or the chat, go there.',
+  'settings.projectLots.placeholder': 'Name of the lot',
+  'settings.projectLots.remove': 'Remove this lot',
+  'settings.projectLots.add': 'Add a lot',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

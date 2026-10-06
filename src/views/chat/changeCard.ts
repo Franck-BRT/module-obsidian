@@ -1,3 +1,4 @@
+import { projectLots } from '../../store/projectLots'
 import { MarkdownRenderChild, Notice, setIcon, TFile } from 'obsidian'
 import type PMPlugin from '../../main'
 import {
@@ -897,8 +898,12 @@ class ChangeCard extends MarkdownRenderChild {
   }
 
   private async applyProject(spec: Extract<ChangeSpec, { kind: 'project' }>): Promise<void> {
-    const done = await applyProject(this.plugin.index, this.plugin.store, spec, (parent) =>
-      this.plugin.newProjectFolder(parent)
+    const done = await applyProject(
+      this.plugin.index,
+      this.plugin.store,
+      spec,
+      (parent) => this.plugin.newProjectFolder(parent),
+      projectLots(this.plugin.settings)
     )
     this.report(done, spec.title)
     if (done.ok && done.changed) {

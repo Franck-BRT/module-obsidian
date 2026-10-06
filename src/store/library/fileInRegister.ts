@@ -5,6 +5,7 @@ import { flattenTasks } from '../TaskTreeOps'
 import { repointedDocument, withRegisterFields, type RegisterFields } from './libraryRegister'
 import type { DocumentStore } from '../DocumentStore'
 import type { TaskSource } from '../TaskSource'
+import { documentsLot, ensureLot } from '../projectLots'
 
 /**
  * A library file followed in a project's register, where it lives: referred to, never
@@ -62,7 +63,8 @@ export async function fileAsNew(
   const meta = await deps.documents.link(draft, file, deposit)
   const status = statusForState(meta.state, deps.store.configFor(project).statuses)
   const task: Task = { ...draft, document: meta, ...(status ? { status } : {}) }
-  await deps.store.insertTask(project, task)
+  // In the project's Documents lot, made when it has none.
+  await deps.store.insertTask(project, task, await ensureLot(deps.store, project, documentsLot()))
   return task
 }
 

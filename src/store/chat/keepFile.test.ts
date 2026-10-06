@@ -28,7 +28,9 @@ describe('a file dropped on the chat', () => {
     expect(kept).toEqual({ path: 'Work/Ligne 6/_docs/Planning- indice C.pdf', filed: true })
     expect(app.vault.getAbstractFileByPath(kept.path)).not.toBeNull()
     const reloaded = await store.loadProjectByPath(project.filePath)
-    const ticket = reloaded?.tasks.find((task) => task.type === 'document')
+    const lot = reloaded?.tasks.find((task) => task.type === 'phase' && task.title === 'Documents')
+    // In the project's Documents lot, made for it.
+    const ticket = lot?.subtasks.find((task) => task.type === 'document')
     expect(ticket?.title).toBe('Planning: indice C')
     expect(ticket?.document).toMatchObject({ state: 'received', file: kept.path })
     expect(ticket?.document?.versions[0]).toMatchObject({ by: 'Anne', note: 'Reçu' })

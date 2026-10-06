@@ -523,18 +523,25 @@ export async function applyProject(
   index: VaultIndex,
   store: TaskSource,
   spec: ProjectSpec,
-  folderFor: (parentPath: string | null) => string
+  folderFor: (parentPath: string | null) => string,
+  /** The lots it is made with, as a project made in the "new project" window. */
+  lots: string[] = []
 ): Promise<Applied> {
   const target = projectTarget(index, spec)
   if ('problem' in target) return { ok: false, problem: 'parent', allowed: target.allowed }
   if (target.existing) return { ok: true, name: target.existing.title, changed: false }
   const title = spec.title.trim()
   if (!title) return { ok: false, problem: 'empty' }
-  const project = await store.createProject(title, folderFor(target.parent?.path ?? null), {
-    ...(spec.program ? { program: true } : {}),
-    ...(target.parent ? { parentPath: target.parent.path } : {}),
-    ...(spec.description.trim() ? { description: spec.description.trim() } : {})
-  })
+  const project = await store.createProject(
+    title,
+    folderFor(target.parent?.path ?? null),
+    {
+      ...(spec.program ? { program: true } : {}),
+      ...(target.parent ? { parentPath: target.parent.path } : {}),
+      ...(spec.description.trim() ? { description: spec.description.trim() } : {})
+    },
+    lots
+  )
   return { ok: true, name: project.title, changed: true }
 }
 

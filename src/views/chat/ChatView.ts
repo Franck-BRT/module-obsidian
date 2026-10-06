@@ -1,3 +1,4 @@
+import { projectLots } from '../../store/projectLots'
 import { decisionStateLabel } from '../decisions/decisionLabels'
 import {
   Component,
@@ -2379,8 +2380,12 @@ export class ChatView extends ItemView {
         deletions++
         continue
       } else if (spec.kind === 'project') {
-        done = await applyProject(this.plugin.index, this.plugin.store, spec, (parent) =>
-          this.plugin.newProjectFolder(parent)
+        done = await applyProject(
+          this.plugin.index,
+          this.plugin.store,
+          spec,
+          (parent) => this.plugin.newProjectFolder(parent),
+          projectLots(this.plugin.settings)
         )
       } else {
         const typeLabel = (type: string): string => typeConfigOf(type as TaskType).label

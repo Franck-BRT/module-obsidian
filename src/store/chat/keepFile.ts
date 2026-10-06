@@ -1,3 +1,4 @@
+import { documentsLot, ensureLot } from '../projectLots'
 import type { App } from 'obsidian'
 import { makeDocument, makeTask } from '../../types'
 import { sanitizeFileName } from '../../utils'
@@ -51,7 +52,7 @@ export async function keepDroppedFile(
     const source = await app.vault.createBinary(await freePath(app, inbox, clean, ext), data)
     const task = makeTask({ title: base, type: 'document', start: '', document: makeDocument({ reference: base }) })
     const document = await deps.documents.deposit(project, task, source, { move: true, by: deps.by, note: deps.note })
-    await deps.store.insertTask(project, { ...task, document })
+    await deps.store.insertTask(project, { ...task, document }, await ensureLot(deps.store, project, documentsLot()))
     return { path: document.file, filed: true }
   }
   await ensureFolder(app, deps.looseFolder)

@@ -1097,6 +1097,8 @@ export default class PMPlugin extends Plugin {
     // and gains an entry for what it is missing, so every kind stays recolourable.
     this.settings.types = saved?.types?.length ? withMissingTypes(this.settings.types, seedTypes()) : seedTypes()
     if (!saved?.docStates?.length) this.settings.docStates = seedDocStates()
+    // Reserves among a new project's lots until the reader says otherwise.
+    if (!Array.isArray(saved?.projectLots)) this.settings.projectLots = [t('lots.reserves')]
     if (!saved?.meetingKinds?.length) this.settings.meetingKinds = seedMeetingKinds()
     // Merged field by field rather than taken whole: the assign above is shallow, so a
     // settings file written before a field of this group existed would otherwise arrive
