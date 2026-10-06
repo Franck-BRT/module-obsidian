@@ -29,6 +29,8 @@ import { renderHome } from '../../src/views/home/homePage'
 import { renderFlag } from '../../src/ui/flags'
 import { PromptsView } from '../../src/views/prompts/PromptsView'
 import { PromptModal } from '../../src/views/prompts/PromptModal'
+import { DeliveryModal } from '../../src/views/library/DeliveryModal'
+import { isDocument } from '../../src/store/Document'
 import { promptNoteContent } from '../../src/store/chat/promptLibrary'
 
 const query = new URLSearchParams(location.search)
@@ -176,6 +178,11 @@ async function main(): Promise<void> {
         description: '',
         favorite: true
       }, true).open()
+      break
+    }
+    case 'delivery': {
+      const docs = tasks.filter(isDocument)
+      new DeliveryModal(plugin, project, docs, new Set(docs.slice(0, 3).map((task) => task.id))).open()
       break
     }
     case 'flags': {

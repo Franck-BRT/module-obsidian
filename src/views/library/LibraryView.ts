@@ -27,7 +27,7 @@ import type { SubView } from '../SubView'
 import { depositDocument, setDocState, signOff } from './documentActions'
 import { LIBRARY_SORT_KEYS, librarySortKeyLabel, orderDocuments } from './librarySort'
 import { renderSortControl } from '../SortControl'
-import { writeBordereau } from './bordereau'
+import { DeliveryModal } from './DeliveryModal'
 import { LibraryDocPicker } from '../documents/LibraryDocPicker'
 import { fileInRegister } from '../documents/registerActions'
 import { pourRegisterFiles } from '../documents/pourRegisters'
@@ -265,23 +265,14 @@ export class LibraryView implements SubView {
         .onClick(safeAsync(() => pourRegisterFiles(this.plugin, primary.filePath)))
         .explain(t('library.toLibrary'), t('tip.library.toLibrary'))
     }
-    new ChipButton(right)
-      .setLabel(t('view.bordereau'))
-      .setShape('pill')
-      .explain(t('view.bordereau'), t('tip.view.bordereau'))
-      .onClick(
-        safeAsync(async () => {
-          const chosen = docs.filter((task) => this.picked.has(task.id))
-          const project = this.scope.primary
-          if (!project) return
-          if (!chosen.length) {
-            new Notice(t('view.bordereauEmpty'))
-            return
-          }
-          new Notice(t('view.bordereauCreated', { path: await writeBordereau(this.plugin, project, chosen) }))
-        })
-      )
-      .explain(t('view.bordereau'), t('tip.view.bordereau'))
+    const deliveryProject = this.scope.primary
+    if (deliveryProject && !this.scope.isMulti) {
+      new ChipButton(right)
+        .setLabel(t('view.bordereau'))
+        .setShape('pill')
+        .onClick(() => new DeliveryModal(this.plugin, deliveryProject, docs, this.picked).open())
+        .explain(t('view.bordereau'), t('tip.view.bordereau'))
+    }
   }
 
   /**

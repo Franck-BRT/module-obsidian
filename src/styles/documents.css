@@ -1216,3 +1216,74 @@ a.pm-docs-clear-filters {
   color: var(--text-muted);
   cursor: pointer;
 }
+
+/* The delivery note's window: the documents sent, one line each. */
+.pm-delivery-modal {
+  width: min(760px, 92vw);
+}
+
+.pm-delivery-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.pm-delivery-head-title {
+  font-weight: var(--font-semibold);
+}
+
+.pm-delivery-list {
+  max-height: 40vh;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+
+.pm-delivery-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+  cursor: pointer;
+}
+
+.pm-delivery-row:last-child {
+  border-bottom: none;
+}
+
+.pm-delivery-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.pm-delivery-ref {
+  flex: 0 0 9rem;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-delivery-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-delivery-meta {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-delivery-modal textarea {
+  width: 24rem;
+  max-width: 100%;
+  resize: vertical;
+}
