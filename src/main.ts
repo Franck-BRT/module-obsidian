@@ -1507,7 +1507,17 @@ export default class PMPlugin extends Plugin {
     )
     progress?.hide()
     const parts = [t('library.poured', { count: report.added.length })]
-    if (report.known.length) parts.push(t('library.alreadyThere', { count: report.known.length }))
+    if (report.known.length) {
+      parts.push(t('library.alreadyThere', { count: report.known.length }))
+      // Where they are, by the name they were filed under, which may not be the one poured.
+      const known = this.library.docs().filter((doc) => report.known.includes(doc.record))
+      const where = known.map((doc) =>
+        doc.folder
+          ? t('library.alreadyThereIn', { title: doc.title, folder: doc.folder })
+          : t('library.alreadyThereRoot', { title: doc.title })
+      )
+      if (where.length) parts.push(where.slice(0, 5).join('\n'))
+    }
     if (report.failed.length) {
       parts.push(
         t('library.pourFailed', {
@@ -1517,6 +1527,9 @@ export default class PMPlugin extends Plugin {
     }
     new Notice(parts.join('\n'), report.failed.length ? 0 : 6000)
     await this.openDocuments(answer.projects.length === 1 ? answer.projects[0] : '')
+    // What was poured, and what was there already, shown — whatever the library was filtered by.
+    const shown = this.app.workspace.getLeavesOfType(PM_DOCUMENTS_VIEW_TYPE)[0]?.view
+    if (shown instanceof DocumentsView) shown.reveal([...report.added, ...report.known])
     // Read what they say, for searching; the library shows how far it has got.
     void this.libraryText.refresh(this.library.docs())
     // Another issue of a document already there — « ind B » after « ind A »: the reader says

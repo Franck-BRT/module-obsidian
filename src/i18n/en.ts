@@ -1393,6 +1393,8 @@ export const en = {
   'settings.chat.promptsFolder': 'Prompts folder',
   'settings.chat.promptsFolderDesc':
     'Where the prompt library creates new prompts. A prompt moved elsewhere is still found (pm-prompt property).',
+  'library.alreadyThereIn': '“{title}” is already in the folder “{folder}”.',
+  'library.alreadyThereRoot': '“{title}” is already at the root of the library.',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

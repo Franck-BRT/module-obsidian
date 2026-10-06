@@ -488,6 +488,12 @@ button.pm-docs-chip:not(.clickable-icon):hover {
   margin-top: 10px;
 }
 
+/* Just poured, or found already there: picked out for a moment. */
+.pm-docs-row.is-fresh {
+  background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  box-shadow: inset 3px 0 0 var(--interactive-accent);
+}
+
 .pm-docs-row.is-picked {
   background: rgb(from var(--interactive-accent) r g b / 8%);
 }

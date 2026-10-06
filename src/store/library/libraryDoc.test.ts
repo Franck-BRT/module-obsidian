@@ -12,9 +12,11 @@ import {
   matchesDoc,
   NO_PROJECT,
   NO_VALUE,
+  revealQuery,
   sortDocs,
   stringList,
   titleFromName,
+  type DocQuery,
   type LibraryDoc
 } from './libraryDoc'
 
@@ -209,5 +211,49 @@ describe('collections of documents', () => {
   it('change by what is ticked and unticked, the rest left as it was', () => {
     expect(nextCollections(a, new Set(['Lot 03']), new Set(['normes']))).toEqual(['CCTP Lot 02', 'Lot 03'])
     expect(nextCollections(c, new Set(['Normes']), new Set())).toEqual(['Normes'])
+  })
+})
+
+describe('revealQuery', () => {
+  const docAt = (record: string, folder: string, projects: string[] = []): LibraryDoc => ({
+    record,
+    folder,
+    title: record,
+    file: `${record}.pdf`,
+    projects,
+    added: '',
+    size: 1,
+    hash: record,
+    category: '',
+    lot: '',
+    issuer: '',
+    tags: []
+  })
+  const shows = (doc: LibraryDoc, query: DocQuery): boolean => matchesDoc(doc, query, (path) => path)
+
+  it('keeps the search on screen when it shows them already', () => {
+    const query: DocQuery = { text: '', project: '', family: '', folder: 'Plans' }
+    expect(revealQuery([docAt('a', 'Plans')], query, shows)).toBe(query)
+  })
+
+  it('lifts what hides them, and opens the folder they share', () => {
+    const hidden: DocQuery = { text: 'radier', project: 'P.md', family: 'word', collection: 'Normes', folder: 'Autre' }
+    expect(revealQuery([docAt('a', 'Plans/Lot 2', ['P.md'])], hidden, shows)).toEqual({
+      text: '',
+      project: 'P.md',
+      family: '',
+      category: '',
+      lot: '',
+      issuer: '',
+      tag: '',
+      collection: '',
+      folder: 'Plans/Lot 2'
+    })
+  })
+
+  it('shows every folder when they are in several, the root alone when they are all at it', () => {
+    const query: DocQuery = { text: 'x', project: 'P.md', family: '' }
+    expect(revealQuery([docAt('a', 'A'), docAt('b', 'B')], query, shows)).toMatchObject({ folder: '', project: '' })
+    expect(revealQuery([docAt('a', '')], query, shows)).toMatchObject({ folder: AT_ROOT })
   })
 })

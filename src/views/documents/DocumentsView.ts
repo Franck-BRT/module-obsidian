@@ -23,6 +23,7 @@ import {
   matchesDoc,
   NO_PROJECT,
   NO_VALUE,
+  revealQuery,
   sortDocs,
   type DocFamily,
   type DocQuery,
@@ -121,6 +122,9 @@ export class DocumentsView extends ItemView {
   private query: DocQuery = { text: '', project: '', family: '' }
   /** Only the documents whose text is not there to search, with why. */
   private onlyUnread = false
+  /** Documents just poured, or found already there, picked out for a moment. */
+  private fresh = new Set<string>()
+  private freshTimer: number | null = null
   private sort: DocSort = 'added'
   /** Whether the finer filters — kind, category, lot, issuer, tag — are shown. */
   private moreFilters = false
@@ -937,6 +941,7 @@ export class DocumentsView extends ItemView {
       this.renderBody()
     })
     if (tick.checked) row.addClass('is-picked')
+    if (this.fresh.has(doc.record)) row.addClass('is-fresh')
     const family = familyOf(doc.file || doc.title)
     setIcon(row.createDiv({ cls: `pm-docs-icon pm-docs-icon--${family}` }), FAMILY_ICONS[family])
 
@@ -1393,6 +1398,46 @@ export class DocumentsView extends ItemView {
   }
 
   /** Files chosen from the computer, the way the system asks for them. */
+  /**
+   * Documents just poured, or found already there, shown whatever was filtering them out —
+   * another folder, a search, a kind, a collection, the unread alone —, far enough down the
+   * list, and picked out for a moment.
+   */
+  reveal(records: string[]): void {
+    const docs = this.plugin.library.docs().filter((doc) => records.includes(doc.record))
+    if (!docs.length) return
+    const texts = this.plugin.libraryText
+    const shows = (doc: LibraryDoc, query: DocQuery): boolean =>
+      matchesDoc(
+        doc,
+        query,
+        (path) => this.projectTitle(path),
+        (each) => texts.folded(each)
+      )
+    const query = revealQuery(docs, this.query, shows)
+    if (query !== this.query || this.onlyUnread) {
+      this.query = query
+      this.onlyUnread = false
+      this.renderFilters()
+    }
+    // Far enough down the list for the last of them to be drawn.
+    const listed = sortDocs(
+      this.plugin.library.docs().filter((doc) => shows(doc, this.query)),
+      this.sort
+    )
+    const last = Math.max(...listed.map((doc, at) => (records.includes(doc.record) ? at : -1)))
+    this.shown = Math.max(PAGE, last + 1)
+    this.fresh = new Set(records)
+    this.renderBody()
+    this.bodyEl.querySelector('.pm-docs-row.is-fresh')?.scrollIntoView({ block: 'center' })
+    if (this.freshTimer !== null) window.clearTimeout(this.freshTimer)
+    this.freshTimer = window.setTimeout(() => {
+      this.freshTimer = null
+      this.fresh.clear()
+      for (const row of Array.from(this.bodyEl.querySelectorAll('.pm-docs-row.is-fresh'))) row.removeClass('is-fresh')
+    }, 6000)
+  }
+
   private pickFromComputer(): void {
     const input = createEl('input', { attr: { type: 'file', multiple: 'true' } })
     input.addEventListener('change', () => {

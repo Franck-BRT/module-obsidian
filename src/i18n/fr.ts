@@ -1439,6 +1439,8 @@ export const fr: Catalog = {
   'settings.chat.promptsFolder': 'Dossier des prompts',
   'settings.chat.promptsFolderDesc':
     'Où la bibliothèque de prompts crée les nouveaux prompts. Un prompt déplacé ailleurs est toujours retrouvé (propriété pm-prompt).',
+  'library.alreadyThereIn': '« {title} » est déjà dans le dossier « {folder} ».',
+  'library.alreadyThereRoot': '« {title} » est déjà à la racine de la bibliothèque.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

@@ -1,5 +1,5 @@
 import { stringifyYaml } from 'obsidian'
-import { inFolder } from '../folderFilter'
+import { AT_ROOT, inFolder } from '../folderFilter'
 
 /**
  * A document poured into the library, as the note that stands for it.
@@ -306,4 +306,31 @@ export function sortDocs(docs: LibraryDoc[], by: DocSort): LibraryDoc[] {
 export async function fingerprint(bytes: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>)
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * The search that shows these documents — just poured, or found already there —: the one
+ * on screen when it shows them all; else one with nothing filtering them out, in their
+ * folder when they share one, still narrowed to the project on screen when they are all in it.
+ */
+export function revealQuery(
+  docs: LibraryDoc[],
+  query: DocQuery,
+  shows: (doc: LibraryDoc, query: DocQuery) => boolean
+): DocQuery {
+  if (!docs.length || docs.every((doc) => shows(doc, query))) return query
+  const folders = new Set(docs.map((doc) => doc.folder))
+  const [only] = folders
+  const project = query.project && docs.every((doc) => doc.projects.includes(query.project)) ? query.project : ''
+  return {
+    text: '',
+    project,
+    family: '',
+    category: '',
+    lot: '',
+    issuer: '',
+    tag: '',
+    collection: '',
+    folder: folders.size === 1 ? only || AT_ROOT : ''
+  }
 }
