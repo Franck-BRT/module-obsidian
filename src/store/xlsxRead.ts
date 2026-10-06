@@ -81,7 +81,7 @@ function relationships(parts: Map<string, string>, part: string): Map<string, { 
 }
 
 /** The built-in number formats that are dates or times, by id: 14–22 and 45–47. */
-const DATE_FORMAT_IDS = new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47])
+export const DATE_FORMAT_IDS = new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47])
 
 /**
  * Whether a format code shows a date: a day, a month or a year outside quoted text and

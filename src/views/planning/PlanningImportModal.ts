@@ -1,7 +1,8 @@
 import { Modal, Notice, setIcon } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { Project } from '../../types'
-import { readXlsx } from '../../store/xlsxRead'
+import { readSpreadsheet } from '../../store/xlsRead'
+import { isCfb } from '../../store/cfb'
 import { readMsProject } from '../../store/planning/msProject'
 import { readPlanningSheet } from '../../store/planning/planningSheet'
 import { planCounts, planTasks, type Plan } from '../../store/planning/plan'
@@ -10,11 +11,11 @@ import { formatDate } from '../../dates'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 
-/** A file's planning, whatever it is: a spreadsheet by its ZIP signature, else MS Project's XML. */
+/** A file's planning, whatever it is: a spreadsheet by its signature — ZIP, or Excel 97's compound file —, else MS Project's XML. */
 export async function readPlanningFile(name: string, bytes: Uint8Array): Promise<Plan> {
   if (/\.mpp$/i.test(name)) throw new Error(t('planning.mpp'))
-  if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
-    const plan = readPlanningSheet(await readXlsx(bytes), name)
+  if ((bytes[0] === 0x50 && bytes[1] === 0x4b) || isCfb(bytes)) {
+    const plan = readPlanningSheet(await readSpreadsheet(bytes), name)
     if (!plan) throw new Error(t('planning.noColumn'))
     return plan
   }
@@ -58,7 +59,7 @@ export class PlanningImportModal extends Modal {
     const pick = root.createEl('label', { cls: 'pm-planning-pick' })
     setIcon(pick.createSpan({ cls: 'pm-planning-icon' }), 'file-up')
     pick.createSpan({ text: this.fileName || t('planning.pick') })
-    const input = pick.createEl('input', { attr: { type: 'file', accept: '.xml,.xlsx,.xlsm,.mpp' } })
+    const input = pick.createEl('input', { attr: { type: 'file', accept: '.xml,.xlsx,.xlsm,.xls,.mpp' } })
     input.addClass('pm-hidden')
     input.addEventListener(
       'change',

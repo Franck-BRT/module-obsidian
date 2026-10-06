@@ -6,7 +6,7 @@ import { readHtml } from '../htmlRead'
 import { readPdf } from '../pdfRead'
 import { pdfBlocks } from '../pdfText'
 import { readPptx } from '../pptxRead'
-import { readXlsx } from '../xlsxRead'
+import { readSpreadsheet } from '../xlsRead'
 import { fold } from '../library/libraryDoc'
 
 /**
@@ -54,6 +54,8 @@ export const READABLE_EXTENSIONS = new Set([
   'dot',
   'rtf',
   'xlsx',
+  'xlsm',
+  'xls',
   'pptx',
   'html',
   'htm',
@@ -158,8 +160,8 @@ export async function fileText(extension: string, bytes: Uint8Array): Promise<st
     else if (ext === 'pdf') text = blocksText(pdfBlocks(await readPdf(bytes)))
     else if (ext === 'docx') text = blocksText(await readDocx(bytes))
     else if (ext === 'doc' || ext === 'dot' || ext === 'rtf') text = await oldWordText(bytes)
-    else if (ext === 'xlsx') {
-      text = (await readXlsx(bytes))
+    else if (ext === 'xlsx' || ext === 'xlsm' || ext === 'xls') {
+      text = (await readSpreadsheet(bytes))
         .filter((sheet) => sheet.rows.length)
         .map((sheet) => `## ${sheet.name}\n\n${rowsText(sheet.rows)}`)
         .join('\n\n')

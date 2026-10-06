@@ -24,6 +24,7 @@ function iconFor(extension: string): string {
       return 'file-type'
     case 'xls':
     case 'xlsx':
+    case 'xlsm':
     case 'csv':
     case 'ods':
       return 'table'

@@ -55,7 +55,7 @@ import { toMarkdownDocument } from '../../store/requirements/reqMarkdown'
 import { exportFileName } from '../../store/requirements/ReqPorter'
 import { pickVaultFile } from '../../modals/PickerModals'
 import { openReqifImport, openReqImport, openTableImport } from './ReqImportModal'
-import { readXlsx } from '../../store/xlsxRead'
+import { readSpreadsheet } from '../../store/xlsRead'
 import { xlsxTable } from '../../store/requirements/reqXlsxRead'
 import { readDocx } from '../../store/docxRead'
 import {
@@ -998,6 +998,8 @@ export class RequirementsView extends ItemView {
         'txt',
         'tsv',
         'xlsx',
+        'xlsm',
+        'xls',
         'docx',
         'pdf',
         'pptx',
@@ -1012,7 +1014,7 @@ export class RequirementsView extends ItemView {
     )
     if (!file) return
     const done = (): void => this.render()
-    if (file.extension.toLowerCase() === 'xlsx') {
+    if (['xlsx', 'xlsm', 'xls'].includes(file.extension.toLowerCase())) {
       await this.importXlsx(file, done)
       return
     }
@@ -1068,7 +1070,7 @@ export class RequirementsView extends ItemView {
     let table: ReturnType<typeof xlsxTable>
     try {
       table = xlsxTable(
-        await readXlsx(new Uint8Array(await this.app.vault.readBinary(file))),
+        await readSpreadsheet(new Uint8Array(await this.app.vault.readBinary(file))),
         xlsxVocabulary(this.plugin)
       )
     } catch (error) {
