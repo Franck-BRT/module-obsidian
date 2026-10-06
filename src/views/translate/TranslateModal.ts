@@ -1,38 +1,10 @@
 import { Modal, Setting } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { LibraryDoc } from '../../store/library/libraryDoc'
-import { languageName } from '../../store/requirements/translate'
-import { reqLanguages } from '../requirements/reqPalette'
+import { languageLabel, languages } from './languages'
 import { safeAsync } from '../../utils'
 import { t } from '../../i18n'
 import { glossaryPath, openGlossary, translatable, translateDocuments } from './translateDocs'
-
-/** The languages offered: the usual ones, and those the requirements are kept in. */
-function languages(plugin: PMPlugin): string[] {
-  return [...new Set(['fr', 'en', 'de', 'es', 'it', 'pt', 'nl', ...reqLanguages(plugin.settings)])]
-}
-
-/** A language's name for the reader. */
-function languageLabel(code: string): string {
-  switch (code) {
-    case 'fr':
-      return t('translate.lang.fr')
-    case 'en':
-      return t('translate.lang.en')
-    case 'de':
-      return t('translate.lang.de')
-    case 'es':
-      return t('translate.lang.es')
-    case 'it':
-      return t('translate.lang.it')
-    case 'pt':
-      return t('translate.lang.pt')
-    case 'nl':
-      return t('translate.lang.nl')
-    default:
-      return languageName(code)
-  }
-}
 
 /** Asks into which language, and with the glossary or not, then translates the documents. */
 export function openTranslate(plugin: PMPlugin, docs: LibraryDoc[]): void {

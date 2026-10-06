@@ -334,3 +334,14 @@ export function revealQuery(
     folder: folders.size === 1 ? only || AT_ROOT : ''
   }
 }
+
+/**
+ * The same document in its other languages: the one translations are linked to, and every
+ * one linked to it — this one left out. Links to a document no longer there lead nowhere.
+ */
+export function otherLanguages(doc: LibraryDoc, docs: LibraryDoc[]): LibraryDoc[] {
+  const source = (doc.translationOf && docs.find((one) => one.record === doc.translationOf)) || doc
+  return [source, ...docs.filter((one) => one.translationOf === source.record)].filter(
+    (one, at, all) => one.record !== doc.record && all.findIndex((other) => other.record === one.record) === at
+  )
+}

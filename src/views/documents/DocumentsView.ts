@@ -23,6 +23,7 @@ import {
   matchesDoc,
   NO_PROJECT,
   NO_VALUE,
+  otherLanguages,
   revealQuery,
   sortDocs,
   type DocFamily,
@@ -44,6 +45,10 @@ import {
   type RegisterEntry
 } from '../../store/library/libraryRegister'
 import { fileNameOf, findVaultFile } from '../../store/library/DocLibrary'
+import { detectLanguage } from '../../store/library/docLanguage'
+import { renderFlag } from '../../ui/flags'
+import { languageLabel, languages } from '../translate/languages'
+import { LanguagesModal } from './languageModal'
 import { documentOf } from '../../store/Document'
 import { confirmDialog, openTaskModal, promptText } from '../../ui/ModalFactory'
 import { docStateLabel } from '../library/docStateLabel'
@@ -125,6 +130,8 @@ export class DocumentsView extends ItemView {
   private onlyUnread = false
   /** Documents just poured, or found already there, picked out for a moment. */
   private fresh = new Set<string>()
+  /** The language guessed from each document's text, by its fingerprint: guessed once. */
+  private detected = new Map<string, string>()
   /** The folders each document has a ghost in, by its record: drawn on its line. */
   private ghostFolders = new Map<string, string[]>()
   private freshTimer: number | null = null
@@ -506,21 +513,132 @@ export class DocumentsView extends ItemView {
         text: t('library.versionBefore', { title: after.title })
       })
     }
-    // Its translations: the one it is, and those made of it.
-    const source = doc.translationOf ? all.find((one) => one.record === doc.translationOf) : undefined
-    if (source) {
-      meta.createSpan({
-        cls: 'pm-docs-version pm-docs-translation',
-        text: t('translate.of', { lang: (doc.language ?? '').toUpperCase(), title: source.title })
-      })
+    // The same document in its other languages: a flag each, which opens it.
+    const others = otherLanguages(doc, all)
+    if (others.length) {
+      const langs = meta.createSpan({ cls: 'pm-docs-langs' })
+      langs.createSpan({ text: t('library.alsoInLanguages') })
+      for (const other of others) {
+        const code = this.languageOf(other)
+        const chip = langs.createEl('a', { cls: 'pm-docs-lang', href: '#' })
+        if (code) renderFlag(chip, code)
+        chip.createSpan({ text: code ? code.toUpperCase() : '?' })
+        explain(chip, other.title, code ? languageLabel(code) : t('library.langUnknown'))
+        chip.addEventListener('click', (event) => {
+          event.preventDefault()
+          void this.openDoc(other)
+        })
+      }
     }
-    const made = all.filter((one) => one.translationOf === doc.record)
-    if (made.length) {
-      meta.createSpan({
-        cls: 'pm-docs-version pm-docs-translation',
-        text: t('translate.into', { langs: made.map((one) => (one.language ?? '?').toUpperCase()).join(', ') })
-      })
+  }
+
+  /** The language a document is in: said in its record, else guessed from its text. */
+  private languageOf(doc: LibraryDoc): string {
+    if (doc.language) return doc.language
+    return this.guessedLanguage(doc)
+  }
+
+  private guessedLanguage(doc: LibraryDoc): string {
+    if (!doc.hash) return ''
+    let code = this.detected.get(doc.hash)
+    if (code === undefined) {
+      const text = this.plugin.libraryText.entry(doc)?.text ?? ''
+      code = text ? detectLanguage(text) : ''
+      // Not kept while the text is not read: it may be, a moment later.
+      if (text) this.detected.set(doc.hash, code)
     }
+    return code
+  }
+
+  /** Its language's flag before its title — guessed or said —, which changes it at a click. */
+  private renderLanguageFlag(parent: HTMLElement, doc: LibraryDoc): void {
+    const code = this.languageOf(doc)
+    if (!code) return
+    const flag = renderFlag(parent, code)
+    flag.addClass('pm-docs-flag')
+    if (!doc.language) flag.addClass('is-guessed')
+    explain(flag, languageLabel(code), doc.language ? t('library.langSaid') : t('library.langGuessed'))
+    flag.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      this.chooseLanguage(doc)
+    })
+  }
+
+  /** The language of a document, picked: kept in its record. */
+  private chooseLanguage(doc: LibraryDoc): void {
+    const guessed = this.guessedLanguage(doc)
+    new LanguagesModal(
+      this.app,
+      t('library.langTitle'),
+      [
+        {
+          label: doc.title,
+          value: doc.language ?? guessed,
+          note:
+            !doc.language && guessed ? t('library.langGuessedNote', { language: languageLabel(guessed) }) : undefined
+        }
+      ],
+      this.languageOptions(),
+      safeAsync(async ([code]: string[]) => {
+        await this.plugin.library.setLanguage(doc, code)
+        this.redrawSoon()
+      })
+    ).open()
+  }
+
+  private languageOptions(): [string, string][] {
+    return languages(this.plugin).map((code): [string, string] => [code, languageLabel(code)])
+  }
+
+  /**
+   * The same document in another language, picked among the others — those of the same
+   * name first —, then each one's language said; linked as one document in two languages.
+   */
+  private pickOtherLanguage(doc: LibraryDoc): void {
+    const all = this.plugin.library.docs()
+    const linked = new Set(otherLanguages(doc, all).map((one) => one.record))
+    const key = versionKey(doc.title)
+    const candidates = sortDocs(
+      all.filter((one) => one.record !== doc.record && !linked.has(one.record)),
+      'added'
+    )
+    const alike = (one: LibraryDoc): boolean => !!key && versionKey(one.title) === key
+    const texts = this.plugin.libraryText
+    new LibraryDocPicker(
+      this.app,
+      [...candidates.filter(alike), ...candidates.filter((one) => !alike(one))],
+      (path) => this.projectTitle(path),
+      (each) => texts.folded(each),
+      (other) => {
+        const guess = (one: LibraryDoc): string => one.language ?? this.guessedLanguage(one)
+        new LanguagesModal(
+          this.app,
+          t('library.langLinkTitle'),
+          [
+            { label: doc.title, value: guess(doc) },
+            { label: other.title, value: guess(other) }
+          ],
+          this.languageOptions(),
+          safeAsync(async ([mine, theirs]: string[]) => {
+            if (!mine || !theirs || mine === theirs) {
+              new Notice(t('library.langLinkNeedsTwo'))
+              return
+            }
+            await this.plugin.library.linkLanguages(doc, other, mine, theirs)
+            new Notice(
+              t('library.langLinked', {
+                title: doc.title,
+                other: other.title,
+                language: languageLabel(theirs)
+              })
+            )
+            this.redrawSoon()
+          }),
+          t('library.langLink')
+        ).open()
+      }
+    ).open()
   }
 
   /**
@@ -979,6 +1097,7 @@ export class DocumentsView extends ItemView {
     const main = row.createDiv('pm-docs-main')
     const line = main.createDiv('pm-docs-title-line')
     this.renderReferenceStar(line, doc)
+    this.renderLanguageFlag(line, doc)
     const title = line.createEl('a', { cls: 'pm-docs-title', text: doc.title, href: '#' })
     title.addEventListener('click', (event) => {
       event.preventDefault()
@@ -1284,6 +1403,7 @@ export class DocumentsView extends ItemView {
     const main = row.createDiv('pm-docs-main')
     const line = main.createDiv('pm-docs-title-line')
     this.renderReferenceStar(line, doc)
+    this.renderLanguageFlag(line, doc)
     const title = line.createEl('a', { cls: 'pm-docs-title', text: doc.title, href: '#' })
     title.addEventListener('click', (event) => {
       event.preventDefault()
@@ -1386,6 +1506,32 @@ export class DocumentsView extends ItemView {
         .setIcon('pencil')
         .onClick(safeAsync(() => this.renameDoc(doc)))
     )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('library.langMenu'))
+        .setIcon('languages')
+        .onClick(() => this.chooseLanguage(doc))
+    )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('library.langLinkMenu'))
+        .setIcon('link')
+        .onClick(() => this.pickOtherLanguage(doc))
+    )
+    if (otherLanguages(doc, this.plugin.library.docs()).length) {
+      menu.addItem((item) =>
+        item
+          .setTitle(t('library.langUnlinkMenu'))
+          .setIcon('unlink')
+          .onClick(
+            safeAsync(async () => {
+              await this.plugin.library.unlinkLanguages(doc)
+              new Notice(t('library.langUnlinked', { title: doc.title }))
+              this.redrawSoon()
+            })
+          )
+      )
+    }
     menu.addItem((item) =>
       item
         .setTitle(t('library.registerMenu'))

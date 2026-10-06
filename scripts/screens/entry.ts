@@ -26,6 +26,7 @@ import { SAMPLE_MSPDI } from './sample'
 import { CollectionsModal, DocPickModal } from '../../src/views/documents/collections'
 import { chooseProjects } from '../../src/views/documents/ProjectChooser'
 import { renderHome } from '../../src/views/home/homePage'
+import { renderFlag } from '../../src/ui/flags'
 import { PromptsView } from '../../src/views/prompts/PromptsView'
 import { PromptModal } from '../../src/views/prompts/PromptModal'
 import { promptNoteContent } from '../../src/store/chat/promptLibrary'
@@ -175,6 +176,16 @@ async function main(): Promise<void> {
         description: '',
         favorite: true
       }, true).open()
+      break
+    }
+    case 'flags': {
+      body.addClass('pm-root')
+      const box = body.createDiv({ attr: { style: 'padding:24px;display:grid;grid-template-columns:repeat(4,160px);gap:12px;font-size:14px' } })
+      for (const code of ['fr', 'en', 'de', 'es', 'it', 'pt', 'nl', 'pl', 'ru', 'sv', 'ja', 'zh', 'ar']) {
+        const line = box.createDiv({ attr: { style: 'display:flex;align-items:center;gap:8px' } })
+        renderFlag(line, code).addClass('pm-docs-flag')
+        line.createSpan({ text: code })
+      }
       break
     }
     case 'weekly': {

@@ -224,6 +224,61 @@ export class DocLibrary {
     }
   }
 
+  /** The language a document is in, said in its record; '' to say it is not known. */
+  async setLanguage(doc: LibraryDoc, language: string): Promise<void> {
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return
+    await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+      if (language) fm.language = language
+      else delete fm.language
+    })
+  }
+
+  /**
+   * Two documents said to be the same one in two languages: each with its language, the
+   * other linked to the first — or to the one the first is itself a translation of, so that
+   * all the languages of a document hang together on one.
+   */
+  async linkLanguages(doc: LibraryDoc, other: LibraryDoc, language: string, otherLanguage: string): Promise<void> {
+    if (doc.record === other.record) return
+    const source = doc.translationOf && doc.translationOf !== other.record ? doc.translationOf : doc.record
+    await this.setLanguage(doc, language)
+    // The other was the one the rest hung on: they hang on the new one now, with it.
+    for (const one of this.docs().filter((each) => each.translationOf === other.record)) {
+      await this.setTranslationOfRecord(one, source)
+    }
+    if (doc.translationOf === other.record) await this.setTranslationOfRecord(doc, null)
+    const target = this.app.vault.getAbstractFileByPath(other.record)
+    if (!(target instanceof TFile)) return
+    await this.app.fileManager.processFrontMatter(target, (fm: Record<string, unknown>) => {
+      fm.translationOf = `[[${source.replace(/\.md$/, '')}]]`
+      if (otherLanguage) fm.language = otherLanguage
+    })
+  }
+
+  /** A document taken out of its languages: no longer linked, nor anything linked to it. */
+  async unlinkLanguages(doc: LibraryDoc): Promise<void> {
+    if (doc.translationOf) {
+      await this.setTranslationOfRecord(doc, null)
+      return
+    }
+    // The one the others hung on: the first of them takes its place.
+    const others = this.docs().filter((one) => one.translationOf === doc.record)
+    const [first, ...rest] = others
+    if (!first) return
+    await this.setTranslationOfRecord(first, null)
+    for (const one of rest) await this.setTranslationOfRecord(one, first.record)
+  }
+
+  private async setTranslationOfRecord(doc: LibraryDoc, source: string | null): Promise<void> {
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return
+    await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+      if (source) fm.translationOf = `[[${source.replace(/\.md$/, '')}]]`
+      else delete fm.translationOf
+    })
+  }
+
   /** Says which document this one is the translation of, and in which language: in its record. */
   async setTranslationOf(doc: LibraryDoc, source: LibraryDoc, language: string): Promise<void> {
     const record = this.app.vault.getAbstractFileByPath(doc.record)

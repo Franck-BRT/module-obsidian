@@ -2,6 +2,7 @@ import { TFile, type App } from 'obsidian'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { makeFakeApp, type FakeVault } from '../../../test/fakeVault'
 import { DocLibrary, findVaultFile, type PourItem } from './DocLibrary'
+import { otherLanguages } from './libraryDoc'
 import { parseCategories } from './libraryClass'
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
@@ -710,6 +711,53 @@ describe('DocLibrary', () => {
       const [doc] = library.docs()
       expect((await library.rename(doc, '  / ? ')).size).toBe(0)
       expect(library.docs()[0].title).toBe(doc.title)
+    })
+  })
+
+  describe('languages', () => {
+    const three = async (): Promise<void> => {
+      await library.pour([outside('Spec FR.pdf', 'fr'), outside('Spec EN.pdf', 'en'), outside('Spec DE.pdf', 'de')], {
+        projects: [],
+        move: false,
+        today: TODAY
+      })
+    }
+    const byTitle = (title: string) => {
+      const found = library.docs().find((doc) => doc.title === title)
+      if (!found) throw new Error(`no ${title}`)
+      return found
+    }
+    const others = (title: string): string[] =>
+      otherLanguages(byTitle(title), library.docs())
+        .map((doc) => `${doc.title}:${doc.language ?? ''}`)
+        .sort()
+
+    it('links two documents as the same one in two languages, each with its own', async () => {
+      await three()
+      await library.linkLanguages(byTitle('Spec FR'), byTitle('Spec EN'), 'fr', 'en')
+      expect(byTitle('Spec EN').translationOf).toBe(byTitle('Spec FR').record)
+      expect(others('Spec FR')).toEqual(['Spec EN:en'])
+      expect(others('Spec EN')).toEqual(['Spec FR:fr'])
+    })
+
+    it('hangs every language of a document on one, whichever two were linked', async () => {
+      await three()
+      await library.linkLanguages(byTitle('Spec FR'), byTitle('Spec EN'), 'fr', 'en')
+      // Linked from the English: the German hangs on the French too.
+      await library.linkLanguages(byTitle('Spec EN'), byTitle('Spec DE'), 'en', 'de')
+      expect(byTitle('Spec DE').translationOf).toBe(byTitle('Spec FR').record)
+      expect(others('Spec DE')).toEqual(['Spec EN:en', 'Spec FR:fr'])
+    })
+
+    it('takes a document out of its languages, the others staying together', async () => {
+      await three()
+      await library.linkLanguages(byTitle('Spec FR'), byTitle('Spec EN'), 'fr', 'en')
+      await library.linkLanguages(byTitle('Spec FR'), byTitle('Spec DE'), 'fr', 'de')
+      await library.unlinkLanguages(byTitle('Spec FR'))
+      expect(others('Spec FR')).toEqual([])
+      expect(others('Spec EN')).toEqual(['Spec DE:de'])
+      await library.setLanguage(byTitle('Spec FR'), '')
+      expect(byTitle('Spec FR').language).toBeUndefined()
     })
   })
 })
