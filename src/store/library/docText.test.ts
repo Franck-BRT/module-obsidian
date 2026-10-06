@@ -98,7 +98,7 @@ describe('extractText', () => {
   })
 
   it('says why there is nothing: no reader for the format, nothing in it, or unreadable', async () => {
-    expect(await extractText('vieux.doc', bytes('x'), WORDS)).toEqual({ state: 'unsupported', text: '' })
+    expect(await extractText('plan.dwg', bytes('x'), WORDS)).toEqual({ state: 'unsupported', text: '' })
     expect(await extractText('vide.txt', bytes('   '), WORDS)).toEqual({ state: 'empty', text: '' })
     expect(await extractText('abîmé.pdf', bytes('pas un pdf'), WORDS)).toEqual({ state: 'unreadable', text: '' })
     expect(await extractText('abîmé.docx', bytes('pas un zip'), WORDS)).toEqual({ state: 'unreadable', text: '' })

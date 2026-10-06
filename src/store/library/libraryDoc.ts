@@ -61,6 +61,7 @@ export const DOC_FAMILIES: DocFamily[] = ['pdf', 'word', 'sheet', 'slides', 'ima
 const FAMILY_OF: Record<string, DocFamily> = {
   pdf: 'pdf',
   doc: 'word',
+  dot: 'word',
   docx: 'word',
   odt: 'word',
   rtf: 'word',

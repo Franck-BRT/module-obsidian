@@ -16,9 +16,9 @@ import { extensionOf, fold } from './libraryDoc'
 /**
  * Bumped when the readers improve. What an older reader could not read is read again —
  * a PDF locked against editing, which version 1 refused; a `.result`, which version 2 did
- * not know —; what it did read is kept.
+ * not know; a `.doc` or an `.rtf`, which version 3 did not —; what it did read is kept.
  */
-export const TEXT_VERSION = 3
+export const TEXT_VERSION = 4
 
 /** The most kept of one document: five hundred dense pages or so, past which the start is enough to find it. */
 export const TEXT_LIMIT = 1_000_000

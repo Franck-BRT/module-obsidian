@@ -80,14 +80,14 @@ describe('DocTextIndex', () => {
     await vault.createBinary('L/_files/photo.jpg', bytes('jpeg'))
     await vault.createBinary('L/_files/a.dwg', bytes('plan'))
     await vault.createBinary('L/_files/b.dwg', bytes('plan'))
-    await vault.createBinary('L/_files/c.doc', bytes('ancien'))
+    await vault.createBinary('L/_files/c.skp', bytes('maquette'))
     await vault.createBinary('L/_files/vide.txt', bytes('  '))
     const read = [
       docOf('a', 'L/_files/cr.txt'),
       docOf('b', 'L/_files/photo.jpg'),
       docOf('c', 'L/_files/a.dwg'),
       docOf('d', 'L/_files/b.dwg'),
-      docOf('e', 'L/_files/c.doc'),
+      docOf('e', 'L/_files/c.skp'),
       docOf('f', 'L/_files/vide.txt')
     ]
     await index.refresh(read)
@@ -100,7 +100,7 @@ describe('DocTextIndex', () => {
         3,
         [
           ['dwg', 2],
-          ['doc', 1]
+          ['skp', 1]
         ]
       ],
       ['empty', 1, []],

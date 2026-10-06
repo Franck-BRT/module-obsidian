@@ -1,4 +1,7 @@
 import { readDocx, type DocxReadBlock } from '../docxRead'
+import { isCfb } from '../cfb'
+import { readDoc } from '../docRead'
+import { isRtf, readRtf } from '../rtfRead'
 import { readHtml } from '../htmlRead'
 import { readPdf } from '../pdfRead'
 import { pdfBlocks } from '../pdfText'
@@ -47,6 +50,9 @@ export const READABLE_EXTENSIONS = new Set([
   ...PLAIN,
   'pdf',
   'docx',
+  'doc',
+  'dot',
+  'rtf',
   'xlsx',
   'pptx',
   'html',
@@ -127,6 +133,19 @@ export function blocksText(blocks: DocxReadBlock[]): string {
 }
 
 /**
+ * A Word document of before 2007, by what it really is rather than by its name: the
+ * binary format of Word 97–2003 (and 6 and 95), RTF — which many `.doc` are —, a newer
+ * document renamed, a web page saved as a document, or plain text.
+ */
+async function oldWordText(bytes: Uint8Array): Promise<string> {
+  if (isCfb(bytes)) return readDoc(bytes)
+  if (isRtf(bytes)) return readRtf(bytes)
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b) return blocksText(await readDocx(bytes))
+  const text = plainText(bytes)
+  return /^\s*</.test(text) && /<(html|body|p|div)\b/i.test(text) ? blocksText(readHtml(text)) : text
+}
+
+/**
  * The file's text. Throws a `FileReadError` saying why when there is none to give: the
  * format is not one of these, the file holds no text (a scanned PDF), or it does not read.
  */
@@ -138,6 +157,7 @@ export async function fileText(extension: string, bytes: Uint8Array): Promise<st
     else if (ext === 'html' || ext === 'htm') text = blocksText(readHtml(plainText(bytes)))
     else if (ext === 'pdf') text = blocksText(pdfBlocks(await readPdf(bytes)))
     else if (ext === 'docx') text = blocksText(await readDocx(bytes))
+    else if (ext === 'doc' || ext === 'dot' || ext === 'rtf') text = await oldWordText(bytes)
     else if (ext === 'xlsx') {
       text = (await readXlsx(bytes))
         .filter((sheet) => sheet.rows.length)
