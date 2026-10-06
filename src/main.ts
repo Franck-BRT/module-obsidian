@@ -1511,7 +1511,7 @@ export default class PMPlugin extends Plugin {
         await this.library.fillIdentity(doc, guessIdentity(entry.text, doc.file))
       }
       for (const doc of this.library.docs()) {
-        if (doc.source) await this.library.shareIdentity(doc.record, doc.source)
+        for (const source of doc.sources ?? []) await this.library.shareIdentity(doc.record, source)
       }
     } finally {
       this.fillingIdentities = false
@@ -1648,7 +1648,7 @@ export default class PMPlugin extends Plugin {
         ]
       )
       if (choice !== 'link') continue
-      await this.library.setSource(pair.derived, pair.source)
+      await this.library.addSource(pair.derived, pair.source)
       new Notice(t('library.sourceLinked', { source: pair.source.title, derived: pair.derived.title }))
     }
     // Those that look like documents a register is waiting for, offered to be filed as them.

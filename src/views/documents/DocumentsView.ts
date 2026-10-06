@@ -517,12 +517,14 @@ export class DocumentsView extends ItemView {
         text: t('library.versionBefore', { title: after.title })
       })
     }
-    // What it was made from — its Word document, for a PDF —, and what was made from it.
-    const source = doc.source ? all.find((one) => one.record === doc.source) : undefined
-    if (source) {
+    // What it was made from — its Word document and its workbook, for a PDF —, and what was made from it.
+    const sources = (doc.sources ?? [])
+      .map((path) => all.find((one) => one.record === path))
+      .filter((one): one is LibraryDoc => !!one)
+    if (sources.length) {
       const line = meta.createSpan({ cls: 'pm-docs-source' })
-      line.createSpan({ text: t('library.sourceIs') })
-      this.renderDocLink(line, source)
+      line.createSpan({ text: sources.length > 1 ? t('library.sourcesAre') : t('library.sourceIs') })
+      for (const source of sources) this.renderDocLink(line, source)
     }
     const derived = derivedFrom(doc, all)
     if (derived.length) {
@@ -589,8 +591,9 @@ export class DocumentsView extends ItemView {
   private pickSource(doc: LibraryDoc, made: boolean): void {
     const all = this.plugin.library.docs()
     const texts = this.plugin.libraryText
+    // Never one it is linked with already, either way.
     const candidates = made
-      ? sourceCandidates(doc, all).filter((one) => one.source !== doc.record && doc.source !== one.record)
+      ? sourceCandidates(doc, all).filter((one) => !(one.sources ?? []).includes(doc.record))
       : sourceCandidates(doc, all)
     new LibraryDocPicker(
       this.app,
@@ -598,8 +601,8 @@ export class DocumentsView extends ItemView {
       (path) => this.projectTitle(path),
       (each) => texts.folded(each),
       safeAsync(async (other: LibraryDoc) => {
-        if (made) await this.plugin.library.setSource(other, doc)
-        else await this.plugin.library.setSource(doc, other)
+        if (made) await this.plugin.library.addSource(other, doc)
+        else await this.plugin.library.addSource(doc, other)
         const [from, to] = made ? [doc, other] : [other, doc]
         new Notice(t('library.sourceLinked', { source: from.title, derived: to.title }))
         this.redrawSoon()
@@ -1597,15 +1600,19 @@ export class DocumentsView extends ItemView {
         .setIcon('file-output')
         .onClick(() => this.pickSource(doc, true))
     )
-    if (doc.source) {
+    // Each of its sources unlinked on its own: the Word document, and not the workbook.
+    const all = this.plugin.library.docs()
+    for (const path of doc.sources ?? []) {
+      const source = all.find((one) => one.record === path)
+      if (!source) continue
       menu.addItem((item) =>
         item
-          .setTitle(t('library.sourceUnlinkMenu'))
+          .setTitle(t('library.sourceUnlinkOne', { title: source.title }))
           .setIcon('unlink')
           .onClick(
             safeAsync(async () => {
-              await this.plugin.library.setSource(doc, null)
-              new Notice(t('library.sourceUnlinked', { title: doc.title }))
+              await this.plugin.library.removeSource(doc, source)
+              new Notice(t('library.sourceUnlinked', { title: doc.title, source: source.title }))
               this.redrawSoon()
             })
           )

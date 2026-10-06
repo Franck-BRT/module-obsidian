@@ -50,8 +50,11 @@ export interface LibraryDoc {
   previous?: string
   /** The document it is a translation of, by its record's path; absent when none. */
   translationOf?: string
-  /** The document it was made from — the Word document a PDF was printed from —, by its record's path. */
-  source?: string
+  /**
+   * The documents it was made from — the Word document and the workbook a PDF was printed
+   * from —, by their records' paths.
+   */
+  sources?: string[]
   /** Its reference, as its issuer numbers it: « DLA-NM-0000000-01-PSP ». */
   reference?: string
   /** Its edition and its revision within it: « 2 » and « 15 ». */
@@ -361,7 +364,7 @@ export function otherLanguages(doc: LibraryDoc, docs: LibraryDoc[]): LibraryDoc[
 
 /** The documents made from this one — the PDFs printed from a Word document. */
 export function derivedFrom(doc: LibraryDoc, docs: LibraryDoc[]): LibraryDoc[] {
-  return docs.filter((one) => one.source === doc.record && one.record !== doc.record)
+  return docs.filter((one) => (one.sources ?? []).includes(doc.record) && one.record !== doc.record)
 }
 
 /** A file's name without its folder nor its extension, folded: « Spec_v2.DOCX » and « spec_v2.pdf » agree. */
@@ -385,23 +388,24 @@ export function likelyPair(doc: LibraryDoc, docs: LibraryDoc[]): { source: Libra
     docs.find((one) => one.record !== doc.record && bareName(one) === name && wanted(familyOf(one.file || one.title)))
   if (kind === 'pdf') {
     const source = twin((family) => EDITED.includes(family))
-    return source && !doc.source ? { source, derived: doc } : null
+    return source && !(doc.sources ?? []).includes(source.record) ? { source, derived: doc } : null
   }
   if (EDITED.includes(kind)) {
     const derived = twin((family) => family === 'pdf')
-    return derived && !derived.source ? { source: doc, derived } : null
+    return derived && !(derived.sources ?? []).includes(doc.record) ? { source: doc, derived } : null
   }
   return null
 }
 
 /**
  * The documents a source is picked among for this one: those of its name in another kind
- * first, then the rest — never itself, nor one made from it, which would make a loop.
+ * first, then the rest — never itself, one of its sources already, nor one made from it,
+ * which would make a loop.
  */
 export function sourceCandidates(doc: LibraryDoc, docs: LibraryDoc[]): LibraryDoc[] {
   const name = bareName(doc)
   const kind = familyOf(doc.file || doc.title)
-  const made = new Set(derivedFrom(doc, docs).map((one) => one.record))
+  const made = new Set([...derivedFrom(doc, docs).map((one) => one.record), ...(doc.sources ?? [])])
   const others = docs.filter((one) => one.record !== doc.record && !made.has(one.record))
   const alike = (one: LibraryDoc): boolean =>
     !!name && bareName(one) === name && familyOf(one.file || one.title) !== kind

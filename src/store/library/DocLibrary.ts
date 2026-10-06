@@ -227,35 +227,52 @@ export class DocLibrary {
       ...(text(fm.edition ?? fm['édition']) ? { edition: text(fm.edition ?? fm['édition']) } : {}),
       ...(text(fm.revision ?? fm['révision']) ? { revision: text(fm.revision ?? fm['révision']) } : {}),
       ...(fm[IDENTITY_KEY] === true ? { identityRead: true } : {}),
-      ...(typeof fm.source === 'string' && this.resolve(fm.source, record.path)
-        ? { source: this.resolve(fm.source, record.path)?.path }
-        : {})
+      ...this.sourcesOf(fm, record.path)
     }
   }
 
-  /**
-   * The document a document was made from — the Word document of a PDF —, or none: written
-   * in its record, as a link to the other's. The other's own link back, which would make a
-   * loop, is taken off.
-   */
-  async setSource(doc: LibraryDoc, source: LibraryDoc | null): Promise<void> {
-    if (source?.record === doc.record) return
-    if (source?.source === doc.record) {
-      const back = this.app.vault.getAbstractFileByPath(source.record)
-      if (back instanceof TFile) {
-        await this.app.fileManager.processFrontMatter(back, (fm: Record<string, unknown>) => {
-          delete fm.source
-        })
-      }
-    }
+  /** The documents a record says it was made from: `sources`, or the one `source` of before. */
+  private sourcesOf(fm: Record<string, unknown>, from: string): { sources?: string[] } {
+    const paths = stringList(fm.sources ?? fm.source)
+      .map((raw) => this.resolve(raw, from)?.path)
+      .filter((path): path is string => !!path)
+    return paths.length ? { sources: [...new Set(paths)] } : {}
+  }
+
+  /** A record's sources written: as links, the one `source` of before taken off. */
+  private async writeSources(doc: LibraryDoc, sources: string[]): Promise<void> {
     const record = this.app.vault.getAbstractFileByPath(doc.record)
     if (!(record instanceof TFile)) return
     await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
-      if (source) fm.source = `[[${source.record.replace(/\.md$/, '')}]]`
-      else delete fm.source
+      delete fm.source
+      if (sources.length) fm.sources = sources.map((path) => `[[${path.replace(/\.md$/, '')}]]`)
+      else delete fm.sources
     })
-    // Made one from the other, they share their reference, edition and revision.
-    if (source) await this.shareIdentity(doc.record, source.record)
+  }
+
+  /**
+   * One more document a document was made from — a PDF from its Word document, and from its
+   * workbook too —: written in its record, as a link to the other's. The other's own link
+   * back, which would make a loop, is taken off; the two then share their reference,
+   * edition and revision.
+   */
+  async addSource(doc: LibraryDoc, source: LibraryDoc): Promise<void> {
+    if (source.record === doc.record) return
+    if ((source.sources ?? []).includes(doc.record)) {
+      await this.writeSources(
+        source,
+        (source.sources ?? []).filter((path) => path !== doc.record)
+      )
+    }
+    const current = doc.sources ?? []
+    if (!current.includes(source.record)) await this.writeSources(doc, [...current, source.record])
+    await this.shareIdentity(doc.record, source.record)
+  }
+
+  /** A document no longer said to be made from one of its sources — from any, when none is named. */
+  async removeSource(doc: LibraryDoc, source: LibraryDoc | null): Promise<void> {
+    const kept = source ? (doc.sources ?? []).filter((path) => path !== source.record) : []
+    await this.writeSources(doc, kept)
   }
 
   /**

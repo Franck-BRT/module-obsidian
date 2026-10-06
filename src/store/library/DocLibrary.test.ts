@@ -779,19 +779,54 @@ describe('DocLibrary', () => {
         derived: { file: 'Bibliothèque/Fichiers/Spec.pdf' }
       })
       expect(likelyPair(byFile('Spec.docx'), library.docs())?.derived.file).toBe('Bibliothèque/Fichiers/Spec.pdf')
-      await library.setSource(byFile('Spec.pdf'), byFile('Spec.docx'))
-      expect(byFile('Spec.pdf').source).toBe(byFile('Spec.docx').record)
+      await library.addSource(byFile('Spec.pdf'), byFile('Spec.docx'))
+      expect(byFile('Spec.pdf').sources).toEqual([byFile('Spec.docx').record])
       expect(derivedFrom(byFile('Spec.docx'), library.docs()).map((doc) => doc.file)).toEqual([
         'Bibliothèque/Fichiers/Spec.pdf'
       ])
       // Linked already: no longer offered.
       expect(likelyPair(byFile('Spec.docx'), library.docs())).toBeNull()
       // The other way round, the loop it would make is undone.
-      await library.setSource(byFile('Spec.docx'), byFile('Spec.pdf'))
-      expect(byFile('Spec.pdf').source).toBeUndefined()
-      expect(byFile('Spec.docx').source).toBe(byFile('Spec.pdf').record)
-      await library.setSource(byFile('Spec.docx'), null)
-      expect(byFile('Spec.docx').source).toBeUndefined()
+      await library.addSource(byFile('Spec.docx'), byFile('Spec.pdf'))
+      expect(byFile('Spec.pdf').sources).toBeUndefined()
+      expect(byFile('Spec.docx').sources).toEqual([byFile('Spec.pdf').record])
+      await library.removeSource(byFile('Spec.docx'), null)
+      expect(byFile('Spec.docx').sources).toBeUndefined()
+    })
+
+    it('links a file to several sources — a Word document and a workbook —, and unlinks one alone', async () => {
+      await library.pour([outside('Note.docx', 'w'), outside('Note.xlsx', 'x'), outside('Note.pdf', 'p')], {
+        projects: [],
+        move: false,
+        today: TODAY
+      })
+      await library.addSource(byFile('Note.pdf'), byFile('Note.docx'))
+      await library.addSource(byFile('Note.pdf'), byFile('Note.xlsx'))
+      // Linked twice to the same: once.
+      await library.addSource(byFile('Note.pdf'), byFile('Note.docx'))
+      expect(byFile('Note.pdf').sources).toEqual([byFile('Note.docx').record, byFile('Note.xlsx').record])
+      expect(derivedFrom(byFile('Note.xlsx'), library.docs()).map((doc) => doc.file)).toEqual([
+        'Bibliothèque/Fichiers/Note.pdf'
+      ])
+      // Linked to both: neither is offered again.
+      expect(sourceCandidates(byFile('Note.pdf'), library.docs())).toEqual([])
+      await library.removeSource(byFile('Note.pdf'), byFile('Note.docx'))
+      expect(byFile('Note.pdf').sources).toEqual([byFile('Note.xlsx').record])
+    })
+
+    it('reads the one source a record of before named', async () => {
+      await library.pour([outside('Old.docx', 'w'), outside('Old.pdf', 'p')], {
+        projects: [],
+        move: false,
+        today: TODAY
+      })
+      const pdf = byFile('Old.pdf')
+      const content = vault.contentAt(pdf.record) ?? ''
+      await vault.modify(
+        fileAt(pdf.record),
+        content.replace('---\n\n', `source: "[[${byFile('Old.docx').record.replace(/\.md$/, '')}]]"\n---\n\n`)
+      )
+      expect(byFile('Old.pdf').sources).toEqual([byFile('Old.docx').record])
     })
 
     it('offers the documents of the same name in another kind first, and never one made from it', async () => {
@@ -800,7 +835,7 @@ describe('DocLibrary', () => {
         move: false,
         today: TODAY
       })
-      await library.setSource(byFile('Autre.docx'), byFile('Note.pdf'))
+      await library.addSource(byFile('Autre.docx'), byFile('Note.pdf'))
       expect(sourceCandidates(byFile('Note.pdf'), library.docs()).map((doc) => doc.file)).toEqual([
         'Bibliothèque/Fichiers/Note.xlsx'
       ])
@@ -866,7 +901,7 @@ describe('DocLibrary', () => {
       if (!word || !pdf) throw new Error('no pair')
       await library.fillIdentity(word, { reference: 'SP-01-A', edition: '2' })
       await library.fillIdentity(pdf, { revision: '15' })
-      await library.setSource(pdf, word)
+      await library.addSource(pdf, word)
       const after = (end: string) => library.docs().find((doc) => doc.file.endsWith(end))
       expect(after('.pdf')).toMatchObject({ reference: 'SP-01-A', edition: '2', revision: '15' })
       expect(after('.docx')).toMatchObject({ reference: 'SP-01-A', edition: '2', revision: '15' })
