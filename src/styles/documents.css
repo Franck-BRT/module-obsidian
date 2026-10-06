@@ -488,8 +488,37 @@ button.pm-docs-chip:not(.clickable-icon):hover {
   margin-top: 10px;
 }
 
+/* A document of reference, and its ghosts: a yellow star before the title. */
+.pm-docs-reference-star {
+  display: inline-flex;
+  margin-right: var(--size-4-1);
+  color: var(--color-yellow);
+  vertical-align: -2px;
+}
+
+.pm-docs-reference-star svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* The title, with the star before it when it has one. */
+.pm-docs-title-line {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.pm-docs-title-line .pm-docs-title {
+  flex: 1;
+  min-width: 0;
+}
+
 /* A ghost: a document shown in a folder it is not kept in. */
-.pm-docs-ghost {
+/* Dimmed but for its star, which says it is a document of reference as brightly as the original's. */
+.pm-docs-ghost .pm-docs-title,
+.pm-docs-ghost .pm-docs-meta,
+.pm-docs-ghost .pm-docs-icon {
   opacity: 0.78;
 }
 

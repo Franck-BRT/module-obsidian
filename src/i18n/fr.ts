@@ -1463,6 +1463,9 @@ export const fr: Catalog = {
   'settings.libraryReference.name': 'Dossier de référence de la bibliothèque',
   'settings.libraryReference.desc':
     'Le dossier de la bibliothèque où ranger les documents communs à plusieurs dossiers : un document déplacé là laisse un fantôme dans son ancien dossier. Un chemin sous la bibliothèque, par exemple « Références » ou « Commun/Normes ».',
+  'library.referenceStar': 'Document de référence',
+  'library.referenceStarHint':
+    'Rangé dans le dossier de référence « {reference} » : commun à plusieurs dossiers, qui le montrent par un fantôme.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

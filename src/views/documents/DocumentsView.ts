@@ -977,7 +977,9 @@ export class DocumentsView extends ItemView {
     setIcon(row.createDiv({ cls: `pm-docs-icon pm-docs-icon--${family}` }), FAMILY_ICONS[family])
 
     const main = row.createDiv('pm-docs-main')
-    const title = main.createEl('a', { cls: 'pm-docs-title', text: doc.title, href: '#' })
+    const line = main.createDiv('pm-docs-title-line')
+    this.renderReferenceStar(line, doc)
+    const title = line.createEl('a', { cls: 'pm-docs-title', text: doc.title, href: '#' })
     title.addEventListener('click', (event) => {
       event.preventDefault()
       void this.openDoc(doc)
@@ -1280,7 +1282,9 @@ export class DocumentsView extends ItemView {
     row.createSpan('pm-docs-tick pm-docs-tick-spacer')
     setIcon(row.createDiv('pm-docs-icon pm-docs-icon--ghost'), 'ghost')
     const main = row.createDiv('pm-docs-main')
-    const title = main.createEl('a', { cls: 'pm-docs-title', text: doc.title, href: '#' })
+    const line = main.createDiv('pm-docs-title-line')
+    this.renderReferenceStar(line, doc)
+    const title = line.createEl('a', { cls: 'pm-docs-title', text: doc.title, href: '#' })
     title.addEventListener('click', (event) => {
       event.preventDefault()
       void this.openDoc(doc)
@@ -1331,6 +1335,15 @@ export class DocumentsView extends ItemView {
       )
       menu.showAtMouseEvent(event)
     })
+  }
+
+  /** A document of reference — kept in the folder of reference, or one of its folders —, and its ghosts: a yellow star. */
+  private renderReferenceStar(parent: HTMLElement, doc: LibraryDoc): void {
+    const reference = this.plugin.referenceFolder()
+    if (doc.folder !== reference && !doc.folder.startsWith(`${reference}/`)) return
+    const star = parent.createSpan({ cls: 'pm-docs-reference-star' })
+    setIcon(star, 'star')
+    explain(star, t('library.referenceStar'), t('library.referenceStarHint', { reference }))
   }
 
   /** The document a ghost stands for, shown in its own folder. */

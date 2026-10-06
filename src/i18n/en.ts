@@ -1417,6 +1417,9 @@ export const en = {
   'settings.libraryReference.name': 'Library reference folder',
   'settings.libraryReference.desc':
     'The library’s folder for documents several folders share: a document moved there leaves a ghost in its former folder. A path under the library, such as “References” or “Shared/Standards”.',
+  'library.referenceStar': 'Reference document',
+  'library.referenceStarHint':
+    'Kept in the reference folder “{reference}”: shared by several folders, which show it by a ghost.',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',
