@@ -835,4 +835,41 @@ describe('DocLibrary', () => {
       expect(content).toContain('revision: ""')
     })
   })
+
+  describe('identity found', () => {
+    it('fills what the record does not say, never over the reader, and once', async () => {
+      await library.pour([outside('Spec.pdf', 's')], { projects: [], move: false, today: TODAY })
+      const [doc] = library.docs()
+      await vault.modify(fileAt(doc.record), (vault.contentAt(doc.record) ?? '').replace('edition: ""', 'edition: "7"'))
+      const filled = await library.fillIdentity(library.docs()[0], {
+        reference: 'SP-01-A',
+        edition: '2',
+        revision: '15'
+      })
+      expect(filled.sort()).toEqual(['reference', 'revision'])
+      expect(library.docs()[0]).toMatchObject({
+        reference: 'SP-01-A',
+        edition: '7',
+        revision: '15',
+        identityRead: true
+      })
+    })
+
+    it('shares a source’s and its PDF’s reference, edition and revision, where each says none', async () => {
+      await library.pour([outside('Spec.docx', 'w'), outside('Spec.pdf', 'p')], {
+        projects: [],
+        move: false,
+        today: TODAY
+      })
+      const word = library.docs().find((doc) => doc.file.endsWith('.docx'))
+      const pdf = library.docs().find((doc) => doc.file.endsWith('.pdf'))
+      if (!word || !pdf) throw new Error('no pair')
+      await library.fillIdentity(word, { reference: 'SP-01-A', edition: '2' })
+      await library.fillIdentity(pdf, { revision: '15' })
+      await library.setSource(pdf, word)
+      const after = (end: string) => library.docs().find((doc) => doc.file.endsWith(end))
+      expect(after('.pdf')).toMatchObject({ reference: 'SP-01-A', edition: '2', revision: '15' })
+      expect(after('.docx')).toMatchObject({ reference: 'SP-01-A', edition: '2', revision: '15' })
+    })
+  })
 })

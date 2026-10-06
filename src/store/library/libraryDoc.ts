@@ -57,6 +57,8 @@ export interface LibraryDoc {
   /** Its edition and its revision within it: « 2 » and « 15 ». */
   edition?: string
   revision?: string
+  /** Its reference, edition and revision were looked for in what it says, once: not again. */
+  identityRead?: boolean
   /** The language it is in, as a code — set on a translation —; absent when not known. */
   language?: string
 }

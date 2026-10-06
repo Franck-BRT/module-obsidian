@@ -114,6 +114,7 @@ import {
 import { DocLibrary, type PourItem } from './store/library/DocLibrary'
 import { DocTextIndex, folderShelf } from './store/library/DocTextIndex'
 import { collectionNames, isLibraryDoc, likelyPair, type LibraryDoc } from './store/library/libraryDoc'
+import { guessIdentity } from './store/library/docIdentity'
 import { cleanTranscriptIn, TRANSCRIPT_KEY, type Furniture } from './store/chat/ocr'
 import {
   guessCategory,
@@ -929,6 +930,20 @@ export default class PMPlugin extends Plugin {
     this.registerEvent(this.app.vault.on('delete', later))
     this.registerEvent(this.app.vault.on('rename', later))
     this.register(this.libraryText.onChange(later))
+    // Documents read: their reference, edition and revision looked for, a moment after.
+    let identities: number | null = null
+    this.register(
+      this.libraryText.onChange(() => {
+        if (identities !== null) window.clearTimeout(identities)
+        identities = window.setTimeout(() => {
+          identities = null
+          safeAsync(() => this.fillIdentities())()
+        }, 3000)
+      })
+    )
+    this.register(() => {
+      if (identities !== null) window.clearTimeout(identities)
+    })
     const status = this.addStatusBarItem()
     status.addClass('pm-rag-status')
     status.addClass('mod-clickable')
@@ -1475,6 +1490,32 @@ export default class PMPlugin extends Plugin {
    * Pours documents into the library once the reader has said which projects they belong
    * to, telling how far it has got on a long pour and what came of it at the end.
    */
+  private fillingIdentities = false
+
+  /**
+   * The documents read and never looked through for it given the reference, edition and
+   * revision their first pages — or their files' names — say, where their records say none;
+   * then those made one from the other told what the other says.
+   */
+  async fillIdentities(): Promise<void> {
+    if (this.fillingIdentities) return
+    this.fillingIdentities = true
+    try {
+      for (const doc of this.library.docs()) {
+        if (doc.identityRead || !doc.file) continue
+        const entry = this.libraryText.entry(doc)
+        // Not read yet: looked through once it is.
+        if (!entry) continue
+        await this.library.fillIdentity(doc, guessIdentity(entry.text, doc.file))
+      }
+      for (const doc of this.library.docs()) {
+        if (doc.source) await this.library.shareIdentity(doc.record, doc.source)
+      }
+    } finally {
+      this.fillingIdentities = false
+    }
+  }
+
   /** The library's folder for documents many folders need: the reader's, or the default. */
   referenceFolder(): string {
     return this.settings.libraryReferenceFolder.trim().replace(/^\/+|\/+$/g, '') || t('library.referenceDefault')

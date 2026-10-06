@@ -4,6 +4,7 @@ import { DOCS_FOLDER_NAME, freePath } from '../DocumentStore'
 import { refLink } from '../refs'
 import { ensureFolder } from '../vaultFs'
 import { previousVersion } from './docVersions'
+import type { DocIdentity } from './docIdentity'
 import { ghostContent, ghostTarget, isGhost, type LibraryGhost } from './libraryGhost'
 import {
   dissolveSubfolder,
@@ -225,6 +226,7 @@ export class DocLibrary {
       ...(text(fm.reference ?? fm['référence']) ? { reference: text(fm.reference ?? fm['référence']) } : {}),
       ...(text(fm.edition ?? fm['édition']) ? { edition: text(fm.edition ?? fm['édition']) } : {}),
       ...(text(fm.revision ?? fm['révision']) ? { revision: text(fm.revision ?? fm['révision']) } : {}),
+      ...(fm[IDENTITY_KEY] === true ? { identityRead: true } : {}),
       ...(typeof fm.source === 'string' && this.resolve(fm.source, record.path)
         ? { source: this.resolve(fm.source, record.path)?.path }
         : {})
@@ -252,6 +254,8 @@ export class DocLibrary {
       if (source) fm.source = `[[${source.record.replace(/\.md$/, '')}]]`
       else delete fm.source
     })
+    // Made one from the other, they share their reference, edition and revision.
+    if (source) await this.shareIdentity(doc.record, source.record)
   }
 
   /**
@@ -268,6 +272,51 @@ export class DocLibrary {
     await this.app.fileManager.processFrontMatter(record, (fields: Record<string, unknown>) => {
       for (const key of missing) if (!(key in fields)) fields[key] = ''
     })
+  }
+
+  /**
+   * What was found of a document's reference, edition and revision written into its record —
+   * only where it says none, the reader's own never written over —, and the record marked as
+   * looked through, so that a field the reader empties is not filled again. Returns the
+   * fields filled.
+   */
+  async fillIdentity(doc: LibraryDoc, found: DocIdentity): Promise<string[]> {
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return []
+    const filled: string[] = []
+    await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+      for (const key of HAND_FIELDS) {
+        const now = text(fm[key])
+        if (now) continue
+        const value = found[key]
+        fm[key] = value ?? ''
+        if (value) filled.push(key)
+      }
+      fm[IDENTITY_KEY] = true
+    })
+    return filled
+  }
+
+  /**
+   * Two documents one made from the other — a Word document and its PDF — told what the other
+   * says of their reference, edition and revision, where they say nothing themselves.
+   */
+  async shareIdentity(oneRecord: string, otherRecord: string): Promise<void> {
+    const docs = this.docs()
+    const one = docs.find((doc) => doc.record === oneRecord)
+    const other = docs.find((doc) => doc.record === otherRecord)
+    if (!one || !other) return
+    const fill = async (doc: LibraryDoc, from: LibraryDoc): Promise<void> => {
+      const missing = HAND_FIELDS.filter((key) => !doc[key] && from[key])
+      if (!missing.length) return
+      const record = this.app.vault.getAbstractFileByPath(doc.record)
+      if (!(record instanceof TFile)) return
+      await this.app.fileManager.processFrontMatter(record, (fm: Record<string, unknown>) => {
+        for (const key of missing) if (!text(fm[key])) fm[key] = from[key]
+      })
+    }
+    await fill(one, other)
+    await fill(other, one)
   }
 
   /** The language a document is in, said in its record; '' to say it is not known. */
@@ -809,6 +858,9 @@ export function fileNameOf(title: string): string {
     .replace(/\s+/g, ' ')
     .replace(/^[.\s]+|[.\s]+$/g, '')
 }
+
+/** Marks a record whose reference, edition and revision were looked for in its text. */
+const IDENTITY_KEY = 'pm-identity-read'
 
 /** A frontmatter field as text: a number written bare in YAML — a lot « 2 » — read as one too. */
 function text(raw: unknown): string {
