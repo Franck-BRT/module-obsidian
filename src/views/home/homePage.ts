@@ -15,6 +15,7 @@ export interface HomeCounts {
   documentsRead: number
   notes: number
   requirements: number
+  prompts: number
 }
 
 export interface HomeActions {
@@ -24,6 +25,7 @@ export interface HomeActions {
   documents(): void
   notes(): void
   requirements(): void
+  prompts(): void
   settings(): void
   newProject(): void
   newNote(): void
@@ -115,6 +117,13 @@ export function renderHome(root: HTMLElement, counts: HomeCounts, go: HomeAction
       title: t('home.requirements'),
       detail: t('home.requirements.detail', { count: counts.requirements }),
       open: () => go.requirements()
+    },
+    {
+      cls: 'prompts',
+      icon: 'message-square-quote',
+      title: t('home.prompts'),
+      detail: counts.prompts ? t('home.prompts.detail', { count: counts.prompts }) : t('home.prompts.none'),
+      open: () => go.prompts()
     }
   ])
   section(page, t('home.section.setup'), [

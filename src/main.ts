@@ -102,6 +102,8 @@ import { registerNoteBlock } from './views/chat/noteCard'
 import { DocumentsView, PM_DOCUMENTS_VIEW_TYPE } from './views/documents/DocumentsView'
 import { NotesView, PM_NOTES_VIEW_TYPE } from './views/notes/NotesView'
 import { HomeView, PM_HOME_VIEW_TYPE } from './views/home/HomeView'
+import { PromptsView, PM_PROMPTS_VIEW_TYPE } from './views/prompts/PromptsView'
+import type { ChatPrompt } from './store/chat/chatPrompts'
 import { NoteLibrary } from './store/notes/NoteLibrary'
 import {
   chooseProjects,
@@ -340,6 +342,7 @@ export default class PMPlugin extends Plugin {
     this.registerView(PM_DOCUMENTS_VIEW_TYPE, (leaf) => new DocumentsView(leaf, this))
     this.registerView(PM_NOTES_VIEW_TYPE, (leaf) => new NotesView(leaf, this))
     this.registerView(PM_HOME_VIEW_TYPE, (leaf) => new HomeView(leaf, this))
+    this.registerView(PM_PROMPTS_VIEW_TYPE, (leaf) => new PromptsView(leaf, this))
     // Claiming the extension is what stops a click handing the message back to Outlook.
     this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
@@ -374,6 +377,12 @@ export default class PMPlugin extends Plugin {
       id: 'open-home',
       name: t('command.openHome'),
       callback: safeAsync(() => this.openHome())
+    })
+
+    this.addCommand({
+      id: 'open-prompts',
+      name: t('command.openPrompts'),
+      callback: safeAsync(() => this.openPrompts())
     })
 
     this.addCommand({
@@ -1203,6 +1212,21 @@ export default class PMPlugin extends Plugin {
       return
     }
     editor.replaceRange(insertion.insert, insertion.at)
+  }
+
+  /** The prompt library, in a tab of its own: found again if it is open. */
+  async openPrompts(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(PM_PROMPTS_VIEW_TYPE)[0]
+    const leaf = existing ?? this.app.workspace.getLeaf('tab')
+    if (!existing) await leaf.setViewState({ type: PM_PROMPTS_VIEW_TYPE, active: true })
+    await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /** A prompt of the library, taken to the chat: asked at once, or put in its box to adjust. */
+  async usePrompt(prompt: ChatPrompt, mode: 'send' | 'insert'): Promise<void> {
+    await this.openChat()
+    const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
+    if (view instanceof ChatView) await view.usePrompt(prompt, mode)
   }
 
   /** The home page, in a tab of its own: found again if it is open. */

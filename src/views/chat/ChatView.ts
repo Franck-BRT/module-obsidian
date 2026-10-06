@@ -130,6 +130,8 @@ import {
 import { LlmClient, LlmError } from '../../store/llm'
 import { displayName, safeAsync, sanitizeFileName } from '../../utils'
 import { fillPrompt, promptParams } from '../../store/chat/promptParams'
+import { asChatPrompt, isPromptNote, matchesPrompt, type PromptNote } from '../../store/chat/promptLibrary'
+import { allPrompts } from '../prompts/promptVault'
 import { withSelection } from '../../store/chat/selection'
 import { branchEnd, conversationTree, threadTo } from '../../store/chat/chatBranches'
 import { BranchModal } from './branchGraph'
@@ -229,6 +231,8 @@ export class ChatView extends ItemView {
   private stopper: AbortController | null = null
   private listEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
+  /** The prompt library, kept at hand: its favourites are offered before anything is asked. */
+  private libraryPrompts: PromptNote[] = []
   private sendEl!: HTMLButtonElement
 
   constructor(
@@ -251,6 +255,20 @@ export class ChatView extends ItemView {
 
   onOpen(): Promise<void> {
     this.containerEl.addClass('pm-view')
+    // The prompt library, read now and again whenever one of its notes changes.
+    safeAsync(() => this.loadPrompts())()
+    this.registerEvent(
+      this.app.metadataCache.on('changed', (_file, _data, cache) => {
+        if (isPromptNote(cache.frontmatter) || this.libraryPrompts.some((one) => one.path === _file.path)) {
+          safeAsync(() => this.loadPrompts())()
+        }
+      })
+    )
+    this.registerEvent(
+      this.app.vault.on('delete', (file) => {
+        if (this.libraryPrompts.some((one) => one.path === file.path)) safeAsync(() => this.loadPrompts())()
+      })
+    )
     // The note may be renamed or moved while the conversation goes on; the next exchange
     // follows it rather than starting a second note.
     this.registerEvent(
@@ -2418,7 +2436,11 @@ export class ChatView extends ItemView {
   /** The ready questions that fit what is attached now. */
   private presets(): ChatPrompt[] {
     const settings = this.plugin.settings.chat
-    const all = [...parsePrompts(settings.prompts), ...(settings.builtinPrompts ? builtinPrompts() : [])]
+    const all = [
+      ...this.libraryPrompts.filter((prompt) => prompt.favorite).map(asChatPrompt),
+      ...parsePrompts(settings.prompts),
+      ...(settings.builtinPrompts ? builtinPrompts() : [])
+    ]
     return availablePrompts(all, {
       note: this.useNote && this.contextFile !== null,
       // A collection is asked about the way a project is: where its tickets stand.
@@ -2461,11 +2483,21 @@ export class ChatView extends ItemView {
 
   private presetMenu(event: MouseEvent): void {
     const presets = this.presets()
-    if (!presets.length) {
-      new Notice(t('chat.presetsNone'))
-      return
-    }
     const menu = new Menu()
+    // The whole library, searched by its words: more than a menu can hold.
+    menu.addItem((item) =>
+      item
+        .setTitle(t('prompts.pickMenu'))
+        .setIcon('message-square-quote')
+        .onClick(() => this.pickPrompt())
+    )
+    menu.addItem((item) =>
+      item
+        .setTitle(t('prompts.openLibrary'))
+        .setIcon('library')
+        .onClick(safeAsync(() => this.plugin.openPrompts()))
+    )
+    if (presets.length) menu.addSeparator()
     let scope = presets[0].scope
     for (const preset of presets) {
       if (preset.scope !== scope) {
@@ -2480,6 +2512,38 @@ export class ChatView extends ItemView {
       )
     }
     menu.showAtMouseEvent(event)
+  }
+
+  private async loadPrompts(): Promise<void> {
+    this.libraryPrompts = await allPrompts(this.app)
+    this.renderPresets()
+  }
+
+  /** A prompt of the library, found by its words, then asked. */
+  private pickPrompt(): void {
+    if (!this.libraryPrompts.length) {
+      new Notice(t('prompts.pickNone'), 8000)
+      return
+    }
+    new PromptPicker(this.app, this.libraryPrompts, (prompt) => {
+      safeAsync(() => this.askPreset(asChatPrompt(prompt)))()
+    }).open()
+  }
+
+  /**
+   * A prompt from the library: asked at once, or put in the box to be adjusted first —
+   * its blanks left for the reader to fill.
+   */
+  async usePrompt(prompt: ChatPrompt, mode: 'send' | 'insert'): Promise<void> {
+    if (mode === 'send') {
+      await this.askPreset(prompt)
+      return
+    }
+    if (!this.inputEl) return
+    const before = this.inputEl.value.trim()
+    this.inputEl.value = before ? `${before}\n\n${prompt.question}` : prompt.question
+    this.inputEl.dispatchEvent(new Event('input'))
+    this.inputEl.focus()
   }
 
   /**
@@ -3136,6 +3200,35 @@ class ConversationPicker extends SuggestModal<TFile> {
 }
 
 /** The skills in the vault, by name, with what each is for. */
+class PromptPicker extends SuggestModal<PromptNote> {
+  constructor(
+    app: App,
+    private prompts: PromptNote[],
+    private onChoose: (prompt: PromptNote) => void
+  ) {
+    super(app)
+    this.setPlaceholder(t('prompts.pickPlaceholder'))
+  }
+
+  getSuggestions(query: string): PromptNote[] {
+    return this.prompts
+      .filter((prompt) => matchesPrompt(prompt, query))
+      .sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name))
+  }
+
+  renderSuggestion(prompt: PromptNote, el: HTMLElement): void {
+    const line = el.createDiv({ cls: 'pm-chat-pick-line' })
+    setIcon(line.createSpan({ cls: 'pm-chat-pick-icon' }), prompt.favorite ? 'star' : scopeIcon(prompt.scope))
+    line.createSpan({ text: prompt.name })
+    const detail = [prompt.category, prompt.description || prompt.question.split('\n')[0]].filter(Boolean).join(' · ')
+    if (detail) el.createEl('small', { cls: 'pm-chat-pick-when', text: detail })
+  }
+
+  onChooseSuggestion(prompt: PromptNote): void {
+    this.onChoose(prompt)
+  }
+}
+
 class SkillPicker extends SuggestModal<Skill> {
   constructor(
     app: App,

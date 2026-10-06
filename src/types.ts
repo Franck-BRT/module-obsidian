@@ -701,6 +701,8 @@ export interface ChatSettings {
   notesFolder: string
   /** Where new skills are written; they are found wherever they are. */
   skillsFolder: string
+  /** Where the prompt library writes new prompts; they are found wherever they are. */
+  promptsFolder: string
 }
 
 export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
@@ -713,7 +715,8 @@ export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   noteChars: 200000,
   fileChars: 200000,
   notesFolder: '',
-  skillsFolder: 'Chats/Skills'
+  skillsFolder: 'Chats/Skills',
+  promptsFolder: 'Chats/Prompts'
 }
 
 /** Anything the reader can restyle: an id that never changes, and the look they chose. */

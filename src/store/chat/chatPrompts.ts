@@ -61,6 +61,11 @@ const SCOPE_WORDS: Record<string, PromptScope> = {
   always: 'any'
 }
 
+/** What a word says a question is about — « projet », « exigences », « note »… — if it is one. */
+export function scopeOfWord(word: string): PromptScope | undefined {
+  return SCOPE_WORDS[word.trim().toLowerCase()]
+}
+
 /** The reader's list, read. A line that says nothing once its prefixes are taken off is skipped. */
 export function parsePrompts(text: string): ChatPrompt[] {
   const prompts: ChatPrompt[] = []

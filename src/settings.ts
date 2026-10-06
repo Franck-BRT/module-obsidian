@@ -1310,6 +1310,16 @@ export class PMSettingTab extends PluginSettingTab {
           }
         },
         {
+          name: t('settings.chat.promptsFolder'),
+          desc: t('settings.chat.promptsFolderDesc'),
+          control: {
+            type: 'folder',
+            key: 'chat.promptsFolder',
+            defaultValue: 'Chats/Prompts',
+            placeholder: 'Chats/Prompts'
+          }
+        },
+        {
           name: t('settings.chat.skillsFolder'),
           desc: t('settings.chat.skillsFolderDesc'),
           render: (setting: Setting) => {

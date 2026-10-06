@@ -26,6 +26,9 @@ import { SAMPLE_MSPDI } from './sample'
 import { CollectionsModal, DocPickModal } from '../../src/views/documents/collections'
 import { chooseProjects } from '../../src/views/documents/ProjectChooser'
 import { renderHome } from '../../src/views/home/homePage'
+import { PromptsView } from '../../src/views/prompts/PromptsView'
+import { PromptModal } from '../../src/views/prompts/PromptModal'
+import { promptNoteContent } from '../../src/store/chat/promptLibrary'
 
 const query = new URLSearchParams(location.search)
 const screen = query.get('screen') ?? 'reserves'
@@ -140,9 +143,38 @@ async function main(): Promise<void> {
       const go = () => {}
       renderHome(
         body,
-        { projects: index.rootRefs().length, contacts: 14, documents: 552, documentsRead: 470, notes: 38, requirements: index.requirementRefs().length },
-        { projects: go, chat: go, contacts: go, documents: go, notes: go, requirements: go, settings: go, newProject: go, newNote: go }
+        { projects: index.rootRefs().length, contacts: 14, documents: 552, documentsRead: 470, notes: 38, requirements: index.requirementRefs().length, prompts: 12 },
+        { projects: go, chat: go, contacts: go, documents: go, notes: go, requirements: go, prompts: go, settings: go, newProject: go, newNote: go }
       )
+      break
+    }
+    case 'prompts': {
+      const write = async (name: string, scope: any, scopeWord: string, category: string, favorite: boolean, question: string, description = ''): Promise<void> => {
+        await app.vault.create(`Chats/Prompts/${name}.md`, promptNoteContent({ scope, scopeWord, category, description, favorite, question }))
+      }
+      await write('Compte rendu de réunion', 'note', 'note', 'Réunions', true, 'Rédige le compte rendu de la réunion du {Date:date} : décisions, actions avec leur responsable et leur échéance, points en suspens.')
+      await write('Ordre du jour', 'project', 'projet', 'Réunions', false, 'Propose l’ordre du jour du prochain comité de pilotage à partir des tickets en retard et des décisions attendues.')
+      await write('Relecture des exigences', 'requirements', 'exigences', 'Qualité', true, 'Relis ces exigences : ambiguïtés, exigences non vérifiables, doublons, et propose une reformulation.', 'Relecture qualité avant revue')
+      await write('Résumé pour la direction', 'any', '', '', false, 'Résume en cinq lignes, pour la direction, ce qui vient d’être dit.')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      body.addClass('pm-root', 'pm-prompts')
+      const view: any = new PromptsView({} as never, plugin)
+      view.app = app
+      view.containerEl = document.body.createDiv()
+      view.contentEl = body
+      view.registerEvent = () => {}
+      await view.onOpen()
+      break
+    }
+    case 'prompt-modal': {
+      new PromptModal(app, ['Réunions', 'Qualité'], async () => {}, {
+        name: 'Compte rendu de réunion',
+        question: 'Rédige le compte rendu de la réunion du {Date:date} : décisions, actions avec leur responsable et leur échéance, points en suspens.',
+        scope: 'note',
+        category: 'Réunions',
+        description: '',
+        favorite: true
+      }, true).open()
       break
     }
     case 'weekly': {
