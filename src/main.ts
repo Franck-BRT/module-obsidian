@@ -101,6 +101,7 @@ import { registerBranchBlock } from './views/chat/branchGraph'
 import { registerNoteBlock } from './views/chat/noteCard'
 import { DocumentsView, PM_DOCUMENTS_VIEW_TYPE } from './views/documents/DocumentsView'
 import { NotesView, PM_NOTES_VIEW_TYPE } from './views/notes/NotesView'
+import { HomeView, PM_HOME_VIEW_TYPE } from './views/home/HomeView'
 import { NoteLibrary } from './store/notes/NoteLibrary'
 import {
   chooseProjects,
@@ -338,6 +339,7 @@ export default class PMPlugin extends Plugin {
     this.registerView(PM_CONTACTS_VIEW_TYPE, (leaf) => new ContactsView(leaf, this))
     this.registerView(PM_DOCUMENTS_VIEW_TYPE, (leaf) => new DocumentsView(leaf, this))
     this.registerView(PM_NOTES_VIEW_TYPE, (leaf) => new NotesView(leaf, this))
+    this.registerView(PM_HOME_VIEW_TYPE, (leaf) => new HomeView(leaf, this))
     // Claiming the extension is what stops a click handing the message back to Outlook.
     this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
@@ -354,11 +356,24 @@ export default class PMPlugin extends Plugin {
         await this.startupSweep()
         this.watchVaultIndex()
         this.watchScans()
+        // The home page at start-up, when asked for and not already among the tabs restored.
+        if (this.settings.homeOnStartup && !this.app.workspace.getLeavesOfType(PM_HOME_VIEW_TYPE).length) {
+          await this.openHome()
+        }
       })
     )
 
+    this.addRibbonIcon('house', t('ribbon.home'), async () => {
+      await this.openHome()
+    })
     this.addRibbonIcon('chart-gantt', t('ribbon.title'), async () => {
       await this.router.openDashboard()
+    })
+
+    this.addCommand({
+      id: 'open-home',
+      name: t('command.openHome'),
+      callback: safeAsync(() => this.openHome())
     })
 
     this.addCommand({
@@ -1188,6 +1203,29 @@ export default class PMPlugin extends Plugin {
       return
     }
     editor.replaceRange(insertion.insert, insertion.at)
+  }
+
+  /** The home page, in a tab of its own: found again if it is open. */
+  async openHome(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(PM_HOME_VIEW_TYPE)[0]
+    const leaf = existing ?? this.app.workspace.getLeaf('tab')
+    if (!existing) await leaf.setViewState({ type: PM_HOME_VIEW_TYPE, active: true })
+    await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /**
+   * The plugin's settings. Obsidian's settings window is not part of its published API,
+   * and is reached the way every plugin reaches it; where it is not there, a Notice says
+   * where to go.
+   */
+  openSettings(): void {
+    const setting = (this.app as unknown as { setting?: { open(): void; openTabById(id: string): void } }).setting
+    if (!setting) {
+      new Notice(t('home.settingsWhere'))
+      return
+    }
+    setting.open()
+    setting.openTabById(this.manifest.id)
   }
 
   async openRequirements(): Promise<void> {

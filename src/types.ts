@@ -868,6 +868,8 @@ export interface PMSettings {
   translationLanguage: string
   /** Whether a button hovered for a moment explains itself. */
   tooltips: boolean
+  /** Whether the home page opens when Obsidian starts. */
+  homeOnStartup: boolean
   /** How long, in milliseconds, before it does: '500', '1000' or '2000'. */
   tooltipDelay: string
   /** Folders discovery skips, for templates and archives holding pm-project notes. */
@@ -1228,6 +1230,7 @@ export const DEFAULT_SETTINGS: PMSettings = {
   translationGlossary: '',
   translationLanguage: 'fr',
   tooltips: true,
+  homeOnStartup: false,
   tooltipDelay: '1000',
   excludedFolders: [],
   defaultView: 'table',

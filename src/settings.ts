@@ -89,6 +89,11 @@ export class PMSettingTab extends PluginSettingTab {
             }
           },
           {
+            name: t('settings.homeOnStartup.name'),
+            desc: t('settings.homeOnStartup.desc'),
+            control: { type: 'toggle', key: 'homeOnStartup' }
+          },
+          {
             name: t('settings.tooltips.name'),
             desc: t('settings.tooltips.desc'),
             control: { type: 'toggle', key: 'tooltips' }

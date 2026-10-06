@@ -1,0 +1,161 @@
+/* The home page: where to go from, a tile for each place. */
+.pm-home-root {
+  overflow-y: auto;
+}
+
+.pm-home {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: var(--size-4-8) var(--size-4-6) var(--size-4-12);
+}
+
+.pm-home-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-4);
+  margin-bottom: var(--size-4-6);
+}
+
+.pm-home-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-l);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.pm-home-logo svg {
+  width: 26px;
+  height: 26px;
+}
+
+.pm-home-title {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.pm-home-title h1 {
+  margin: 0;
+  font-size: 1.6em;
+  line-height: 1.2;
+}
+
+.pm-home-intro {
+  margin-top: var(--size-4-1);
+  color: var(--text-muted);
+}
+
+.pm-home-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+}
+
+.pm-home-quick button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.pm-home-quick-icon {
+  display: inline-flex;
+}
+
+.pm-home-quick-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pm-home-section {
+  margin-top: var(--size-4-6);
+}
+
+.pm-home-section-title {
+  margin: 0 0 var(--size-4-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pm-home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--size-4-3);
+}
+
+.pm-home .pm-home-tile {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--size-4-3);
+  height: auto;
+  min-height: 76px;
+  padding: var(--size-4-3) var(--size-4-4);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l);
+  background: var(--background-primary-alt);
+  box-shadow: none;
+  color: var(--text-normal);
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.pm-home .pm-home-tile:hover {
+  border-color: var(--interactive-accent);
+  background: var(--background-secondary);
+}
+
+.pm-home .pm-home-tile:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+.pm-home-tile-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  color: var(--interactive-accent);
+}
+
+.pm-home-tile-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.pm-home-tile--settings .pm-home-tile-icon {
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+}
+
+.pm-home-tile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pm-home-tile-title {
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+}
+
+.pm-home-tile-detail {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.35;
+}

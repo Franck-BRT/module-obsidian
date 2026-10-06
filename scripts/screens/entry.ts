@@ -25,6 +25,7 @@ import { projectMetrics } from '../../src/store/Metrics'
 import { SAMPLE_MSPDI } from './sample'
 import { CollectionsModal, DocPickModal } from '../../src/views/documents/collections'
 import { chooseProjects } from '../../src/views/documents/ProjectChooser'
+import { renderHome } from '../../src/views/home/homePage'
 
 const query = new URLSearchParams(location.search)
 const screen = query.get('screen') ?? 'reserves'
@@ -132,6 +133,16 @@ async function main(): Promise<void> {
         collections: { known: ['Normes', 'CCTP Lot 02'], chosen: ['Normes'] },
         confirm: 'Ajouter'
       })
+      break
+    }
+    case 'home': {
+      body.addClass('pm-root', 'pm-home-root')
+      const go = () => {}
+      renderHome(
+        body,
+        { projects: index.rootRefs().length, contacts: 14, documents: 552, documentsRead: 470, notes: 38, requirements: index.requirementRefs().length },
+        { projects: go, chat: go, contacts: go, documents: go, notes: go, requirements: go, settings: go, newProject: go, newNote: go }
+      )
       break
     }
     case 'weekly': {
