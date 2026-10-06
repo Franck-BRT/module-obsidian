@@ -133,6 +133,11 @@ export class PMSettingTab extends PluginSettingTab {
             }
           },
           {
+            name: t('settings.libraryReference.name'),
+            desc: t('settings.libraryReference.desc'),
+            control: { type: 'text', key: 'libraryReferenceFolder', placeholder: t('library.referenceDefault') }
+          },
+          {
             name: t('settings.notesFolder.name'),
             desc: t('settings.notesFolder.desc'),
             control: {

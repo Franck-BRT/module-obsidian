@@ -56,6 +56,10 @@ describe('the vault’s sources', () => {
       }
     )
     await texts.refresh(library.docs())
+    // A ghost of a document, in another folder: not looked through as a note of its own.
+    const shown = library.docs().find((doc) => doc.file === 'Library/_files/Planning.txt')
+    if (shown) await library.addGhost(shown, 'Lot 1')
+    expect(library.ghosts()).toHaveLength(1)
 
     const sources = vaultSources({ app, library, texts, excluded: excludedFolders(' /Archives/ \n\n'), words: WORDS })
     const byPath = Object.fromEntries(sources.map((each) => [each.path, each]))

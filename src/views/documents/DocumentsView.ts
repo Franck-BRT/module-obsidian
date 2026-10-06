@@ -34,7 +34,8 @@ import { versionKey } from '../../store/library/docVersions'
 import { LibraryDocPicker } from './LibraryDocPicker'
 import type { PourItem } from '../../store/library/DocLibrary'
 import { snippet } from '../../store/library/docText'
-import { AT_ROOT } from '../../store/folderFilter'
+import { AT_ROOT, inFolder } from '../../store/folderFilter'
+import type { LibraryGhost } from '../../store/library/libraryGhost'
 import {
   missingRegisterFiles,
   registerEntries,
@@ -124,6 +125,8 @@ export class DocumentsView extends ItemView {
   private onlyUnread = false
   /** Documents just poured, or found already there, picked out for a moment. */
   private fresh = new Set<string>()
+  /** The folders each document has a ghost in, by its record: drawn on its line. */
+  private ghostFolders = new Map<string, string[]>()
   private freshTimer: number | null = null
   private sort: DocSort = 'added'
   /** Whether the finer filters — kind, category, lot, issuer, tag — are shown. */
@@ -586,6 +589,28 @@ export class DocumentsView extends ItemView {
       ),
       this.sort
     )
+    // Ghosts: documents shown in a folder they are not in. Only in a folder chosen — every
+    // folder at once shows the documents themselves.
+    const ghosts = this.plugin.library.ghosts(all)
+    this.ghostFolders = new Map()
+    for (const { ghost, doc } of ghosts) {
+      if (doc) this.ghostFolders.set(doc.record, [...(this.ghostFolders.get(doc.record) ?? []), ghost.folder])
+    }
+    const searching = !!this.query.text.trim()
+    const ghostsHere = this.query.folder
+      ? ghosts.filter(
+          ({ ghost, doc }) =>
+            !!doc &&
+            inFolder(ghost.folder, this.query.folder, searching) &&
+            matchesDoc(
+              doc,
+              { ...this.query, folder: '' },
+              (path) => this.projectTitle(path),
+              (each) => texts.folded(each)
+            ) &&
+            (!this.onlyUnread || texts.unreadReason(doc) !== null)
+        )
+      : []
     // A ticked document no longer in the library is no longer ticked.
     const records = new Set(all.map((doc) => doc.record))
     for (const record of this.picked) if (!records.has(record)) this.picked.delete(record)
@@ -620,6 +645,11 @@ export class DocumentsView extends ItemView {
     this.renderScanQueue()
     this.renderRegistersOutside(all)
     if (this.picked.size) this.renderPickedBar(all)
+    if (!found.length && ghostsHere.length) {
+      const list = this.bodyEl.createDiv('pm-docs-list')
+      for (const entry of ghostsHere) if (entry.doc) this.renderGhostRow(list, entry.ghost, entry.doc)
+      return
+    }
     if (!found.length) {
       // A folder that holds only folders says so: its documents are in them, one click away.
       const folder = filteredFolder(this.query.folder)
@@ -643,6 +673,7 @@ export class DocumentsView extends ItemView {
     }
     const list = this.bodyEl.createDiv('pm-docs-list')
     for (const doc of found.slice(0, this.shown)) this.renderRow(list, doc)
+    for (const entry of ghostsHere) if (entry.doc) this.renderGhostRow(list, entry.ghost, entry.doc)
     if (found.length > this.shown) {
       new ButtonComponent(this.bodyEl.createDiv('pm-docs-more'))
         .setButtonText(t('library.showMore', { count: Math.min(PAGE, found.length - this.shown) }))
@@ -978,6 +1009,19 @@ export class DocumentsView extends ItemView {
     if (doc.issuer) meta.createSpan({ text: t('library.issuedBy', { issuer: doc.issuer }) })
     this.renderVersions(meta, doc)
     this.renderTextState(meta, doc)
+    // Shown elsewhere by its ghosts: said, with where.
+    const elsewhere = this.ghostFolders.get(doc.record) ?? []
+    if (elsewhere.length) {
+      const badge = meta.createSpan({
+        cls: 'pm-docs-badge is-ghosted',
+        text: t('library.alsoIn', { count: elsewhere.length })
+      })
+      explain(
+        badge,
+        t('library.alsoIn', { count: elsewhere.length }),
+        elsewhere.map((folder) => folder || t('library.rootFolder')).join(' · ')
+      )
+    }
 
     // Where the words searched for are in what it says.
     const words = this.query.text.split(/\s+/).filter(Boolean)
@@ -1229,6 +1273,72 @@ export class DocumentsView extends ItemView {
     })
   }
 
+  /** A ghost: the document it stands for, said to be elsewhere — opened from here, or found there. */
+  private renderGhostRow(list: HTMLElement, ghost: LibraryGhost, doc: LibraryDoc): void {
+    const row = list.createDiv('pm-docs-row pm-docs-ghost')
+    if (this.fresh.has(ghost.record)) row.addClass('is-fresh')
+    row.createSpan('pm-docs-tick pm-docs-tick-spacer')
+    setIcon(row.createDiv('pm-docs-icon pm-docs-icon--ghost'), 'ghost')
+    const main = row.createDiv('pm-docs-main')
+    const title = main.createEl('a', { cls: 'pm-docs-title', text: doc.title, href: '#' })
+    title.addEventListener('click', (event) => {
+      event.preventDefault()
+      void this.openDoc(doc)
+    })
+    const meta = main.createDiv('pm-docs-meta')
+    const badge = meta.createSpan({ cls: 'pm-docs-badge is-ghost', text: t('library.ghost') })
+    explain(badge, t('library.ghost'), t('library.ghostHint'))
+    const where = meta.createEl('a', {
+      cls: 'pm-docs-folder',
+      href: '#',
+      text: t('library.ghostIn', { folder: doc.folder || t('library.rootFolder') })
+    })
+    explain(where, t('library.ghostGo'), t('library.ghostGoHint'))
+    where.addEventListener('click', (event) => {
+      event.preventDefault()
+      this.goToOriginal(doc)
+    })
+    const actions = row.createDiv('pm-docs-actions')
+    const more = new ExtraButtonComponent(actions).setIcon('more-vertical')
+    explain(more.extraSettingsEl, t('library.more'), t('library.ghostMenuHint'))
+    more.extraSettingsEl.addEventListener('click', (event) => {
+      const menu = new Menu()
+      menu.addItem((item) =>
+        item
+          .setTitle(t('library.open'))
+          .setIcon('file-search')
+          .setDisabled(!doc.file)
+          .onClick(safeAsync(() => this.openDoc(doc)))
+      )
+      menu.addItem((item) =>
+        item
+          .setTitle(t('library.ghostGo'))
+          .setIcon('corner-up-right')
+          .onClick(() => this.goToOriginal(doc))
+      )
+      menu.addSeparator()
+      menu.addItem((item) =>
+        item
+          .setTitle(t('library.ghostRemove'))
+          .setIcon('trash-2')
+          .onClick(
+            safeAsync(async () => {
+              await this.plugin.library.removeGhost(ghost)
+              new Notice(t('library.ghostRemoved', { title: doc.title }))
+              this.redrawSoon()
+            })
+          )
+      )
+      menu.showAtMouseEvent(event)
+    })
+  }
+
+  /** The document a ghost stands for, shown in its own folder. */
+  private goToOriginal(doc: LibraryDoc): void {
+    this.openFolder(doc.folder || AT_ROOT)
+    this.reveal([doc.record])
+  }
+
   private showMenu(doc: LibraryDoc, event: MouseEvent): void {
     const menu = new Menu()
     menu.addItem((item) =>
@@ -1250,6 +1360,21 @@ export class DocumentsView extends ItemView {
           })
         )
     )
+    const reference = this.plugin.referenceFolder()
+    if (doc.folder !== reference) {
+      menu.addItem((item) =>
+        item
+          .setTitle(t('library.referenceMenu', { reference }))
+          .setIcon('ghost')
+          .onClick(
+            safeAsync(async () => {
+              await this.plugin.moveToReference(doc)
+              this.renderFilters()
+              this.redrawSoon()
+            })
+          )
+      )
+    }
     menu.addItem((item) =>
       item
         .setTitle(t('collection.docs.button'))
@@ -1403,9 +1528,9 @@ export class DocumentsView extends ItemView {
    * another folder, a search, a kind, a collection, the unread alone —, far enough down the
    * list, and picked out for a moment.
    */
-  reveal(records: string[]): void {
+  reveal(records: string[], ghosts: string[] = []): void {
     const docs = this.plugin.library.docs().filter((doc) => records.includes(doc.record))
-    if (!docs.length) return
+    if (!docs.length && !ghosts.length) return
     const texts = this.plugin.libraryText
     const shows = (doc: LibraryDoc, query: DocQuery): boolean =>
       matchesDoc(
@@ -1425,9 +1550,9 @@ export class DocumentsView extends ItemView {
       this.plugin.library.docs().filter((doc) => shows(doc, this.query)),
       this.sort
     )
-    const last = Math.max(...listed.map((doc, at) => (records.includes(doc.record) ? at : -1)))
+    const last = Math.max(-1, ...listed.map((doc, at) => (records.includes(doc.record) ? at : -1)))
     this.shown = Math.max(PAGE, last + 1)
-    this.fresh = new Set(records)
+    this.fresh = new Set([...records, ...ghosts])
     this.renderBody()
     this.bodyEl.querySelector('.pm-docs-row.is-fresh')?.scrollIntoView({ block: 'center' })
     if (this.freshTimer !== null) window.clearTimeout(this.freshTimer)
@@ -1466,7 +1591,9 @@ export class DocumentsView extends ItemView {
       items,
       preset,
       filteredFolder(this.query.folder),
-      this.query.collection ? [this.query.collection] : []
+      this.query.collection ? [this.query.collection] : [],
+      // Into a folder chosen — not every folder at once —: a document already elsewhere leaves a ghost.
+      !!this.query.folder
     )
   }
 

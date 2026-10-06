@@ -856,6 +856,11 @@ export interface PMSettings {
   projectsFolder: string
   /** Where the document library keeps its records, and the files brought into it. */
   libraryFolder: string
+  /**
+   * The library's folder for documents many folders need, by its path under the library's;
+   * '' for the default, named in the reader's language.
+   */
+  libraryReferenceFolder: string
   /** The library's categories, one a line with the words that recognise them; empty is the shipped list. */
   libraryCategories: string
   /** The notes library: notes of no project yet, and the inbox new notes land in. */
@@ -1225,6 +1230,7 @@ export function seedPriorities(): PriorityConfig[] {
 export const DEFAULT_SETTINGS: PMSettings = {
   projectsFolder: 'Projects',
   libraryFolder: 'Library',
+  libraryReferenceFolder: '',
   libraryCategories: '',
   notesFolder: 'Notes',
   peopleFolder: 'People',

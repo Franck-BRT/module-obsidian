@@ -3,6 +3,7 @@ import { isChatNote } from '../chat/chatNote'
 import type { DocLibrary } from '../library/DocLibrary'
 import type { DocTextIndex } from '../library/DocTextIndex'
 import { extractText, type DocText, type MailWords } from '../library/docText'
+import { isGhost } from '../library/libraryGhost'
 import { isLibraryDoc, linkPath, stringList, titleFromName, type LibraryDoc } from '../library/libraryDoc'
 import { noteBody } from '../notes/NoteLibrary'
 import { FRONTMATTER_KEY, TASK_FRONTMATTER_KEY } from '../YamlParser'
@@ -144,8 +145,9 @@ export function vaultSources(deps: SourceDeps): RagSourceSpec[] {
   for (const file of app.vault.getMarkdownFiles()) {
     if (leftOut(file.path, excluded) || docFiles.has(file.path)) continue
     const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter
-    // A library record stands for its document, which is looked through by what it says.
-    if (isLibraryDoc(frontmatter)) continue
+    // A library record stands for its document, which is looked through by what it says; a
+    // ghost only says where that document is.
+    if (isLibraryDoc(frontmatter) || isGhost(frontmatter)) continue
     const kind = kindOf(frontmatter)
     const title =
       typeof frontmatter?.title === 'string' && frontmatter.title.trim() ? frontmatter.title.trim() : file.basename

@@ -578,4 +578,67 @@ describe('DocLibrary', () => {
       expect(library.folders()).toEqual(['A'])
     })
   })
+
+  describe('ghosts', () => {
+    const pourInto = (folder: string, name = 'Glossaire.pdf') =>
+      library.pour([outside(name, 'glossaire DLA')], { projects: [], move: false, today: TODAY, folder, ghosts: true })
+
+    it('leaves a ghost, not a copy, where a document already there is poured again', async () => {
+      await pourInto('Normes')
+      const report = await pourInto('Lot 2', 'Glossaire (copie).pdf')
+      expect(report.added).toEqual([])
+      expect(report.known).toEqual(['Bibliothèque/Normes/Glossaire.md'])
+      expect(report.ghosts?.map((one) => one.ghost)).toEqual(['Bibliothèque/Lot 2/Glossaire.md'])
+      expect(library.docs()).toHaveLength(1)
+      const [entry] = library.ghosts()
+      expect(entry.ghost).toMatchObject({ folder: 'Lot 2', title: 'Glossaire' })
+      expect(entry.doc?.record).toBe('Bibliothèque/Normes/Glossaire.md')
+      // Poured there again, or into its own folder: nothing more.
+      expect((await pourInto('Lot 2')).ghosts ?? []).toEqual([])
+      expect((await pourInto('Normes')).ghosts ?? []).toEqual([])
+      expect(library.ghosts()).toHaveLength(1)
+    })
+
+    it('leaves no ghost when no folder was chosen', async () => {
+      await pourInto('Normes')
+      const report = await library.pour([outside('Glossaire.pdf', 'glossaire DLA')], {
+        projects: [],
+        move: false,
+        today: TODAY
+      })
+      expect(report.ghosts ?? []).toEqual([])
+      expect(library.ghosts()).toEqual([])
+    })
+
+    it('puts a document in the folder of reference, a ghost left where it was', async () => {
+      await pourInto('Normes')
+      await pourInto('Lot 2')
+      const [doc] = library.docs()
+      await library.toReference(doc, 'Références')
+      const [moved] = library.docs()
+      expect(moved.record).toBe('Bibliothèque/Références/Glossaire.md')
+      expect(moved.file).toBe('Bibliothèque/Références/Fichiers/Glossaire.pdf')
+      // Found again by its fingerprint, whatever became of their links.
+      expect(
+        library
+          .ghosts()
+          .map(({ ghost, doc: of }) => [ghost.folder, of?.record])
+          .sort()
+      ).toEqual([
+        ['Lot 2', 'Bibliothèque/Références/Glossaire.md'],
+        ['Normes', 'Bibliothèque/Références/Glossaire.md']
+      ])
+    })
+
+    it('drops a ghost where its document comes, and all of them when it goes', async () => {
+      await pourInto('Normes')
+      await pourInto('Lot 2')
+      await library.moveTo(library.docs()[0], 'Lot 2')
+      expect(library.ghosts()).toEqual([])
+      await pourInto('Lot 3')
+      expect(library.ghosts()).toHaveLength(1)
+      await library.remove(library.docs()[0])
+      expect(library.ghosts()).toEqual([])
+    })
+  })
 })

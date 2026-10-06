@@ -488,6 +488,32 @@ button.pm-docs-chip:not(.clickable-icon):hover {
   margin-top: 10px;
 }
 
+/* A ghost: a document shown in a folder it is not kept in. */
+.pm-docs-ghost {
+  opacity: 0.78;
+}
+
+.pm-docs-ghost .pm-docs-title {
+  font-style: italic;
+}
+
+.pm-docs-ghost .pm-docs-tick-spacer {
+  display: inline-block;
+  width: 16px;
+  flex: none;
+}
+
+.pm-docs-icon--ghost {
+  color: var(--text-muted);
+}
+
+.pm-docs-badge.is-ghost,
+.pm-docs-badge.is-ghosted {
+  border: 1px dashed var(--background-modifier-border-hover);
+  background: transparent;
+  color: var(--text-muted);
+}
+
 /* Just poured, or found already there: picked out for a moment. */
 .pm-docs-row.is-fresh {
   background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);

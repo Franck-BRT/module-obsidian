@@ -245,7 +245,12 @@ export default class PMPlugin extends Plugin {
     this.library = new DocLibrary(
       this.app,
       () => this.settings.libraryFolder.trim() || 'Library',
-      () => ({ filesFolder: '_files', notesHeading: t('library.notesHeading') }),
+      () => ({
+        filesFolder: '_files',
+        notesHeading: t('library.notesHeading'),
+        ghostLine: (link, folder) =>
+          folder ? t('library.ghostLine', { link, folder }) : t('library.ghostLineRoot', { link })
+      }),
       (path) => this.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, '')
     )
     this.notes = new NoteLibrary(
@@ -1470,11 +1475,18 @@ export default class PMPlugin extends Plugin {
    * Pours documents into the library once the reader has said which projects they belong
    * to, telling how far it has got on a long pour and what came of it at the end.
    */
+  /** The library's folder for documents many folders need: the reader's, or the default. */
+  referenceFolder(): string {
+    return this.settings.libraryReferenceFolder.trim().replace(/^\/+|\/+$/g, '') || t('library.referenceDefault')
+  }
+
   async pourIntoLibrary(
     items: PourItem[],
     preset: string[] = [],
     folder = '',
-    collections: string[] = []
+    collections: string[] = [],
+    /** Poured into a folder chosen: a document already elsewhere leaves a ghost there. */
+    ghosts = false
   ): Promise<void> {
     if (!items.length) return
     const inVault = items.some((item) => item.kind === 'vault' && this.library.movable(item.file))
@@ -1501,7 +1513,8 @@ export default class PMPlugin extends Plugin {
         classification: answer.classification,
         categories: this.libraryCategories(),
         folder,
-        collections: answer.collections ?? []
+        collections: answer.collections ?? [],
+        ghosts
       },
       (done, total) => progress?.setMessage(t('library.pouring', { done, total }))
     )
@@ -1529,7 +1542,35 @@ export default class PMPlugin extends Plugin {
     await this.openDocuments(answer.projects.length === 1 ? answer.projects[0] : '')
     // What was poured, and what was there already, shown — whatever the library was filtered by.
     const shown = this.app.workspace.getLeavesOfType(PM_DOCUMENTS_VIEW_TYPE)[0]?.view
-    if (shown instanceof DocumentsView) shown.reveal([...report.added, ...report.known])
+    const ghosted = report.ghosts ?? []
+    if (shown instanceof DocumentsView) {
+      // A document shown here by its ghost is not gone looking for in its own folder.
+      const elsewhere = new Set(ghosted.map((one) => one.doc.record))
+      shown.reveal(
+        [...report.added, ...report.known.filter((record) => !elsewhere.has(record))],
+        ghosted.map((one) => one.ghost)
+      )
+    }
+    // A document wanted in several folders: offered a place of reference, a ghost in each.
+    const reference = this.referenceFolder()
+    for (const { doc } of ghosted) {
+      if (doc.folder === reference) continue
+      const choice = await chooseDialog(
+        this.app,
+        t('library.referenceAsk', {
+          title: doc.title,
+          folder: doc.folder || t('library.rootFolder'),
+          here: folder || t('library.rootFolder'),
+          reference
+        }),
+        [
+          { id: 'move', label: t('library.referenceMove', { reference }), primary: true },
+          { id: 'keep', label: t('library.referenceKeep') }
+        ]
+      )
+      if (choice !== 'move') continue
+      await this.moveToReference(doc)
+    }
     // Read what they say, for searching; the library shows how far it has got.
     void this.libraryText.refresh(this.library.docs())
     // Another issue of a document already there — « ind B » after « ind A »: the reader says
@@ -1550,6 +1591,16 @@ export default class PMPlugin extends Plugin {
     }
     // Those that look like documents a register is waiting for, offered to be filed as them.
     if (report.docs.length) await proposeRegisterMatches(this, report.docs, false)
+  }
+
+  /** A document put in the folder of reference, a ghost left where it was; the registers told. */
+  async moveToReference(doc: LibraryDoc): Promise<void> {
+    const reference = this.referenceFolder()
+    const moves = await this.library.toReference(doc, reference)
+    const told = await this.followLibraryMoves(moves)
+    const parts = [t('library.referenceDone', { title: doc.title, reference })]
+    if (told) parts.push(t('library.registersFollowed', { count: told }))
+    new Notice(parts.join('\n'), 8000)
   }
 
   /**

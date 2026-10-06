@@ -4,6 +4,7 @@ import { DOCS_FOLDER_NAME, freePath } from '../DocumentStore'
 import { refLink } from '../refs'
 import { ensureFolder } from '../vaultFs'
 import { previousVersion } from './docVersions'
+import { ghostContent, ghostTarget, isGhost, type LibraryGhost } from './libraryGhost'
 import {
   dissolveSubfolder,
   folderPath,
@@ -45,6 +46,14 @@ export interface LibraryWords {
   filesFolder: string
   /** The heading over the reader's own notes in a record. */
   notesHeading: string
+  /** A ghost's line, for whoever opens its note: where the document it stands for is. */
+  ghostLine?: (link: string, folder: string) => string
+}
+
+/** A ghost of the library, with the document it stands for — none when that is gone. */
+export interface GhostEntry {
+  ghost: LibraryGhost
+  doc: LibraryDoc | undefined
 }
 
 /** One thing to pour: a file already in the vault, or bytes brought from outside. */
@@ -72,6 +81,11 @@ export interface PourOptions {
   folder?: string
   /** The collections every poured document is gathered in; one already there is added to them. */
   collections?: string[]
+  /**
+   * A document already in the library, poured into another folder than its own, leaves a
+   * ghost there — when that folder was chosen, not merely the library's root by default.
+   */
+  ghosts?: boolean
 }
 
 export interface PourReport {
@@ -87,6 +101,8 @@ export interface PourReport {
    * bytes —, with that one: linked as its version once the reader says so.
    */
   versions: { doc: LibraryDoc; previous: LibraryDoc }[]
+  /** Documents already there, poured into another folder, with the ghost left there for each. */
+  ghosts?: { doc: LibraryDoc; ghost: string }[]
 }
 
 /** The collections a pour gathers its documents in: named once each, blanks left out. */
@@ -274,6 +290,11 @@ export class DocLibrary {
           byHash.set(hash, updated)
           if (known.file) byFile.set(known.file, updated)
           if (!report.known.includes(known.record)) report.known.push(known.record)
+          // Wanted in another folder than its own: a ghost of it there, not a copy.
+          if (options.ghosts) {
+            const ghost = await this.addGhost(updated, options.folder ?? '')
+            if (ghost) (report.ghosts ??= []).push({ doc: updated, ghost })
+          }
         } else {
           const doc = await this.addNew(item, bytes, hash, options)
           // Another issue of a document already there — « ind B » after « ind A » —: said, to be asked.
@@ -471,6 +492,8 @@ export class DocLibrary {
    * is left there.
    */
   async remove(doc: LibraryDoc): Promise<void> {
+    // Its ghosts have nothing left to stand for.
+    for (const { ghost } of this.ghostsOf(doc)) await this.removeGhost(ghost)
     const record = this.app.vault.getAbstractFileByPath(doc.record)
     if (record instanceof TFile) await this.app.fileManager.trashFile(record)
     const file = doc.file ? this.app.vault.getAbstractFileByPath(doc.file) : null
@@ -503,6 +526,79 @@ export class DocLibrary {
       moves.set(from, file.path)
       await this.pointAt(record, file.path)
     }
+    // A ghost of it in the folder it has come to has nothing to say any more.
+    for (const { ghost } of this.ghostsOf(doc)) if (ghost.folder === subfolder) await this.removeGhost(ghost)
+    return moves
+  }
+
+  /** Every ghost of the library, with the document each stands for. */
+  ghosts(docs: LibraryDoc[] = this.docs()): GhostEntry[] {
+    const byRecord = new Map(docs.map((doc) => [doc.record, doc]))
+    const out: GhostEntry[] = []
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter
+      if (!isGhost(fm) || !fm || !file.path.startsWith(`${this.root}/`)) continue
+      const link = typeof fm.of === 'string' ? fm.of : ''
+      const linked = link ? this.resolve(link, file.path) : null
+      const hash = typeof fm.sha256 === 'string' ? fm.sha256 : ''
+      const dir = file.path.slice(0, Math.max(0, file.path.lastIndexOf('/')))
+      out.push({
+        ghost: {
+          record: file.path,
+          folder: dir.startsWith(`${this.root}/`) ? dir.slice(this.root.length + 1) : '',
+          link,
+          hash,
+          title: typeof fm.title === 'string' ? fm.title : file.basename
+        },
+        doc: ghostTarget({ hash }, linked ? byRecord.get(linked.path) : undefined, docs)
+      })
+    }
+    return out
+  }
+
+  /** The ghosts of one document, in the folders it is shown in without being there. */
+  ghostsOf(doc: LibraryDoc): GhostEntry[] {
+    // By its record, or — the record moved since — by its fingerprint, which one document alone has.
+    return this.ghosts().filter(
+      (entry) => entry.doc?.record === doc.record || (!!doc.hash && (entry.doc?.hash ?? entry.ghost.hash) === doc.hash)
+    )
+  }
+
+  /**
+   * A ghost of a document left in a folder of the library — '' for its root —; its note's
+   * path, or null when the document is there already, or has a ghost there already.
+   */
+  async addGhost(doc: LibraryDoc, subfolder: string): Promise<string | null> {
+    if (doc.folder === subfolder) return null
+    if (this.ghostsOf(doc).some(({ ghost }) => ghost.folder === subfolder)) return null
+    const target = this.pathOf(subfolder)
+    await ensureFolder(this.app, target)
+    const name = doc.record.slice(doc.record.lastIndexOf('/') + 1).replace(/\.md$/, '')
+    const line = this.words().ghostLine ?? ((link: string, folder: string) => `${link} — ${folder || '/'}`)
+    const note = await this.app.vault.create(await freePath(this.app, target, name, 'md'), ghostContent(doc, { line }))
+    return note.path
+  }
+
+  async removeGhost(ghost: LibraryGhost): Promise<void> {
+    const note = this.app.vault.getAbstractFileByPath(ghost.record)
+    if (note instanceof TFile) await this.app.fileManager.trashFile(note)
+  }
+
+  /**
+   * A document many folders need, put in the folder of reference — '' for the root —: moved
+   * there, the folder it was in keeping a ghost of it. Returns the files moved.
+   */
+  async toReference(doc: LibraryDoc, reference: string): Promise<Moves> {
+    if (doc.folder === reference) return new Map()
+    const from = doc.folder
+    const moves = await this.moveTo(doc, reference)
+    const moved: LibraryDoc = {
+      ...doc,
+      record: moves.get(doc.record) ?? doc.record,
+      file: (doc.file && moves.get(doc.file)) || doc.file,
+      folder: reference
+    }
+    await this.addGhost(moved, from)
     return moves
   }
 
