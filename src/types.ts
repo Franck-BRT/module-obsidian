@@ -862,6 +862,16 @@ export interface PMSettings {
    */
   libraryReferenceFolder: string
   /**
+   * The note the delivery notes are written from, its fields between double braces; ''
+   * for the one the plugin ships.
+   */
+  deliveryTemplate: string
+  /**
+   * A Word document of the reader's own — letterhead, logo — the delivery notes' Word is
+   * filled from, by the same fields; '' to write it from the note.
+   */
+  deliveryWordTemplate: string
+  /**
    * The lots a new project is made with, after Documents, which it always has: Reserves
    * by default, and the reader's own.
    */
@@ -1236,6 +1246,8 @@ export const DEFAULT_SETTINGS: PMSettings = {
   projectsFolder: 'Projects',
   libraryFolder: 'Library',
   libraryReferenceFolder: '',
+  deliveryTemplate: '',
+  deliveryWordTemplate: '',
   projectLots: [],
   libraryCategories: '',
   notesFolder: 'Notes',

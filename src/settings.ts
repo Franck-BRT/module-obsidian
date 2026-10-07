@@ -1,5 +1,5 @@
 import { App, Menu, Notice, PluginSettingTab, Setting, debounce } from 'obsidian'
-import type { SettingDefinitionItem, SettingDefinitionPage } from 'obsidian'
+import type { SettingDefinitionItem, SettingDefinitionPage, TextComponent } from 'obsidian'
 import type PMPlugin from './main'
 import {
   type PMSettings,
@@ -32,6 +32,7 @@ import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
 import { LOCALES, searchAliases, t } from './i18n'
 import { invalidHolidays, renderHolidays, renderWorkingWeekdays } from './ui/WorkCalendarEditor'
 import { renderProjectLots } from './ui/ProjectLotsEditor'
+import { ensureDeliveryTemplate, ensureDeliveryWord, openTemplate } from './views/library/deliveryTemplates'
 import { OCR_STEPS, stepDesc, stepName } from './views/documents/scanOptions'
 
 /** Exhaustive, so a new mode cannot reach the interface without a name. */
@@ -148,6 +149,16 @@ export class PMSettingTab extends PluginSettingTab {
             name: t('settings.libraryReference.name'),
             desc: t('settings.libraryReference.desc'),
             control: { type: 'text', key: 'libraryReferenceFolder', placeholder: t('library.referenceDefault') }
+          },
+          {
+            name: t('settings.deliveryTemplate.name'),
+            desc: t('settings.deliveryTemplate.desc'),
+            render: (setting: Setting) => this.deliveryTemplateSetting(setting, 'deliveryTemplate')
+          },
+          {
+            name: t('settings.deliveryWordTemplate.name'),
+            desc: t('settings.deliveryWordTemplate.desc'),
+            render: (setting: Setting) => this.deliveryTemplateSetting(setting, 'deliveryWordTemplate')
           },
           {
             name: t('settings.notesFolder.name'),
@@ -1932,6 +1943,34 @@ export class PMSettingTab extends PluginSettingTab {
         }
       ]
     }
+  }
+
+  /**
+   * A delivery note's template: its path, to type or to clear for the plugin's own, and a
+   * button to make it — from the plugin's — and open it.
+   */
+  private deliveryTemplateSetting(setting: Setting, key: 'deliveryTemplate' | 'deliveryWordTemplate'): void {
+    const word = key === 'deliveryWordTemplate'
+    let input: TextComponent | null = null
+    setting.addText((text) => {
+      input = text
+      text
+        .setPlaceholder(word ? t('delivery.templateWordNone') : t('delivery.templateShipped'))
+        .setValue(this.plugin.settings[key])
+        .onChange((value) => {
+          this.plugin.settings[key] = value.trim()
+          this.persist()
+        })
+    })
+    setting.addButton((button) =>
+      button.setButtonText(t('settings.deliveryTemplate.open')).onClick(
+        safeAsync(async () => {
+          const file = word ? await ensureDeliveryWord(this.plugin) : await ensureDeliveryTemplate(this.plugin)
+          input?.setValue(file.path)
+          if (!(await openTemplate(this.plugin, file))) new Notice(t('delivery.templateWordWhere', { path: file.path }))
+        })
+      )
+    )
   }
 
   private persist(): void {

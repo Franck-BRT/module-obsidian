@@ -1339,3 +1339,31 @@ a.pm-docs-clear-filters {
 .pm-delivery-modal .setting-item-control {
   flex-wrap: nowrap;
 }
+
+.pm-delivery-templates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--background-modifier-border);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-delivery-template {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pm-delivery-template-label {
+  flex: 0 0 5rem;
+  color: var(--text-muted);
+}
+
+.pm-delivery-template-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

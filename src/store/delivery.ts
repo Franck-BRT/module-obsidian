@@ -1,12 +1,19 @@
 import { stringifyYaml } from 'obsidian'
 import type { DocState, DocVersion, Task } from '../types'
-import { DOCX_TEXT_WIDTH, para, type DocxBlock, type DocxCell, type DocxDocument } from './docx'
+import type { DocxDocument } from './docx'
 import { documentOf, isDocument } from './Document'
+import { fold } from './library/libraryDoc'
+import { markdownBlocks, noteBody } from './markdownBlocks'
 
 /**
  * A delivery note — a bordereau de livraison —: the documents sent, in a table of their
  * reference, title, state and version, who sends them to whom and when, under a number of
- * its own, and the blocks the two sign. For Word and PDF alike, and as a note to keep.
+ * its own, and the blocks the two sign.
+ *
+ * Written from a template: a note the reader can change, its fields between double
+ * braces — `{{numero}}`, `{{destinataire}}` — filled in, and each line naming a field of a
+ * document — the row `| {{reference}} | {{titre}} |` — written once for each document
+ * sent. The same filled note makes the Word and the PDF, so the three say the same.
  */
 
 export interface DeliveryRow {
@@ -15,20 +22,38 @@ export interface DeliveryRow {
   state: DocState
   /** Its issue, as the register keeps it — « B », « 2-15 » —; else the number of its last deposit. */
   version: string
+  issuer: string
+  /** The project's lot it sits in; '' when none. */
+  lot: string
+  /** The design stage it belongs to — APS, PRO, EXE. */
+  phase: string
+  /** The name of its file, without the folders. */
+  file: string
+  /** The day its last file was deposited, YYYY-MM-DD; '' when none. */
+  deposited: string
+  /** The day it is due, YYYY-MM-DD; '' when none. */
+  due: string
 }
 
 /** The documents among these tasks, as the note lists them: by reference, then by title. */
-export function deliveryRows(tasks: Task[]): DeliveryRow[] {
+export function deliveryRows(tasks: Task[], lotOf: (task: Task) => string = () => ''): DeliveryRow[] {
   return tasks
     .filter(isDocument)
     .map((task) => {
       const meta = documentOf(task)
       const last: DocVersion | undefined = meta.versions[meta.versions.length - 1]
+      const file = meta.file || last?.file || ''
       return {
         reference: meta.reference,
         title: task.title,
         state: meta.state,
-        version: meta.issue || (last ? `v${last.version}` : '')
+        version: meta.issue || (last ? `v${last.version}` : ''),
+        issuer: meta.issuer,
+        lot: lotOf(task),
+        phase: meta.phase,
+        file: file.replace(/^\[\[|\]\]$/g, '').replace(/^.*\//, ''),
+        deposited: last?.at.slice(0, 10) ?? '',
+        due: task.due ?? ''
       }
     })
     .sort((a, b) => byReference(a, b))
@@ -73,70 +98,220 @@ export interface DeliveryWords {
   documentTitle: string
   state: string
   version: string
-  count: (count: number) => string
+  countLabel: string
   stateLabel: (state: DocState) => string
+  /** A day, YYYY-MM-DD, as it is read. */
+  day: (iso: string) => string
   signatures: string
   sentBy: string
   receivedBy: string
   signHere: string
+  /** The template's own instructions, in its comment: a line each. */
+  help: string[]
 }
 
-/** The delivery note as a document: what Word and PDF are made from alike. */
-export function deliveryDocument(rows: DeliveryRow[], context: DeliveryContext, words: DeliveryWords): DocxDocument {
-  const cell = (text: string, width: number, bold = false): DocxCell => ({
-    runs: [{ text, ...(bold ? { bold: true } : {}) }],
-    width
-  })
-  // Twentieths of a point: the title takes what the other three leave.
-  const widths = [2200, 0, 1800, 1300]
-  widths[1] = DOCX_TEXT_WIDTH - widths[0] - widths[2] - widths[3]
-  const parties = [`${words.sender} ${context.sender || '—'}`, `${words.recipient} ${context.recipient || '—'}`]
-  const blocks: DocxBlock[] = [
-    para('Title', words.title),
-    para('Meta', words.numberDate(context.number, context.date)),
-    para('Heading2', `${words.project} ${context.project}`),
-    ...parties.map((line) => para('Normal', line)),
-    ...(context.note.trim() ? [para('Quote', context.note.trim())] : []),
-    {
-      kind: 'table',
-      header: [words.reference, words.documentTitle, words.state, words.version].map((text, at) =>
-        cell(text, widths[at], true)
-      ),
-      rows: rows.map((row) => [
-        cell(row.reference || '—', widths[0]),
-        cell(row.title, widths[1]),
-        cell(words.stateLabel(row.state), widths[2]),
-        cell(row.version || '—', widths[3])
-      ])
-    },
-    para('Meta', words.count(rows.length)),
-    para('Heading1', words.signatures)
-  ]
-  const half = Math.floor(DOCX_TEXT_WIDTH / 2)
-  const space = `${words.signHere}\n\n\n\n`
-  blocks.push({
-    kind: 'table',
-    header: [cell(words.sentBy, half, true), cell(words.receivedBy, half, true)],
-    rows: [[cell(space, half), cell(space, half)]]
-  })
-  return { title: `${words.title} ${context.number} — ${context.project}`, blocks }
+/** The fields of the note itself, and those of each document, by their French names. */
+export const NOTE_FIELDS = ['numero', 'date', 'projet', 'expediteur', 'destinataire', 'remarque', 'nombre'] as const
+export const ROW_FIELDS = [
+  'n',
+  'reference',
+  'titre',
+  'etat',
+  'version',
+  'emetteur',
+  'lot',
+  'phase',
+  'fichier',
+  'depot',
+  'echeance'
+] as const
+export type DeliveryField = (typeof NOTE_FIELDS)[number] | (typeof ROW_FIELDS)[number]
+
+/** Their English names, which read the same. */
+export const ENGLISH_FIELDS: Record<DeliveryField, string> = {
+  numero: 'number',
+  date: 'date',
+  projet: 'project',
+  expediteur: 'sender',
+  destinataire: 'recipient',
+  remarque: 'note',
+  nombre: 'count',
+  n: 'no',
+  reference: 'reference',
+  titre: 'title',
+  etat: 'state',
+  version: 'version',
+  emetteur: 'issuer',
+  lot: 'lot',
+  phase: 'phase',
+  fichier: 'file',
+  depot: 'deposited',
+  echeance: 'due'
 }
 
-/** A table cell of a Markdown note: no pipe nor line break to break its row. */
-function mdCell(text: string): string {
+const ALIASES: Record<string, DeliveryField> = {
+  ...(Object.fromEntries(Object.entries(ENGLISH_FIELDS).map(([field, english]) => [english, field])) as Record<
+    string,
+    DeliveryField
+  >),
+  ...(Object.fromEntries([...NOTE_FIELDS, ...ROW_FIELDS].map((field) => [field, field])) as Record<
+    string,
+    DeliveryField
+  >),
+  ref: 'reference',
+  remark: 'remarque',
+  status: 'etat',
+  issue: 'version',
+  indice: 'version'
+}
+
+const ROW_SET = new Set<string>(ROW_FIELDS)
+
+/** The field a name between braces stands for — accents, case and spaces aside —; null for none. */
+export function fieldOf(name: string): DeliveryField | null {
   return (
-    text
-      .replace(/\|/g, '/')
-      .replace(/\s*\n\s*/g, ' ')
-      .trim() || '—'
+    ALIASES[
+      fold(name)
+        .trim()
+        .replace(/[\s-]+/g, '_')
+    ] ?? null
   )
 }
 
-/** The delivery note kept beside the project: its properties, its table, and its Word and PDF. */
+export function isRowField(field: DeliveryField): boolean {
+  return ROW_SET.has(field)
+}
+
+/** A field between double braces: `{{ numero }}`. */
+export const PLACEHOLDER = /\{\{\s*([^{}]+?)\s*\}\}/g
+
+export interface DeliveryValues {
+  note: Record<string, string>
+  rows: Record<string, string>[]
+}
+
+/** What each field says, for the note and for each of its documents. */
+export function deliveryValues(rows: DeliveryRow[], context: DeliveryContext, words: DeliveryWords): DeliveryValues {
+  return {
+    note: {
+      numero: context.number,
+      date: context.date,
+      projet: context.project,
+      expediteur: context.sender,
+      destinataire: context.recipient,
+      remarque: context.note.trim(),
+      nombre: String(rows.length)
+    },
+    rows: rows.map((row, at) => ({
+      n: String(at + 1),
+      reference: row.reference,
+      titre: row.title,
+      etat: words.stateLabel(row.state),
+      version: row.version,
+      emetteur: row.issuer,
+      lot: row.lot,
+      phase: row.phase,
+      fichier: row.file,
+      depot: row.deposited ? words.day(row.deposited) : '',
+      echeance: row.due ? words.day(row.due) : ''
+    }))
+  }
+}
+
+/** The template the plugin ships: the one a reader starts from, in their language. */
+export function defaultDeliveryTemplate(words: DeliveryWords, english = false): string {
+  const f = (field: DeliveryField): string => `{{${english ? ENGLISH_FIELDS[field] : field}}}`
+  const names = (fields: readonly DeliveryField[]): string => fields.map(f).join(' ')
+  const space = '<br><br><br><br>'
+  return [
+    '%%',
+    ...words.help,
+    '',
+    names(NOTE_FIELDS),
+    names(ROW_FIELDS),
+    '%%',
+    '',
+    `# ${words.title}`,
+    '',
+    `*${words.numberDate(f('numero'), f('date'))}*`,
+    '',
+    `### ${words.project} ${f('projet')}`,
+    '',
+    `${words.sender} ${f('expediteur')}`,
+    `${words.recipient} ${f('destinataire')}`,
+    '',
+    `> ${f('remarque')}`,
+    '',
+    `| ${words.reference} | ${words.documentTitle} | ${words.state} | ${words.version} |`,
+    '| --- | --- | --- | --- |',
+    `| ${f('reference')} | ${f('titre')} | ${f('etat')} | ${f('version')} |`,
+    '',
+    `*${words.countLabel} ${f('nombre')}*`,
+    '',
+    `## ${words.signatures}`,
+    '',
+    `| ${words.sentBy} | ${words.receivedBy} |`,
+    '| --- | --- |',
+    `| ${words.signHere}${space} | ${words.signHere}${space} |`,
+    ''
+  ].join('\n')
+}
+
+/** A value made safe for where it goes: no pipe nor line break in a table, no mark taken for emphasis. */
+function written(value: string, inTable: boolean, prefix: string): string {
+  const escaped = value.replace(/([\\*_`[\]|])/g, '\\$1')
+  return inTable ? escaped.replace(/\s*\n\s*/g, '<br>') : escaped.replace(/\n/g, `\n${prefix}`)
+}
+
+/**
+ * The template filled in: each line naming a document's field written once for each
+ * document, the note's fields put in, and a line left with nothing but its marks — a
+ * quote with no remark — taken out. A name between braces that is no field is left as
+ * it is, for the reader to see it.
+ */
+export function fillDeliveryTemplate(template: string, values: DeliveryValues): string {
+  const out: string[] = []
+  for (const line of noteBody(template).split('\n')) {
+    const fields = [...line.matchAll(PLACEHOLDER)].map((match) => fieldOf(match[1]))
+    if (!fields.length) {
+      out.push(line)
+      continue
+    }
+    const inTable = line.trim().startsWith('|')
+    const prefix = /^\s*(>\s*)*/.exec(line)?.[0] ?? ''
+    const perRow = fields.some((field) => field && isRowField(field))
+    const fill = (row: Record<string, string> | null): void => {
+      let empty = true
+      const filled = line.replace(PLACEHOLDER, (whole, name: string) => {
+        const field = fieldOf(name)
+        if (!field) return whole
+        const value = (isRowField(field) ? row?.[field] : values.note[field]) ?? ''
+        if (value.trim()) empty = false
+        return written(value || (inTable && isRowField(field) ? '—' : ''), inTable, prefix)
+      })
+      // A line whose fields all came empty, and that holds nothing else but marks.
+      if (empty && !inTable && !/[\p{L}\p{N}]/u.test(filled)) return
+      out.push(filled)
+    }
+    if (perRow) for (const row of values.rows) fill(row)
+    else fill(null)
+  }
+  return out
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/** The delivery note as a document, from its filled template: what Word and PDF are made from alike. */
+export function deliveryDocument(filled: string, context: DeliveryContext, words: DeliveryWords): DocxDocument {
+  return { title: `${words.title} ${context.number} — ${context.project}`, blocks: markdownBlocks(filled) }
+}
+
+/** The delivery note kept beside the project: its properties, its filled template, and its Word and PDF. */
 export function deliveryNote(
-  rows: DeliveryRow[],
+  filled: string,
   context: DeliveryContext & { isoDate: string },
-  words: DeliveryWords,
+  count: number,
   files: string[]
 ): string {
   const properties = {
@@ -145,33 +320,9 @@ export function deliveryNote(
     project: context.project,
     date: context.isoDate,
     recipient: context.recipient,
-    documents: rows.length
+    documents: count
   }
-  const lines = [
-    '---',
-    stringifyYaml(properties).trimEnd(),
-    '---',
-    '',
-    `# ${words.title} ${context.number}`,
-    '',
-    `${words.numberDate(context.number, context.date)}  `,
-    `${words.project} ${context.project}  `,
-    `${words.sender} ${context.sender || '—'}  `,
-    `${words.recipient} ${context.recipient || '—'}`,
-    ''
-  ]
-  if (context.note.trim()) lines.push(`> ${context.note.trim().replace(/\n/g, '\n> ')}`, '')
-  lines.push(
-    `| ${words.reference} | ${words.documentTitle} | ${words.state} | ${words.version} |`,
-    '| --- | --- | --- | --- |',
-    ...rows.map(
-      (row) =>
-        `| ${mdCell(row.reference)} | ${mdCell(row.title)} | ${mdCell(words.stateLabel(row.state))} | ${mdCell(row.version)} |`
-    ),
-    '',
-    words.count(rows.length),
-    ''
-  )
+  const lines = ['---', stringifyYaml(properties).trimEnd(), '---', '', filled, '']
   if (files.length) lines.push(files.map((path) => `[[${path}]]`).join(' · '), '')
   return lines.join('\n')
 }

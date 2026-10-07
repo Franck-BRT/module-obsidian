@@ -3,15 +3,32 @@ import type PMPlugin from '../../main'
 import type { Project, Task } from '../../types'
 import { documentOf, isDocument } from '../../store/Document'
 import {
+  byReference,
   deliveryDocument,
   deliveryNote,
-  byReference,
   deliveryRows,
+  deliveryValues,
+  fieldOf,
+  fillDeliveryTemplate,
+  isRowField,
   nextDeliveryNumber,
   type DeliveryContext,
-  type DeliveryWords
+  type DeliveryField,
+  type DeliveryValues
 } from '../../store/delivery'
-import { buildDocx } from '../../store/docx'
+import { DocxTemplateError, fillDocxTemplate } from '../../store/docxTemplate'
+import { flattenTasks } from '../../store/TaskTreeOps'
+import {
+  deliveryTemplateFile,
+  deliveryTemplateText,
+  deliveryWordBytes,
+  deliveryWordFile,
+  deliveryWords,
+  ensureDeliveryTemplate,
+  ensureDeliveryWord,
+  openTemplate
+} from './deliveryTemplates'
+import { buildDocx, type DocxDocument } from '../../store/docx'
 import { buildPdf } from '../../store/pdf'
 import { ensureFolder, folderOf } from '../../store/vaultFs'
 import { formatDateLetter, today } from '../../dates'
@@ -21,27 +38,6 @@ import { docStateLabel } from './docStateLabel'
 import { ContactBook, readContacts } from '../../store/contacts'
 import { contactLabel, projectPeople } from '../../store/projectPeople'
 import { PersonPicker } from '../contacts/PersonPicker'
-
-/** The words the delivery note is written with, in the reader's language. */
-function deliveryWords(): DeliveryWords {
-  return {
-    title: t('delivery.title'),
-    numberDate: (number, date) => t('delivery.numberDate', { number, date }),
-    project: t('delivery.project'),
-    sender: t('delivery.sender'),
-    recipient: t('delivery.recipient'),
-    reference: t('delivery.reference'),
-    documentTitle: t('delivery.documentTitle'),
-    state: t('delivery.state'),
-    version: t('delivery.version'),
-    count: (count) => t('delivery.count', { count }),
-    stateLabel: docStateLabel,
-    signatures: t('delivery.signatures'),
-    sentBy: t('delivery.sentBy'),
-    receivedBy: t('delivery.receivedBy'),
-    signHere: t('delivery.signHere')
-  }
-}
 
 /** Where a project's delivery notes are kept: a folder of its own beside it. */
 function deliveryFolder(project: Project): string {
@@ -141,6 +137,7 @@ export class DeliveryModal extends Modal {
     new Setting(root)
       .setName(t('delivery.pdf'))
       .addToggle((toggle) => toggle.setValue(this.pdf).onChange((value) => (this.pdf = value)))
+    this.renderTemplates(root.createDiv('pm-delivery-templates'))
     new Setting(root)
       .addButton((button) => button.setButtonText(t('common.cancel')).onClick(() => this.close()))
       .addButton((button) => {
@@ -148,6 +145,46 @@ export class DeliveryModal extends Modal {
         button.setCta().onClick(safeAsync(() => this.write()))
       })
     this.renderList()
+  }
+
+  /** Which templates the note and the Word are written from, each to change from here. */
+  private renderTemplates(box: HTMLElement): void {
+    box.empty()
+    const line = (label: string, current: string, action: string, run: () => Promise<void>): void => {
+      const row = box.createDiv('pm-delivery-template')
+      row.createSpan({ cls: 'pm-delivery-template-label', text: label })
+      row.createSpan({ cls: 'pm-delivery-template-name', text: current })
+      const link = row.createEl('a', { href: '#', text: action })
+      link.addEventListener(
+        'click',
+        safeAsync(async (event: MouseEvent) => {
+          event.preventDefault()
+          await run()
+        })
+      )
+    }
+    const note = deliveryTemplateFile(this.plugin)
+    line(
+      t('delivery.templateNote'),
+      note ? note.basename : t('delivery.templateShipped'),
+      note ? t('delivery.templateEdit') : t('delivery.templateCustomize'),
+      async () => {
+        const file = await ensureDeliveryTemplate(this.plugin)
+        this.close()
+        await openTemplate(this.plugin, file)
+      }
+    )
+    const word = deliveryWordFile(this.plugin)
+    line(
+      t('delivery.templateWord'),
+      word ? word.name : t('delivery.templateWordNone'),
+      word ? t('delivery.templateWordOpen') : t('delivery.templateWordCreate'),
+      async () => {
+        const file = await ensureDeliveryWord(this.plugin)
+        if (!(await openTemplate(this.plugin, file))) new Notice(t('delivery.templateWordWhere', { path: file.path }))
+        this.renderTemplates(box)
+      }
+    )
   }
 
   /** A field for someone, written by hand or found in the people folder — the project's own first. */
@@ -210,7 +247,7 @@ export class DeliveryModal extends Modal {
       new Notice(t('view.bordereauEmpty'))
       return
     }
-    const rows = deliveryRows(tasks)
+    const rows = deliveryRows(tasks, this.lotOf())
     const words = deliveryWords()
     const number = this.number || nextDeliveryNumber([], this.date.slice(0, 4))
     const context: DeliveryContext & { isoDate: string } = {
@@ -222,14 +259,16 @@ export class DeliveryModal extends Modal {
       recipient: this.recipient.trim(),
       note: this.note
     }
+    const values = deliveryValues(rows, context, words)
+    const filled = fillDeliveryTemplate(await deliveryTemplateText(this.plugin), values)
     const folder = deliveryFolder(this.project)
     await ensureFolder(this.app, folder)
     const base = sanitizeFileName(`${number} ${this.project.title}`).trim()
-    const document = deliveryDocument(rows, context, words)
+    const document = deliveryDocument(filled, context, words)
     const files: string[] = []
     if (this.word) {
       const path = freePath(this.app, folder, base, 'docx')
-      await this.app.vault.createBinary(path, buildDocx(document).slice().buffer)
+      await this.app.vault.createBinary(path, (await this.wordOf(document, values)).slice().buffer)
       files.push(path)
     }
     let pdf = ''
@@ -239,11 +278,48 @@ export class DeliveryModal extends Modal {
       files.push(pdf)
     }
     const note = freePath(this.app, folder, base, 'md')
-    await this.app.vault.create(note, deliveryNote(rows, context, words, files))
+    await this.app.vault.create(note, deliveryNote(filled, context, rows.length, files))
     this.close()
     new Notice(t('view.bordereauCreated', { path: note }))
     const opened = this.app.vault.getAbstractFileByPath(pdf || note)
     if (opened instanceof TFile) await this.app.workspace.getLeaf('tab').openFile(opened)
+  }
+
+  /** The Word: the reader's own filled, when they set one; else written from the note. */
+  private async wordOf(document: DocxDocument, values: DeliveryValues): Promise<Uint8Array> {
+    const bytes = await deliveryWordBytes(this.plugin)
+    if (bytes) {
+      try {
+        return await fillDocxTemplate(bytes, {
+          fieldOf: (name) => fieldOf(name),
+          isRowField: (field) => isRowField(field as DeliveryField),
+          ...values
+        })
+      } catch (error) {
+        const reason = error instanceof DocxTemplateError ? error.message : String(error)
+        new Notice(t('delivery.wordTemplateFailed', { reason }))
+      }
+    }
+    return buildDocx(document)
+  }
+
+  /** The lot each document sits in: the top of its branch, when that is a lot. */
+  private lotOf(): (task: Task) => string {
+    const parents = new Map<string, string | null>()
+    const byId = new Map<string, Task>()
+    for (const { task, parentId } of flattenTasks(this.project.tasks)) {
+      parents.set(task.id, parentId)
+      byId.set(task.id, task)
+    }
+    return (task) => {
+      let id: string | null | undefined = task.id
+      let top: Task | undefined
+      for (let guard = 0; id && guard < 64; guard++) {
+        top = byId.get(id)
+        id = parents.get(id)
+      }
+      return top && top.id !== task.id && top.type === 'phase' ? top.title : ''
+    }
   }
 
   onClose(): void {

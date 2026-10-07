@@ -1525,7 +1525,6 @@ export const fr: Catalog = {
   'delivery.documentTitle': 'Titre',
   'delivery.state': 'État',
   'delivery.version': 'Version',
-  'delivery.count': { one: '{count} document livré.', other: '{count} documents livrés.' },
   'delivery.signatures': 'Signatures',
   'delivery.sentBy': 'Pour l’expéditeur',
   'delivery.receivedBy': 'Pour le destinataire',
@@ -1550,6 +1549,33 @@ export const fr: Catalog = {
   'person.notInBook': 'Nommé dans le projet, sans fiche dans l’annuaire',
   'person.onProject': 'projet',
   'person.pick': 'Chercher dans l’annuaire',
+  'delivery.countLabel': 'Documents livrés :',
+  'delivery.templatesFolder': 'Modèles',
+  'delivery.help.what':
+    'Modèle du bordereau de livraison. Modifiez-le librement : les textes, les titres, les colonnes du tableau. Ce commentaire n’apparaît pas dans le bordereau.',
+  'delivery.help.rows':
+    'Une ligne qui contient un champ de document (référence, titre…) est répétée pour chaque document livré : c’est la ligne du tableau. Une ligne dont les champs sont vides et qui ne contient rien d’autre (la remarque) est retirée.',
+  'delivery.help.word':
+    'Mise en forme : # titre, ## et ### intertitres, > citation, - liste, **gras**, *italique*, <br> pour aller à la ligne dans une case, &nbsp; seul sur une ligne pour un espace. Pour un logo ou un papier à en-tête, utilisez le modèle Word (Paramètres).',
+  'delivery.help.fields': 'Champs disponibles, entre doubles accolades — le bordereau, puis chaque document :',
+  'delivery.wordTemplateFailed': 'Modèle Word illisible ({reason}) : le Word est écrit avec la mise en page du module.',
+  'delivery.templateNote': 'Modèle',
+  'delivery.templateShipped': 'celui du module',
+  'delivery.templateEdit': 'Modifier',
+  'delivery.templateCustomize': 'Personnaliser',
+  'delivery.templateWord': 'Word',
+  'delivery.templateWordNone': 'mise en page du module',
+  'delivery.templateWordOpen': 'Ouvrir le modèle Word',
+  'delivery.templateWordCreate': 'Créer un modèle Word',
+  'delivery.templateWordWhere':
+    'Le modèle Word est dans {path} : ouvrez-le avec Word pour y mettre votre en-tête et votre logo.',
+  'settings.deliveryTemplate.name': 'Modèle du bordereau de livraison',
+  'settings.deliveryTemplate.desc':
+    'La note à partir de laquelle sont écrits le bordereau, son Word et son PDF : textes, colonnes du tableau, champs entre doubles accolades. Vide : le modèle du module. « Ouvrir » le crée au besoin dans Modèles.',
+  'settings.deliveryWordTemplate.name': 'Modèle Word du bordereau',
+  'settings.deliveryWordTemplate.desc':
+    'Un document Word à vous (en-tête, logo, styles) rempli avec les mêmes champs ; la ligne du tableau qui contient le champ « reference » est répétée pour chaque document. Seul le Word l’utilise : le PDF reste écrit depuis la note. Vide : le Word suit la note. « Ouvrir » le crée au besoin à partir du modèle de note.',
+  'settings.deliveryTemplate.open': 'Ouvrir',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',
