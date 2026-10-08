@@ -1672,6 +1672,9 @@ export const fr: Catalog = {
   'sheet.openSystem': 'Ouvrir avec l’application',
   'sheet.openSystemHint':
     'Obsidian n’affiche pas les fichiers {ext} : le fichier s’ouvre avec l’application de l’ordinateur (Word, Excel…).',
+  'folders.tree': 'Dossiers',
+  'tip.folder.treeNew':
+    'Crée un dossier dans le dossier affiché. Clic droit sur un dossier : y créer un sous-dossier, le renommer ou le supprimer. Glissez des documents sur un dossier pour les y ranger.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

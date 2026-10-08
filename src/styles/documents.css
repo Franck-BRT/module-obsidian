@@ -1734,3 +1734,125 @@ a.pm-docs-clear-filters {
   align-items: center;
   gap: 6px;
 }
+
+/* The library's folders on the left, as a file explorer has them; the list on the right. */
+.pm-docs-split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.pm-docs-split > .pm-docs-body {
+  min-width: 0;
+}
+
+.pm-docs-tree {
+  display: flex;
+  flex: 0 0 240px;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--size-4-2) var(--size-2-2) var(--size-4-4);
+  border-right: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+
+.pm-docs-tree:empty {
+  display: none;
+}
+
+.pm-tree-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--size-2-2) var(--size-2-3) var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pm-tree-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px calc(4px + var(--pm-tree-depth, 0) * 14px);
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  user-select: none;
+}
+
+.pm-tree-item:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.pm-tree-item.is-current {
+  background: var(--background-modifier-active-hover, var(--background-modifier-hover));
+  color: var(--text-normal);
+  font-weight: var(--font-medium);
+}
+
+.pm-tree-item:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.pm-tree-item.is-drop-target {
+  border-color: var(--interactive-accent);
+  background: hsla(var(--interactive-accent-hsl), 0.15);
+}
+
+.pm-tree-twisty {
+  --icon-size: 14px;
+  display: inline-flex;
+  flex: 0 0 16px;
+  justify-content: center;
+  color: var(--text-faint);
+}
+
+.pm-tree-icon {
+  --icon-size: 15px;
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.pm-tree-item.is-current .pm-tree-icon {
+  color: var(--text-accent);
+}
+
+.pm-tree-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-tree-count {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Too narrow for two columns: the folders above the list, in a band of their own. */
+.pm-docs {
+  container-type: inline-size;
+}
+
+@container (width <= 640px) {
+  .pm-docs-split {
+    flex-direction: column;
+  }
+
+  .pm-docs-tree {
+    flex: 0 0 auto;
+    max-height: 180px;
+    border-right: none;
+    border-bottom: 1px solid var(--background-modifier-border);
+  }
+}

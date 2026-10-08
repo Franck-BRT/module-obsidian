@@ -32,6 +32,7 @@ import { PromptModal } from '../../src/views/prompts/PromptModal'
 import { DeliveryModal } from '../../src/views/library/DeliveryModal'
 import { PersonPicker } from '../../src/views/contacts/PersonPicker'
 import { DocumentSheet } from '../../src/views/documents/DocumentSheet'
+import { renderFolderTree, renderFolderStrip } from '../../src/views/folderUi'
 import { ContactBook, readContacts } from '../../src/store/contacts'
 import { projectPeople } from '../../src/store/projectPeople'
 import { isDocument } from '../../src/store/Document'
@@ -235,6 +236,24 @@ async function main(): Promise<void> {
       if (screen === 'doc-sheet-combo') {
         const input = [...document.querySelectorAll<HTMLInputElement>('.pm-sheet-input')].find((one) => one.value === 'CCTP')
         input?.focus()
+      }
+      break
+    }
+    case 'folder-tree': {
+      const root = body.createDiv('pm-root pm-docs')
+      root.setAttr('style', 'height:100%')
+      const split = root.createDiv('pm-docs-split')
+      const tree = split.createDiv('pm-docs-tree')
+      const list = split.createDiv('pm-content pm-docs-body')
+      const folders = ['Marchés', 'Marchés/Lot 01 Terrassement', 'Marchés/Lot 02 Gros œuvre', 'Marchés/Lot 02 Gros œuvre/Plans', 'Normes', 'Référence', 'Réunions', 'Réunions/2026']
+      const counts = new Map([['', 4], ['Marchés', 2], ['Marchés/Lot 01 Terrassement', 6], ['Marchés/Lot 02 Gros œuvre', 9], ['Marchés/Lot 02 Gros œuvre/Plans', 23], ['Normes', 12], ['Référence', 5], ['Réunions', 3], ['Réunions/2026', 8]])
+      const current = 'Marchés/Lot 02 Gros œuvre'
+      const noop = () => {}
+      renderFolderTree(tree, { folders, current, counts, total: 72, expanded: new Set(['Marchés', 'Marchés/Lot 02 Gros œuvre']), reference: 'Référence', rootLabel: 'Racine de la bibliothèque', open: noop, toggle: noop, create: noop, drop: noop, rename: noop, remove: noop })
+      renderFolderStrip(list, { folders, current, open: noop, drop: noop, rename: noop, remove: noop })
+      for (const title of ['CCTP Lot 02 — Gros œuvre', 'Note de calcul des fondations', 'Plan de coffrage du radier']) {
+        const row = list.createDiv('pm-docs-row')
+        row.createDiv({ cls: 'pm-docs-main', text: title })
       }
       break
     }

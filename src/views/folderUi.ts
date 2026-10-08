@@ -1,4 +1,4 @@
-import { setIcon, SuggestModal, type App } from 'obsidian'
+import { Menu, setIcon, SuggestModal, type App } from 'obsidian'
 import { AT_ROOT } from '../store/folderFilter'
 import { parentOf } from '../store/libraryFolders'
 import { t } from '../i18n'
@@ -177,4 +177,136 @@ export function renderFolderStrip(parent: HTMLElement, strip: FolderStrip): void
     dropTarget(chip, (paths) => strip.drop(paths, folder))
     explain(chip, folder.slice(folder.lastIndexOf('/') + 1), t('tip.folder.chip'))
   }
+}
+
+export interface FolderTree extends FolderStrip {
+  /** How many rows each folder holds itself, by its path; '' for the root's own. */
+  counts: Map<string, number>
+  /** How many rows in all: what « every folder » shows. */
+  total: number
+  /** The folders unfolded: their own folders shown under them. */
+  expanded: Set<string>
+  toggle: (folder: string) => void
+  /** A folder made under this one — '' for the root. */
+  create: (under: string) => void
+  /** The folder marked with a star: the reference documents'. */
+  reference?: string
+  rootLabel: string
+}
+
+/**
+ * The library's folders as a tree beside the list, as a file explorer has them: every
+ * folder at once, the root, then each folder under the one it is in, unfolded or not, with
+ * how many rows it holds — itself and below. One opens on a click and takes the rows
+ * dropped on it; its menu makes a folder in it, renames it or takes it out.
+ */
+export function renderFolderTree(parent: HTMLElement, tree: FolderTree): void {
+  parent.empty()
+  const current = tree.current
+  const below = (folder: string): number => {
+    let sum = tree.counts.get(folder) ?? 0
+    for (const [path, count] of tree.counts) if (path && folder && path.startsWith(`${folder}/`)) sum += count
+    return sum
+  }
+  const head = parent.createDiv('pm-tree-head')
+  head.createSpan({ cls: 'pm-tree-head-title', text: t('folders.tree') })
+  const add = head.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('folders.newFolder') } })
+  setIcon(add, 'folder-plus')
+  explain(add, t('folders.newFolder'), t('tip.folder.treeNew'))
+  add.addEventListener('click', () => tree.create(filteredFolder(current)))
+
+  const list = parent.createDiv({ cls: 'pm-tree', attr: { role: 'tree' } })
+  const item = (options: {
+    label: string
+    folder: string
+    value: string
+    depth: number
+    icon: string
+    count: number
+    children?: boolean
+    menu?: boolean
+  }): void => {
+    const row = list.createDiv({
+      cls: `pm-tree-item${current === options.value ? ' is-current' : ''}`,
+      attr: { role: 'treeitem', tabindex: '0', style: `--pm-tree-depth: ${options.depth}` }
+    })
+    const twisty = row.createSpan('pm-tree-twisty')
+    if (options.children) {
+      const open = tree.expanded.has(options.folder)
+      setIcon(twisty, open ? 'chevron-down' : 'chevron-right')
+      row.setAttr('aria-expanded', String(open))
+      twisty.addEventListener('click', (event) => {
+        event.stopPropagation()
+        tree.toggle(options.folder)
+      })
+    }
+    setIcon(row.createSpan('pm-tree-icon'), options.icon)
+    row.createSpan({ cls: 'pm-tree-label', text: options.label })
+    if (options.count) row.createSpan({ cls: 'pm-tree-count', text: String(options.count) })
+    row.addEventListener('click', () => tree.open(options.value))
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') tree.open(options.value)
+      if (options.children && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
+        const open = tree.expanded.has(options.folder)
+        if (open === (event.key === 'ArrowLeft')) tree.toggle(options.folder)
+      }
+    })
+    if (options.value !== '') dropTarget(row, (paths) => tree.drop(paths, options.folder))
+    row.addEventListener('contextmenu', (event) => {
+      event.preventDefault()
+      const menu = new Menu()
+      menu.addItem((entry) =>
+        entry
+          .setTitle(options.folder ? t('folders.newFolderIn', { folder: options.label }) : t('folders.newFolder'))
+          .setIcon('folder-plus')
+          .onClick(() => tree.create(options.folder))
+      )
+      if (options.menu) {
+        menu.addItem((entry) =>
+          entry
+            .setTitle(t('folders.rename', { folder: options.label }))
+            .setIcon('pencil')
+            .onClick(() => tree.rename(options.folder))
+        )
+        menu.addItem((entry) =>
+          entry
+            .setTitle(t('folders.delete', { folder: options.label }))
+            .setIcon('folder-x')
+            .setWarning(true)
+            .onClick(() => tree.remove(options.folder))
+        )
+      }
+      menu.showAtMouseEvent(event)
+    })
+  }
+
+  item({ label: t('folders.allFolders'), folder: '', value: '', depth: 0, icon: 'library', count: tree.total })
+  const tops = tree.folders.filter((folder) => !folder.includes('/'))
+  item({
+    label: tree.rootLabel,
+    folder: '',
+    value: AT_ROOT,
+    depth: 0,
+    icon: 'folder-root',
+    count: tree.counts.get('') ?? 0
+  })
+  const walk = (folders: string[], depth: number): void => {
+    for (const folder of folders) {
+      const children = tree.folders.filter((other) => parentOf(other) === folder)
+      const name = folder.slice(folder.lastIndexOf('/') + 1)
+      const isReference = !!tree.reference && folder === tree.reference
+      item({
+        label: name,
+        folder,
+        value: folder,
+        depth,
+        icon: isReference ? 'star' : tree.expanded.has(folder) && children.length ? 'folder-open' : 'folder',
+        count: below(folder),
+        children: children.length > 0,
+        menu: true
+      })
+      if (children.length && tree.expanded.has(folder)) walk(children, depth + 1)
+    }
+  }
+  walk(tops, 1)
 }

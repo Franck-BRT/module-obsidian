@@ -1623,6 +1623,9 @@ export const en = {
   'sheet.openSystem': 'Open with its application',
   'sheet.openSystemHint':
     'Obsidian does not show {ext} files: the file opens with the computer’s application (Word, Excel…).',
+  'folders.tree': 'Folders',
+  'tip.folder.treeNew':
+    'Makes a folder in the folder shown. Right-click a folder to make a folder in it, rename it or delete it. Drag documents onto a folder to file them there.',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

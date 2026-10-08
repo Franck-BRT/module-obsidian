@@ -76,6 +76,7 @@ import {
   FolderPicker,
   folderOptions,
   renderFolderStrip,
+  renderFolderTree,
   type FolderChoice
 } from '../folderUi'
 
@@ -147,6 +148,9 @@ export class DocumentsView extends ItemView {
   private toolbarEl!: HTMLElement
   private filtersEl!: HTMLElement
   private bodyEl!: HTMLElement
+  private treeEl!: HTMLElement
+  /** The folders of the tree unfolded; those above the one shown always are. */
+  private expanded = new Set<string>()
   private redrawTimer: number | null = null
   /** Where the time spent on the page being read is said, while one is. */
   private scanElapsedEl: HTMLElement | null = null
@@ -200,7 +204,10 @@ export class DocumentsView extends ItemView {
     root.addClass('pm-root', 'pm-docs')
     this.toolbarEl = root.createDiv('pm-toolbar')
     this.filtersEl = root.createDiv('pm-docs-filters')
-    this.bodyEl = root.createDiv('pm-content pm-docs-body')
+    // The folders on the left, as a file explorer has them; the list on the right.
+    const split = root.createDiv('pm-docs-split')
+    this.treeEl = split.createDiv('pm-docs-tree')
+    this.bodyEl = split.createDiv('pm-content pm-docs-body')
     this.renderToolbar()
     this.renderFilters()
     this.renderBody()
@@ -492,6 +499,44 @@ export class DocumentsView extends ItemView {
     }
   }
 
+  /** The library's folders on the left, each with how many documents it holds. */
+  private renderTree(all: LibraryDoc[]): void {
+    const current = filteredFolder(this.query.folder)
+    // The folder shown is always in sight: those above it unfolded.
+    const parts = current ? current.split('/') : []
+    for (let at = 1; at < parts.length; at++) this.expanded.add(parts.slice(0, at).join('/'))
+    const counts = new Map<string, number>()
+    for (const doc of all) counts.set(doc.folder, (counts.get(doc.folder) ?? 0) + 1)
+    renderFolderTree(this.treeEl, {
+      folders: this.plugin.library.folders(),
+      current: this.query.folder ?? '',
+      counts,
+      total: all.length,
+      expanded: this.expanded,
+      reference: this.plugin.referenceFolder(),
+      rootLabel: t('library.rootFolder'),
+      open: (folder) => this.openFolder(folder),
+      toggle: (folder) => {
+        if (this.expanded.has(folder)) this.expanded.delete(folder)
+        else this.expanded.add(folder)
+        this.renderTree(this.plugin.library.docs())
+      },
+      create: (under) => {
+        void this.newFolder(under)
+      },
+      drop: (records, folder) => {
+        const moved = all.filter((doc) => records.includes(doc.record))
+        void this.moveDocs(moved, folder)
+      },
+      rename: (folder) => {
+        void this.renameFolder(folder)
+      },
+      remove: (folder) => {
+        void this.deleteFolder(folder)
+      }
+    })
+  }
+
   /** Shows a folder — '' for every folder, `AT_ROOT` for the root alone. */
   private openFolder(folder: string): void {
     this.query = { ...this.query, folder }
@@ -753,9 +798,11 @@ export class DocumentsView extends ItemView {
     this.bodyEl.empty()
     const all = this.plugin.library.docs()
     if (!all.length) {
+      this.treeEl.empty()
       this.renderEmpty()
       return
     }
+    this.renderTree(all)
     renderFolderStrip(this.bodyEl, {
       folders: this.plugin.library.folders(),
       current: this.query.folder ?? '',
@@ -1959,8 +2006,7 @@ export class DocumentsView extends ItemView {
   }
 
   /** A folder made in the one on screen — or at the root —, then shown. */
-  private async newFolder(): Promise<void> {
-    const under = filteredFolder(this.query.folder)
+  private async newFolder(under = filteredFolder(this.query.folder)): Promise<void> {
     const name = await promptText(
       this.app,
       under ? t('folders.newFolderIn', { folder: under }) : t('library.newFolderTitle'),
