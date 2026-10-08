@@ -194,7 +194,8 @@ async function main(): Promise<void> {
       new PersonPicker(app, book, projectPeople(book, project), () => {}).open()
       break
     }
-    case 'doc-sheet': {
+    case 'doc-sheet':
+    case 'doc-sheet-combo': {
       plugin.libraryText = {
         entry: () => ({ state: 'ok', text: 'Le présent cahier des clauses techniques particulières définit les travaux de gros œuvre '.repeat(40), mtime: 0 }),
         unreadReason: () => null,
@@ -202,6 +203,14 @@ async function main(): Promise<void> {
         reread: async () => {}
       }
       plugin.scans = { stateOf: () => null }
+      plugin.libraryChoices = () => ({
+        categories: ['Plan', 'CCTP', 'Note de calcul', 'Compte rendu', 'Planning', 'Rapport', 'Courrier'],
+        lots: ['Gros œuvre', 'Charpente', 'Électricité'],
+        issuers: ['BET Structure'],
+        tags: [],
+        lotsFor: () => ['Documents', 'Réserves', 'Gros œuvre']
+      })
+      plugin.rememberCategory = async () => {}
       plugin.referenceFolder = () => 'Référence'
       const docs = library.docs()
       const [doc, other, third] = docs
@@ -223,6 +232,10 @@ async function main(): Promise<void> {
         redraw: () => {}
       }
       new DocumentSheet(host as any, fresh).open()
+      if (screen === 'doc-sheet-combo') {
+        const input = [...document.querySelectorAll<HTMLInputElement>('.pm-sheet-input')].find((one) => one.value === 'CCTP')
+        input?.focus()
+      }
       break
     }
     case 'flags': {

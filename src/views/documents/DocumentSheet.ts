@@ -1,7 +1,8 @@
 import { ButtonComponent, Modal, Notice, setIcon, type EventRef } from 'obsidian'
 import type PMPlugin from '../../main'
 import { formatBytes } from '../../store/email/EmailMessage'
-import { knownValues } from '../../store/library/libraryClass'
+import { ContactBook, readContacts } from '../../store/contacts'
+import { attachComboList } from '../../ui/comboList'
 import {
   derivedFrom,
   extensionOf,
@@ -48,6 +49,17 @@ export interface DocSheetHost {
   /** Folders it is shown in besides its own, by its ghosts. */
   ghostFolders(doc: LibraryDoc): string[]
   redraw(): void
+}
+
+/** The values, each once, in their order: the first spelling kept. */
+function unique(values: string[]): string[] {
+  const seen = new Set<string>()
+  return values.filter((value) => {
+    const key = value.trim().toLowerCase()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 /** What each kind of file is called, for whoever does not read extensions. */
@@ -270,7 +282,6 @@ export class DocumentSheet extends Modal {
 
   /** What it is: its reference, edition and revision, its kind, lot and issuer — to change here. */
   private renderIdentity(body: HTMLElement, doc: LibraryDoc): void {
-    const all = this.plugin.library.docs()
     const field = (
       label: string,
       value: string,
@@ -283,12 +294,9 @@ export class DocumentSheet extends Modal {
         attr: { type: 'text', placeholder }
       })
       input.value = value
-      if (options.length) {
-        const id = `pm-sheet-${label.replace(/\W+/g, '-')}-${Math.random().toString(36).slice(2, 8)}`
-        const list = body.createEl('datalist', { attr: { id } })
-        for (const option of options) list.createEl('option', { value: option })
-        input.setAttr('list', id)
-      }
+      // Every choice offered on a click, not only the one the field holds; one taken is saved.
+      const blur = (): void => input.blur()
+      if (options.length) attachComboList(input, () => options, blur)
       input.addEventListener('focus', () => (this.editing = true))
       input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') input.blur()
@@ -304,6 +312,11 @@ export class DocumentSheet extends Modal {
       )
     }
     const classification = { category: doc.category, lot: doc.lot, issuer: doc.issuer, tags: doc.tags }
+    const choices = this.plugin.libraryChoices()
+    // The lots of its projects first, then those the library files under; the people folder's names after the issuers known.
+    const lots = unique([...(choices.lotsFor?.(doc.projects) ?? []), ...choices.lots])
+    const people = new ContactBook(readContacts(this.app, this.plugin.settings.peopleFolder)).names()
+    const issuers = unique([...choices.issuers, ...people])
     field(t('sheet.reference'), doc.reference ?? '', t('sheet.referencePlaceholder'), (reference) =>
       this.plugin.library.setHandFields(doc, { reference })
     )
@@ -317,22 +330,25 @@ export class DocumentSheet extends Modal {
       t('sheet.category'),
       doc.category,
       t('sheet.categoryPlaceholder'),
-      (category) => this.plugin.library.setClassification(doc, { ...classification, category }),
-      knownValues(all, 'category')
+      async (category) => {
+        await this.plugin.library.setClassification(doc, { ...classification, category })
+        await this.plugin.rememberCategory(category)
+      },
+      choices.categories
     )
     field(
       t('sheet.lot'),
       doc.lot,
       t('sheet.lotPlaceholder'),
       (lot) => this.plugin.library.setClassification(doc, { ...classification, lot }),
-      knownValues(all, 'lot')
+      lots
     )
     field(
       t('sheet.issuer'),
       doc.issuer,
       t('sheet.issuerPlaceholder'),
       (issuer) => this.plugin.library.setClassification(doc, { ...classification, issuer }),
-      knownValues(all, 'issuer')
+      issuers
     )
     // Its language: said, and changed by the list's own window.
     const language = this.line(body, t('sheet.language'))
