@@ -2,6 +2,7 @@ import { ItemView, type WorkspaceLeaf } from 'obsidian'
 import type PMPlugin from '../../main'
 import { readContacts } from '../../store/contacts'
 import { isPromptNote } from '../../store/chat/promptLibrary'
+import { isPersonaNote } from '../../store/chat/personaLibrary'
 import { openProjectCreate } from '../../ui/ModalFactory'
 import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
@@ -72,7 +73,10 @@ export class HomeView extends ItemView {
       requirements: plugin.index.requirementRefs().length,
       prompts: this.app.vault
         .getMarkdownFiles()
-        .filter((file) => isPromptNote(this.app.metadataCache.getFileCache(file)?.frontmatter)).length
+        .filter((file) => isPromptNote(this.app.metadataCache.getFileCache(file)?.frontmatter)).length,
+      personas: this.app.vault
+        .getMarkdownFiles()
+        .filter((file) => isPersonaNote(this.app.metadataCache.getFileCache(file)?.frontmatter)).length
     }
   }
 
@@ -86,6 +90,7 @@ export class HomeView extends ItemView {
       notes: safeAsync(() => plugin.openNotes()),
       requirements: safeAsync(() => plugin.openRequirements()),
       prompts: safeAsync(() => plugin.openPrompts()),
+      personas: safeAsync(() => plugin.openPersonas()),
       settings: () => plugin.openSettings(),
       newProject: () => openProjectCreate(plugin),
       newNote: safeAsync(() => plugin.newInboxNote())

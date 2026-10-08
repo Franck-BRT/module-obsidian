@@ -76,6 +76,8 @@ import { scanPages, transcribeScan, transcriptFile } from './scanReader'
 import { notesFallback } from './noteCard'
 import { noteAtTitle, noteBlocks, parseNoteProposal, sectionTitles, writtenNote } from '../../store/chat/noteProposal'
 import { calledSkills, readSkill, skillBody, skillsContext, type Skill } from '../../store/chat/skills'
+import { matchesPersona, personaContext, type PersonaNote } from '../../store/chat/personaLibrary'
+import { allPersonas, personaAt } from '../personas/personaVault'
 import { lookUpVault, SEARCH_DEFAULTS, vaultContext } from '../../store/rag/ragSearch'
 import { citedFile } from '../../store/chat/citedLink'
 import {
@@ -423,6 +425,7 @@ export class ChatView extends ItemView {
     this.renderSelectionRow(el)
     this.renderProjectRows(el)
     this.renderFileRows(el)
+    this.renderPersonaRow(el)
     this.renderSkillRows(el)
     if (this.searchLibrary) {
       const row = el.createDiv('pm-chat-context-row pm-chat-library-row')
@@ -621,6 +624,66 @@ export class ChatView extends ItemView {
       if (skill) skills.push(skill)
     }
     return skills.sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  /** The persona's name as its note says it, or its note's. */
+  private personaName(path: string): string {
+    const file = this.app.vault.getAbstractFileByPath(path)
+    const name: unknown = file instanceof TFile ? this.app.metadataCache.getFileCache(file)?.frontmatter?.name : null
+    return typeof name === 'string' && name.trim()
+      ? name.trim()
+      : path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/, '')
+  }
+
+  /** The persona the chat answers as, its note there; null for none. */
+  private currentPersona(): string | null {
+    const path = this.plugin.activePersona()
+    return path && this.app.vault.getAbstractFileByPath(path) instanceof TFile ? path : null
+  }
+
+  /** The chat's persona changed — here, in the library, by a conversation taken up again —: said. */
+  personaChanged(): void {
+    this.renderContext()
+    this.render()
+  }
+
+  /** The persona row: who the chat answers as, to change or to take off. */
+  private renderPersonaRow(el: HTMLElement): void {
+    const path = this.currentPersona()
+    if (!path) return
+    const row = el.createDiv('pm-chat-context-row pm-chat-persona-row')
+    setIcon(row.createSpan({ cls: 'pm-chat-context-icon' }), 'drama')
+    const name = row.createEl('a', {
+      cls: 'pm-chat-context-name',
+      text: t('chat.personaOn', { name: this.personaName(path) }),
+      attr: { title: path }
+    })
+    explain(name, t('chat.personaOn', { name: this.personaName(path) }), t('tip.chat.personaOn'))
+    name.addEventListener('click', () => this.pickPersona())
+    const off = row.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': t('chat.personaOff') } })
+    explain(off, t('chat.personaOff'), t('tip.chat.personaOff'))
+    setIcon(off, 'x')
+    off.addEventListener(
+      'click',
+      safeAsync(() => this.plugin.usePersona(null, false))
+    )
+  }
+
+  /** The personas to answer as, by name and what they are for; none yet, the library is opened. */
+  private pickPersona(): void {
+    safeAsync(async () => {
+      const current = this.currentPersona()
+      const offered = (await allPersonas(this.app)).filter((persona) => persona.path !== current)
+      if (!offered.length) {
+        new Notice(t('chat.personaNone'), 10000)
+        await this.plugin.openPersonas()
+        return
+      }
+      new PersonaPicker(this.app, offered, (persona) => {
+        void this.plugin.usePersona(persona.path, false)
+        window.setTimeout(() => this.inputEl?.focus(), 0)
+      }).open()
+    })()
   }
 
   /** One row a skill in use, with the way to read it and the way to take it off. */
@@ -2001,6 +2064,14 @@ export class ChatView extends ItemView {
     setIcon(skill, 'sparkles')
     skill.disabled = missing !== null || this.pending
     skill.addEventListener('click', () => this.pickSkill())
+    const persona = composer.createEl('button', {
+      cls: `clickable-icon pm-chat-ready${this.currentPersona() ? ' is-active' : ''}`,
+      attr: { 'aria-label': t('chat.personaPick') }
+    })
+    explain(persona, t('chat.personaPick'), t('tip.chat.personaPick'))
+    setIcon(persona, 'drama')
+    persona.disabled = missing !== null || this.pending
+    persona.addEventListener('click', () => this.pickPersona())
     const library = composer.createEl('button', {
       cls: `clickable-icon pm-chat-ready pm-chat-library${this.searchLibrary ? ' is-active' : ''}`,
       attr: {
@@ -2773,6 +2844,7 @@ export class ChatView extends ItemView {
         ...(this.collections.length ? { collections: [...this.collections] } : {}),
         ...(this.files.length ? { files: [...this.files] } : {}),
         ...(this.skills.length ? { skills: [...this.skills] } : {}),
+        ...(this.currentPersona() ? { persona: this.currentPersona() ?? '' } : {}),
         ...(this.searchLibrary ? { library: [] } : {}),
         ...(this.attached.length ? { requirements: [...this.attached] } : {}),
         ...(follows ? { follows } : {})
@@ -2858,6 +2930,9 @@ export class ChatView extends ItemView {
       const longestFile = Math.max(0, ...attached.read.map((file) => file.text.length))
       const lastQuestion = [...this.turns].reverse().find((turn) => turn.role === 'user')
       const skills = await this.skillsBlock(lastQuestion?.skills ?? [])
+      // Who answers: the persona the question was asked of, its note read now.
+      const asPersona = lastQuestion?.persona ? await personaAt(this.app, lastQuestion.persona) : null
+      const persona = asPersona ? personaContext(asPersona, (name) => t('chat.personaIntro', { name })) : ''
       const library = lastQuestion?.library ? await this.libraryBlock(lastQuestion) : ''
       // The question now says what it was answered from.
       if (library) this.render()
@@ -2919,6 +2994,7 @@ export class ChatView extends ItemView {
           this.turns,
           [
             systemFor(budget),
+            persona,
             project?.text,
             status,
             chase,
@@ -3061,7 +3137,12 @@ export class ChatView extends ItemView {
       this.branched = note.all.some(branches)
       this.turns = note.turns
       // A conversation that looked things up in the library goes on looking them up.
-      this.searchLibrary = !![...note.turns].reverse().find((turn) => turn.role === 'user')?.library
+      const lastAsked = [...note.turns].reverse().find((turn) => turn.role === 'user')
+      this.searchLibrary = !!lastAsked?.library
+      // A conversation goes on with the persona it was having.
+      if ((lastAsked?.persona ?? '') !== (this.plugin.activePersona() ?? '')) {
+        await this.plugin.usePersona(lastAsked?.persona ?? null, false)
+      }
       this.saved = new WeakSet(note.all)
       if (this.branched) await this.notes.ensureBranchBlock(file)
       this.notePath = file.path
@@ -3266,6 +3347,35 @@ class PromptPicker extends SuggestModal<PromptNote> {
 
   onChooseSuggestion(prompt: PromptNote): void {
     this.onChoose(prompt)
+  }
+}
+
+class PersonaPicker extends SuggestModal<PersonaNote> {
+  constructor(
+    app: App,
+    private personas: PersonaNote[],
+    private onChoose: (persona: PersonaNote) => void
+  ) {
+    super(app)
+    this.setPlaceholder(t('chat.personaPickPlaceholder'))
+  }
+
+  getSuggestions(query: string): PersonaNote[] {
+    return this.personas
+      .filter((persona) => matchesPersona(persona, query))
+      .sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name))
+  }
+
+  renderSuggestion(persona: PersonaNote, el: HTMLElement): void {
+    const line = el.createDiv({ cls: 'pm-chat-pick-line' })
+    setIcon(line.createSpan({ cls: 'pm-chat-pick-icon' }), persona.favorite ? 'star' : 'drama')
+    line.createSpan({ text: persona.name })
+    const about = [persona.category, persona.description].filter(Boolean).join(' · ')
+    if (about) el.createEl('small', { cls: 'pm-chat-pick-when', text: about })
+  }
+
+  onChooseSuggestion(persona: PersonaNote): void {
+    this.onChoose(persona)
   }
 }
 

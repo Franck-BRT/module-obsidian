@@ -1348,6 +1348,16 @@ export class PMSettingTab extends PluginSettingTab {
           }
         },
         {
+          name: t('settings.chat.personasFolder'),
+          desc: t('settings.chat.personasFolderDesc'),
+          control: {
+            type: 'folder',
+            key: 'chat.personasFolder',
+            defaultValue: 'Chats/Personas',
+            placeholder: 'Chats/Personas'
+          }
+        },
+        {
           name: t('settings.chat.skillsFolder'),
           desc: t('settings.chat.skillsFolderDesc'),
           render: (setting: Setting) => {

@@ -16,6 +16,7 @@ export interface HomeCounts {
   notes: number
   requirements: number
   prompts: number
+  personas: number
 }
 
 export interface HomeActions {
@@ -26,6 +27,7 @@ export interface HomeActions {
   notes(): void
   requirements(): void
   prompts(): void
+  personas(): void
   settings(): void
   newProject(): void
   newNote(): void
@@ -124,6 +126,13 @@ export function renderHome(root: HTMLElement, counts: HomeCounts, go: HomeAction
       title: t('home.prompts'),
       detail: counts.prompts ? t('home.prompts.detail', { count: counts.prompts }) : t('home.prompts.none'),
       open: () => go.prompts()
+    },
+    {
+      cls: 'personas',
+      icon: 'drama',
+      title: t('home.personas'),
+      detail: counts.personas ? t('home.personas.detail', { count: counts.personas }) : t('home.personas.none'),
+      open: () => go.personas()
     }
   ])
   section(page, t('home.section.setup'), [

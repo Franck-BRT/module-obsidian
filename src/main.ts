@@ -103,6 +103,7 @@ import { DocumentsView, PM_DOCUMENTS_VIEW_TYPE } from './views/documents/Documen
 import { NotesView, PM_NOTES_VIEW_TYPE } from './views/notes/NotesView'
 import { HomeView, PM_HOME_VIEW_TYPE } from './views/home/HomeView'
 import { PromptsView, PM_PROMPTS_VIEW_TYPE } from './views/prompts/PromptsView'
+import { PersonasView, PM_PERSONAS_VIEW_TYPE } from './views/personas/PersonasView'
 import type { ChatPrompt } from './store/chat/chatPrompts'
 import { NoteLibrary } from './store/notes/NoteLibrary'
 import {
@@ -349,6 +350,7 @@ export default class PMPlugin extends Plugin {
     this.registerView(PM_NOTES_VIEW_TYPE, (leaf) => new NotesView(leaf, this))
     this.registerView(PM_HOME_VIEW_TYPE, (leaf) => new HomeView(leaf, this))
     this.registerView(PM_PROMPTS_VIEW_TYPE, (leaf) => new PromptsView(leaf, this))
+    this.registerView(PM_PERSONAS_VIEW_TYPE, (leaf) => new PersonasView(leaf, this))
     // Claiming the extension is what stops a click handing the message back to Outlook.
     this.registerExtensions(['msg', 'eml'], PM_MESSAGE_VIEW_TYPE)
     this.registerTaskNoteSwap()
@@ -389,6 +391,12 @@ export default class PMPlugin extends Plugin {
       id: 'open-prompts',
       name: t('command.openPrompts'),
       callback: safeAsync(() => this.openPrompts())
+    })
+
+    this.addCommand({
+      id: 'open-personas',
+      name: t('command.openPersonas'),
+      callback: safeAsync(() => this.openPersonas())
     })
 
     this.addCommand({
@@ -1249,6 +1257,32 @@ export default class PMPlugin extends Plugin {
     await this.openChat()
     const view = this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)[0]?.view
     if (view instanceof ChatView) await view.usePrompt(prompt, mode)
+  }
+
+  /** The persona library, in a tab of its own: found again if it is open. */
+  async openPersonas(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(PM_PERSONAS_VIEW_TYPE)[0]
+    const leaf = existing ?? this.app.workspace.getLeaf('tab')
+    if (!existing) await leaf.setViewState({ type: PM_PERSONAS_VIEW_TYPE, active: true })
+    await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /** The persona the chat answers as, by the path of its note; null for none. */
+  activePersona(): string | null {
+    return this.settings.chat.persona.trim() || null
+  }
+
+  /**
+   * The chat set to answer as a persona — or as itself again, given none —, kept for the
+   * next questions and the next sessions; the chat opened to show it, unless told not to.
+   */
+  async usePersona(path: string | null, open = true): Promise<void> {
+    this.settings.chat.persona = path ?? ''
+    await this.saveSettings()
+    if (open) await this.openChat()
+    for (const leaf of this.app.workspace.getLeavesOfType(PM_CHAT_VIEW_TYPE)) {
+      if (leaf.view instanceof ChatView) leaf.view.personaChanged()
+    }
   }
 
   /** The home page, in a tab of its own: found again if it is open. */

@@ -29,6 +29,9 @@ import { renderHome } from '../../src/views/home/homePage'
 import { renderFlag } from '../../src/ui/flags'
 import { PromptsView } from '../../src/views/prompts/PromptsView'
 import { PromptModal } from '../../src/views/prompts/PromptModal'
+import { PersonasView } from '../../src/views/personas/PersonasView'
+import { createPersona } from '../../src/views/personas/personaVault'
+import { starterPersonas } from '../../src/views/personas/starterPersonas'
 import { DeliveryModal } from '../../src/views/library/DeliveryModal'
 import { PersonPicker } from '../../src/views/contacts/PersonPicker'
 import { DocumentSheet } from '../../src/views/documents/DocumentSheet'
@@ -151,8 +154,8 @@ async function main(): Promise<void> {
       const go = () => {}
       renderHome(
         body,
-        { projects: index.rootRefs().length, contacts: 14, documents: 552, documentsRead: 470, notes: 38, requirements: index.requirementRefs().length, prompts: 12 },
-        { projects: go, chat: go, contacts: go, documents: go, notes: go, requirements: go, prompts: go, settings: go, newProject: go, newNote: go }
+        { projects: index.rootRefs().length, contacts: 14, documents: 552, documentsRead: 470, notes: 38, requirements: index.requirementRefs().length, prompts: 12, personas: 5 },
+        { projects: go, chat: go, contacts: go, documents: go, notes: go, requirements: go, prompts: go, personas: go, settings: go, newProject: go, newNote: go }
       )
       break
     }
@@ -167,6 +170,24 @@ async function main(): Promise<void> {
       await new Promise((resolve) => setTimeout(resolve, 50))
       body.addClass('pm-root', 'pm-prompts')
       const view: any = new PromptsView({} as never, plugin)
+      view.app = app
+      view.containerEl = document.body.createDiv()
+      view.contentEl = body
+      view.registerEvent = () => {}
+      await view.onOpen()
+      break
+    }
+    case 'personas':
+    case 'personas-empty': {
+      if (screen === 'personas') {
+        for (const starter of starterPersonas()) await createPersona(app, 'Chats/Personas', starter.name, starter.draft)
+        settings.chat.persona = 'Chats/Personas/Juriste marchés publics.md'
+      }
+      plugin.activePersona = () => settings.chat.persona || null
+      plugin.usePersona = async () => {}
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      body.addClass('pm-root', 'pm-prompts', 'pm-personas')
+      const view: any = new PersonasView({} as never, plugin)
       view.app = app
       view.containerEl = document.body.createDiv()
       view.contentEl = body

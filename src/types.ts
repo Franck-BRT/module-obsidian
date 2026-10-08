@@ -703,6 +703,10 @@ export interface ChatSettings {
   skillsFolder: string
   /** Where the prompt library writes new prompts; they are found wherever they are. */
   promptsFolder: string
+  /** Where the persona library writes new personas; they are found wherever they are. */
+  personasFolder: string
+  /** The persona the chat answers as, by the path of its note; '' for none. */
+  persona: string
 }
 
 export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
@@ -716,7 +720,9 @@ export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   fileChars: 200000,
   notesFolder: '',
   skillsFolder: 'Chats/Skills',
-  promptsFolder: 'Chats/Prompts'
+  promptsFolder: 'Chats/Prompts',
+  personasFolder: 'Chats/Personas',
+  persona: ''
 }
 
 /** Anything the reader can restyle: an id that never changes, and the look they chose. */

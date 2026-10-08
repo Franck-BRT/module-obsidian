@@ -259,3 +259,28 @@ a.pm-prompt-card-name:hover {
   gap: var(--size-4-2);
   margin-top: var(--size-4-4);
 }
+
+/* The persona the chat answers as: its card marked, and said so. */
+.pm-personas .pm-prompt-card.is-active {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.pm-prompt-chip.is-active {
+  background: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
+  color: var(--text-accent);
+}
+
+.pm-personas-starters {
+  display: inline-block;
+  margin-top: var(--size-4-4);
+  font-size: var(--font-ui-small);
+}
+
+.pm-chat-ready.is-active {
+  color: var(--text-accent);
+}
+
+.pm-prompts-empty > button {
+  margin-top: var(--size-4-3);
+}

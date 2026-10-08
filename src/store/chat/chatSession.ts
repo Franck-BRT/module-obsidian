@@ -30,6 +30,8 @@ export interface ChatTurn {
   files?: string[]
   /** The skills a question was asked with, by the paths of their notes. */
   skills?: string[]
+  /** The persona a question was asked of, by the path of its note. */
+  persona?: string
   /**
    * A question asked of the whole library: the documents and notes whose passages went
    * with it, by path — none when nothing was found.

@@ -263,6 +263,23 @@ describe('the skills a question was asked with', () => {
   })
 })
 
+describe('the persona a question was asked of', () => {
+  const question = {
+    ...turn('user', 'Ce marché est-il régulier ?', 3),
+    skills: ['Chats/Skills/CR.md'],
+    persona: 'Chats/Personas/Juriste marchés publics.md'
+  }
+
+  it('is named after its own mark, read back with the skills, and never taken for the note asked about', () => {
+    expect(turnMarkdown(question, WORDS).split('\n')[0]).toContain(
+      '· 🎭 [[Chats/Personas/Juriste marchés publics|Juriste marchés publics]]'
+    )
+    const [read] = readChatNote(chatNoteContent(META, [question], WORDS)).turns
+    expect(read).toEqual(question)
+    expect(read.context).toBeUndefined()
+  })
+})
+
 describe('the library a question was asked of', () => {
   it('names the sources its passages came from, documents and notes whole, and reads them back', () => {
     const question = {
