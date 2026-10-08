@@ -69,6 +69,7 @@ import { t } from '../../i18n'
 import { safeAsync } from '../../utils'
 import { ragDocState, type RagDocState } from './ragState'
 import { CollectionsModal } from './collections'
+import { DocumentSheet, type DocSheetHost } from './DocumentSheet'
 import {
   dragRows,
   filteredFolder,
@@ -1573,8 +1574,16 @@ export class DocumentsView extends ItemView {
     this.reveal([doc.record])
   }
 
-  private showMenu(doc: LibraryDoc, event: MouseEvent): void {
+  private showMenu(doc: LibraryDoc, event: MouseEvent, fromSheet = false): void {
     const menu = new Menu()
+    if (!fromSheet) {
+      menu.addItem((item) =>
+        item
+          .setTitle(t('sheet.menu'))
+          .setIcon('id-card')
+          .onClick(() => this.openSheet(doc))
+      )
+    }
     menu.addItem((item) =>
       item
         .setTitle(t('library.open'))
@@ -1804,8 +1813,36 @@ export class DocumentsView extends ItemView {
       const control = 'a, button, input, select, textarea, label, .pm-docs-actions, .clickable-icon, .pm-flag'
       if (target.closest(control)) return
       if (activeWindow.getSelection()?.toString()) return
-      void this.openRecord(doc)
+      this.openSheet(doc)
     })
+  }
+
+  /** A document's sheet: all that is known of it, said plainly, its fields and actions at hand. */
+  private openSheet(doc: LibraryDoc): void {
+    const host: DocSheetHost = {
+      plugin: this.plugin,
+      projectTitle: (path) => this.projectTitle(path),
+      languageOf: (one) => this.languageOf(one),
+      openDoc: (one) => this.openDoc(one),
+      openRecord: (one) => this.openRecord(one),
+      editProjects: (one) => this.editProjects(one),
+      editCollections: (one) => new CollectionsModal(this.plugin, [one], () => this.redrawSoon()).open(),
+      pickSource: (one, made) => this.pickSource(one, made),
+      pickPrevious: (one) => this.pickPrevious(one),
+      chooseLanguage: (one) => this.chooseLanguage(one),
+      pickOtherLanguage: (one) => this.pickOtherLanguage(one),
+      fileInRegister: async (one) => {
+        await fileInRegister(this.plugin, one)
+        await this.loadRegister()
+      },
+      showMenu: (one, event) => this.showMenu(one, event, true),
+      remove: (one) => this.confirmRemove(one),
+      renderRegister: (parent, one) => this.renderRegister(parent, one),
+      renderRagChip: (parent, one) => this.renderRagChip(parent, one),
+      ghostFolders: (one) => this.plugin.library.ghostsOf(one).map((entry) => entry.ghost.folder),
+      redraw: () => this.redrawSoon()
+    }
+    new DocumentSheet(host, doc).open()
   }
 
   /** A document's record, in a tab — the one it is open in already, when it is. */

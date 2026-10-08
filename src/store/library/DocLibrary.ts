@@ -291,6 +291,18 @@ export class DocLibrary {
     })
   }
 
+  /** A document's reference, edition or revision, as the reader writes them: what is given replaces, the rest stays. */
+  async setHandFields(doc: LibraryDoc, given: Partial<Record<(typeof HAND_FIELDS)[number], string>>): Promise<void> {
+    const record = this.app.vault.getAbstractFileByPath(doc.record)
+    if (!(record instanceof TFile)) return
+    await this.app.fileManager.processFrontMatter(record, (fields: Record<string, unknown>) => {
+      for (const key of HAND_FIELDS) {
+        const value = given[key]
+        if (value !== undefined) fields[key] = value.trim()
+      }
+    })
+  }
+
   /**
    * What was found of a document's reference, edition and revision written into its record —
    * only where it says none, the reader's own never written over —, and the record marked as

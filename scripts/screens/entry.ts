@@ -31,6 +31,7 @@ import { PromptsView } from '../../src/views/prompts/PromptsView'
 import { PromptModal } from '../../src/views/prompts/PromptModal'
 import { DeliveryModal } from '../../src/views/library/DeliveryModal'
 import { PersonPicker } from '../../src/views/contacts/PersonPicker'
+import { DocumentSheet } from '../../src/views/documents/DocumentSheet'
 import { ContactBook, readContacts } from '../../src/store/contacts'
 import { projectPeople } from '../../src/store/projectPeople'
 import { isDocument } from '../../src/store/Document'
@@ -191,6 +192,37 @@ async function main(): Promise<void> {
     case 'person-picker': {
       const book = new ContactBook(readContacts(app, plugin.settings.peopleFolder))
       new PersonPicker(app, book, projectPeople(book, project), () => {}).open()
+      break
+    }
+    case 'doc-sheet': {
+      plugin.libraryText = {
+        entry: () => ({ state: 'ok', text: 'Le présent cahier des clauses techniques particulières définit les travaux de gros œuvre '.repeat(40), mtime: 0 }),
+        unreadReason: () => null,
+        onChange: () => () => {},
+        reread: async () => {}
+      }
+      plugin.scans = { stateOf: () => null }
+      plugin.referenceFolder = () => 'Référence'
+      const docs = library.docs()
+      const [doc, other, third] = docs
+      await library.setHandFields(doc, { reference: 'B12-CCTP-02', edition: '2', revision: '15' })
+      await library.setClassification(doc, { category: 'CCTP', lot: 'Gros œuvre', issuer: 'BET Structure', tags: ['marché', 'lot02'] })
+      if (other) await library.setPrevious(library.docs().find((one) => one.record === doc.record)!, other)
+      if (third) await library.addSource(library.docs().find((one) => one.record === doc.record)!, third)
+      const fresh = library.docs().find((one) => one.record === doc.record)!
+      const host = {
+        plugin,
+        projectTitle: (p: string) => p.replace(/^.*\//, '').replace(/\.md$/, ''),
+        languageOf: () => 'fr',
+        openDoc: async () => {}, openRecord: async () => {}, editProjects: async () => {}, editCollections: () => {},
+        pickSource: () => {}, pickPrevious: () => {}, chooseLanguage: () => {}, pickOtherLanguage: () => {},
+        fileInRegister: async () => {}, showMenu: () => {}, remove: () => {},
+        renderRegister: (parent: HTMLElement) => { parent.createSpan({ cls: 'pm-docs-reg', text: 'Démo — Bâtiment B12 · B12-CCTP-02 · indice B · Reçu' }) },
+        renderRagChip: (parent: HTMLElement) => { parent.createSpan({ cls: 'pm-docs-chip pm-docs-rag is-indexed', text: 'Indexé pour le chat' }) },
+        ghostFolders: () => ['Marchés'],
+        redraw: () => {}
+      }
+      new DocumentSheet(host as any, fresh).open()
       break
     }
     case 'flags': {

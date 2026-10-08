@@ -869,6 +869,17 @@ describe('DocLibrary', () => {
       expect(content).toContain('reference: ""')
       expect(content).toContain('revision: ""')
     })
+
+    it('writes those the reader gives in the sheet, and leaves the others', async () => {
+      await vault.create(
+        'Bibliothèque/Spec.md',
+        '---\npm-library-doc: true\ntitle: Spec\nedition: 4\nrevision: 2\n---\n'
+      )
+      await library.setHandFields(library.docs()[0], { reference: ' SP-01 ', revision: '' })
+      const [doc] = library.docs()
+      expect(doc).toMatchObject({ reference: 'SP-01', edition: '4' })
+      expect(doc.revision ?? '').toBe('')
+    })
   })
 
   describe('identity found', () => {
