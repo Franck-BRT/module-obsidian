@@ -1663,6 +1663,15 @@ export const fr: Catalog = {
   'sheet.openNote': 'Ouvrir la note du document',
   'sheet.openNoteHint':
     'La note Obsidian derrière cette fiche, pour y écrire vos propres notes ou voir toutes ses propriétés.',
+  'sheet.reveal': 'Afficher dans l’explorateur',
+  'sheet.revealHint': 'Montre le fichier dans l’explorateur de fichiers d’Obsidian, ses dossiers ouverts jusqu’à lui.',
+  'sheet.noExplorer':
+    'L’explorateur de fichiers d’Obsidian n’est pas ouvert : activez-le (module principal « Explorateur de fichiers »).',
+  'sheet.openWindow': 'Ouvrir dans une fenêtre',
+  'sheet.openWindowHint': 'Ouvre le fichier dans une nouvelle fenêtre d’Obsidian, à côté de la principale.',
+  'sheet.openSystem': 'Ouvrir avec l’application',
+  'sheet.openSystemHint':
+    'Obsidian n’affiche pas les fichiers {ext} : le fichier s’ouvre avec l’application de l’ordinateur (Word, Excel…).',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

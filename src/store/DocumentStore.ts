@@ -180,35 +180,77 @@ export class DocumentStore {
   }
 }
 
+/** What Obsidian shows itself — messages too, the plugin reads them —; the rest goes to the system's application. */
+const SHOWN_IN_OBSIDIAN = [
+  'md',
+  'pdf',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'svg',
+  'mp4',
+  'webm',
+  'mp3',
+  'wav',
+  'canvas',
+  'msg',
+  'eml'
+]
+
+/** Whether Obsidian shows this file itself, in a tab or a window. */
+export function shownInObsidian(file: TFile): boolean {
+  return SHOWN_IN_OBSIDIAN.includes(file.extension.toLowerCase())
+}
+
 /**
  * Opens a file where it can be read: in a tab for what Obsidian renders, with the
  * system's own application otherwise. False when neither is possible, as on mobile.
  */
 export async function openDocumentFile(app: App, file: TFile): Promise<boolean> {
-  // Messages too: the plugin reads them itself.
-  const readable = [
-    'md',
-    'pdf',
-    'png',
-    'jpg',
-    'jpeg',
-    'gif',
-    'webp',
-    'svg',
-    'mp4',
-    'webm',
-    'mp3',
-    'wav',
-    'canvas',
-    'msg',
-    'eml'
-  ]
-  if (readable.includes(file.extension.toLowerCase())) {
+  if (shownInObsidian(file)) {
     await app.workspace.getLeaf('tab').openFile(file)
     return true
   }
   const opener = (app as App & { openWithDefaultApp?: (path: string) => Promise<void> }).openWithDefaultApp
   if (!opener) return false
   await opener.call(app, file.path)
+  return true
+}
+
+/**
+ * Opens a file in a window of Obsidian's own, beside the main one — where it shows it; a
+ * format it does not show goes to the system's application. Says where it went; null
+ * when nowhere, as on mobile without an application for it.
+ */
+export async function openInWindow(app: App, file: TFile): Promise<'window' | 'tab' | 'system' | null> {
+  if (shownInObsidian(file)) {
+    try {
+      await app.workspace.openPopoutLeaf().openFile(file)
+      return 'window'
+    } catch {
+      // No windows of its own on mobile: a tab instead.
+      await app.workspace.getLeaf('tab').openFile(file)
+      return 'tab'
+    }
+  }
+  const opener = (app as App & { openWithDefaultApp?: (path: string) => Promise<void> }).openWithDefaultApp
+  if (!opener) return null
+  await opener.call(app, file.path)
+  return 'system'
+}
+
+interface ExplorerView {
+  revealInFolder?: (file: TFile) => void
+}
+
+/** Shows a file in Obsidian's file explorer, its folders opened down to it. False when there is no explorer. */
+export async function revealInExplorer(app: App, file: TFile): Promise<boolean> {
+  const leaf = app.workspace.getLeavesOfType('file-explorer')[0]
+  const view = leaf?.view as ExplorerView | undefined
+  if (!leaf || !view?.revealInFolder) return false
+  await app.workspace.revealLeaf(leaf)
+  view.revealInFolder(file)
   return true
 }

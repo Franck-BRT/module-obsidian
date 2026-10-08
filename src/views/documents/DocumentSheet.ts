@@ -1,8 +1,9 @@
-import { ButtonComponent, Modal, Notice, setIcon, type EventRef } from 'obsidian'
+import { ButtonComponent, Modal, Notice, setIcon, TFile, type EventRef } from 'obsidian'
 import type PMPlugin from '../../main'
 import { formatBytes } from '../../store/email/EmailMessage'
 import { ContactBook, readContacts } from '../../store/contacts'
 import { attachComboList } from '../../ui/comboList'
+import { openInWindow, revealInExplorer, shownInObsidian } from '../../store/DocumentStore'
 import {
   derivedFrom,
   extensionOf,
@@ -379,6 +380,34 @@ export class DocumentSheet extends Modal {
       const where = this.line(body, t('sheet.path'))
       where.createSpan({ cls: 'pm-sheet-path', text: doc.file })
     }
+    const file = doc.file ? this.app.vault.getAbstractFileByPath(doc.file) : null
+    if (!(file instanceof TFile)) return
+    // Where it is, in Obsidian's own explorer; and the file itself, in a window of its own.
+    const actions = body.createDiv('pm-sheet-file-actions')
+    const button = (text: string, icon: string, tip: string, run: () => Promise<void>): void => {
+      const one = new ButtonComponent(actions).setButtonText(text).onClick(safeAsync(run))
+      setIcon(one.buttonEl.createSpan({ cls: 'pm-sheet-button-icon' }), icon)
+      one.buttonEl.prepend(one.buttonEl.lastElementChild ?? one.buttonEl)
+      explain(one.buttonEl, text, tip)
+    }
+    button(t('sheet.reveal'), 'folder-open', t('sheet.revealHint'), async () => {
+      if (!(await revealInExplorer(this.app, file))) {
+        new Notice(t('sheet.noExplorer'))
+        return
+      }
+      // The explorer is behind the sheet: the sheet steps aside for it.
+      this.close()
+    })
+    const shown = shownInObsidian(file)
+    button(
+      shown ? t('sheet.openWindow') : t('sheet.openSystem'),
+      shown ? 'app-window' : 'external-link',
+      shown ? t('sheet.openWindowHint') : t('sheet.openSystemHint', { ext: file.extension.toUpperCase() }),
+      async () => {
+        const where = await openInWindow(this.app, file)
+        if (!where) new Notice(t('library.cannotOpen', { name: file.name }))
+      }
+    )
   }
 
   /** The projects it serves, the collections it is gathered in, its tags. */

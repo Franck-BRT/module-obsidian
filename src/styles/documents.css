@@ -1721,3 +1721,16 @@ a.pm-docs-clear-filters {
   color: var(--text-accent);
   font-weight: var(--font-medium);
 }
+
+.pm-sheet-file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.pm-sheet-file-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
