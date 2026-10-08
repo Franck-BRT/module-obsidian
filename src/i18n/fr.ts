@@ -1675,7 +1675,10 @@ export const fr: Catalog = {
   'folders.tree': 'Dossiers',
   'tip.folder.treeNew':
     'Crée un dossier dans le dossier affiché. Clic droit sur un dossier : y créer un sous-dossier, le renommer ou le supprimer. Glissez des documents sur un dossier pour les y ranger.',
-  'library.referencePicked': { one: 'Passer en référence', other: 'Passer les {count} en référence' },
+  'library.referencePicked': {
+    one: 'Passer {count} document en référence',
+    other: 'Passer {count} documents en référence'
+  },
   'tip.library.referencePicked':
     'Range les documents cochés dans « {reference} », le dossier des documents de référence ; un fantôme de chacun reste dans son ancien dossier, et les registres qui les suivent sont mis à jour.',
   'library.referenceManyDone': {

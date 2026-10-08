@@ -1626,7 +1626,7 @@ export const en = {
   'folders.tree': 'Folders',
   'tip.folder.treeNew':
     'Makes a folder in the folder shown. Right-click a folder to make a folder in it, rename it or delete it. Drag documents onto a folder to file them there.',
-  'library.referencePicked': { one: 'Make reference', other: 'Make the {count} reference' },
+  'library.referencePicked': { one: 'Make {count} document reference', other: 'Make {count} documents reference' },
   'tip.library.referencePicked':
     'Files the ticked documents in “{reference}”, the reference documents’ folder; a ghost of each stays in its former folder, and the registers that follow them are updated.',
   'library.referenceManyDone': {
