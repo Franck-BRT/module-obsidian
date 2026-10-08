@@ -74,7 +74,6 @@ import {
   dragRows,
   filteredFolder,
   FolderPicker,
-  folderOptions,
   renderFolderStrip,
   renderFolderTree,
   type FolderChoice
@@ -376,16 +375,6 @@ export class DocumentsView extends ItemView {
         this.renderBody()
       }
     )
-    // The folders, each under the one it is in; new documents go into the one shown.
-    const folders = this.plugin.library.folders()
-    if (folders.length || this.query.folder) {
-      if (filteredFolder(this.query.folder) && !folders.includes(this.query.folder ?? '')) {
-        folders.push(this.query.folder ?? '')
-      }
-      select(main, folderOptions(folders, t('library.rootFolder')), this.query.folder ?? '', (folder) =>
-        this.openFolder(folder)
-      )
-    }
     // The collections, once there is one: a set of documents shown, and asked, alone.
     const collections = collectionNames(this.plugin.library.docs())
     if (collections.length || this.query.collection) {

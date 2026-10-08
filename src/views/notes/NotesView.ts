@@ -30,8 +30,8 @@ import {
   dragRows,
   filteredFolder,
   FolderPicker,
-  folderOptions,
   renderFolderStrip,
+  renderFolderTree,
   type FolderChoice
 } from '../folderUi'
 import { AT_ROOT } from '../../store/folderFilter'
@@ -58,6 +58,9 @@ export class NotesView extends ItemView {
   private toolbarEl!: HTMLElement
   private filtersEl!: HTMLElement
   private bodyEl!: HTMLElement
+  private treeEl!: HTMLElement
+  /** The folders of the tree unfolded; those above the one shown always are. */
+  private expanded = new Set<string>()
   private redrawTimer: number | null = null
 
   constructor(
@@ -130,7 +133,10 @@ export class NotesView extends ItemView {
     root.addClass('pm-root', 'pm-docs', 'pm-notes')
     this.toolbarEl = root.createDiv('pm-toolbar')
     this.filtersEl = root.createDiv('pm-docs-filters')
-    this.bodyEl = root.createDiv('pm-content pm-docs-body')
+    // The folders on the left, as a file explorer has them; the list on the right.
+    const split = root.createDiv('pm-docs-split')
+    this.treeEl = split.createDiv('pm-docs-tree')
+    this.bodyEl = split.createDiv('pm-content pm-docs-body')
     // A note written, changed, moved or thrown away redraws the list.
     const later = (): void => this.reloadSoon()
     // Only what happens in the library's folder: the vault indexed at start-up, or a note
@@ -272,15 +278,6 @@ export class NotesView extends ItemView {
       this.app.workspace.requestSaveLayout()
       this.renderBody()
     })
-    // The folders, each under the one it is in.
-    const folders = this.plugin.notes.folders()
-    if (folders.length || this.query.folder) {
-      select(folderOptions(folders, t('notes.rootFolder')), this.query.folder ?? '', (folder) => {
-        this.query = { ...this.query, folder }
-        this.shown = PAGE
-        this.renderBody()
-      })
-    }
     const tags = [...new Set(this.entries.flatMap((entry) => entry.tags))].sort((a, b) => a.localeCompare(b))
     if (tags.length || this.query.tag) {
       select(
@@ -310,6 +307,7 @@ export class NotesView extends ItemView {
     this.bodyEl.empty()
     const all = this.entries
     if (!all.length) {
+      this.treeEl.empty()
       const empty = this.bodyEl.createDiv('pm-docs-empty')
       setIcon(empty.createDiv('pm-docs-empty-icon'), 'notebook-pen')
       empty.createDiv({ cls: 'pm-docs-empty-title', text: t('notes.emptyTitle') })
@@ -327,7 +325,10 @@ export class NotesView extends ItemView {
     }
     const paths = new Set(all.map((entry) => entry.path))
     for (const path of this.picked) if (!paths.has(path)) this.picked.delete(path)
+    this.renderTree(all)
+    // The path above the list; the folders themselves, and what is done with them, in the tree.
     renderFolderStrip(this.bodyEl, {
+      pathOnly: true,
       folders: this.plugin.notes.folders(),
       current: this.query.folder ?? '',
       open: (folder) => this.openFolder(folder),
@@ -595,14 +596,52 @@ export class NotesView extends ItemView {
     this.picked.clear()
   }
 
+  /** The library's folders on the left, each with how many notes it holds. */
+  private renderTree(all: NoteEntry[]): void {
+    const current = this.currentFolder()
+    // The folder shown is always in sight: those above it unfolded.
+    const parts = current ? current.split('/') : []
+    for (let at = 1; at < parts.length; at++) this.expanded.add(parts.slice(0, at).join('/'))
+    const counts = new Map<string, number>()
+    for (const entry of all) counts.set(entry.subfolder, (counts.get(entry.subfolder) ?? 0) + 1)
+    renderFolderTree(this.treeEl, {
+      folders: this.plugin.notes.folders(),
+      current: this.query.folder ?? '',
+      counts,
+      total: all.length,
+      expanded: this.expanded,
+      rootLabel: t('notes.rootFolder'),
+      open: (folder) => this.openFolder(folder),
+      toggle: (folder) => {
+        if (this.expanded.has(folder)) this.expanded.delete(folder)
+        else this.expanded.add(folder)
+        this.renderTree(all)
+      },
+      create: (under) => {
+        void this.newFolder(under)
+      },
+      drop: (dropped, folder) => {
+        void this.moveNotes(
+          all.filter((entry) => dropped.includes(entry.path)),
+          folder
+        )
+      },
+      rename: (folder) => {
+        void this.renameFolder(folder)
+      },
+      remove: (folder) => {
+        void this.deleteFolder(folder)
+      }
+    })
+  }
+
   /** The folder on screen, where a new note or folder goes: '' at the root, or when all are shown. */
   private currentFolder(): string {
     return filteredFolder(this.query.folder)
   }
 
   /** A folder made in the one on screen — or at the root —, then shown. */
-  private async newFolder(): Promise<void> {
-    const under = this.currentFolder()
+  private async newFolder(under = this.currentFolder()): Promise<void> {
     const name = await promptText(
       this.app,
       under ? t('folders.newFolderIn', { folder: under }) : t('notes.newFolderTitle'),

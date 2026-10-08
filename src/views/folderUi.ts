@@ -7,21 +7,6 @@ import { explain } from '../ui/explain'
 /** A folder of a library chosen: one it has — '' for its root —, or a new one named. */
 export type FolderChoice = { kind: 'folder'; path: string } | { kind: 'new'; name: string }
 
-/**
- * A folder filter's choices: every folder, the root alone, then the library's folders, each
- * under the one it is in.
- */
-export function folderOptions(folders: string[], rootLabel: string): [string, string][] {
-  return [
-    ['', t('folders.allFolders')],
-    [AT_ROOT, rootLabel],
-    ...folders.map((folder): [string, string] => {
-      const depth = folder.split('/').length - 1
-      return [folder, `${'\u2003'.repeat(depth)}${folder.slice(folder.lastIndexOf('/') + 1)}`]
-    })
-  ]
-}
-
 /** The folder a filter shows, where something new goes: '' at the root, or when all are shown. */
 export function filteredFolder(folder: string | undefined): string {
   return !folder || folder === AT_ROOT ? '' : folder
