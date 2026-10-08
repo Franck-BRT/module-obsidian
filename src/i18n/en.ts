@@ -1256,8 +1256,8 @@ export const en = {
   'chat.mode.words': 'By words (library)',
   'collection.docs.pourLabel': 'Collections',
   'library.onlyInSubfolders': {
-    one: 'No document right in this folder: {count} document is in its folders, above.',
-    other: 'No document right in this folder: {count} documents are in its folders, above.'
+    one: 'No document right in this folder: {count} document is in its folders, on the left.',
+    other: 'No document right in this folder: {count} documents are in its folders, on the left.'
   },
   'library.unreadLink': { one: '{count} not read: see why', other: '{count} not read: see why' },
   'library.unreadAll': 'Show all documents',
@@ -1634,6 +1634,10 @@ export const en = {
     other: '{count} documents filed in “{reference}”; a ghost of each stays in its former folder.'
   },
   'library.referenceAlready': 'These documents are reference documents already.',
+  'notes.onlyInSubfolders': {
+    one: 'No note right in this folder: {count} note is in its folders, on the left.',
+    other: 'No note right in this folder: {count} notes are in its folders, on the left.'
+  },
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

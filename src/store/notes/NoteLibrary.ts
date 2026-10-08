@@ -77,7 +77,7 @@ export interface NoteQuery {
   project: string
   /** '' for any tag. */
   tag: string
-  /** '' for every folder, `AT_ROOT`, or a folder under the library's — its own folders included. */
+  /** '' for every folder, `AT_ROOT`, or a folder under the library's — its own folders only when words are searched. */
   folder?: string
 }
 
@@ -92,7 +92,9 @@ export function matchesNote(
     if (entry.projects.length) return false
   } else if (query.project && !entry.projects.includes(query.project)) return false
   if (query.tag && !entry.tags.some((tag) => fold(tag) === fold(query.tag))) return false
-  if (!inFolder(entry.subfolder, query.folder)) return false
+  // A folder shows what is in it, not what its own folders hold — unless words are searched,
+  // which look below it too.
+  if (!inFolder(entry.subfolder, query.folder, !!query.text.trim())) return false
   const words = fold(query.text).split(/\s+/).filter(Boolean)
   if (!words.length) return true
   const haystack = fold([entry.title, entry.subfolder, ...entry.tags, ...entry.projects.map(projectTitle)].join('\n'))

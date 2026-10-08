@@ -377,7 +377,24 @@ export class NotesView extends ItemView {
     })
     if (this.picked.size) this.renderPickedBar()
     if (!found.length) {
-      this.bodyEl.createDiv({ cls: 'pm-docs-none', text: t('notes.nothingFound') })
+      // A folder holding nothing itself, but its own folders do: said, rather than « nothing ».
+      const folder = this.currentFolder()
+      const below = folder
+        ? all.filter(
+            (entry) =>
+              entry.subfolder.startsWith(`${folder}/`) &&
+              matchesNote(
+                entry,
+                { ...this.query, folder: '' },
+                (path) => this.projectTitle(path),
+                (each) => this.plugin.notes.folded(each)
+              )
+          ).length
+        : 0
+      this.bodyEl.createDiv({
+        cls: 'pm-docs-none',
+        text: below ? t('notes.onlyInSubfolders', { count: below }) : t('notes.nothingFound')
+      })
       return
     }
     const list = this.bodyEl.createDiv('pm-docs-list')

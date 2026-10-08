@@ -1295,8 +1295,8 @@ export const fr: Catalog = {
   'chat.mode.words': 'Par les mots (bibliothèque)',
   'collection.docs.pourLabel': 'Collections',
   'library.onlyInSubfolders': {
-    one: 'Aucun document directement dans ce dossier : {count} document est dans ses sous-dossiers, ci-dessus.',
-    other: 'Aucun document directement dans ce dossier : {count} documents sont dans ses sous-dossiers, ci-dessus.'
+    one: 'Aucun document directement dans ce dossier : {count} document est dans ses sous-dossiers, à gauche.',
+    other: 'Aucun document directement dans ce dossier : {count} documents sont dans ses sous-dossiers, à gauche.'
   },
   'library.unreadLink': { one: '{count} non lu : voir pourquoi', other: '{count} non lus : voir pourquoi' },
   'library.unreadAll': 'Voir tous les documents',
@@ -1686,6 +1686,10 @@ export const fr: Catalog = {
     other: '{count} documents rangés dans « {reference} » ; un fantôme de chacun reste dans son ancien dossier.'
   },
   'library.referenceAlready': 'Ces documents sont déjà des documents de référence.',
+  'notes.onlyInSubfolders': {
+    one: 'Aucune note directement dans ce dossier : {count} note est dans ses sous-dossiers, à gauche.',
+    other: 'Aucune note directement dans ce dossier : {count} notes sont dans ses sous-dossiers, à gauche.'
+  },
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

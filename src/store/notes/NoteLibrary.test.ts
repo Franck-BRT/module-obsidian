@@ -81,16 +81,16 @@ describe('finding a note', () => {
     expect(matchesNote(call, q('setec radier'), title, () => 'le radier est decale')).toBe(true)
   })
 
-  it('filters by folder — its own folders included — or the library’s root alone', () => {
+  it('filters by folder — its own folders only for words searched — or the library’s root alone', () => {
     const root = entry({ subfolder: '' })
     const meetings = entry({ subfolder: 'Réunions' })
     const inner = entry({ subfolder: 'Réunions/2026' })
     const other = entry({ subfolder: 'Réunions bis' })
     const q = (folder: string) => ({ text: '', project: '', tag: '', folder })
-    expect([root, meetings, inner, other].filter((e) => matchesNote(e, q('Réunions'), title))).toEqual([
-      meetings,
-      inner
-    ])
+    expect([root, meetings, inner, other].filter((e) => matchesNote(e, q('Réunions'), title))).toEqual([meetings])
+    // Words searched in a folder: its own folders too.
+    const searched = { ...q('Réunions'), text: 'x' }
+    expect([root, meetings, inner, other].filter((e) => matchesNote(e, searched, title))).toEqual([meetings, inner])
     expect([root, meetings, inner, other].filter((e) => matchesNote(e, q(AT_ROOT), title))).toEqual([root])
     expect([root, meetings].filter((e) => matchesNote(e, q(''), title))).toEqual([root, meetings])
   })
