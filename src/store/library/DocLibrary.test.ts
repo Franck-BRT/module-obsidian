@@ -631,6 +631,24 @@ describe('DocLibrary', () => {
       ])
     })
 
+    it('puts several documents in the folder of reference, one after the other, a ghost of each', async () => {
+      const into = (name: string, folder: string) =>
+        library.pour([outside(name, `texte ${name}`)], { projects: [], move: false, today: TODAY, folder })
+      await into('Glossaire.pdf', 'Normes')
+      await into('Charte.pdf', 'Lot 2')
+      for (const doc of library.docs()) await library.toReference(doc, 'Références')
+      expect(library.docs().map((doc) => doc.folder)).toEqual(['Références', 'Références'])
+      expect(
+        library
+          .ghosts()
+          .map(({ ghost, doc }) => [ghost.folder, doc?.title])
+          .sort()
+      ).toEqual([
+        ['Lot 2', 'Charte'],
+        ['Normes', 'Glossaire']
+      ])
+    })
+
     it('drops a ghost where its document comes, and all of them when it goes', async () => {
       await pourInto('Normes')
       await pourInto('Lot 2')

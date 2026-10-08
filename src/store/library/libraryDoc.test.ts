@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AT_ROOT } from '../folderFilter'
 import {
+  inReference,
   collectionNames,
   familyOf,
   inCollection,
@@ -280,5 +281,14 @@ describe('matchesTitle', () => {
     expect(matchesTitle(one, 'specification B')).toBe(true)
     expect(matchesTitle(one, 'radier')).toBe(false)
     expect(matchesTitle(one, '')).toBe(true)
+  })
+})
+
+describe('the reference folder', () => {
+  it('holds its own folders too, not one only named like it', () => {
+    expect(inReference('Références', 'Références')).toBe(true)
+    expect(inReference('Références/Normes', 'Références')).toBe(true)
+    expect(inReference('Références bis', 'Références')).toBe(false)
+    expect(inReference('', 'Références')).toBe(false)
   })
 })

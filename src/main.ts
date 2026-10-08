@@ -113,7 +113,7 @@ import {
 } from './views/documents/ProjectChooser'
 import { DocLibrary, type PourItem } from './store/library/DocLibrary'
 import { DocTextIndex, folderShelf } from './store/library/DocTextIndex'
-import { collectionNames, isLibraryDoc, likelyPair, type LibraryDoc } from './store/library/libraryDoc'
+import { collectionNames, inReference, isLibraryDoc, likelyPair, type LibraryDoc } from './store/library/libraryDoc'
 import { guessIdentity } from './store/library/docIdentity'
 import { cleanTranscriptIn, TRANSCRIPT_KEY, type Furniture } from './store/chat/ocr'
 import {
@@ -1661,6 +1661,27 @@ export default class PMPlugin extends Plugin {
     const moves = await this.library.toReference(doc, reference)
     const told = await this.followLibraryMoves(moves)
     const parts = [t('library.referenceDone', { title: doc.title, reference })]
+    if (told) parts.push(t('library.registersFollowed', { count: told }))
+    new Notice(parts.join('\n'), 8000)
+  }
+
+  /**
+   * Several documents put among the reference documents at once — those not there yet —,
+   * a ghost of each left where it was, and the registers told once for all of them.
+   */
+  async moveManyToReference(docs: LibraryDoc[]): Promise<void> {
+    const reference = this.referenceFolder()
+    const moving = docs.filter((doc) => !inReference(doc.folder, reference))
+    if (!moving.length) {
+      new Notice(t('library.referenceAlready'))
+      return
+    }
+    const moves = new Map<string, string>()
+    for (const doc of moving) {
+      for (const [from, to] of await this.library.toReference(doc, reference)) moves.set(from, to)
+    }
+    const told = await this.followLibraryMoves(moves)
+    const parts = [t('library.referenceManyDone', { count: moving.length, reference })]
     if (told) parts.push(t('library.registersFollowed', { count: told }))
     new Notice(parts.join('\n'), 8000)
   }

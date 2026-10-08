@@ -430,3 +430,8 @@ export function matchesTitle(doc: Pick<LibraryDoc, 'title'>, query: string): boo
     .filter(Boolean)
     .every((word) => title.includes(word))
 }
+
+/** Whether a library folder is the reference one, or a folder inside it. */
+export function inReference(folder: string, reference: string): boolean {
+  return !!reference && (folder === reference || folder.startsWith(`${reference}/`))
+}

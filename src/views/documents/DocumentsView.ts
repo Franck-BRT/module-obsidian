@@ -24,6 +24,7 @@ import {
   NO_PROJECT,
   NO_VALUE,
   derivedFrom,
+  inReference,
   extensionOf,
   otherLanguages,
   revealQuery,
@@ -986,6 +987,26 @@ export class DocumentsView extends ItemView {
       t('collection.docs.button'),
       t('tip.library.collections')
     )
+    // Put among the reference documents together, a ghost of each left where it was.
+    const reference = this.plugin.referenceFolder()
+    const toReference = all.filter((doc) => this.picked.has(doc.record) && !inReference(doc.folder, reference))
+    if (toReference.length) {
+      tipped(
+        new ButtonComponent(bar)
+          .setButtonText(t('library.referencePicked', { count: toReference.length }))
+          .setIcon('star')
+          .onClick(
+            safeAsync(async () => {
+              await this.plugin.moveManyToReference(toReference)
+              this.picked.clear()
+              this.renderFilters()
+              this.redrawSoon()
+            })
+          ),
+        t('library.referencePicked', { count: toReference.length }),
+        t('tip.library.referencePicked', { reference })
+      )
+    }
     tipped(
       new ButtonComponent(bar)
         .setButtonText(t('folders.moveTo'))
@@ -1581,7 +1602,7 @@ export class DocumentsView extends ItemView {
   /** A document of reference — kept in the folder of reference, or one of its folders —, and its ghosts: a yellow star. */
   private renderReferenceStar(parent: HTMLElement, doc: LibraryDoc): void {
     const reference = this.plugin.referenceFolder()
-    if (doc.folder !== reference && !doc.folder.startsWith(`${reference}/`)) return
+    if (!inReference(doc.folder, reference)) return
     const star = parent.createSpan({ cls: 'pm-docs-reference-star' })
     setIcon(star, 'star')
     explain(star, t('library.referenceStar'), t('library.referenceStarHint', { reference }))
