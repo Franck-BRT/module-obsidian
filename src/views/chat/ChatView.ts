@@ -202,13 +202,13 @@ export class ChatView extends ItemView {
   private searchLibrary = false
   /** How the library is searched: by the vault index — meaning and words — when it is on, or by words in the library. */
   private searchMode: 'auto' | 'words' = 'auto'
-  /** What the search is held to: the whole vault, the whole library, a collection, documents chosen by hand. */
+  /** What the search is held to — the whole vault unless told otherwise —, the whole library, a collection, documents chosen by hand. */
   private searchScope:
     | { kind: 'vault' }
     | { kind: 'all' }
     | { kind: 'collection'; name: string }
     | { kind: 'docs'; files: string[] } = {
-    kind: 'all'
+    kind: 'vault'
   }
   /** What each question was looked up as, when a follow-up was made to stand alone. */
   private lookedUp = new WeakMap<ChatTurn, string>()
@@ -831,7 +831,7 @@ export class ChatView extends ItemView {
           before,
           (path) => this.plugin.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, ''),
           (files) => {
-            this.searchScope = files.length ? { kind: 'docs', files } : { kind: 'all' }
+            this.searchScope = files.length ? { kind: 'docs', files } : { kind: 'vault' }
             this.renderContext()
           }
         ).open()
