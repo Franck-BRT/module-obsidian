@@ -175,7 +175,28 @@ describe('VaultIndex', () => {
 
     const ref = expectDefined(index.projectRef('Projects/Roadmap.md'))
     expect(index.counts(ref)).toEqual({ total: 1, done: 0 })
-    expect(index.dueSummary(ref)).toEqual({ overdue: 1, latestDue: '2020-01-01' })
+    expect(index.dueSummary(ref)).toEqual({ overdue: 1, latestDue: '2020-01-01', late: ['A'] })
+  })
+
+  it('counts as late only work, as the dashboard does — not a lot, a risk, a decision nor a reserve', async () => {
+    const typed = (id: string, title: string, type: string, due: string): string =>
+      `---\npm-task: true\nid: ${id}\nprojectId: p1\ntitle: ${title}\ntype: ${type}\nstatus: todo\ndue: ${due}\n---\n\n`
+    await vault.create('Projects/Roadmap.md', projectNote('p1', 'Roadmap'))
+    await vault.create('Projects/Roadmap_tasks/lot.md', typed('l1', 'Gros œuvre', 'phase', '2030-01-01'))
+    await vault.create('Projects/Roadmap_tasks/old.md', typed('l2', 'Études', 'phase', '2020-01-01'))
+    await vault.create('Projects/Roadmap_tasks/risk.md', typed('r1', 'Retard béton', 'risk', '2020-01-01'))
+    await vault.create('Projects/Roadmap_tasks/dec.md', typed('d1', 'Choix façade', 'decision', '2020-01-01'))
+    await vault.create('Projects/Roadmap_tasks/res.md', typed('s1', 'Fissure', 'reserve', '2020-01-01'))
+    await vault.create('Projects/Roadmap_tasks/a.md', taskNote('t1', 'Coffrage', 'p1', 'done', '2020-01-01'))
+    index.build()
+
+    const ref = expectDefined(index.projectRef('Projects/Roadmap.md'))
+    expect(index.dueSummary(ref)).toEqual({ overdue: 0, latestDue: '2030-01-01', late: [] })
+    expect(index.counts(ref)).toEqual({ total: 1, done: 1 })
+
+    await vault.create('Projects/Roadmap_tasks/b.md', taskNote('t2', 'Ferraillage', 'p1', 'todo', '2020-02-01'))
+    index.build()
+    expect(index.dueSummary(ref)).toMatchObject({ overdue: 1, late: ['Ferraillage'] })
   })
 
   it('reads only the usable names from a hand-edited team member list', async () => {
@@ -264,8 +285,8 @@ describe('VaultIndex', () => {
       index.build()
 
       const root = expectDefined(index.projectRef('A.md'))
-      expect(index.dueSummary(root)).toEqual({ overdue: 1, latestDue: '2020-01-05' })
-      expect(index.rollupDueSummary(root)).toEqual({ overdue: 2, latestDue: '2020-03-01' })
+      expect(index.dueSummary(root)).toEqual({ overdue: 1, latestDue: '2020-01-05', late: ['A1'] })
+      expect(index.rollupDueSummary(root)).toEqual({ overdue: 2, latestDue: '2020-03-01', late: ['A1', 'B › B1'] })
     })
 
     it('follows a parent link added after the build', async () => {

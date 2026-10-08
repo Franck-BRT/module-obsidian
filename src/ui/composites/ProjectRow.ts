@@ -22,6 +22,8 @@ export interface ProjectRowProps {
   tasksDone: number
   tasksTotal: number
   overdue: number
+  /** The late tickets' titles, said over the count. */
+  overdueTitles?: string[]
   members: AvatarPerson[]
   /** Said beside the name when the row is not an ordinary project: a programme. */
   badge?: string
@@ -69,12 +71,13 @@ export class ProjectRow {
     const tasks = this.el.createEl('td', { cls: 'pm-table-cell' })
     tasks.createSpan({ cls: 'pm-project-row-tasks', text: `${props.tasksDone}/${props.tasksTotal}` })
     if (props.overdue > 0) {
-      new Chip(tasks)
+      const chip = new Chip(tasks)
         .setLabel(t('project.overdueCount', { count: props.overdue }))
         .setVariant('solid')
         .setColor('var(--color-red)')
         .setSize('sm')
         .setStrong()
+      if (props.overdueTitles?.length) chip.setTooltip(props.overdueTitles.join('\n'))
     }
 
     const members = this.el.createEl('td', { cls: 'pm-table-cell pm-table-cell-assignees' })

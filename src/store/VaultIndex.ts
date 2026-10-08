@@ -21,6 +21,7 @@ import { projectPathForTaskPath, resolveVaultLink } from './vaultFs'
 import { isRefLink, refToId, refToPath } from './refs'
 import { personKeyer } from './people'
 import { dedupePeople } from '../utils'
+import { isWork } from './workTickets'
 
 export interface ProjectRef {
   path: string
@@ -315,25 +316,27 @@ export class VaultIndex {
   }
 
   /** Tasks past due and the last date anything is due, without loading the project. */
-  dueSummary(ref: ProjectRef): { overdue: number; latestDue: string } {
+  dueSummary(ref: ProjectRef): { overdue: number; latestDue: string; late: string[] } {
     const complete = this.completeStatuses(ref)
     const now = today().toString()
-    let overdue = 0
     let latestDue = ''
-    for (const task of this.countableTasks(ref)) {
+    const late: string[] = []
+    for (const task of this.countableTasks(ref, true)) {
       if (!task.due) continue
       if (task.due > latestDue) latestDue = task.due
-      if (task.due < now && !complete.has(task.status)) overdue++
+      // Late is work late: a lot, a risk, a decision or a reserve is followed where it is.
+      if (isWork(task) && task.due < now && !complete.has(task.status)) late.push(task.title)
     }
-    return { overdue, latestDue }
+    return { overdue: late.length, latestDue, late }
   }
 
-  /** The same across a project and everything under it. */
-  rollupDueSummary(ref: ProjectRef): { overdue: number; latestDue: string } {
+  /** The same across a project and everything under it; a sub-project's late tickets named with it. */
+  rollupDueSummary(ref: ProjectRef): { overdue: number; latestDue: string; late: string[] } {
     const totals = this.dueSummary(ref)
     for (const descendant of this.descendantRefs(ref.path)) {
       const summary = this.dueSummary(descendant)
       totals.overdue += summary.overdue
+      totals.late.push(...summary.late.map((title) => `${descendant.title} › ${title}`))
       if (summary.latestDue > totals.latestDue) totals.latestDue = summary.latestDue
     }
     return totals
@@ -384,11 +387,12 @@ export class VaultIndex {
   }
 
   /** One task per id, archived ones left out, so counts match what the project's views show. */
-  private countableTasks(ref: ProjectRef): TaskRef[] {
+  /** A project's tickets as they are counted: not archived, once each — and only its work, unless all are asked for. */
+  private countableTasks(ref: ProjectRef, all = false): TaskRef[] {
     const seen = new Set<string>()
     const tasks: TaskRef[] = []
     for (const task of this.taskRefs(ref.path)) {
-      if (task.archived || seen.has(task.id)) continue
+      if (task.archived || seen.has(task.id) || (!all && !isWork(task))) continue
       seen.add(task.id)
       tasks.push(task)
     }

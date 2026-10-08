@@ -17,6 +17,7 @@ import { renderTimeChip } from '../ui/composites/timeChip'
 import { renderGlyph } from '../ui/composites/properties'
 import { t } from '../i18n'
 import { explain } from '../ui/explain'
+import { isWork } from '../store/workTickets'
 
 export const PM_PROJECT_OVERVIEW_VIEW_TYPE = 'pm-project-overview'
 
@@ -388,6 +389,11 @@ function summarize(tasks: Task[], config: ResolvedProjectConfig): Rollup {
   const now = today()
   const rollup: Rollup = { total: 0, done: 0, overdue: 0, logged: 0, estimate: 0, latestDue: '' }
   for (const task of tasks) {
+    if (!isWork(task)) {
+      // A lot's date is the project's too, though it is not work to count.
+      if (task.due > rollup.latestDue && parsePlainDate(task.due)) rollup.latestDue = task.due
+      continue
+    }
     rollup.total++
     rollup.logged += totalLoggedHours(task)
     rollup.estimate += task.timeEstimate ?? 0

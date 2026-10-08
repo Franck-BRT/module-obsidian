@@ -337,7 +337,7 @@ function renderRows(ctx: ProjectListContext, tbody: HTMLElement, refs: ProjectRe
     const children = index.childRefs(ref.path)
     const collapsed = ctx.plugin.isProjectCollapsed(ref.path)
     const { total, done } = children.length ? index.rollupCounts(ref) : index.counts(ref)
-    const { overdue, latestDue } = children.length ? index.rollupDueSummary(ref) : index.dueSummary(ref)
+    const { overdue, latestDue, late } = children.length ? index.rollupDueSummary(ref) : index.dueSummary(ref)
     const isLastChild = i === refs.length - 1
 
     new ProjectRow(tbody, {
@@ -352,6 +352,7 @@ function renderRows(ctx: ProjectListContext, tbody: HTMLElement, refs: ProjectRe
       tasksDone: done,
       tasksTotal: total,
       overdue,
+      overdueTitles: late,
       members: linkedRefs(ctx.plugin.app, ref.teamMembers, ref.path),
       ...(ref.program ? { badge: `${t('program.one')} · ${t('count.projectsIn', { count: children.length })}` } : {}),
       dueLabel: formatDateShort(latestDue),
