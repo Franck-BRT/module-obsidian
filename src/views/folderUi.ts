@@ -119,6 +119,11 @@ export interface FolderStrip {
   drop: (paths: string[], folder: string) => void
   rename: (folder: string) => void
   remove: (folder: string) => void
+  /**
+   * The path alone, when a folder tree beside the list does the rest: no folders to open
+   * from here, nor buttons to rename or take one out.
+   */
+  pathOnly?: boolean
 }
 
 /**
@@ -148,6 +153,9 @@ export function renderFolderStrip(parent: HTMLElement, strip: FolderStrip): void
       el.createSpan({ cls: 'pm-folder-sep', text: '›' })
       crumb(name, parts.slice(0, at + 1).join('/'), at === parts.length - 1 ? 'is-current' : '')
     })
+  }
+  if (strip.pathOnly) return
+  if (current) {
     const rename = el.createEl('button', {
       cls: 'clickable-icon pm-folder-action',
       attr: { 'aria-label': t('folders.rename', { folder: current }) }

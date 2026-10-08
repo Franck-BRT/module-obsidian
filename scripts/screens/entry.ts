@@ -250,7 +250,7 @@ async function main(): Promise<void> {
       const current = 'Marchés/Lot 02 Gros œuvre'
       const noop = () => {}
       renderFolderTree(tree, { folders, current, counts, total: 72, expanded: new Set(['Marchés', 'Marchés/Lot 02 Gros œuvre']), reference: 'Référence', rootLabel: 'Racine de la bibliothèque', open: noop, toggle: noop, create: noop, drop: noop, rename: noop, remove: noop })
-      renderFolderStrip(list, { folders, current, open: noop, drop: noop, rename: noop, remove: noop })
+      renderFolderStrip(list, { pathOnly: true, folders, current, open: noop, drop: noop, rename: noop, remove: noop })
       for (const title of ['CCTP Lot 02 — Gros œuvre', 'Note de calcul des fondations', 'Plan de coffrage du radier']) {
         const row = list.createDiv('pm-docs-row')
         row.createDiv({ cls: 'pm-docs-main', text: title })

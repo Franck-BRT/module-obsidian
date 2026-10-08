@@ -803,7 +803,9 @@ export class DocumentsView extends ItemView {
       return
     }
     this.renderTree(all)
+    // The path above the list; the folders themselves, and what is done with them, in the tree.
     renderFolderStrip(this.bodyEl, {
+      pathOnly: true,
       folders: this.plugin.library.folders(),
       current: this.query.folder ?? '',
       open: (folder) => this.openFolder(folder),
