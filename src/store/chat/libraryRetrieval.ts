@@ -452,3 +452,22 @@ export function lookUp(
   if (found.length || questions.length < 2) return found
   return retrieve(sources, `${questions[questions.length - 2]}\n${last}`, options)
 }
+
+/**
+ * A note of the vault outside the notes library — a project, a ticket, a conversation, a
+ * note anywhere —, as the word search looks through it when the whole vault is asked.
+ */
+export function vaultNoteSource(
+  spec: { path: string; title: string; projects: string[] },
+  text: string,
+  kind: string,
+  projectTitle: (path: string) => string
+): LibrarySource {
+  return {
+    path: spec.path,
+    title: spec.title,
+    kind: 'note',
+    detail: [kind, ...spec.projects.map(projectTitle)].filter(Boolean).join(' · '),
+    text
+  }
+}

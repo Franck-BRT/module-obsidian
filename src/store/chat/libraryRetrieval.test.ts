@@ -9,6 +9,7 @@ import {
   sectionRefs,
   sectionText,
   sourceLink,
+  vaultNoteSource,
   type LibrarySource
 } from './libraryRetrieval'
 
@@ -263,5 +264,24 @@ describe('a section the question does not number', () => {
     expect(found.passages[0]).toBe(
       '### 6.3.5 ESSAIS DE TYPE 1\n\nLes essais de type 1 qualifient la conception.\n\nCritères d’acceptation : aucun claquage.'
     )
+  })
+})
+
+describe('a note of the vault searched by its words', () => {
+  it('is a source with its kind and its projects, found by what it says', () => {
+    const source = vaultNoteSource(
+      { path: 'Projets/B12/Tickets/Coffrage.md', title: 'Coffrage du radier', projects: ['Projets/B12/B12.md'] },
+      'Le coffrage du radier est décalé de deux semaines.',
+      'Ticket',
+      () => 'Bâtiment B12'
+    )
+    expect(source).toEqual({
+      path: 'Projets/B12/Tickets/Coffrage.md',
+      title: 'Coffrage du radier',
+      kind: 'note',
+      detail: 'Ticket · Bâtiment B12',
+      text: 'Le coffrage du radier est décalé de deux semaines.'
+    })
+    expect(retrieve([source], 'radier décalé').map((found) => found.source.path)).toEqual([source.path])
   })
 })

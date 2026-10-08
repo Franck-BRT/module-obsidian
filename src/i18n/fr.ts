@@ -1271,7 +1271,7 @@ export const fr: Catalog = {
   'collection.docs.filterOn': 'Afficher les documents de la collection « {name} ».',
   'chat.scope.title': 'Rechercher dans',
   'tip.chat.scope':
-    'Limite la recherche à une collection de documents, ou à des documents choisis à la main. « Toute la bibliothèque » cherche partout (et, avec l’index, dans tout le coffre).',
+    '« Tout le coffre » cherche dans toutes les notes du coffre (projets, tickets, conversations, notes) et dans les documents de la bibliothèque. « Toute la bibliothèque » se limite aux documents et aux notes de la bibliothèque. On peut aussi se limiter à une collection, ou à des documents choisis à la main. Les dossiers exclus dans les paramètres de l’index sont ignorés.',
   'chat.scope.all': 'Toute la bibliothèque',
   'chat.scope.collection': 'Collection : {name}',
   'chat.scope.pick': 'Choisir des documents…',
@@ -1290,9 +1290,9 @@ export const fr: Catalog = {
   },
   'chat.mode.title': 'Mode de recherche',
   'tip.chat.mode':
-    'Par l’index : la recherche par le sens et par les mots dans l’index du coffre. Par les mots : la recherche dans la bibliothèque seule, par les mots de la question, les numéros de paragraphe et les titres de section.',
+    'Par l’index : la recherche par le sens et par les mots, dans l’index du coffre. Par les mots : la recherche par les mots de la question, les numéros de paragraphe et les titres de section, sans index.',
   'chat.mode.index': 'Par l’index (sens et mots)',
-  'chat.mode.words': 'Par les mots (bibliothèque)',
+  'chat.mode.words': 'Par les mots',
   'collection.docs.pourLabel': 'Collections',
   'library.onlyInSubfolders': {
     one: 'Aucun document directement dans ce dossier : {count} document est dans ses sous-dossiers, à gauche.',
@@ -1690,6 +1690,7 @@ export const fr: Catalog = {
     one: 'Aucune note directement dans ce dossier : {count} note est dans ses sous-dossiers, à gauche.',
     other: 'Aucune note directement dans ce dossier : {count} notes sont dans ses sous-dossiers, à gauche.'
   },
+  'chat.scope.vault': 'Tout le coffre',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

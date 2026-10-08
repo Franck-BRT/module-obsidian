@@ -128,7 +128,7 @@ import { askClassification, GUESS_CATEGORY, type ClassifyChoices } from './views
 import { askScanOptions } from './views/documents/scanOptions'
 import { proposeRegisterMatches } from './views/documents/matchRegister'
 import { followMoves } from './store/library/fileInRegister'
-import { adapterStorage, RagIndex } from './store/rag/RagIndex'
+import { adapterStorage, RagIndex, type RagSourceSpec } from './store/rag/RagIndex'
 import { NOTE_UNDO_FILE, UndoLog, type NoteUndo } from './store/chat/chatUndo'
 import { ScanQueue, ScanStopped } from './store/library/ScanQueue'
 import { ScanProgress } from './store/library/scanProgress'
@@ -1516,6 +1516,21 @@ export default class PMPlugin extends Plugin {
     } finally {
       this.fillingIdentities = false
     }
+  }
+
+  /**
+   * The vault's notes as the vault search sees them — projects, tickets, conversations,
+   * notes —, the library's documents and the folders left out aside: what a word search of
+   * the whole vault looks through besides the library.
+   */
+  vaultNoteSpecs(): RagSourceSpec[] {
+    return vaultSources({
+      app: this.app,
+      library: this.library,
+      texts: this.libraryText,
+      excluded: excludedFolders(this.settings.rag.exclude),
+      words: ragFilingWords()
+    }).filter((spec) => spec.kind !== 'document')
   }
 
   /** The library's folder for documents many folders need: the reader's, or the default. */

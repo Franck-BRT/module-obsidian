@@ -100,6 +100,7 @@ import {
   documentSource,
   lookUp,
   noteSource,
+  vaultNoteSource,
   passagesOf,
   retrievalContext,
   type LibrarySource
@@ -201,8 +202,12 @@ export class ChatView extends ItemView {
   private searchLibrary = false
   /** How the library is searched: by the vault index — meaning and words — when it is on, or by words in the library. */
   private searchMode: 'auto' | 'words' = 'auto'
-  /** What the search is held to: the whole library, a collection, documents chosen by hand. */
-  private searchScope: { kind: 'all' } | { kind: 'collection'; name: string } | { kind: 'docs'; files: string[] } = {
+  /** What the search is held to: the whole vault, the whole library, a collection, documents chosen by hand. */
+  private searchScope:
+    | { kind: 'vault' }
+    | { kind: 'all' }
+    | { kind: 'collection'; name: string }
+    | { kind: 'docs'; files: string[] } = {
     kind: 'all'
   }
   /** What each question was looked up as, when a follow-up was made to stand alone. */
@@ -425,7 +430,7 @@ export class ChatView extends ItemView {
       const byIndex = this.byIndex()
       row.createSpan({
         cls: 'pm-chat-context-name',
-        text: byIndex ? t('chat.vaultOn') : t('chat.libraryOn'),
+        text: this.searchScope.kind === 'vault' ? t('chat.vaultOn') : t('chat.libraryOn'),
         attr: { title: byIndex ? t('chat.vaultOnDesc') : t('chat.libraryOnDesc') }
       })
       this.renderSearchChoices(row)
@@ -789,10 +794,10 @@ export class ChatView extends ItemView {
     return this.searchMode === 'auto' && this.plugin.ragIndexer.ready
   }
 
-  /** The files the search is held to; null for the whole library — and, by the index, the whole vault. */
+  /** The files the search is held to; null for the whole library — or the whole vault. */
   private scopeFiles(): string[] | null {
     const scope = this.searchScope
-    if (scope.kind === 'all') return null
+    if (scope.kind === 'all' || scope.kind === 'vault') return null
     if (scope.kind === 'docs') return scope.files
     return this.plugin.library
       .docs()
@@ -803,6 +808,7 @@ export class ChatView extends ItemView {
   /** Where the search looks — all, a collection, documents chosen — and, with the index on, how. */
   private renderSearchChoices(row: HTMLElement): void {
     const scope = row.createEl('select', { cls: 'dropdown pm-chat-scope' })
+    scope.createEl('option', { value: 'vault', text: t('chat.scope.vault') })
     scope.createEl('option', { value: 'all', text: t('chat.scope.all') })
     const names = collectionNames(this.plugin.library.docs())
     for (const name of names) {
@@ -814,7 +820,7 @@ export class ChatView extends ItemView {
       text: chosen ? t('chat.scope.docs', { count: chosen }) : t('chat.scope.pick')
     })
     const current = this.searchScope
-    scope.value = current.kind === 'all' ? 'all' : current.kind === 'docs' ? 'docs' : `c:${current.name}`
+    scope.value = current.kind === 'collection' ? `c:${current.name}` : current.kind
     explain(scope, t('chat.scope.title'), t('tip.chat.scope'))
     scope.addEventListener('change', () => {
       const value = scope.value
@@ -831,7 +837,11 @@ export class ChatView extends ItemView {
         ).open()
         return
       }
-      this.searchScope = value.startsWith('c:') ? { kind: 'collection', name: value.slice(2) } : { kind: 'all' }
+      this.searchScope = value.startsWith('c:')
+        ? { kind: 'collection', name: value.slice(2) }
+        : value === 'vault'
+          ? { kind: 'vault' }
+          : { kind: 'all' }
       this.renderContext()
     })
     if (!this.plugin.ragIndexer.ready) return
@@ -882,6 +892,30 @@ export class ChatView extends ItemView {
   }
 
   /**
+   * What the index search is held to: nothing for the whole vault; the library's documents
+   * and notes for the whole library; else the files chosen.
+   */
+  private async indexScope(only: string[] | null): Promise<string[] | null> {
+    if (only || this.searchScope.kind === 'vault') return only
+    const docs = this.plugin.library
+      .docs()
+      .map((doc) => doc.file)
+      .filter(Boolean)
+    return [...docs, ...(await this.plugin.notes.entries()).map((entry) => entry.path)]
+  }
+
+  /** The vault's notes the libraries do not hold, with what they say, for a word search of the whole vault. */
+  private async vaultNotes(library: LibrarySource[]): Promise<LibrarySource[]> {
+    const known = new Set(library.map((source) => source.path))
+    const projectTitle = (path: string): string =>
+      this.plugin.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, '')
+    const specs = this.plugin.vaultNoteSpecs().filter((spec) => !known.has(spec.path))
+    return Promise.all(
+      specs.map(async (spec) => vaultNoteSource(spec, await spec.read(), t(`rag.kind.${spec.kind}`), projectTitle))
+    )
+  }
+
+  /**
    * The passages that answer a question, looked up now, the sources they came from kept
    * with it: in the whole vault when its index is on and holds something, in the two
    * libraries by their words otherwise.
@@ -890,10 +924,11 @@ export class ChatView extends ItemView {
     const only = this.scopeFiles()
     if (this.byIndex()) {
       await this.plugin.ragIndex.load(this.plugin.settings.llm.modelEmbed.trim())
-      if (this.plugin.ragIndex.passageCount) return this.vaultBlock(question, only)
+      if (this.plugin.ragIndex.passageCount) return this.vaultBlock(question, await this.indexScope(only))
     }
     // Held to some documents, the search looks through those alone: the notes are left.
-    const all = await this.librarySources()
+    const library = await this.librarySources()
+    const all = this.searchScope.kind === 'vault' ? [...library, ...(await this.vaultNotes(library))] : library
     const sources = only ? all.filter((source) => source.kind === 'document' && only.includes(source.path)) : all
     const asked = this.turns.filter((turn) => turn.role === 'user' && !turn.failed)
     const upTo = asked.slice(0, asked.indexOf(question) + 1).map((turn) => turn.content)

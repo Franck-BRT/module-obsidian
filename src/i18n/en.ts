@@ -1232,8 +1232,8 @@ export const en = {
   'collection.docs.filterOn': 'Show the documents of the collection « {name} ».',
   'chat.scope.title': 'Search in',
   'tip.chat.scope':
-    'Holds the search to a collection of documents, or to documents chosen by hand. « Whole library » searches everywhere (and, with the index, the whole vault).',
-  'chat.scope.all': 'Whole library',
+    '“The whole vault” searches every note of the vault (projects, tickets, conversations, notes) and the library’s documents. “The whole library” keeps to the library’s documents and notes. The search can also keep to a collection, or to documents picked by hand. Folders left out in the index settings are skipped.',
+  'chat.scope.all': 'The whole library',
   'chat.scope.collection': 'Collection: {name}',
   'chat.scope.pick': 'Choose documents…',
   'chat.scope.docs': { one: '{count} document chosen…', other: '{count} documents chosen…' },
@@ -1251,9 +1251,9 @@ export const en = {
   },
   'chat.mode.title': 'Search mode',
   'tip.chat.mode':
-    'By the index: searching by meaning and by words in the vault index. By words: searching the library alone, by the question’s words, section numbers and section headings.',
+    'By the index: the search by meaning and by words, in the vault index. By words: the search by the question’s words, paragraph numbers and section titles, without the index.',
   'chat.mode.index': 'By the index (meaning and words)',
-  'chat.mode.words': 'By words (library)',
+  'chat.mode.words': 'By words',
   'collection.docs.pourLabel': 'Collections',
   'library.onlyInSubfolders': {
     one: 'No document right in this folder: {count} document is in its folders, on the left.',
@@ -1638,6 +1638,7 @@ export const en = {
     one: 'No note right in this folder: {count} note is in its folders, on the left.',
     other: 'No note right in this folder: {count} notes are in its folders, on the left.'
   },
+  'chat.scope.vault': 'The whole vault',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',
