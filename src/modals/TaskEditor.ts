@@ -27,6 +27,8 @@ import { renderDecisionPanel } from './DecisionPanel'
 import { isDecision } from '../store/decision'
 import { isReserve } from '../store/reserve'
 import { renderReservePanel } from './ReservePanel'
+import { renderChangePanel } from './ChangePanel'
+import { isChange } from '../store/change'
 import { isDocument } from '../store/Document'
 import { renderSubtasksPanel } from './SubtasksPanel'
 import { NoteLinkSuggest } from './NoteLinkSuggest'
@@ -620,6 +622,15 @@ export class TaskEditor {
 
     if (isReserve(this.task)) {
       renderReservePanel(body, {
+        task: this.task,
+        project: this.project,
+        plugin: this.plugin,
+        rerender: () => this.render()
+      })
+    }
+
+    if (isChange(this.task)) {
+      renderChangePanel(body, {
         task: this.task,
         project: this.project,
         plugin: this.plugin,

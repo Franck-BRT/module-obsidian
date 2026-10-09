@@ -29,6 +29,7 @@ export const UNDO_FIELDS = [
   'risk',
   'decision',
   'reserve',
+  'change',
   'budget'
 ] as const
 export type UndoField = (typeof UNDO_FIELDS)[number]

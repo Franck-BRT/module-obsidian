@@ -35,7 +35,7 @@ export interface CriticalPath {
   path: Task[]
 }
 
-const NOT_WORK = new Set(['meeting', 'risk', 'decision', 'reserve'])
+const NOT_WORK = new Set(['meeting', 'risk', 'decision', 'reserve', 'change'])
 
 /** Whether a ticket is work that can sit on the path: dated, open, not a phase nor a record. */
 function charted(task: Task, statuses: StatusConfig[]): boolean {

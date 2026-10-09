@@ -87,6 +87,7 @@ export const TASK_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'risk',
   'decision',
   'reserve',
+  'change',
   'budget',
   'collapsed'
 ])
@@ -262,6 +263,13 @@ export function buildTaskFrontmatter(
     fm.decision = { state, date, decidedBy, rationale, affects: [...affects] }
   }
   if (task.reserve) fm.reserve = { ...task.reserve, photos: [...task.reserve.photos], chases: [...task.reserve.chases] }
+  if (task.change) {
+    fm.change = {
+      ...task.change,
+      affected: [...task.change.affected],
+      rounds: task.change.rounds.map((round) => ({ ...round }))
+    }
+  }
   if (task.budget) {
     const { amount, toCommit, commitments, invoices } = task.budget
     fm.budget = {

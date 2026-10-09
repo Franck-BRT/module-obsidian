@@ -27,6 +27,7 @@ export const VIEW_MODES = [
   'risks',
   'decisions',
   'reserves',
+  'changes',
   'budget',
   'workload',
   'dashboard'
@@ -46,6 +47,7 @@ export type TaskType =
   | 'risk'
   | 'decision'
   | 'reserve'
+  | 'change'
 
 /**
  * Every kind of ticket, in the order they are offered.
@@ -64,7 +66,8 @@ const TASK_TYPE_ORDER = {
   meeting: true,
   risk: true,
   decision: true,
-  reserve: true
+  reserve: true,
+  change: true
 } satisfies Record<TaskType, true>
 
 export const TASK_TYPES = Object.keys(TASK_TYPE_ORDER) as TaskType[]
@@ -297,6 +300,50 @@ export interface TaskReserve {
   chases: string[]
 }
 
+/** A round of the local change board: 0 the request, 1 the proposal, 2 what was carried out. */
+export type ChangeRoundNumber = 0 | 1 | 2
+
+/** What the board decides at a round: on to the next, refused, to its next sitting, back to be completed. */
+export type ChangeDecision = 'accepted' | 'rejected' | 'postponed' | 'incomplete'
+
+/** One decision of the board, on the day it sat. */
+export interface ChangeRound {
+  round: ChangeRoundNumber
+  decision: ChangeDecision
+  /** YYYY-MM-DD. */
+  date: string
+  comment: string
+}
+
+/**
+ * A configuration change as it is controlled: the request (DM) — who asks, why, what —,
+ * the proposal (PM) — how, and what it does to the design, the cost and the schedule —,
+ * what it touches, and the board's decisions, round by round. Its subject is the
+ * ticket's title; who carries the proposal, its assignee.
+ */
+export interface TaskChange {
+  number: string
+  /** Who asks for it: a person, a company. */
+  origin: string
+  class: 'major' | 'minor'
+  /** Why it is asked. */
+  reason: string
+  /** What is asked: the request. */
+  request: string
+  /** The day it was sent to the board, YYYY-MM-DD; '' while it is being written. */
+  submittedOn: string
+  /** How it would be done: the proposal. */
+  proposal: string
+  impactTechnical: string
+  impactCost: string
+  impactSchedule: string
+  /** The documents, requirements, parts it changes, as written. */
+  affected: string[]
+  rounds: ChangeRound[]
+  /** Taken back by whoever asked for it. */
+  withdrawn: boolean
+}
+
 /** A ticket's dates in the reference plan; '' where it had none. */
 export interface TaskBaseline {
   start: string
@@ -364,6 +411,8 @@ export interface Task {
   decision?: TaskDecision
   /** Set on a ticket of type `reserve`: its number, where it is, how serious, where it stands. */
   reserve?: TaskReserve
+  /** Set on a ticket of type `change`: the request, the proposal, and the board's decisions. */
+  change?: TaskChange
   /** Set on a phase: its budget, what is committed and invoiced against it. */
   budget?: TaskBudget
   /** UI state, persisted per project in plugin settings (data.json), not in frontmatter. */
@@ -1116,7 +1165,8 @@ export const DEFAULT_TYPES: TypeConfig[] = [
   { id: 'meeting', label: 'Meeting', color: '#db2777', icon: 'users' },
   { id: 'risk', label: 'Risk', color: '#c2410c', icon: 'shield-alert' },
   { id: 'decision', label: 'Decision', color: '#0f766e', icon: 'gavel' },
-  { id: 'reserve', label: 'Reserve', color: '#be123c', icon: 'clipboard-x' }
+  { id: 'reserve', label: 'Reserve', color: '#be123c', icon: 'clipboard-x' },
+  { id: 'change', label: 'Change', color: '#4338ca', icon: 'git-pull-request-arrow' }
 ]
 
 /**
@@ -1166,7 +1216,8 @@ export function seedTypes(): TypeConfig[] {
     meeting: t('task.type.meeting'),
     risk: t('task.type.risk'),
     decision: t('task.type.decision'),
-    reserve: t('task.type.reserve')
+    reserve: t('task.type.reserve'),
+    change: t('task.type.change')
   }
   return DEFAULT_TYPES.map((type) => ({ ...type, label: labels[type.id] ?? type.label }))
 }

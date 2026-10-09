@@ -2,6 +2,7 @@ import { ButtonComponent, ExtraButtonComponent, ItemView, Menu, Scope, Workspace
 import { RisksView } from './risks/RisksView'
 import { DecisionsView } from './decisions/DecisionsView'
 import { ReservesView } from './reserves/ReservesView'
+import { ChangesView } from './changes/ChangesView'
 import { BudgetView } from './budget/BudgetView'
 import { WorkloadView } from './workload/WorkloadView'
 import type PMPlugin from '../main'
@@ -529,6 +530,7 @@ export class ProjectView extends ItemView {
         { id: 'risks', icon: 'shield-alert', label: t('view.risks'), help: t('tip.view.risks') },
         { id: 'decisions', icon: 'gavel', label: t('view.decisions'), help: t('tip.view.decisions') },
         { id: 'reserves', icon: 'clipboard-x', label: t('view.reserves'), help: t('tip.view.reserves') },
+        { id: 'changes', icon: 'git-pull-request-arrow', label: t('view.changes'), help: t('tip.view.changes') },
         { id: 'budget', icon: 'euro', label: t('view.budget'), help: t('tip.view.budget') },
         { id: 'workload', icon: 'calendar-range', label: t('view.workload'), help: t('tip.view.workload') },
         { id: 'dashboard', icon: 'gauge', label: t('kpi.title'), help: t('tip.view.dashboard') }
@@ -949,6 +951,9 @@ export class ProjectView extends ItemView {
         break
       case 'reserves':
         this.subview = new ReservesView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)
+        break
+      case 'changes':
+        this.subview = new ChangesView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)
         break
       case 'budget':
         this.subview = new BudgetView(this.bodyEl, scope, this.plugin, () => this.refreshProject(), this.filter)

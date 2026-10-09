@@ -84,7 +84,8 @@ describe('a palette saved before a kind of ticket existed', () => {
       'meeting',
       'risk',
       'decision',
-      'reserve'
+      'reserve',
+      'change'
     ])
     expect(DEFAULT_TYPES.map((type) => type.id).sort()).toEqual([...TASK_TYPES].sort())
   })

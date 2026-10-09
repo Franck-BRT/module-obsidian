@@ -28,6 +28,8 @@ export function viewModeLabel(mode: ViewMode): string {
       return t('view.decisions')
     case 'reserves':
       return t('view.reserves')
+    case 'changes':
+      return t('view.changes')
     case 'budget':
       return t('view.budget')
     case 'workload':

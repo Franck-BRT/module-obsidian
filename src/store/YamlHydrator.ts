@@ -219,6 +219,50 @@ function readReserve(raw: unknown): Task['reserve'] {
   }
 }
 
+/** A change — request, proposal, the board's rounds —, as written in its note; none when it is not there. */
+function readChange(raw: unknown): Task['change'] {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  const text = (value: unknown): string =>
+    typeof value === 'string' ? value : typeof value === 'number' ? String(value) : ''
+  const day = (value: unknown): string => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '')
+  const list = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((one): one is string => typeof one === 'string' && !!one.trim()) : []
+  const decisions = ['accepted', 'rejected', 'postponed', 'incomplete']
+  const rounds = Array.isArray(r.rounds)
+    ? r.rounds.flatMap((one): NonNullable<Task['change']>['rounds'] => {
+        if (!one || typeof one !== 'object') return []
+        const o = one as Record<string, unknown>
+        const round = Number(o.round)
+        if (round !== 0 && round !== 1 && round !== 2) return []
+        if (typeof o.decision !== 'string' || !decisions.includes(o.decision)) return []
+        return [
+          {
+            round,
+            decision: o.decision as NonNullable<Task['change']>['rounds'][number]['decision'],
+            date: day(o.date),
+            comment: text(o.comment)
+          }
+        ]
+      })
+    : []
+  return {
+    number: text(r.number),
+    origin: text(r.origin),
+    class: r.class === 'major' ? 'major' : 'minor',
+    reason: text(r.reason),
+    request: text(r.request),
+    submittedOn: day(r.submittedOn),
+    proposal: text(r.proposal),
+    impactTechnical: text(r.impactTechnical),
+    impactCost: text(r.impactCost),
+    impactSchedule: text(r.impactSchedule),
+    affected: list(r.affected),
+    rounds,
+    withdrawn: r.withdrawn === true
+  }
+}
+
 /** An amount as people write it: « 12 500,50 € », « 12,500.50 », 12500.5; null when it is none. */
 export function parseAmount(raw: unknown): number | null {
   if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null
@@ -328,6 +372,7 @@ export function mapRawToTask(r: Record<string, unknown>, overrides?: Partial<Tas
     risk: readRisk(r.risk),
     decision: readDecision(r.decision),
     reserve: readReserve(r.reserve),
+    change: readChange(r.change),
     budget: readBudget(r.budget),
     collapsed: r.collapsed === true,
     createdAt: (r.createdAt as string) ?? new Date().toISOString(),

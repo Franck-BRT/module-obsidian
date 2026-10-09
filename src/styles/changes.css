@@ -1,0 +1,438 @@
+/* Configuration changes: requests (DM), proposals (PM), the board's rounds (CLM). */
+.pm-changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3);
+  padding: var(--size-4-3) var(--size-4-4) var(--size-4-6);
+}
+
+.pm-changes-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--size-4-3);
+}
+
+.pm-changes-titles {
+  flex: 1;
+  min-width: 260px;
+}
+
+.pm-changes-title {
+  margin: 0 0 4px;
+}
+
+.pm-changes-intro {
+  max-width: 62rem;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+}
+
+.pm-changes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pm-changes-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-changes-button-icon {
+  --icon-size: 15px;
+  display: inline-flex;
+}
+
+.pm-changes-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pm-changes-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l);
+  background: var(--background-primary);
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-changes-filter.is-active {
+  border-color: var(--interactive-accent);
+  color: var(--text-normal);
+  font-weight: var(--font-medium);
+}
+
+.pm-changes-filter-icon {
+  --icon-size: 13px;
+  display: inline-flex;
+}
+
+.pm-changes-filter-count {
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-changes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-ui-small);
+}
+
+.pm-changes-table th {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  text-align: left;
+}
+
+.pm-changes-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+  vertical-align: top;
+}
+
+.pm-changes-row {
+  cursor: pointer;
+}
+
+.pm-changes-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.pm-changes-row.is-closed,
+.pm-changes-row.is-rejected,
+.pm-changes-row.is-withdrawn {
+  color: var(--text-muted);
+}
+
+.pm-changes-number {
+  font-family: var(--font-monospace);
+  white-space: nowrap;
+}
+
+.pm-changes-subject {
+  min-width: 14rem;
+  font-weight: var(--font-medium);
+}
+
+.pm-changes-reason {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: normal;
+}
+
+.pm-changes-class.is-major {
+  color: var(--text-error);
+  font-weight: var(--font-medium);
+}
+
+.pm-changes-last {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.pm-changes-empty {
+  padding: var(--size-4-8) var(--size-4-4);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.pm-changes-empty-icon {
+  --icon-size: 40px;
+  color: var(--text-faint);
+}
+
+.pm-changes-empty-title {
+  margin: 8px 0 4px;
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+
+/* Where a change stands: one badge, in the register and on its card. */
+.pm-change-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 9px;
+  border-radius: var(--radius-l);
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+}
+
+.pm-change-stage-icon {
+  --icon-size: 13px;
+  display: inline-flex;
+}
+
+.pm-change-stage.is-round0,
+.pm-change-stage.is-round1,
+.pm-change-stage.is-round2 {
+  background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  color: var(--text-accent);
+}
+
+.pm-change-stage.is-closed {
+  background: color-mix(in srgb, var(--color-green) 16%, transparent);
+  color: var(--color-green);
+}
+
+.pm-change-stage.is-rejected {
+  background: color-mix(in srgb, var(--color-red) 14%, transparent);
+  color: var(--text-error);
+}
+
+/* The change's card: request, proposal, board. */
+.pm-change-panel .pm-modal-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pm-change-field {
+  margin-top: 10px;
+}
+
+.pm-change-label {
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+}
+
+.pm-change-text {
+  width: 100%;
+  resize: vertical;
+  font-size: var(--font-ui-small);
+}
+
+.pm-change-hint {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-change-impacts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 0 10px;
+}
+
+.pm-change-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 10px;
+}
+
+.pm-change-step {
+  padding: 10px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.pm-change-step.is-waiting {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.pm-change-step.is-done {
+  border-color: color-mix(in srgb, var(--color-green) 55%, transparent);
+}
+
+.pm-change-step.is-rejected {
+  border-color: color-mix(in srgb, var(--color-red) 55%, transparent);
+}
+
+.pm-change-step-title {
+  font-weight: var(--font-semibold);
+}
+
+.pm-change-step-hint {
+  margin: 2px 0 6px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.35;
+}
+
+.pm-change-step-wait {
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+}
+
+.pm-change-decision {
+  margin-top: 4px;
+  font-size: var(--font-ui-small);
+}
+
+.pm-change-decision-what {
+  font-weight: var(--font-medium);
+}
+
+.pm-change-decision.is-accepted .pm-change-decision-what {
+  color: var(--color-green);
+}
+
+.pm-change-decision.is-rejected .pm-change-decision-what {
+  color: var(--text-error);
+}
+
+.pm-change-decision.is-postponed .pm-change-decision-what,
+.pm-change-decision.is-incomplete .pm-change-decision-what {
+  color: var(--text-warning, var(--color-orange));
+}
+
+.pm-change-decision-date {
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-change-decision-comment {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-change-record {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.pm-change-record-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.pm-change-undo,
+.pm-change-withdraw {
+  display: inline-block;
+  margin-top: 10px;
+  margin-right: 16px;
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-change-withdraw {
+  color: var(--text-error);
+}
+
+/* A sitting of the board: the changes waiting, round by round, each with its decision. */
+.pm-board-modal {
+  width: min(900px, 94vw);
+}
+
+.pm-board-intro {
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pm-board-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pm-board-round {
+  margin-bottom: 14px;
+}
+
+.pm-board-round-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pm-board-round-title {
+  font-weight: var(--font-semibold);
+}
+
+.pm-board-round-count {
+  padding: 0 7px;
+  border-radius: var(--radius-l);
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-board-round-hint,
+.pm-board-none {
+  margin: 2px 0 6px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-board-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  margin-bottom: 6px;
+}
+
+.pm-board-line.is-decided {
+  border-color: var(--interactive-accent);
+}
+
+.pm-board-what {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.pm-board-number {
+  margin-right: 8px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+}
+
+.pm-board-subject {
+  font-weight: var(--font-medium);
+}
+
+.pm-board-meta {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.pm-board-decide {
+  display: flex;
+  flex: 1 1 320px;
+  gap: 8px;
+}
+
+.pm-board-decide input {
+  flex: 1;
+  min-width: 0;
+}
+
+.pm-board-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}

@@ -95,7 +95,8 @@ export function weekStarts(today: string, count: number): string[] {
 
 /** Whether a ticket is work the plan counts, and how. */
 function kindOf(task: Task): 'work' | 'meeting' | null {
-  if (isPhase(task) || isRisk(task) || isDecision(task) || isReserve(task) || task.type === 'milestone') return null
+  const notWork = isPhase(task) || isRisk(task) || isDecision(task) || isReserve(task) || task.type === 'change'
+  if (notWork || task.type === 'milestone') return null
   if (isMeeting(task)) return 'meeting'
   if (isDocument(task) && !(task.timeEstimate && task.timeEstimate > 0)) return null
   return 'work'

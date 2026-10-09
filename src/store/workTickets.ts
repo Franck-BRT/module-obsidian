@@ -6,7 +6,7 @@
  * One rule for every place that counts — the projects' list, the overview, the
  * dashboard —, so that « 1 en retard » in one is one in the others.
  */
-const NOT_WORK = new Set(['phase', 'risk', 'decision', 'reserve'])
+const NOT_WORK = new Set(['phase', 'risk', 'decision', 'reserve', 'change'])
 
 export function isWork(task: { type: string }): boolean {
   return !NOT_WORK.has(task.type)
