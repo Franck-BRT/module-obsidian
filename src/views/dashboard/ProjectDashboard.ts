@@ -18,6 +18,9 @@ import { RISK_LEVELS, riskBand, type RiskBand } from '../../store/risk'
 import { BAND_COLOR, bandLabel, impactLabel, probabilityLabel } from '../risks/riskLabels'
 import { focusRiskCell } from '../risks/RisksView'
 import { openChase } from '../chase/ChaseModal'
+import { changeDigest } from '../../store/changeFollowUp'
+import { changeOf } from '../../store/change'
+import { groupLabel } from '../changes/changeLabels'
 import type { SubView } from '../SubView'
 import { barList, burnChart, progressRing } from './charts'
 import { writeStatusReport, writeStatusReportPdf } from './statusReport'
@@ -82,6 +85,7 @@ export class ProjectDashboard implements SubView {
     this.renderPeople(grid, this.metrics)
     this.renderMilestones(grid, this.metrics)
     this.renderDocuments(grid, this.metrics)
+    this.renderChanges(grid, tasks)
   }
 
   refresh(): void {
@@ -526,6 +530,52 @@ export class ProjectDashboard implements SubView {
         .setShape('pill')
         .onClick(() => openChase(this.plugin, this.scope.projects, this.onRefresh))
         .explain(t('chase.button'), t('tip.chase.button'))
+    }
+  }
+
+  /**
+   * The changes: what the next sitting of the board has to examine, group by group, the
+   * requests whose proposal is overdue, and how many were closed this month.
+   */
+  private renderChanges(parent: HTMLElement, tasks: Task[]): void {
+    const digest = changeDigest(tasks, today().toString())
+    if (!digest.open && !digest.closedThisMonth) return
+    const body = this.card(parent, t('view.changes'))
+    const chips = body.createDiv('pm-kpi-chips')
+    new ChipButton(chips)
+      .setLabel(t('kpi.changes.open', { count: digest.open }))
+      .setShape('pill')
+      .onClick(() => this.drill(makeDefaultFilter(), 'changes'))
+      .explain(t('view.changes'), t('tip.kpi.changes'))
+    if (digest.closedThisMonth) {
+      new Chip(chips)
+        .setLabel(t('kpi.changes.closed', { count: digest.closedThisMonth }))
+        .setLeadingIcon('circle-check')
+    }
+    if (digest.toExamine) {
+      body.createDiv({ cls: 'pm-kpi-subtitle', text: t('kpi.changes.nextBoard', { count: digest.toExamine }) })
+      barList(
+        body,
+        digest.nextBoard.map((one) => ({
+          label: groupLabel(one.group),
+          value: String(one.count),
+          share: (one.count / digest.toExamine) * 100,
+          color: '#4338ca',
+          onClick: () => this.drill(makeDefaultFilter(), 'changes')
+        }))
+      )
+    }
+    if (digest.stale.length) {
+      body.createDiv({ cls: 'pm-kpi-subtitle', text: t('kpi.changes.stale', { count: digest.stale.length }) })
+      const list = body.createDiv('pm-kpi-milestones')
+      for (const one of digest.stale.slice(0, 5)) {
+        const row = list.createDiv('pm-kpi-milestone pm-kpi-milestone--late')
+        makeActivatable(row, () => this.openTask(one.task.id))
+        setIcon(row.createSpan({ cls: 'pm-kpi-milestone-icon' }), 'hourglass')
+        const number = changeOf(one.task).number
+        row.createSpan({ cls: 'pm-kpi-milestone-title', text: [number, one.task.title].filter(Boolean).join(' — ') })
+        row.createSpan({ cls: 'pm-kpi-milestone-state', text: t('kpi.changes.days', { count: one.days }) })
+      }
     }
   }
 

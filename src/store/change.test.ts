@@ -140,6 +140,7 @@ describe('a change and its ticket', () => {
       proposal: 'Modèle étanche IP67',
       impactCost: '1 200 €',
       group: 2,
+      tasks: ['t1', 't2'],
       affected: ['PL-002', 'EX-12'],
       rounds: [{ round: 0, decision: 'accepted', date: '2026-10-05', comment: 'OK' }]
     })

@@ -44,6 +44,11 @@ import { ContactBook, readContacts } from '../../src/store/contacts'
 import { projectPeople } from '../../src/store/projectPeople'
 import { isDocument } from '../../src/store/Document'
 import { promptNoteContent } from '../../src/store/chat/promptLibrary'
+import { ImplementationModal } from '../../src/views/changes/ImplementationModal'
+import { ReviseDocsModal, revisableDocs } from '../../src/views/changes/ReviseDocsModal'
+import { ProjectDashboard } from '../../src/views/dashboard/ProjectDashboard'
+import { refLink } from '../../src/store/refs'
+import { rebuildTaskIndex } from '../../src/store/TaskIndex'
 
 const query = new URLSearchParams(location.search)
 const screen = query.get('screen') ?? 'reserves'
@@ -54,10 +59,10 @@ function sampleChanges(project: any): Task[] {
     makeTask({ title, type: 'change', assignees, change: emptyChange(change) } as any)
   const made = [
     make('Remplacer le connecteur J12 par un modèle étanche', { number: 'DM-001', group: 1, origin: 'Thales', class: 'major', reason: 'Infiltrations constatées en essais climatiques', submittedOn: '2026-09-02', rounds: [{ round: 0, decision: 'accepted', date: '2026-09-10', comment: 'Lancer la PM' }, { round: 1, decision: 'accepted', date: '2026-09-24', comment: '' }] }, ['Anne Leroy']),
-    make('Ajouter un capteur de température sur la carte alimentation', { number: 'DM-002', group: 2, origin: 'CNES', class: 'minor', reason: 'Besoin de télémesure', submittedOn: '2026-09-15', rounds: [{ round: 0, decision: 'accepted', date: '2026-09-24', comment: 'PM attendue pour la prochaine CLM' }] }, ['Paul Martin']),
+    make('Ajouter un capteur de température sur la carte alimentation', { number: 'DM-002', group: 2, origin: 'CNES', class: 'minor', reason: 'Besoin de télémesure', submittedOn: '2026-09-15', rounds: [{ round: 0, decision: 'accepted', date: '2026-08-26', comment: 'PM attendue pour la prochaine CLM' }] }, ['Paul Martin']),
     make('Modifier la séquence de mise sous tension', { number: 'DM-003', group: 1, origin: 'Airbus DS', class: 'major', reason: 'Appel de courant trop élevé', submittedOn: '2026-10-01' }),
     make('Changer la référence du joint torique', { number: 'DM-004', group: 3, origin: 'Sous-traitant mécanique', reason: 'Obsolescence fournisseur' }),
-    make('Mettre à jour le plan d’interface mécanique', { number: 'DM-005', group: 2, origin: 'CNES', submittedOn: '2026-08-01', rounds: [{ round: 0, decision: 'accepted', date: '2026-08-05', comment: '' }, { round: 1, decision: 'accepted', date: '2026-08-20', comment: '' }, { round: 2, decision: 'accepted', date: '2026-09-10', comment: 'Clôturée' }] }),
+    make('Mettre à jour le plan d’interface mécanique', { number: 'DM-005', group: 2, origin: 'CNES', submittedOn: '2026-08-01', rounds: [{ round: 0, decision: 'accepted', date: '2026-08-05', comment: '' }, { round: 1, decision: 'accepted', date: '2026-08-20', comment: '' }, { round: 2, decision: 'accepted', date: '2026-10-06', comment: 'Clôturée' }] }),
     make('Passer le harnais en câble blindé', { number: 'DM-006', group: 1, origin: 'Thales', class: 'major', submittedOn: '2026-08-12', rounds: [{ round: 0, decision: 'rejected', date: '2026-08-20', comment: 'Hors périmètre' }] })
   ]
   project.tasks.push(...made)
@@ -135,6 +140,46 @@ async function main(): Promise<void> {
         renderChangePanel(content, { task, project, plugin, rerender: draw })
       }
       draw()
+      break
+    }
+    case 'change-closed':
+    case 'revise-modal': {
+      const dm = sampleChanges(project)[4]
+      const docTicket = tasks.find((one: Task) => isDocument(one) && one.filePath)
+      const libraryDoc = library.docs()[0]
+      dm.change!.affected = [
+        ...(libraryDoc ? [refLink(app, libraryDoc.record, libraryDoc.title, '')] : []),
+        ...(docTicket?.filePath ? [refLink(app, docTicket.filePath, docTicket.title, '')] : []),
+        'Harnais principal'
+      ]
+      const done = makeTask({ title: 'Mettre à jour le plan PL-002 à l’indice C', status: 'done', due: '2026-09-01' })
+      const doing = makeTask({ title: 'Diffuser le plan aux sous-traitants', due: '2026-09-05' })
+      project.tasks.push(done, doing)
+      dm.change!.tasks = [done.id, doing.id]
+      rebuildTaskIndex(project)
+      if (screen === 'revise-modal') {
+        new ReviseDocsModal(plugin, project, dm, revisableDocs(plugin, project, dm)).open()
+        break
+      }
+      const modal = body.createDiv('modal pm-harness-modal')
+      modal.createDiv({ cls: 'modal-title', text: dm.title })
+      const content = modal.createDiv('modal-content')
+      const draw = (): void => {
+        content.empty()
+        renderChangePanel(content, { task: dm, project, plugin, rerender: draw })
+      }
+      draw()
+      break
+    }
+    case 'impl-modal': {
+      const dm = sampleChanges(project)[0]
+      dm.change!.proposal = 'Connecteur étanche IP67 de même empreinte :\n- Commander les connecteurs IP67\n- Modifier le plan de câblage\n- Requalifier en essais climatiques'
+      new ImplementationModal(plugin, project, dm, async () => {}).open()
+      break
+    }
+    case 'dashboard-changes': {
+      sampleChanges(project)
+      new ProjectDashboard(body, scope, plugin, refresh, makeDefaultFilter(), () => {}).render()
       break
     }
     case 'clm':

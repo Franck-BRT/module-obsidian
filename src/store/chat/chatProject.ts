@@ -1,6 +1,7 @@
-import type { PriorityConfig, Project, StatusConfig, Task } from '../../types'
+import type { ChangeRound, PriorityConfig, Project, StatusConfig, Task } from '../../types'
 import { riskScore } from '../risk'
 import { affectedLabel, decisionOf } from '../decision'
+import { changeOf, changeStage, lastDecision, type ChangeStage } from '../change'
 import { isTerminalStatus } from '../../utils'
 import { documentOf, isDocument } from '../Document'
 import { projectMetrics } from '../Metrics'
@@ -67,6 +68,17 @@ export interface ProjectWords {
     decidedBy: string
     rationale: string
     affects: string
+  }) => string
+  /** A change request on one line: its number, group, where it stands before the board, why, what it touches. */
+  change?: (change: {
+    number: string
+    group: number
+    stage: ChangeStage
+    last: ChangeRound | null
+    origin: string
+    reason: string
+    proposal: string
+    affected: string
   }) => string
   late: string
   after: string
@@ -153,6 +165,25 @@ function ticketLine(
         decidedBy: decision.decidedBy,
         rationale: short(decision.rationale, 160),
         affects: short(decision.affects.map(affectedLabel).join(', '), 160)
+      })
+    )
+  }
+  if (task.type === 'change' && words.change) {
+    const change = changeOf(task)
+    const short = (value: string, size: number): string => {
+      const line = value.replace(/\s+/g, ' ').trim()
+      return line.length > size ? `${line.slice(0, size - 1)}…` : line
+    }
+    facts.push(
+      words.change({
+        number: change.number,
+        group: change.group,
+        stage: changeStage(change),
+        last: lastDecision(change) ?? null,
+        origin: change.origin,
+        reason: short(change.reason, 140),
+        proposal: short(change.proposal, 160),
+        affected: short(change.affected.map(affectedLabel).join(', '), 160)
       })
     )
   }

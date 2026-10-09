@@ -1,5 +1,6 @@
 import type { ChangeDecision, ChangeGroup, ChangeRoundNumber, TaskChange } from '../../types'
 import { CHANGE_DECISIONS, type BoardWords, type ChangeStage } from '../../store/change'
+import type { ChangeSheetWords } from '../../store/changeSheet'
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
 
@@ -97,5 +98,49 @@ export function boardWords(): BoardWords {
     chair: t('change.board.chair'),
     secretary: t('change.board.secretary'),
     signHere: t('change.board.signHere')
+  }
+}
+
+/** The words a change's sheet is written with. */
+export function sheetWords(): ChangeSheetWords {
+  return {
+    title: (number) => t('change.sheet.title', { number }),
+    identification: t('change.sheet.identification'),
+    number: t('change.number'),
+    subject: t('change.subject'),
+    class: t('change.class'),
+    classLabel,
+    group: t('change.group'),
+    groupLabel,
+    origin: t('change.origin'),
+    owner: t('change.owner'),
+    due: t('change.sheet.due'),
+    submittedOn: t('change.submittedOn'),
+    stage: t('change.stageColumn'),
+    stageLabel,
+    requestHeading: t('change.section.request'),
+    reason: t('change.reason'),
+    request: t('change.request'),
+    affected: t('change.affected'),
+    proposalHeading: t('change.section.proposal'),
+    proposal: t('change.proposal'),
+    impactTechnical: t('change.impactTechnical'),
+    impactCost: t('change.impactCost'),
+    impactSchedule: t('change.impactSchedule'),
+    roundsHeading: t('change.section.board'),
+    roundColumn: t('change.sheet.round'),
+    round: roundLabel,
+    date: t('change.sheet.date'),
+    decision: t('change.decisionColumn'),
+    comment: t('change.comment'),
+    decisionLabel,
+    noRound: t('change.sheet.noRound'),
+    tasksHeading: t('change.tasks.title'),
+    taskStatus: t('change.sheet.status'),
+    signatures: t('change.board.signatures'),
+    signers: [t('change.sheet.signOrigin'), t('change.sheet.signOwner'), t('change.board.chair')],
+    signHere: t('change.board.signHere'),
+    none: '—',
+    formatDate
   }
 }

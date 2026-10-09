@@ -121,7 +121,8 @@ import { ProjectScope, resolveScopePaths, type ScopeSpec } from '../../store/Pro
 import { collectionMemberIds } from '../../store/Collection'
 import type { ProjectRef } from '../../store/VaultIndex'
 import { docStateConfigOf, typeConfigOf } from '../../store/TicketPalette'
-import { TASK_TYPES, type DecisionState, type DocState, type TaskType } from '../../types'
+import { TASK_TYPES, type ChangeGroup, type DecisionState, type DocState, type TaskType } from '../../types'
+import { decisionLabel, groupLabel, roundLabel, stageLabel } from '../changes/changeLabels'
 import { formatDate, today } from '../../dates'
 import {
   reqCriticalityGlyph,
@@ -1777,6 +1778,23 @@ export class ChatView extends ItemView {
           why: decision.rationale || '—',
           affects: decision.affects || '—'
         }),
+      change: (change) => {
+        const last = change.last
+          ? [roundLabel(change.last.round), decisionLabel(change.last.decision), change.last.date]
+              .filter(Boolean)
+              .join(' · ')
+          : '—'
+        return t('chat.projectChange', {
+          number: change.number || '—',
+          group: change.group ? groupLabel(change.group as ChangeGroup) : '—',
+          stage: stageLabel(change.stage),
+          last,
+          origin: change.origin || '—',
+          why: change.reason || '—',
+          proposal: change.proposal || '—',
+          affects: change.affected || '—'
+        })
+      },
       risk: (probability, impact, mitigation) =>
         t('chat.projectRisk', { probability, impact, score: probability * impact, mitigation: mitigation || '—' }),
       late: t('chat.projectLate'),

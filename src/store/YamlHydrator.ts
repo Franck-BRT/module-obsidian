@@ -260,7 +260,8 @@ function readChange(raw: unknown): Task['change'] {
     impactSchedule: text(r.impactSchedule),
     affected: list(r.affected),
     rounds,
-    withdrawn: r.withdrawn === true
+    withdrawn: r.withdrawn === true,
+    tasks: list(r.tasks)
   }
 }
 

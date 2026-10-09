@@ -1,6 +1,6 @@
-import { Modal, normalizePath, Notice, TFile } from 'obsidian'
+import { Modal, normalizePath, Notice, setIcon, TFile } from 'obsidian'
 import type PMPlugin from '../../main'
-import type { ChangeDecision, ChangeGroup, ChangeRoundNumber, Task } from '../../types'
+import type { ChangeDecision, ChangeGroup, ChangeRoundNumber, Project, Task } from '../../types'
 import type { ProjectScope } from '../../store'
 import {
   boardAgenda,
@@ -17,10 +17,14 @@ import {
 } from '../../store/change'
 import { buildDocx } from '../../store/docx'
 import { buildPdf } from '../../store/pdf'
-import { ensureFolder, folderOf } from '../../store/vaultFs'
+import { approvesProposal, closesChange } from '../../store/changeFollowUp'
+import { findTaskById } from '../../store/TaskIndex'
 import { today } from '../../dates'
 import { displayName, safeAsync, sanitizeFileName } from '../../utils'
 import { t } from '../../i18n'
+import { clmFolder, freeName } from './changeFiles'
+import { ImplementationModal } from './ImplementationModal'
+import { ReviseDocsModal, revisableDocs } from './ReviseDocsModal'
 import { boardWords, classLabel, decisionLabel, groupLabel, roundHint, roundLabel } from './changeLabels'
 
 /**
@@ -152,6 +156,7 @@ export class BoardModal extends Modal {
       new Notice(t('change.board.nothingDecided'))
       return
     }
+    const followUps: FollowUp[] = []
     for (const line of decided) {
       const project = this.projects.projectOf(line.task.id)
       if (!project || !line.decision) continue
@@ -160,6 +165,8 @@ export class BoardModal extends Modal {
       const status = statusForChange(change, line.task.status, this.plugin.store.configFor(project).statuses)
       if (status) patch.status = status
       await this.plugin.store.updateTask(project, line.task.id, patch)
+      if (approvesProposal(line.task, { change })) followUps.push({ kind: 'approved', project, id: line.task.id })
+      else if (closesChange(line.task, { change })) followUps.push({ kind: 'closed', project, id: line.task.id })
     }
     const lines = withDecisions ? this.lines : this.lines.map((line) => ({ ...line, decision: null, comment: '' }))
     const record = await this.writeRecord(lines)
@@ -172,6 +179,7 @@ export class BoardModal extends Modal {
     )
     await this.onDone()
     if (record) await this.app.workspace.getLeaf('tab').openFile(record)
+    if (followUps.length) new FollowUpModal(this.plugin, followUps, this.onDone).open()
   }
 
   /**
@@ -182,18 +190,11 @@ export class BoardModal extends Modal {
   private async writeRecord(lines: BoardLine[]): Promise<TFile | null> {
     const project = this.projects.primary ?? this.projects.addableProjects[0]
     if (!project) return null
-    const root = folderOf(project.filePath)
-    const folder = normalizePath(root ? `${root}/${t('change.board.folder')}` : t('change.board.folder'))
-    await ensureFolder(this.app, folder)
+    const folder = await clmFolder(this.plugin, project)
     const base = sanitizeFileName(
       [t('change.board.fileName'), this.date, this.group ? groupLabel(this.group) : ''].filter(Boolean).join(' ')
     )
-    const taken = (name: string): boolean =>
-      ['md', 'docx', 'pdf'].some(
-        (ext) => !!this.app.vault.getAbstractFileByPath(normalizePath(`${folder}/${name}.${ext}`))
-      )
-    let name = base
-    for (let n = 2; taken(name); n++) name = `${base} (${n})`
+    const name = freeName(this.plugin, folder, base, ['md', 'docx', 'pdf'])
     const words = boardWords()
     const context = { project: project.title, group: this.group }
     const note = await this.app.vault.create(
@@ -212,6 +213,89 @@ export class BoardModal extends Modal {
       new Notice(t('change.board.recordFailed'))
       return note
     }
+  }
+
+  onClose(): void {
+    this.contentEl.empty()
+  }
+}
+
+/** A change the sitting moved on, and what it calls for: its proposal approved, or the change closed. */
+interface FollowUp {
+  kind: 'approved' | 'closed'
+  project: Project
+  id: string
+}
+
+/**
+ * What the sitting's decisions call for, each a click away: the tickets to carry out each
+ * proposal approved, the documents to issue again for each change closed.
+ */
+class FollowUpModal extends Modal {
+  constructor(
+    private plugin: PMPlugin,
+    private followUps: FollowUp[],
+    private onDone: () => Promise<void>
+  ) {
+    super(plugin.app)
+  }
+
+  onOpen(): void {
+    this.modalEl.addClass('pm-followup-modal')
+    this.setTitle(t('change.followUp.title'))
+    this.render()
+  }
+
+  private render(): void {
+    const root = this.contentEl
+    root.empty()
+    root.createDiv({ cls: 'pm-implementation-hint', text: t('change.followUp.hint') })
+    const list = root.createDiv('pm-revise-list')
+    for (const one of this.followUps) {
+      const task = findTaskById(one.project, one.id)
+      if (!task) continue
+      const change = changeOf(task)
+      const row = list.createDiv('pm-revise-row')
+      setIcon(row.createSpan('pm-revise-icon'), one.kind === 'approved' ? 'list-plus' : 'circle-check')
+      const what = row.createDiv('pm-revise-what')
+      what.createDiv({ cls: 'pm-revise-title', text: [change.number, task.title].filter(Boolean).join(' — ') })
+      what.createDiv({
+        cls: 'pm-revise-version',
+        text: one.kind === 'approved' ? t('change.followUp.approved') : t('change.followUp.closed')
+      })
+      if (one.kind === 'approved') {
+        const made = change.tasks.length
+        const button = row.createEl('button', {
+          text: made ? t('change.followUp.tasksMade', { count: made }) : t('change.tasks.open')
+        })
+        button.addEventListener('click', () =>
+          new ImplementationModal(this.plugin, one.project, task, async (ids) => {
+            const fresh = findTaskById(one.project, one.id) ?? task
+            await this.plugin.store.updateTask(one.project, one.id, {
+              change: { ...changeOf(fresh), tasks: [...changeOf(fresh).tasks, ...ids] }
+            })
+            await this.onDone()
+            this.render()
+          }).open()
+        )
+        continue
+      }
+      const docs = revisableDocs(this.plugin, one.project, task)
+      if (!docs.length) {
+        row.createSpan({ cls: 'pm-revise-version', text: t('change.revise.noDocs') })
+        continue
+      }
+      const button = row.createEl('button', { text: t('change.revise.open') })
+      button.addEventListener('click', () =>
+        new ReviseDocsModal(this.plugin, one.project, task, docs, async () => {
+          await this.onDone()
+        }).open()
+      )
+    }
+    const foot = root.createDiv('pm-board-foot')
+    foot
+      .createEl('button', { cls: 'mod-cta', text: t('change.followUp.close') })
+      .addEventListener('click', () => this.close())
   }
 
   onClose(): void {

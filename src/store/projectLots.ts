@@ -17,6 +17,11 @@ export function reservesLot(): string {
   return t('lots.reserves')
 }
 
+/** The lot the tickets carrying out approved changes go in. */
+export function changesLot(): string {
+  return t('lots.changes')
+}
+
 /** The lots a new project is made with: Documents, then the settings' own, each once. */
 export function projectLots(settings: Pick<PMSettings, 'projectLots'>): string[] {
   const out: string[] = []

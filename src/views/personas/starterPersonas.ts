@@ -33,6 +33,12 @@ export function starterPersonas(): { name: string; draft: PersonaDraft }[] {
       t('persona.starter.minutes.instructions')
     ),
     make(
+      t('persona.starter.clm.name'),
+      t('persona.starter.categoryProject'),
+      t('persona.starter.clm.description'),
+      t('persona.starter.clm.instructions')
+    ),
+    make(
       t('persona.starter.translator.name'),
       t('persona.starter.categoryWriting'),
       t('persona.starter.translator.description'),

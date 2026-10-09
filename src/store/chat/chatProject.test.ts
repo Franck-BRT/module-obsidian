@@ -12,6 +12,7 @@ import {
   type ProjectContextInput,
   type ProjectWords
 } from './chatProject'
+import { emptyChange } from '../change'
 
 const WORDS: ProjectWords = {
   heading: (title, path) => `Projet joint : ${title} (${path})`,
@@ -124,6 +125,26 @@ describe('projectContext', () => {
   it('names a document’s state and a ticket of a kind of its own', () => {
     const text = projectContext(input([task('D', { type: 'document' })]), WORDS)
     expect(text).toContain('- Tâche D · Document · Attendu · To Do · Medium')
+  })
+
+  it('writes a change request with where it stands before the board and what it touches', () => {
+    const words: ProjectWords = {
+      ...WORDS,
+      change: (change) =>
+        `DM ${change.number} g${change.group} ${change.stage} ${change.last ? `${change.last.round}/${change.last.decision}` : '-'} ${change.reason} ${change.affected}`
+    }
+    const dm = task('C', {
+      type: 'change',
+      title: 'Connecteur',
+      change: {
+        ...emptyChange({ number: 'DM-001', group: 2, reason: 'Infiltrations', affected: ['[[PL-002|Plan 2]]'] }),
+        submittedOn: '2026-09-01',
+        rounds: [{ round: 0, decision: 'accepted', date: '2026-09-10', comment: '' }]
+      }
+    })
+    expect(projectContext(input([dm]), words)).toContain(
+      '- Connecteur · change · DM DM-001 g2 round1 0/accepted Infiltrations Plan 2'
+    )
   })
 
   // What a document is known by: its reference, its revision mark, its file — not the

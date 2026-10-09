@@ -55,6 +55,7 @@ export function emptyChange(over: Partial<TaskChange> = {}): TaskChange {
     affected: [],
     rounds: [],
     withdrawn: false,
+    tasks: [],
     ...over
   }
 }

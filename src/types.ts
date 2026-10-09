@@ -347,6 +347,8 @@ export interface TaskChange {
   rounds: ChangeRound[]
   /** Taken back by whoever asked for it. */
   withdrawn: boolean
+  /** The tickets that carry it out, made once its proposal is approved, by their ids. */
+  tasks: string[]
 }
 
 /** A ticket's dates in the reference plan; '' where it had none. */
