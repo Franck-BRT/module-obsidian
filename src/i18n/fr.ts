@@ -1782,6 +1782,13 @@ export const fr: Catalog = {
     'Aucun persona dans le coffre : la bibliothèque de personas s’ouvre pour en créer un, ou ajouter ceux proposés.',
   'chat.personaIntro':
     'Pour cette conversation, tu tiens le rôle suivant : « {name} ». Garde les consignes ci-dessus sur la façon de proposer des modifications et de citer tes sources, mais réponds avec ce rôle :',
+  'settings.chat.defaultPersona': 'Persona par défaut',
+  'settings.chat.defaultPersonaDesc':
+    'Le rôle avec lequel le chat démarre à chaque session et à chaque nouvelle conversation. Vous pouvez toujours en changer ou le retirer dans une conversation.',
+  'settings.chat.defaultPersonaNone': 'Aucun (l’assistant habituel)',
+  'personas.isDefault': 'Par défaut',
+  'personas.setDefault': 'Utiliser par défaut',
+  'personas.unsetDefault': 'Ne plus utiliser par défaut',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

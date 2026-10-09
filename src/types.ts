@@ -707,6 +707,8 @@ export interface ChatSettings {
   personasFolder: string
   /** The persona the chat answers as, by the path of its note; '' for none. */
   persona: string
+  /** The persona each new conversation — and each session — starts with, by the path of its note; '' for none. */
+  defaultPersona: string
 }
 
 export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
@@ -722,7 +724,8 @@ export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   skillsFolder: 'Chats/Skills',
   promptsFolder: 'Chats/Prompts',
   personasFolder: 'Chats/Personas',
-  persona: ''
+  persona: '',
+  defaultPersona: ''
 }
 
 /** Anything the reader can restyle: an id that never changes, and the look they chose. */

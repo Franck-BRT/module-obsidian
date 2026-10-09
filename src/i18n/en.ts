@@ -1728,6 +1728,13 @@ export const en = {
   'chat.personaNone': 'No persona in the vault: the persona library opens to create one, or add those offered.',
   'chat.personaIntro':
     'For this conversation, you take the following role: “{name}”. Keep the instructions above on how to propose changes and cite your sources, but answer in this role:',
+  'settings.chat.defaultPersona': 'Default persona',
+  'settings.chat.defaultPersonaDesc':
+    'The role the chat starts with at each session and in each new conversation. You can still change or remove it in a conversation.',
+  'settings.chat.defaultPersonaNone': 'None (the usual assistant)',
+  'personas.isDefault': 'Default',
+  'personas.setDefault': 'Use by default',
+  'personas.unsetDefault': 'Stop using by default',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

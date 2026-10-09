@@ -20,6 +20,19 @@ export async function allPersonas(app: App): Promise<PersonaNote[]> {
   return out.sort((a, b) => a.name.localeCompare(b.name))
 }
 
+/** The personas of the vault by path and name, from their properties alone: for a list to choose from. */
+export function personaChoices(app: App): { path: string; name: string }[] {
+  return app.vault
+    .getMarkdownFiles()
+    .flatMap((file) => {
+      const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter
+      if (!isPersonaNote(frontmatter)) return []
+      const name: unknown = frontmatter?.name ?? frontmatter?.nom
+      return [{ path: file.path, name: typeof name === 'string' && name.trim() ? name.trim() : file.basename }]
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
 /** One persona, read from its note now; null when the note is gone or no longer one. */
 export async function personaAt(app: App, path: string): Promise<PersonaNote | null> {
   const file = app.vault.getAbstractFileByPath(path)

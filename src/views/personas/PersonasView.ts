@@ -185,9 +185,11 @@ export class PersonasView extends ItemView {
       'click',
       safeAsync(() => this.save(persona, { name: persona.name, draft: this.draftOf(persona, !persona.favorite) }))
     )
-    if (active) {
+    const isDefault = this.plugin.defaultPersona() === persona.path
+    if (active || isDefault) {
       const meta = card.createDiv('pm-prompt-card-meta')
-      meta.createSpan({ cls: 'pm-prompt-chip is-active', text: t('personas.inUse') })
+      if (active) meta.createSpan({ cls: 'pm-prompt-chip is-active', text: t('personas.inUse') })
+      if (isDefault) meta.createSpan({ cls: 'pm-prompt-chip', text: t('personas.isDefault') })
     }
     card.createDiv({ cls: 'pm-prompt-card-text', text: persona.description || persona.instructions })
     const actions = card.createDiv('pm-prompt-card-actions')
@@ -225,6 +227,17 @@ export class PersonasView extends ItemView {
             safeAsync(async () => {
               const file = this.app.vault.getAbstractFileByPath(persona.path)
               if (file instanceof TFile) await this.app.workspace.getLeaf('tab').openFile(file)
+            })
+          )
+      )
+      menu.addItem((item) =>
+        item
+          .setTitle(isDefault ? t('personas.unsetDefault') : t('personas.setDefault'))
+          .setIcon('pin')
+          .onClick(
+            safeAsync(async () => {
+              await this.plugin.setDefaultPersona(isDefault ? null : persona.path)
+              this.renderBody()
             })
           )
       )
@@ -281,6 +294,8 @@ export class PersonasView extends ItemView {
       // Renamed while the chat speaks as it: the chat follows.
       const renamed = path !== persona.path && this.plugin.activePersona() === persona.path
       if (renamed) await this.plugin.usePersona(path, false)
+      const wasDefault = path !== persona.path && this.plugin.defaultPersona() === persona.path
+      if (wasDefault) await this.plugin.setDefaultPersona(path)
     } else {
       await createPersona(this.app, this.folder(), edit.name, edit.draft)
       new Notice(t('personas.created', { name: edit.name }))
@@ -293,6 +308,7 @@ export class PersonasView extends ItemView {
     const file = this.app.vault.getAbstractFileByPath(persona.path)
     if (file instanceof TFile) await this.app.fileManager.trashFile(file)
     if (this.plugin.activePersona() === persona.path) await this.plugin.usePersona(null, false)
+    if (this.plugin.defaultPersona() === persona.path) await this.plugin.setDefaultPersona(null)
   }
 
   private folder(): string {

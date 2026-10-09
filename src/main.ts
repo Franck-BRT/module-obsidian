@@ -227,6 +227,8 @@ export default class PMPlugin extends Plugin {
 
   async onload(): Promise<void> {
     await this.loadSettings()
+    // Each session starts with the default persona, when one is set.
+    if (this.settings.chat.defaultPersona.trim()) this.settings.chat.persona = this.settings.chat.defaultPersona.trim()
     this.applyTooltips()
     this.index = new VaultIndex(this.app, () => this.settings)
     this.radar = new ZoneRadar(this)
@@ -1265,6 +1267,17 @@ export default class PMPlugin extends Plugin {
     const leaf = existing ?? this.app.workspace.getLeaf('tab')
     if (!existing) await leaf.setViewState({ type: PM_PERSONAS_VIEW_TYPE, active: true })
     await this.app.workspace.revealLeaf(leaf)
+  }
+
+  /** The persona each new conversation starts with, by the path of its note; null for none. */
+  defaultPersona(): string | null {
+    return this.settings.chat.defaultPersona.trim() || null
+  }
+
+  /** The persona made the one new conversations start with — or none, given none. */
+  async setDefaultPersona(path: string | null): Promise<void> {
+    this.settings.chat.defaultPersona = path ?? ''
+    await this.saveSettings()
   }
 
   /** The persona the chat answers as, by the path of its note; null for none. */

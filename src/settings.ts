@@ -32,6 +32,7 @@ import { openAgendaTemplates } from './views/agenda/AgendaTemplatesModal'
 import { LOCALES, searchAliases, t } from './i18n'
 import { invalidHolidays, renderHolidays, renderWorkingWeekdays } from './ui/WorkCalendarEditor'
 import { renderProjectLots } from './ui/ProjectLotsEditor'
+import { personaChoices } from './views/personas/personaVault'
 import { ensureDeliveryTemplate, ensureDeliveryWord, openTemplate } from './views/library/deliveryTemplates'
 import { OCR_STEPS, stepDesc, stepName } from './views/documents/scanOptions'
 
@@ -1345,6 +1346,31 @@ export class PMSettingTab extends PluginSettingTab {
             key: 'chat.promptsFolder',
             defaultValue: 'Chats/Prompts',
             placeholder: 'Chats/Prompts'
+          }
+        },
+        {
+          name: t('settings.chat.defaultPersona'),
+          desc: t('settings.chat.defaultPersonaDesc'),
+          render: (setting: Setting) => {
+            setting.addDropdown((dropdown) => {
+              dropdown.addOption('', t('settings.chat.defaultPersonaNone'))
+              const current = this.plugin.settings.chat.defaultPersona
+              const personas = personaChoices(this.app)
+              // One set that is no longer there is still shown, to be seen and changed.
+              const gone = current && !personas.some((one) => one.path === current)
+              if (gone) personas.push({ path: current, name: current })
+              for (const persona of personas) dropdown.addOption(persona.path, persona.name)
+              dropdown.setValue(current).onChange((value) => {
+                this.plugin.settings.chat.defaultPersona = value
+                this.persist()
+              })
+            })
+            setting.addExtraButton((button) =>
+              button
+                .setIcon('drama')
+                .setTooltip(t('command.openPersonas'))
+                .onClick(safeAsync(() => this.plugin.openPersonas()))
+            )
           }
         },
         {

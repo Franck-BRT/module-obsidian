@@ -2714,6 +2714,9 @@ export class ChatView extends ItemView {
 
   /** A conversation started anew: nothing said yet, kept in no note. */
   private newConversation(): void {
+    // A new conversation starts with the default persona, when one is set; else with the one in use.
+    const fallback = this.plugin.defaultPersona()
+    if (fallback && fallback !== this.plugin.activePersona()) void this.plugin.usePersona(fallback, false)
     this.turns = []
     this.editing = null
     this.follows = null
