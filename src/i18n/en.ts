@@ -1743,12 +1743,13 @@ export const en = {
   'change.registerIntro':
     'A change request (DM) says what to change and why; its change proposal (PM) says how and what it costs. The local change board (CLM) decides in three rounds: round 0 the request, round 1 the proposal, round 2 the implementation.',
   'change.new': 'New change request',
-  'tip.change.new': 'Creates a numbered change request, then opens its card to write it.',
+  'tip.change.new': 'Creates a numbered change request in the library, attached to this project, then opens its card.',
   'change.newTitle': 'Subject of the change request',
   'change.subjectPlaceholder': 'e.g. Replace connector J12 with a sealed model',
   'change.added': 'Request {number} created.',
   'change.none': 'No change request',
-  'change.noneDesc': 'Create a request with “New change request”: the change board then examines it in three rounds.',
+  'change.noneDesc':
+    'Create a request with “New change request”: it is kept in the library, attached to this project (and others if needed), and the board then examines it in three rounds.',
   'change.nothingShown': 'No change at this stage.',
   'change.filter.open': 'Ongoing',
   'change.filter.all': 'All',
@@ -1793,7 +1794,7 @@ export const en = {
   'change.request': 'Request',
   'change.requestPlaceholder': 'What must change, on what, and what is expected.',
   'change.affected': 'Items affected',
-  'change.proposalHint': 'To be written once the request is accepted at round 0, by its owner (the ticket’s assignee).',
+  'change.proposalHint': 'To be written once the request is accepted at round 0, by its owner.',
   'change.proposal': 'Proposed solution',
   'change.proposalPlaceholder': 'How the change will be carried out.',
   'change.impactTechnical': 'Technical impact',
@@ -1848,8 +1849,7 @@ export const en = {
   'change.sheet.status': 'Status',
   'change.sheet.signOrigin': 'Requester',
   'change.sheet.signOwner': 'Proposal owner',
-  'change.sheet.folder': 'Change forms',
-  'change.sheet.written': 'Form written to {path} (with its Word version)',
+  'change.sheet.written': 'Form written to {path} (with its Word version); the library now shows it for this request.',
   'change.sheet.failed': 'The form could not be written.',
   'change.sheet.button': 'Change form',
   'tip.change.sheet':
@@ -1914,6 +1914,32 @@ export const en = {
   'persona.starter.clm.description': 'Draft change requests, prepare and follow the local change board',
   'persona.starter.clm.instructions':
     'You are the secretary of a project’s local change board. You know the process: a change request (DM) says what to change and why; its change proposal (PM) says how, and what it costs; the board decides in three rounds — round 0 the request, round 1 the proposal, round 2 checking the implementation and closing —, accepting, refusing, postponing or asking for more. Requests are filed in groups 1, 2 and 3.\n\n- To draft a request from a free description: short subject, reason, precise request, affected items (documents, requirements, parts), proposed major or minor class, group if known. Point out what is missing.\n- For a proposal: proposed solution, technical, cost and schedule impacts, implementation tasks as a list.\n- To prepare a sitting: rely on the project’s change register (numbers, groups, stages, last decisions); list by round the requests to examine, what each lacks to be decided, and the proposals awaited for long.\n- After a sitting: write the record of decisions and the actions with owner and due date.\n- Stay factual; never invent a number, a decision or a date: what the register does not say is flagged as to be completed.',
+  'change.library.folder': 'Changes',
+  'change.library.category': 'Change request',
+  'change.library.projects': 'Projects',
+  'change.library.noProject': 'In no project',
+  'change.library.editProjects': 'Projects…',
+  'tip.change.projects':
+    'The change request lives in the library: attach it to one or several projects, as a document. It appears in each one’s change register.',
+  'change.library.openNote': 'Open the note',
+  'change.library.saved': '{number} saved.',
+  'change.library.legacy': {
+    one: '{count} change request is still kept as a project task. Change requests now live in the library.',
+    other: '{count} change requests are still kept as project tasks. Change requests now live in the library.'
+  },
+  'change.library.moveAll': 'Move them to the library',
+  'change.library.moved': {
+    one: '{count} change request moved to the library.',
+    other: '{count} change requests moved to the library.'
+  },
+  'change.library.legacyOne':
+    'Change requests now live in the document library, attachable to several projects. Move this one there to edit it.',
+  'change.library.moveOne': 'Move to the library',
+  'change.tasks.noProject': 'Attach the request to a project first to create its tasks there.',
+  'change.tasks.project': 'Project',
+  'change.sheet.fileName': 'Form',
+  'tip.change.newInLibrary':
+    'Creates a change request in the library — attached to the filtered project if any —, then opens its card.',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

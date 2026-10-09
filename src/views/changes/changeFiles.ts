@@ -29,39 +29,93 @@ export function freeName(plugin: PMPlugin, folder: string, base: string, extensi
   return name
 }
 
-/** The tickets carrying a change out, as its sheet lists them: those still in the project. */
-export function implementationTasks(project: Project, task: Pick<Task, 'change'>): Task[] {
-  return changeOf(task)
-    .tasks.map((id) => findTaskById(project, id))
-    .filter((one): one is Task => !!one)
+/** The projects a change belongs to, loaded — those already at hand first, the same objects. */
+export async function projectsOfChange(plugin: PMPlugin, task: Task, known: Project[] = []): Promise<Project[]> {
+  const paths = (task.filePath ? plugin.changes.at(task.filePath)?.doc.projects : undefined) ?? []
+  const out: Project[] = []
+  for (const path of paths) {
+    const project = known.find((one) => one.filePath === path) ?? (await plugin.store.loadProjectByPath(path))
+    if (project) out.push(project)
+  }
+  return out
+}
+
+/** A ticket carrying a change out, with the project it is in. */
+export interface ImplementationTask {
+  task: Task
+  project: Project
+}
+
+/** The tickets carrying a change out, as its sheet lists them: those still in one of its projects. */
+export function implementationTasks(projects: Project[], task: Pick<Task, 'change'>): ImplementationTask[] {
+  const out: ImplementationTask[] = []
+  for (const id of changeOf(task).tasks) {
+    for (const project of projects) {
+      const found = findTaskById(project, id)
+      if (found) {
+        out.push({ task: found, project })
+        break
+      }
+    }
+  }
+  return out
 }
 
 /**
- * A change's sheet written in Word and in PDF into the project's change board folder,
- * under « Fiches DM », and the PDF opened.
+ * A change's sheet written in Word and in PDF into the library's files, beside its note —
+ * the one printed before replaced —, the PDF made the file the library shows for it, and
+ * opened.
  */
-export async function writeChangeSheet(plugin: PMPlugin, project: Project, task: Task): Promise<void> {
+export async function writeChangeSheet(plugin: PMPlugin, task: Task, projects: Project[]): Promise<void> {
   try {
-    const statuses = plugin.store.configFor(project).statuses
-    const tasks: SheetTask[] = implementationTasks(project, task).map((one) => ({
+    const tasks: SheetTask[] = implementationTasks(projects, task).map(({ task: one, project }) => ({
       title: one.title,
-      status: statuses.find((status) => status.id === one.status)?.label ?? one.status,
+      status: plugin.store.configFor(project).statuses.find((status) => status.id === one.status)?.label ?? one.status,
       due: one.due
     }))
-    const document = changeSheetDocument(task, sheetWords(), { project: project.title, tasks })
-    const folder = await clmFolder(plugin, project, t('change.sheet.folder'))
+    const title = projects.map((project) => project.title).join(' · ')
+    const document = changeSheetDocument(task, sheetWords(), { project: title, tasks })
+    const record = task.filePath ? plugin.changes.at(task.filePath) : undefined
+    const folder = plugin.library.filesOf(record?.doc.folder ?? '')
+    await ensureFolder(plugin.app, folder)
     const change = changeOf(task)
-    const base = sanitizeFileName([change.number, task.title].filter(Boolean).join(' '))
-    const name = freeName(plugin, folder, base, ['docx', 'pdf'])
-    await plugin.app.vault.createBinary(normalizePath(`${folder}/${name}.docx`), buildDocx(document).slice().buffer)
-    const pdf = await plugin.app.vault.createBinary(
-      normalizePath(`${folder}/${name}.pdf`),
-      buildPdf(document).slice().buffer
-    )
+    const base = sanitizeFileName([t('change.sheet.fileName'), change.number, task.title].filter(Boolean).join(' '))
+    // The sheet says what the change is now: printed again, it replaces the one before.
+    const write = async (ext: string, bytes: Uint8Array): Promise<TFile> => {
+      const path = normalizePath(`${folder}/${base}.${ext}`)
+      const there = plugin.app.vault.getAbstractFileByPath(path)
+      if (there instanceof TFile) {
+        await plugin.app.vault.modifyBinary(there, bytes.slice().buffer)
+        return there
+      }
+      return plugin.app.vault.createBinary(path, bytes.slice().buffer)
+    }
+    await write('docx', buildDocx(document))
+    const pdf = await write('pdf', buildPdf(document))
+    await plugin.changes.setFile(task, pdf.path)
     new Notice(t('change.sheet.written', { path: pdf.path }))
-    if (pdf instanceof TFile) await plugin.app.workspace.getLeaf('tab').openFile(pdf)
+    await plugin.app.workspace.getLeaf('tab').openFile(pdf)
   } catch (error) {
     console.error(error)
     new Notice(t('change.sheet.failed'))
   }
+}
+
+/**
+ * A change kept as a ticket of the project, as changes were before they went into the
+ * library: written there, belonging to its project, its ticket then taken out. The tickets
+ * carrying it out stay where they are, and it keeps them.
+ */
+export async function moveChangeToLibrary(plugin: PMPlugin, project: Project, task: Task): Promise<Task> {
+  const change = changeOf(task)
+  const moved = await plugin.changes.create({
+    title: task.title,
+    change: { ...change, number: change.number || plugin.changes.nextNumber() },
+    projects: [project.filePath],
+    assignees: task.assignees,
+    due: task.due,
+    today: (task.createdAt || '').slice(0, 10) || new Date().toISOString().slice(0, 10)
+  })
+  if (findTaskById(project, task.id)) await plugin.store.deleteTask(project, task.id)
+  return moved
 }

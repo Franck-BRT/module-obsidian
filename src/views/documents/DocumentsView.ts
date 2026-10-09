@@ -62,7 +62,10 @@ import { proposeRegisterMatches } from './matchRegister'
 import { pourRegisterFiles } from './pourRegisters'
 import type { Project } from '../../types'
 import { knownValues } from '../../store/library/libraryClass'
-import { formatDate } from '../../dates'
+import { formatDate, today } from '../../dates'
+import { changeOf, changeStage, emptyChange } from '../../store/change'
+import { ChangeModal } from '../changes/ChangeModal'
+import { groupLabel, STAGE_ICON, stageLabel } from '../changes/changeLabels'
 import { openTranslate } from '../translate/TranslateModal'
 import { translatable } from '../translate/translateDocs'
 import { explain } from '../../ui/explain'
@@ -314,6 +317,11 @@ export class DocumentsView extends ItemView {
       .setIcon('folder-plus')
       .onClick(safeAsync(() => this.newFolder()))
     explain(folder.buttonEl, t('folders.newFolder'), t('tip.library.newFolder'))
+    const change = new ButtonComponent(right)
+      .setButtonText(t('change.new'))
+      .setIcon('git-pull-request-arrow')
+      .onClick(safeAsync(() => this.newChange()))
+    explain(change.buttonEl, t('change.new'), t('tip.change.newInLibrary'))
     const pour = new ButtonComponent(right)
       .setButtonText(t('library.pour'))
       .setIcon('upload')
@@ -1299,6 +1307,7 @@ export class DocumentsView extends ItemView {
     }
 
     this.renderRegister(main, doc)
+    this.renderChange(main, doc)
 
     const chips = main.createDiv('pm-docs-projects')
     this.renderRagChip(chips, doc)
@@ -1851,6 +1860,8 @@ export class DocumentsView extends ItemView {
   }
 
   private async openDoc(doc: LibraryDoc): Promise<void> {
+    // A change whose sheet is not printed yet has nothing to open but itself.
+    if (doc.file === doc.record && this.openChange(doc)) return
     const file = doc.file ? this.app.vault.getAbstractFileByPath(doc.file) : null
     if (!(file instanceof TFile)) {
       new Notice(t('library.fileMissing'))
@@ -1876,8 +1887,49 @@ export class DocumentsView extends ItemView {
     })
   }
 
+  /** A change request of the library: its number, where it stands before the board, its group. */
+  private renderChange(main: HTMLElement, doc: LibraryDoc): void {
+    const record = this.plugin.changes.isChange(doc) ? this.plugin.changes.at(doc.record) : undefined
+    if (!record) return
+    const change = changeOf(record.task)
+    const stage = changeStage(change)
+    const line = main.createDiv('pm-docs-change')
+    if (change.number) line.createSpan({ cls: 'pm-docs-change-number', text: change.number })
+    const badge = line.createSpan({ cls: `pm-change-stage is-${stage}` })
+    setIcon(badge.createSpan('pm-change-stage-icon'), STAGE_ICON[stage])
+    badge.createSpan({ text: stageLabel(stage) })
+    if (change.group) line.createSpan({ cls: 'pm-docs-change-group', text: groupLabel(change.group) })
+  }
+
+  /** A change request opened in its own window, its fields and the board's decisions at hand. */
+  private openChange(doc: LibraryDoc): boolean {
+    const record = this.plugin.changes.isChange(doc) ? this.plugin.changes.at(doc.record) : undefined
+    if (!record) return false
+    new ChangeModal(this.plugin, record.task, () => this.redrawSoon()).open()
+    return true
+  }
+
+  /**
+   * A new change request, written in the library — in the project the library is narrowed
+   * to, if it is —, then opened to be written.
+   */
+  private async newChange(): Promise<void> {
+    const title = await promptText(this.app, t('change.newTitle'), t('change.subjectPlaceholder'))
+    if (!title?.trim()) return
+    const task = await this.plugin.changes.create({
+      title: title.trim(),
+      change: emptyChange({ number: this.plugin.changes.nextNumber() }),
+      projects: this.query.project ? [this.query.project] : [],
+      today: today().toString()
+    })
+    new Notice(t('change.added', { number: changeOf(task).number }))
+    this.redrawSoon()
+    new ChangeModal(this.plugin, task, () => this.redrawSoon()).open()
+  }
+
   /** A document's sheet: all that is known of it, said plainly, its fields and actions at hand. */
   private openSheet(doc: LibraryDoc): void {
+    if (this.openChange(doc)) return
     const host: DocSheetHost = {
       plugin: this.plugin,
       projectTitle: (path) => this.projectTitle(path),

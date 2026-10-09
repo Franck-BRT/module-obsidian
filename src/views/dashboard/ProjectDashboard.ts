@@ -21,6 +21,7 @@ import { openChase } from '../chase/ChaseModal'
 import { changeDigest } from '../../store/changeFollowUp'
 import { changeOf } from '../../store/change'
 import { groupLabel } from '../changes/changeLabels'
+import { ChangeModal } from '../changes/ChangeModal'
 import type { SubView } from '../SubView'
 import { barList, burnChart, progressRing } from './charts'
 import { writeStatusReport, writeStatusReportPdf } from './statusReport'
@@ -85,7 +86,7 @@ export class ProjectDashboard implements SubView {
     this.renderPeople(grid, this.metrics)
     this.renderMilestones(grid, this.metrics)
     this.renderDocuments(grid, this.metrics)
-    this.renderChanges(grid, tasks)
+    this.renderChanges(grid)
   }
 
   refresh(): void {
@@ -537,8 +538,11 @@ export class ProjectDashboard implements SubView {
    * The changes: what the next sitting of the board has to examine, group by group, the
    * requests whose proposal is overdue, and how many were closed this month.
    */
-  private renderChanges(parent: HTMLElement, tasks: Task[]): void {
-    const digest = changeDigest(tasks, today().toString())
+  private renderChanges(parent: HTMLElement): void {
+    const changes = this.plugin.changes
+      .forProjects(this.scope.projects.map((project) => project.filePath))
+      .map((record) => record.task)
+    const digest = changeDigest(changes, today().toString())
     if (!digest.open && !digest.closedThisMonth) return
     const body = this.card(parent, t('view.changes'))
     const chips = body.createDiv('pm-kpi-chips')
@@ -570,7 +574,9 @@ export class ProjectDashboard implements SubView {
       const list = body.createDiv('pm-kpi-milestones')
       for (const one of digest.stale.slice(0, 5)) {
         const row = list.createDiv('pm-kpi-milestone pm-kpi-milestone--late')
-        makeActivatable(row, () => this.openTask(one.task.id))
+        makeActivatable(row, () =>
+          new ChangeModal(this.plugin, one.task, () => this.onRefresh(), this.scope.projects).open()
+        )
         setIcon(row.createSpan({ cls: 'pm-kpi-milestone-icon' }), 'hourglass')
         const number = changeOf(one.task).number
         row.createSpan({ cls: 'pm-kpi-milestone-title', text: [number, one.task.title].filter(Boolean).join(' — ') })

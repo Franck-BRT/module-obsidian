@@ -1533,7 +1533,11 @@ export class ChatView extends ItemView {
         description: primary.description,
         team: primary.teamMembers,
         zones: primary.zones ?? [],
-        parts: projectParts(primary, projects),
+        // The project's changes, kept in the library, written among its tickets.
+        parts: projectParts(primary, projects).map((part) => ({
+          ...part,
+          tasks: [...part.tasks, ...this.plugin.changes.forProjects([part.path]).map((record) => record.task)]
+        })),
         statuses: config.statuses,
         priorities: config.priorities,
         today: today().toString(),

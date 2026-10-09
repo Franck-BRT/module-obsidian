@@ -13,14 +13,17 @@ import { t } from '../../i18n'
 /** A document a change touches, that a closed change may make to be issued again. */
 export type RevisableDoc =
   | { kind: 'library'; title: string; version: string; doc: LibraryDoc }
-  | { kind: 'ticket'; title: string; version: string; task: Task }
+  | { kind: 'ticket'; title: string; version: string; task: Task; project: Project }
 
 type Action = 'none' | 'next' | 'revise'
 
 /** The documents among what a change touches: those of the library, and the project's document tickets. */
-export function revisableDocs(plugin: PMPlugin, project: Project, change: Task): RevisableDoc[] {
-  const tasks = flattenTasks(project.tasks).map((flat) => flat.task)
-  const source = change.filePath ?? project.filePath
+export function revisableDocs(plugin: PMPlugin, projects: Project[], change: Task): RevisableDoc[] {
+  const holders = projects.flatMap((project) =>
+    flattenTasks(project.tasks).map((flat) => ({ task: flat.task, project }))
+  )
+  const tasks = holders.map((one) => one.task)
+  const source = change.filePath ?? ''
   const docs = plugin.library.docs()
   const out: RevisableDoc[] = []
   for (const raw of changeOf(change).affected) {
@@ -29,7 +32,16 @@ export function revisableDocs(plugin: PMPlugin, project: Project, change: Task):
       const doc = docs.find((one) => one.record === found.path)
       if (doc) out.push({ kind: 'library', title: doc.title, version: versionLabel(doc), doc })
     } else if (found.kind === 'ticket' && found.task?.type === 'document') {
-      out.push({ kind: 'ticket', title: found.task.title, version: documentOf(found.task).issue, task: found.task })
+      const project = holders.find((one) => one.task === found.task)?.project
+      if (project) {
+        out.push({
+          kind: 'ticket',
+          title: found.task.title,
+          version: documentOf(found.task).issue,
+          task: found.task,
+          project
+        })
+      }
     }
   }
   return out
@@ -51,7 +63,6 @@ export class ReviseDocsModal extends Modal {
 
   constructor(
     private plugin: PMPlugin,
-    private project: Project,
     private change: Task,
     private docs: RevisableDoc[],
     private onDone: () => Promise<void> = async () => {}
@@ -131,7 +142,7 @@ export class ReviseDocsModal extends Modal {
           action === 'revise'
             ? { tags: doc.task.tags.includes(tag) ? doc.task.tags : [...doc.task.tags, tag] }
             : { document: { ...documentOf(doc.task), issue: nextOf(doc), state: 'expected' } }
-        await this.plugin.store.updateTask(this.project, doc.task.id, patch)
+        await this.plugin.store.updateTask(doc.project, doc.task.id, patch)
       }
       changed += 1
     }

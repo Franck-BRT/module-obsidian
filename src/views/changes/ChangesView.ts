@@ -1,7 +1,6 @@
 import { Notice, setIcon } from 'obsidian'
 import type PMPlugin from '../../main'
 import type { ChangeGroup, FilterState, Project, Task } from '../../types'
-import { makeTask } from '../../types'
 import type { ProjectScope } from '../../store'
 import { flattenTasks } from '../../store/TaskTreeOps'
 import {
@@ -14,12 +13,11 @@ import {
   isChange,
   isChangeOver,
   lastDecision,
-  nextChangeNumber,
   orderChanges,
   type ChangeStage
 } from '../../store/change'
-import { openTaskModal, promptText } from '../../ui/ModalFactory'
-import { formatDateShort } from '../../dates'
+import { promptText } from '../../ui/ModalFactory'
+import { formatDateShort, today } from '../../dates'
 import { fold } from '../../store/library/libraryDoc'
 import { displayName, safeAsync } from '../../utils'
 import { explain } from '../../ui/explain'
@@ -28,6 +26,8 @@ import { SUBVIEW_CLASS } from '../subviewClasses'
 import type { SubView } from '../SubView'
 import { classLabel, decisionLabel, groupLabel, roundLabel, STAGE_ICON, stageLabel } from './changeLabels'
 import { BoardModal } from './BoardModal'
+import { ChangeModal } from './ChangeModal'
+import { moveChangeToLibrary } from './changeFiles'
 
 type StageFilter = 'open' | 'all' | ChangeStage
 
@@ -38,11 +38,16 @@ const FILTERS: StageFilter[] = ['open', 'draft', 'round0', 'round1', 'round2', '
  * stands before the local change board (CLM) — round 0, 1 or 2, closed, refused —, the
  * last decision taken; a new request a click away, and the board's sitting, which takes
  * every change waiting for a round, records what it decides and writes its minutes.
+ *
+ * The changes are kept in the document library, each belonging to one project or
+ * several: the register shows those of the projects in view.
  */
 export class ChangesView implements SubView {
   private stage: StageFilter = 'open'
   /** The group shown: all, one of them, or those in none. */
   private group: 'all' | ChangeGroup = 'all'
+  /** The projects each change shown belongs to, by its id. */
+  private projectsOf = new Map<string, string[]>()
 
   constructor(
     private container: HTMLElement,
@@ -54,9 +59,10 @@ export class ChangesView implements SubView {
 
   private changes(): Task[] {
     const words = fold(this.filter.text)
-    return flattenTasks(this.scope.tasks())
-      .map((flat) => flat.task)
-      .filter((task) => isChange(task) && !task.archived)
+    const records = this.plugin.changes.forProjects(this.scope.projects.map((project) => project.filePath))
+    this.projectsOf = new Map(records.map((record) => [record.task.id, record.doc.projects]))
+    return records
+      .map((record) => record.task)
       .filter((task) => {
         if (!words) return true
         const change = changeOf(task)
@@ -70,6 +76,7 @@ export class ChangesView implements SubView {
     const root = this.container.createDiv('pm-changes')
     const all = this.changes()
     this.renderHead(root, all)
+    this.renderLegacy(root)
     if (!all.length) {
       const empty = root.createDiv('pm-changes-empty')
       setIcon(empty.createDiv('pm-changes-empty-icon'), 'git-pull-request-arrow')
@@ -202,6 +209,15 @@ export class ChangesView implements SubView {
       const subject = row.createEl('td', { cls: 'pm-changes-subject' })
       subject.createSpan({ text: task.title })
       if (change.reason) subject.createDiv({ cls: 'pm-changes-reason', text: change.reason })
+      // Shared with other projects: said, since a decision on it is a decision for them all.
+      const projects = this.projectsOf.get(task.id) ?? []
+      if (projects.length > 1) {
+        const shared = subject.createDiv('pm-changes-projects')
+        setIcon(shared.createSpan('pm-changes-projects-icon'), 'folder-kanban')
+        shared.createSpan({
+          text: projects.map((path) => this.plugin.index.projectRef(path)?.title ?? path).join(' · ')
+        })
+      }
       row.createEl('td', {
         cls: `pm-changes-class is-${change.class}`,
         text: classLabel(change.class)
@@ -219,28 +235,59 @@ export class ChangesView implements SubView {
           ? `${roundLabel(last.round)} · ${decisionLabel(last.decision)}${last.date ? ` · ${formatDateShort(last.date)}` : ''}`
           : '—'
       })
-      row.addEventListener('click', () => {
-        const project = this.scope.projectOf(task.id)
-        if (project) openTaskModal(this.plugin, project, { task, onSave: () => this.onRefresh() })
-      })
+      row.addEventListener('click', () => this.open(task))
     }
   }
 
-  /** A new request: its subject asked, then its card opened to write the rest. */
+  private open(task: Task): void {
+    new ChangeModal(this.plugin, task, () => this.onRefresh(), this.scope.projects).open()
+  }
+
+  /**
+   * A new request, written in the library and belonging to the project: its subject
+   * asked, then its card opened to write the rest.
+   */
   private async create(project: Project): Promise<void> {
     const title = await promptText(this.plugin.app, t('change.newTitle'), t('change.subjectPlaceholder'))
     if (!title?.trim()) return
-    const tasks = flattenTasks(project.tasks).map((flat) => flat.task)
-    const task = makeTask({
+    const task = await this.plugin.changes.create({
       title: title.trim(),
-      type: 'change',
-      start: '',
-      due: '',
-      change: emptyChange({ number: nextChangeNumber(tasks), group: this.group === 'all' ? 0 : this.group })
+      change: emptyChange({
+        number: this.plugin.changes.nextNumber(),
+        group: this.group === 'all' ? 0 : this.group
+      }),
+      projects: [project.filePath],
+      today: today().toString()
     })
-    await this.plugin.store.insertTask(project, task)
     new Notice(t('change.added', { number: changeOf(task).number }))
     await this.onRefresh()
-    openTaskModal(this.plugin, project, { task, onSave: () => this.onRefresh() })
+    this.open(task)
+  }
+
+  /**
+   * The changes still kept as tickets of the projects, as they were before they went into
+   * the library: said, and moved there in one click.
+   */
+  private renderLegacy(root: HTMLElement): void {
+    const legacy = this.scope.projects.flatMap((project) =>
+      flattenTasks(project.tasks)
+        .map((flat) => flat.task)
+        .filter((task) => isChange(task) && !task.archived)
+        .map((task) => ({ project, task }))
+    )
+    if (!legacy.length) return
+    const box = root.createDiv('pm-changes-legacy')
+    setIcon(box.createSpan('pm-changes-legacy-icon'), 'library')
+    box.createSpan({ text: t('change.library.legacy', { count: legacy.length }) })
+    const move = box.createEl('button', { cls: 'mod-cta', text: t('change.library.moveAll') })
+    move.addEventListener(
+      'click',
+      safeAsync(async () => {
+        move.disabled = true
+        for (const { project, task } of legacy) await moveChangeToLibrary(this.plugin, project, task)
+        new Notice(t('change.library.moved', { count: legacy.length }))
+        await this.onRefresh()
+      })
+    )
   }
 }

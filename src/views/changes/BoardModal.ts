@@ -12,17 +12,15 @@ import {
   changeOf,
   changeOwner,
   recordDecision,
-  statusForChange,
   type BoardLine
 } from '../../store/change'
 import { buildDocx } from '../../store/docx'
 import { buildPdf } from '../../store/pdf'
 import { approvesProposal, closesChange } from '../../store/changeFollowUp'
-import { findTaskById } from '../../store/TaskIndex'
 import { today } from '../../dates'
 import { displayName, safeAsync, sanitizeFileName } from '../../utils'
 import { t } from '../../i18n'
-import { clmFolder, freeName } from './changeFiles'
+import { clmFolder, freeName, projectsOfChange } from './changeFiles'
 import { ImplementationModal } from './ImplementationModal'
 import { ReviseDocsModal, revisableDocs } from './ReviseDocsModal'
 import { boardWords, classLabel, decisionLabel, groupLabel, roundHint, roundLabel } from './changeLabels'
@@ -158,15 +156,12 @@ export class BoardModal extends Modal {
     }
     const followUps: FollowUp[] = []
     for (const line of decided) {
-      const project = this.projects.projectOf(line.task.id)
-      if (!project || !line.decision) continue
+      if (!line.decision || !line.task.filePath) continue
       const change = recordDecision(changeOf(line.task), line.round, line.decision, this.date, line.comment)
-      const patch: Partial<Task> = { change }
-      const status = statusForChange(change, line.task.status, this.plugin.store.configFor(project).statuses)
-      if (status) patch.status = status
-      await this.plugin.store.updateTask(project, line.task.id, patch)
-      if (approvesProposal(line.task, { change })) followUps.push({ kind: 'approved', project, id: line.task.id })
-      else if (closesChange(line.task, { change })) followUps.push({ kind: 'closed', project, id: line.task.id })
+      await this.plugin.changes.save({ ...line.task, change })
+      const path = line.task.filePath
+      if (approvesProposal(line.task, { change })) followUps.push({ kind: 'approved', path })
+      else if (closesChange(line.task, { change })) followUps.push({ kind: 'closed', path })
     }
     const lines = withDecisions ? this.lines : this.lines.map((line) => ({ ...line, decision: null, comment: '' }))
     const record = await this.writeRecord(lines)
@@ -179,7 +174,7 @@ export class BoardModal extends Modal {
     )
     await this.onDone()
     if (record) await this.app.workspace.getLeaf('tab').openFile(record)
-    if (followUps.length) new FollowUpModal(this.plugin, followUps, this.onDone).open()
+    if (followUps.length) new FollowUpModal(this.plugin, followUps, this.projects.projects, this.onDone).open()
   }
 
   /**
@@ -223,8 +218,8 @@ export class BoardModal extends Modal {
 /** A change the sitting moved on, and what it calls for: its proposal approved, or the change closed. */
 interface FollowUp {
   kind: 'approved' | 'closed'
-  project: Project
-  id: string
+  /** The change, by its note's path. */
+  path: string
 }
 
 /**
@@ -232,17 +227,25 @@ interface FollowUp {
  * proposal approved, the documents to issue again for each change closed.
  */
 class FollowUpModal extends Modal {
+  /** Each change's projects, loaded once. */
+  private projectsOf = new Map<string, Project[]>()
+
   constructor(
     private plugin: PMPlugin,
     private followUps: FollowUp[],
+    private known: Project[],
     private onDone: () => Promise<void>
   ) {
     super(plugin.app)
   }
 
-  onOpen(): void {
+  async onOpen(): Promise<void> {
     this.modalEl.addClass('pm-followup-modal')
     this.setTitle(t('change.followUp.title'))
+    for (const one of this.followUps) {
+      const record = this.plugin.changes.at(one.path)
+      if (record) this.projectsOf.set(one.path, await projectsOfChange(this.plugin, record.task, this.known))
+    }
     this.render()
   }
 
@@ -252,8 +255,9 @@ class FollowUpModal extends Modal {
     root.createDiv({ cls: 'pm-implementation-hint', text: t('change.followUp.hint') })
     const list = root.createDiv('pm-revise-list')
     for (const one of this.followUps) {
-      const task = findTaskById(one.project, one.id)
+      const task = this.plugin.changes.at(one.path)?.task
       if (!task) continue
+      const projects = this.projectsOf.get(one.path) ?? []
       const change = changeOf(task)
       const row = list.createDiv('pm-revise-row')
       setIcon(row.createSpan('pm-revise-icon'), one.kind === 'approved' ? 'list-plus' : 'circle-check')
@@ -268,10 +272,13 @@ class FollowUpModal extends Modal {
         const button = row.createEl('button', {
           text: made ? t('change.followUp.tasksMade', { count: made }) : t('change.tasks.open')
         })
+        button.disabled = !projects.length
+        if (!projects.length) button.setAttr('title', t('change.tasks.noProject'))
         button.addEventListener('click', () =>
-          new ImplementationModal(this.plugin, one.project, task, async (ids) => {
-            const fresh = findTaskById(one.project, one.id) ?? task
-            await this.plugin.store.updateTask(one.project, one.id, {
+          new ImplementationModal(this.plugin, projects, task, async (ids) => {
+            const fresh = this.plugin.changes.at(one.path)?.task ?? task
+            await this.plugin.changes.save({
+              ...fresh,
               change: { ...changeOf(fresh), tasks: [...changeOf(fresh).tasks, ...ids] }
             })
             await this.onDone()
@@ -280,14 +287,14 @@ class FollowUpModal extends Modal {
         )
         continue
       }
-      const docs = revisableDocs(this.plugin, one.project, task)
+      const docs = revisableDocs(this.plugin, projects, task)
       if (!docs.length) {
         row.createSpan({ cls: 'pm-revise-version', text: t('change.revise.noDocs') })
         continue
       }
       const button = row.createEl('button', { text: t('change.revise.open') })
       button.addEventListener('click', () =>
-        new ReviseDocsModal(this.plugin, one.project, task, docs, async () => {
+        new ReviseDocsModal(this.plugin, task, docs, async () => {
           await this.onDone()
         }).open()
       )

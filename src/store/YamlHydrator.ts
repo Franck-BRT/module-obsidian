@@ -220,7 +220,7 @@ function readReserve(raw: unknown): Task['reserve'] {
 }
 
 /** A change — request, proposal, the board's rounds —, as written in its note; none when it is not there. */
-function readChange(raw: unknown): Task['change'] {
+export function readChange(raw: unknown): Task['change'] {
   if (!raw || typeof raw !== 'object') return undefined
   const r = raw as Record<string, unknown>
   const text = (value: unknown): string =>

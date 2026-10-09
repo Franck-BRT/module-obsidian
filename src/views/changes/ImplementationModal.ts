@@ -12,13 +12,13 @@ import { t } from '../../i18n'
 
 /**
  * The tickets an approved proposal is carried out by: one a line — the proposal's own
- * list offered first —, who carries them and by when, made in the project's
- * « Modifications » lot, each pointing back to its change, the change keeping them.
+ * list offered first —, who carries them and by when, made in the « Modifications » lot
+ * of one of the change's projects, each pointing back to the change, which keeps them.
  */
 export class ImplementationModal extends Modal {
   constructor(
     private plugin: PMPlugin,
-    private project: Project,
+    private projects: Project[],
     private change: Task,
     private onCreated: (ids: string[]) => Promise<void>
   ) {
@@ -35,6 +35,17 @@ export class ImplementationModal extends Modal {
     lines.value = implementationLines(this.change).join('\n')
 
     const row = root.createDiv('pm-implementation-row')
+    // Several projects: the one the tickets are made in, chosen.
+    let project = this.projects[0]
+    if (this.projects.length > 1) {
+      const where = row.createDiv('pm-implementation-field')
+      where.createDiv({ cls: 'pm-change-label', text: t('change.tasks.project') })
+      const select = where.createEl('select', { cls: 'dropdown' })
+      for (const one of this.projects) select.createEl('option', { value: one.filePath, text: one.title })
+      select.addEventListener('change', () => {
+        project = this.projects.find((one) => one.filePath === select.value) ?? project
+      })
+    }
     const who = row.createDiv('pm-implementation-field')
     who.createDiv({ cls: 'pm-change-label', text: t('change.owner') })
     const owner = who.createEl('input', { attr: { type: 'text' } })
@@ -67,7 +78,7 @@ export class ImplementationModal extends Modal {
         }
         create.disabled = true
         try {
-          await this.create(titles, owner.value.trim(), due.value)
+          await this.create(project, titles, owner.value.trim(), due.value)
         } finally {
           create.disabled = false
         }
@@ -75,9 +86,9 @@ export class ImplementationModal extends Modal {
     )
   }
 
-  private async create(titles: string[], owner: string, due: string): Promise<void> {
+  private async create(project: Project, titles: string[], owner: string, due: string): Promise<void> {
     const store = this.plugin.store
-    const lot = await ensureLot(store, this.project, changesLot())
+    const lot = await ensureLot(store, project, changesLot())
     const number = changeOf(this.change).number || this.change.title
     const link = this.change.filePath ? refLink(this.app, this.change.filePath, number, '') : number
     const ids: string[] = []
@@ -89,7 +100,7 @@ export class ImplementationModal extends Modal {
         assignees: owner ? [owner] : [],
         description: t('change.tasks.description', { change: link })
       })
-      await store.insertTask(this.project, task, lot)
+      await store.insertTask(project, task, lot)
       ids.push(task.id)
     }
     await this.onCreated(ids)

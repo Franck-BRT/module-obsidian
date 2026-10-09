@@ -16,7 +16,6 @@ import { ReservesView } from '../../src/views/reserves/ReservesView'
 import { BudgetView } from '../../src/views/budget/BudgetView'
 import { GanttView } from '../../src/views/gantt/GanttView'
 import { renderReservePanel } from '../../src/modals/ReservePanel'
-import { renderChangePanel } from '../../src/modals/ChangePanel'
 import { ChangesView } from '../../src/views/changes/ChangesView'
 import { BoardModal } from '../../src/views/changes/BoardModal'
 import { emptyChange } from '../../src/store/change'
@@ -45,6 +44,8 @@ import { projectPeople } from '../../src/store/projectPeople'
 import { isDocument } from '../../src/store/Document'
 import { promptNoteContent } from '../../src/store/chat/promptLibrary'
 import { ImplementationModal } from '../../src/views/changes/ImplementationModal'
+import { ChangeModal } from '../../src/views/changes/ChangeModal'
+import { ChangeLibrary } from '../../src/store/changeLibrary'
 import { ReviseDocsModal, revisableDocs } from '../../src/views/changes/ReviseDocsModal'
 import { ProjectDashboard } from '../../src/views/dashboard/ProjectDashboard'
 import { refLink } from '../../src/store/refs'
@@ -53,19 +54,22 @@ import { rebuildTaskIndex } from '../../src/store/TaskIndex'
 const query = new URLSearchParams(location.search)
 const screen = query.get('screen') ?? 'reserves'
 
-/** A few changes at every stage, for the change screens. */
-function sampleChanges(project: any): Task[] {
-  const make = (title: string, change: any, assignees: string[] = []): Task =>
-    makeTask({ title, type: 'change', assignees, change: emptyChange(change) } as any)
-  const made = [
-    make('Remplacer le connecteur J12 par un modèle étanche', { number: 'DM-001', group: 1, origin: 'Thales', class: 'major', reason: 'Infiltrations constatées en essais climatiques', submittedOn: '2026-09-02', rounds: [{ round: 0, decision: 'accepted', date: '2026-09-10', comment: 'Lancer la PM' }, { round: 1, decision: 'accepted', date: '2026-09-24', comment: '' }] }, ['Anne Leroy']),
-    make('Ajouter un capteur de température sur la carte alimentation', { number: 'DM-002', group: 2, origin: 'CNES', class: 'minor', reason: 'Besoin de télémesure', submittedOn: '2026-09-15', rounds: [{ round: 0, decision: 'accepted', date: '2026-08-26', comment: 'PM attendue pour la prochaine CLM' }] }, ['Paul Martin']),
-    make('Modifier la séquence de mise sous tension', { number: 'DM-003', group: 1, origin: 'Airbus DS', class: 'major', reason: 'Appel de courant trop élevé', submittedOn: '2026-10-01' }),
-    make('Changer la référence du joint torique', { number: 'DM-004', group: 3, origin: 'Sous-traitant mécanique', reason: 'Obsolescence fournisseur' }),
-    make('Mettre à jour le plan d’interface mécanique', { number: 'DM-005', group: 2, origin: 'CNES', submittedOn: '2026-08-01', rounds: [{ round: 0, decision: 'accepted', date: '2026-08-05', comment: '' }, { round: 1, decision: 'accepted', date: '2026-08-20', comment: '' }, { round: 2, decision: 'accepted', date: '2026-10-06', comment: 'Clôturée' }] }),
-    make('Passer le harnais en câble blindé', { number: 'DM-006', group: 1, origin: 'Thales', class: 'major', submittedOn: '2026-08-12', rounds: [{ round: 0, decision: 'rejected', date: '2026-08-20', comment: 'Hors périmètre' }] })
+/** A few changes at every stage, for the change screens: written in the library, belonging to the project. */
+async function sampleChanges(plugin: any, project: any, tune: (number: string, change: any) => void = () => {}): Promise<Task[]> {
+  const other = plugin.settings.demo?.projects[1]
+  const rows: [string, any, string[], string[]][] = [
+    ['Remplacer le connecteur J12 par un modèle étanche', { number: 'DM-001', group: 1, origin: 'Thales', class: 'major', reason: 'Infiltrations constatées en essais climatiques', submittedOn: '2026-09-02', rounds: [{ round: 0, decision: 'accepted', date: '2026-09-10', comment: 'Lancer la PM' }, { round: 1, decision: 'accepted', date: '2026-09-24', comment: '' }] }, ['Anne Leroy'], other ? [other] : []],
+    ['Ajouter un capteur de température sur la carte alimentation', { number: 'DM-002', group: 2, origin: 'CNES', class: 'minor', reason: 'Besoin de télémesure', submittedOn: '2026-09-15', rounds: [{ round: 0, decision: 'accepted', date: '2026-08-26', comment: 'PM attendue pour la prochaine CLM' }] }, ['Paul Martin'], []],
+    ['Modifier la séquence de mise sous tension', { number: 'DM-003', group: 1, origin: 'Airbus DS', class: 'major', reason: 'Appel de courant trop élevé', submittedOn: '2026-10-01' }, [], []],
+    ['Changer la référence du joint torique', { number: 'DM-004', group: 3, origin: 'Sous-traitant mécanique', reason: 'Obsolescence fournisseur' }, [], []],
+    ['Mettre à jour le plan d’interface mécanique', { number: 'DM-005', group: 2, origin: 'CNES', submittedOn: '2026-08-01', rounds: [{ round: 0, decision: 'accepted', date: '2026-08-05', comment: '' }, { round: 1, decision: 'accepted', date: '2026-08-20', comment: '' }, { round: 2, decision: 'accepted', date: '2026-10-06', comment: 'Clôturée' }] }, [], []],
+    ['Passer le harnais en câble blindé', { number: 'DM-006', group: 1, origin: 'Thales', class: 'major', submittedOn: '2026-08-12', rounds: [{ round: 0, decision: 'rejected', date: '2026-08-20', comment: 'Hors périmètre' }] }, [], []]
   ]
-  project.tasks.push(...made)
+  const made: Task[] = []
+  for (const [title, change, assignees, more] of rows) {
+    tune(change.number, change)
+    made.push(await plugin.changes.create({ title, change: emptyChange(change), projects: [project.filePath, ...more], assignees, today: '2026-10-09' }))
+  }
   return made
 }
 setLocale((query.get('lang') as 'fr' | 'en') ?? 'fr')
@@ -94,6 +98,8 @@ async function main(): Promise<void> {
     store,
     index,
     library,
+    changes: new ChangeLibrary(app, library, () => 'Modifications', () => 'DM / PM'),
+    askLibraryProjects: async () => null,
     requirements,
     saveSettings: async () => {},
     refreshViews: () => {},
@@ -127,63 +133,54 @@ async function main(): Promise<void> {
       new GanttView(body, scope, plugin, refresh, makeDefaultFilter(), new Scope() as never).render()
       break
     case 'changes':
-      sampleChanges(project)
+      await sampleChanges(plugin, project)
       new ChangesView(body, scope, plugin, refresh, makeDefaultFilter()).render()
       break
     case 'change-panel': {
-      const task = sampleChanges(project)[1]
-      const modal = body.createDiv('modal pm-harness-modal')
-      modal.createDiv({ cls: 'modal-title', text: task.title })
-      const content = modal.createDiv('modal-content')
-      const draw = (): void => {
-        content.empty()
-        renderChangePanel(content, { task, project, plugin, rerender: draw })
-      }
-      draw()
+      const task = (await sampleChanges(plugin, project))[0]
+      new ChangeModal(plugin, task, () => {}, [project]).open()
       break
     }
     case 'change-closed':
     case 'revise-modal': {
-      const dm = sampleChanges(project)[4]
       const docTicket = tasks.find((one: Task) => isDocument(one) && one.filePath)
       const libraryDoc = library.docs()[0]
-      dm.change!.affected = [
-        ...(libraryDoc ? [refLink(app, libraryDoc.record, libraryDoc.title, '')] : []),
-        ...(docTicket?.filePath ? [refLink(app, docTicket.filePath, docTicket.title, '')] : []),
-        'Harnais principal'
-      ]
       const done = makeTask({ title: 'Mettre à jour le plan PL-002 à l’indice C', status: 'done', due: '2026-09-01' })
       const doing = makeTask({ title: 'Diffuser le plan aux sous-traitants', due: '2026-09-05' })
       project.tasks.push(done, doing)
-      dm.change!.tasks = [done.id, doing.id]
       rebuildTaskIndex(project)
+      const dm = (
+        await sampleChanges(plugin, project, (number, change) => {
+          if (number !== 'DM-005') return
+          change.affected = [
+            ...(libraryDoc ? [refLink(app, libraryDoc.record, libraryDoc.title, '')] : []),
+            ...(docTicket?.filePath ? [refLink(app, docTicket.filePath, docTicket.title, '')] : []),
+            'Harnais principal'
+          ]
+          change.tasks = [done.id, doing.id]
+        })
+      )[4]
       if (screen === 'revise-modal') {
-        new ReviseDocsModal(plugin, project, dm, revisableDocs(plugin, project, dm)).open()
+        new ReviseDocsModal(plugin, dm, revisableDocs(plugin, [project], dm)).open()
         break
       }
-      const modal = body.createDiv('modal pm-harness-modal')
-      modal.createDiv({ cls: 'modal-title', text: dm.title })
-      const content = modal.createDiv('modal-content')
-      const draw = (): void => {
-        content.empty()
-        renderChangePanel(content, { task: dm, project, plugin, rerender: draw })
-      }
-      draw()
+      new ChangeModal(plugin, dm, () => {}, [project]).open()
       break
     }
     case 'impl-modal': {
-      const dm = sampleChanges(project)[0]
+      const dm = (await sampleChanges(plugin, project))[0]
       dm.change!.proposal = 'Connecteur étanche IP67 de même empreinte :\n- Commander les connecteurs IP67\n- Modifier le plan de câblage\n- Requalifier en essais climatiques'
-      new ImplementationModal(plugin, project, dm, async () => {}).open()
+      const second = plugin.settings.demo?.projects[1] ? await store.loadProjectByPath(plugin.settings.demo.projects[1]) : null
+      new ImplementationModal(plugin, second ? [project, second] : [project], dm, async () => {}).open()
       break
     }
     case 'dashboard-changes': {
-      sampleChanges(project)
+      await sampleChanges(plugin, project)
       new ProjectDashboard(body, scope, plugin, refresh, makeDefaultFilter(), () => {}).render()
       break
     }
     case 'clm':
-      new BoardModal(plugin, scope, sampleChanges(project), async () => {}).open()
+      new BoardModal(plugin, scope, await sampleChanges(plugin, project), async () => {}).open()
       break
     case 'reserve-panel': {
       const task = tasks.find((t: Task) => t.type === 'reserve') as Task

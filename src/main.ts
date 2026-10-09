@@ -112,6 +112,7 @@ import {
   type ChooserRequest,
   type ProjectOption
 } from './views/documents/ProjectChooser'
+import { ChangeLibrary } from './store/changeLibrary'
 import { DocLibrary, type PourItem } from './store/library/DocLibrary'
 import { DocTextIndex, folderShelf } from './store/library/DocTextIndex'
 import { collectionNames, inReference, isLibraryDoc, likelyPair, type LibraryDoc } from './store/library/libraryDoc'
@@ -168,6 +169,8 @@ export default class PMPlugin extends Plugin {
   documents!: DocumentStore
   /** Every document poured into the library, whatever project it belongs to. */
   library!: DocLibrary
+  /** The change requests and proposals, kept in the library. */
+  changes!: ChangeLibrary
   /** What the library's documents say, read once and kept, for searching. */
   libraryText!: DocTextIndex
   /** The notes of no project yet, and the inbox new notes land in. */
@@ -256,6 +259,12 @@ export default class PMPlugin extends Plugin {
           folder ? t('library.ghostLine', { link, folder }) : t('library.ghostLineRoot', { link })
       }),
       (path) => this.index.projectRef(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/, '')
+    )
+    this.changes = new ChangeLibrary(
+      this.app,
+      this.library,
+      () => t('change.library.folder'),
+      () => t('change.library.category')
     )
     this.notes = new NoteLibrary(
       this.app,

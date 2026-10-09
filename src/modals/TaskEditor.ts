@@ -27,7 +27,8 @@ import { renderDecisionPanel } from './DecisionPanel'
 import { isDecision } from '../store/decision'
 import { isReserve } from '../store/reserve'
 import { renderReservePanel } from './ReservePanel'
-import { renderChangePanel } from './ChangePanel'
+import { moveChangeToLibrary } from '../views/changes/changeFiles'
+import { ChangeModal } from '../views/changes/ChangeModal'
 import { isChange } from '../store/change'
 import { isDocument } from '../store/Document'
 import { renderSubtasksPanel } from './SubtasksPanel'
@@ -629,13 +630,22 @@ export class TaskEditor {
       })
     }
 
+    // A change is kept in the library now: one still made or kept as a ticket goes there.
     if (isChange(this.task)) {
-      renderChangePanel(body, {
-        task: this.task,
-        project: this.project,
-        plugin: this.plugin,
-        rerender: () => this.render()
-      })
+      const box = body.createDiv('pm-changes-legacy')
+      setIcon(box.createSpan('pm-changes-legacy-icon'), 'library')
+      box.createSpan({ text: t('change.library.legacyOne') })
+      const move = box.createEl('button', { cls: 'mod-cta', text: t('change.library.moveOne') })
+      move.addEventListener(
+        'click',
+        safeAsync(async () => {
+          move.disabled = true
+          const moved = await moveChangeToLibrary(this.plugin, this.project, this.task)
+          this.cancelled = true
+          this.host.close()
+          new ChangeModal(this.plugin, moved, () => this.plugin.refreshViews(), [this.project]).open()
+        })
+      )
     }
 
     if (isDecision(this.task)) {

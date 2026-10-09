@@ -1797,12 +1797,14 @@ export const fr: Catalog = {
   'change.registerIntro':
     'Une DM (demande de modification) dit quoi changer et pourquoi ; sa PM (proposition de modification) dit comment et ce que cela coûte. La CLM (commission locale de modification) décide en trois tours : tour 0 la DM, tour 1 la PM, tour 2 la mise en œuvre.',
   'change.new': 'Nouvelle DM',
-  'tip.change.new': 'Crée une demande de modification numérotée, puis ouvre sa fiche pour la rédiger.',
+  'tip.change.new':
+    'Crée une demande de modification numérotée dans la bibliothèque, rattachée à ce projet, puis ouvre sa fiche.',
   'change.newTitle': 'Objet de la demande de modification',
   'change.subjectPlaceholder': 'ex. Remplacer le connecteur J12 par un modèle étanche',
   'change.added': 'Demande {number} créée.',
   'change.none': 'Aucune demande de modification',
-  'change.noneDesc': 'Créez une DM avec « Nouvelle DM » : elle sera ensuite examinée par la CLM en trois tours.',
+  'change.noneDesc':
+    'Créez une demande avec « Nouvelle DM » : elle est rangée dans la bibliothèque, rattachée à ce projet (et à d’autres si besoin), puis la CLM l’examine en trois tours.',
   'change.nothingShown': 'Aucune modification à cette étape.',
   'change.filter.open': 'En cours',
   'change.filter.all': 'Toutes',
@@ -1847,7 +1849,7 @@ export const fr: Catalog = {
   'change.request': 'Description de la demande',
   'change.requestPlaceholder': 'Ce qui doit changer, sur quoi, et ce qui est attendu.',
   'change.affected': 'Éléments impactés',
-  'change.proposalHint': 'À rédiger une fois la DM acceptée au tour 0, par le porteur (le responsable du ticket).',
+  'change.proposalHint': 'À rédiger une fois la DM acceptée au tour 0, par son porteur.',
   'change.proposal': 'Solution proposée',
   'change.proposalPlaceholder': 'Comment la modification sera réalisée.',
   'change.impactTechnical': 'Impact technique',
@@ -1903,8 +1905,8 @@ export const fr: Catalog = {
   'change.sheet.status': 'Statut',
   'change.sheet.signOrigin': 'L’émetteur de la DM',
   'change.sheet.signOwner': 'Le porteur de la PM',
-  'change.sheet.folder': 'Fiches DM',
-  'change.sheet.written': 'Fiche écrite dans {path} (avec sa version Word)',
+  'change.sheet.written':
+    'Fiche écrite dans {path} (avec sa version Word) ; la bibliothèque l’affiche désormais pour cette DM.',
   'change.sheet.failed': 'La fiche n’a pas pu être écrite.',
   'change.sheet.button': 'Fiche DM',
   'tip.change.sheet':
@@ -1969,6 +1971,33 @@ export const fr: Catalog = {
   'persona.starter.clm.description': 'Rédiger des DM, préparer et suivre la commission locale de modification',
   'persona.starter.clm.instructions':
     'Tu es secrétaire de la commission locale de modification (CLM) d’un projet. Tu connais le processus : une DM (demande de modification) dit quoi changer et pourquoi ; sa PM (proposition de modification) dit comment, et ce qu’elle coûte ; la CLM décide en trois tours — tour 0 la DM, tour 1 la PM, tour 2 la vérification de la mise en œuvre et la clôture —, en acceptant, refusant, ajournant ou demandant de compléter. Les DM sont rangées en groupes 1, 2 et 3.\n\n- Pour rédiger une DM à partir d’une description libre : objet court, motif, demande précise, éléments impactés (documents, exigences, pièces), classe majeure ou mineure proposée, groupe s’il est connu. Signale ce qui manque.\n- Pour une PM : solution proposée, impacts technique, coût et délai, tâches de mise en œuvre sous forme de liste.\n- Pour préparer une séance : appuie-toi sur le registre des modifications du projet (numéros, groupes, étapes, dernières décisions) ; liste par tour les DM à examiner, ce qui manque à chacune pour être décidée, et les PM attendues depuis longtemps.\n- Après une séance : rédige le relevé de décisions, les actions avec responsable et échéance.\n- Reste factuel ; n’invente ni numéro, ni décision, ni date : ce que le registre ne dit pas est signalé comme à compléter.',
+  'change.library.folder': 'Modifications',
+  'change.library.category': 'DM / PM',
+  'change.library.projects': 'Projets',
+  'change.library.noProject': 'Rattachée à aucun projet',
+  'change.library.editProjects': 'Projets…',
+  'tip.change.projects':
+    'La DM / PM est dans la bibliothèque : rattachez-la à un ou plusieurs projets, comme un document. Elle apparaît dans le registre des modifications de chacun.',
+  'change.library.openNote': 'Ouvrir la note',
+  'change.library.saved': '{number} enregistrée.',
+  'change.library.legacy': {
+    one: '{count} DM est encore enregistrée comme tâche du projet. Les DM / PM sont désormais dans la bibliothèque.',
+    other:
+      '{count} DM sont encore enregistrées comme tâches du projet. Les DM / PM sont désormais dans la bibliothèque.'
+  },
+  'change.library.moveAll': 'Les transférer dans la bibliothèque',
+  'change.library.moved': {
+    one: '{count} DM transférée dans la bibliothèque.',
+    other: '{count} DM transférées dans la bibliothèque.'
+  },
+  'change.library.legacyOne':
+    'Les DM / PM sont désormais dans la bibliothèque de documents, rattachables à plusieurs projets. Transférez celle-ci pour la modifier.',
+  'change.library.moveOne': 'Transférer dans la bibliothèque',
+  'change.tasks.noProject': 'Rattachez d’abord la DM à un projet pour y créer ses tâches.',
+  'change.tasks.project': 'Projet',
+  'change.sheet.fileName': 'Fiche',
+  'tip.change.newInLibrary':
+    'Crée une demande de modification dans la bibliothèque — rattachée au projet filtré s’il y en a un —, puis ouvre sa fiche.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

@@ -631,7 +631,8 @@ export class DocLibrary {
     return !file.path.split('/').includes(DOCS_FOLDER_NAME)
   }
 
-  private projectLink(path: string, from: string): string {
+  /** A project as a record names it: a link to its note, under its title. */
+  projectLink(path: string, from: string): string {
     return refLink(this.app, path, this.projectTitle(path), from)
   }
 

@@ -8,13 +8,10 @@ import {
   CHANGE_DECISIONS,
   changeOf,
   changeStage,
-  nextChangeNumber,
-  recordDecision,
-  statusForChange
+  recordDecision
 } from '../store/change'
 import { approvesProposal, closesChange } from '../store/changeFollowUp'
 import { withAffected } from '../store/decision'
-import { findTaskById } from '../store/TaskIndex'
 import { flattenTasks } from '../store/TaskTreeOps'
 import { ContactBook, readContacts } from '../store/contacts'
 import { renderPropRow } from '../ui/FormField'
@@ -40,31 +37,37 @@ import {
 import { t } from '../i18n'
 
 export interface ChangePanelContext {
+  /** The change, as the ticket it is read as: changed here, written when its window saves. */
   task: Task
-  project: Project
+  /** The projects it belongs to: where its tickets are looked for, and made. */
+  projects: Project[]
   plugin: PMPlugin
   rerender: () => void
+  /** Writes the change as it now stands: for what is done at once, the tickets made for it. */
+  persist: () => Promise<void>
+}
+
+/** Every ticket of the change's projects. */
+function projectTasks(projects: Project[]): Task[] {
+  return projects.flatMap((project) => flattenTasks(project.tasks).map((flat) => flat.task))
+}
+
+/** The project holding a ticket, among the change's. */
+function projectHolding(projects: Project[], task: Task): Project | undefined {
+  return projects.find((project) => flattenTasks(project.tasks).some((flat) => flat.task.id === task.id))
 }
 
 /**
- * The change half of a ticket's editor: the request (DM) — its number, class, who asks,
- * why, what —, the proposal (PM) — how, and what it does to the design, the cost, the
- * schedule —, what it touches, then the board (CLM): where it stands, the decisions
- * taken round by round, and the way to record the next. Over, its ticket is done.
+ * A change's card: the request (DM) — its number, class, group, who asks, why, what —,
+ * what it touches, the proposal (PM) — how, and what it does to the design, the cost, the
+ * schedule —, then the board (CLM): where it stands, the decisions taken round by round,
+ * the way to record the next, and what follows them.
  */
 export function renderChangePanel(container: HTMLElement, ctx: ChangePanelContext): void {
-  const { task, project, plugin, rerender } = ctx
-  if (!task.change) {
-    const tasks = flattenTasks(project.tasks).map((flat) => flat.task)
-    task.change = { ...changeOf(task), number: nextChangeNumber(tasks) }
-  }
+  const { task, projects, plugin, rerender } = ctx
   const change = changeOf(task)
   const set = (patch: Partial<TaskChange>): void => {
     task.change = { ...changeOf(task), ...patch }
-  }
-  const syncStatus = (): void => {
-    const status = statusForChange(changeOf(task), task.status, plugin.store.configFor(project).statuses)
-    if (status) task.status = status
   }
   const area = (parent: HTMLElement, label: string, value: string, placeholder: string, save: (v: string) => void) => {
     const box = parent.createDiv('pm-dm-field')
@@ -88,7 +91,10 @@ export function renderChangePanel(container: HTMLElement, ctx: ChangePanelContex
   explain(sheet, t('change.sheet.button'), t('tip.change.sheet'))
   sheet.addEventListener(
     'click',
-    safeAsync(() => writeChangeSheet(plugin, project, task))
+    safeAsync(async () => {
+      await ctx.persist()
+      await writeChangeSheet(plugin, task, projects)
+    })
   )
   const grid = request.createDiv('pm-prop-grid')
   renderPropRow(
@@ -237,7 +243,6 @@ export function renderChangePanel(container: HTMLElement, ctx: ChangePanelContex
     undo.addEventListener('click', (event) => {
       event.preventDefault()
       set({ rounds: changeOf(task).rounds.slice(0, -1) })
-      syncStatus()
       rerender()
     })
   }
@@ -265,7 +270,6 @@ export function renderChangePanel(container: HTMLElement, ctx: ChangePanelContex
         date.value || today().toString(),
         comment.value
       )
-      syncStatus()
       rerender()
       // What the decision calls for next: the tickets to carry it out, the documents to issue again.
       if (approvesProposal(before, task)) openImplementation(ctx, set)
@@ -286,19 +290,18 @@ export function renderChangePanel(container: HTMLElement, ctx: ChangePanelContex
   withdraw.addEventListener('click', (event) => {
     event.preventDefault()
     set({ withdrawn: !changeOf(task).withdrawn })
-    syncStatus()
     rerender()
   })
 }
 
 /** What the change touches: each a chip that opens it — a document, a ticket, a requirement, words —, and the way to add one. */
 function renderAffected(parent: HTMLElement, ctx: ChangePanelContext, set: (patch: Partial<TaskChange>) => void): void {
-  const { task, project, plugin, rerender } = ctx
+  const { task, projects, plugin, rerender } = ctx
   const box = parent.createDiv('pm-dm-field pm-decision-affects')
   box.createDiv({ cls: 'pm-change-label', text: t('change.affected') })
   const chips = box.createDiv('pm-decision-chips')
-  const source = task.filePath ?? project.filePath
-  const tasks = flattenTasks(project.tasks).map((flat) => flat.task)
+  const source = task.filePath ?? ''
+  const tasks = projectTasks(projects)
   for (const raw of changeOf(task).affected) {
     const found = resolveAffected(plugin, raw, source, tasks)
     const chip = chips.createSpan({ cls: `pm-decision-chip is-${found.kind}` })
@@ -308,9 +311,10 @@ function renderAffected(parent: HTMLElement, ctx: ChangePanelContext, set: (patc
       'click',
       safeAsync(async (event: MouseEvent) => {
         event.preventDefault()
-        await openAffected(plugin, found, (other) =>
-          openTaskModal(plugin, project, { task: other, onSave: async () => {} })
-        )
+        await openAffected(plugin, found, (other) => {
+          const holder = projectHolding(projects, other)
+          if (holder) openTaskModal(plugin, holder, { task: other, onSave: async () => {} })
+        })
       })
     )
     const remove = chip.createEl('button', {
@@ -345,29 +349,31 @@ function renderImplementation(
   ctx: ChangePanelContext,
   set: (patch: Partial<TaskChange>) => void
 ): void {
-  const { task, project, plugin } = ctx
+  const { task, projects, plugin } = ctx
   const stage = changeStage(changeOf(task))
-  const made = implementationTasks(project, task)
+  const made = implementationTasks(projects, task)
   if (!made.length && stage !== 'round2' && stage !== 'closed') return
   const box = parent.createDiv('pm-change-tasks')
   const head = box.createDiv('pm-change-tasks-head')
-  const statuses = plugin.store.configFor(project).statuses
-  const done = made.filter((one) => isTerminalStatus(one.status, statuses)).length
+  const statusesOf = (project: Project) => plugin.store.configFor(project).statuses
+  const isDone = (one: (typeof made)[number]): boolean => isTerminalStatus(one.task.status, statusesOf(one.project))
+  const done = made.filter(isDone).length
   head.createSpan({ cls: 'pm-change-label', text: t('change.tasks.title') })
   const progress = t('change.tasks.done', { done, count: made.length })
   if (made.length) head.createSpan({ cls: 'pm-change-tasks-count', text: progress })
   for (const one of made) {
-    const row = box.createDiv(`pm-change-task${isTerminalStatus(one.status, statuses) ? ' is-done' : ''}`)
-    setIcon(row.createSpan('pm-change-task-icon'), isTerminalStatus(one.status, statuses) ? 'circle-check' : 'circle')
-    const link = row.createEl('a', { href: '#', cls: 'pm-change-task-title', text: one.title })
+    const row = box.createDiv(`pm-change-task${isDone(one) ? ' is-done' : ''}`)
+    setIcon(row.createSpan('pm-change-task-icon'), isDone(one) ? 'circle-check' : 'circle')
+    const link = row.createEl('a', { href: '#', cls: 'pm-change-task-title', text: one.task.title })
     link.addEventListener('click', (event) => {
       event.preventDefault()
-      openTaskModal(plugin, project, { task: one, onSave: async () => {} })
+      openTaskModal(plugin, one.project, { task: one.task, onSave: async () => {} })
     })
-    const status = statuses.find((config) => config.id === one.status)?.label ?? one.status
+    const status = statusesOf(one.project).find((config) => config.id === one.task.status)?.label ?? one.task.status
+    const where = projects.length > 1 ? one.project.title : ''
     row.createSpan({
       cls: 'pm-change-task-meta',
-      text: [status, one.due ? formatDateShort(one.due) : ''].filter(Boolean).join(' · ')
+      text: [where, status, one.task.due ? formatDateShort(one.task.due) : ''].filter(Boolean).join(' · ')
     })
   }
   const actions = box.createDiv('pm-change-tasks-actions')
@@ -387,23 +393,27 @@ function renderImplementation(
   }
 }
 
-/** The tickets for an approved proposal asked for, then kept on the change — at once, when it is already saved. */
+/** The tickets for an approved proposal asked for, then kept on the change — and the change written at once. */
 function openImplementation(ctx: ChangePanelContext, set: (patch: Partial<TaskChange>) => void): void {
-  const { task, project, plugin, rerender } = ctx
-  new ImplementationModal(plugin, project, task, async (ids) => {
+  const { task, projects, plugin, rerender } = ctx
+  if (!projects.length) {
+    new Notice(t('change.tasks.noProject'))
+    return
+  }
+  new ImplementationModal(plugin, projects, task, async (ids) => {
     set({ tasks: [...changeOf(task).tasks, ...ids] })
-    if (findTaskById(project, task.id)) await plugin.store.updateTask(project, task.id, { change: changeOf(task) })
+    await ctx.persist()
     rerender()
   }).open()
 }
 
 /** The documents a closed change touched, offered to be issued again; said so when it touched none. */
 function openRevision(ctx: ChangePanelContext, asked = false): void {
-  const { task, project, plugin, rerender } = ctx
-  const docs = revisableDocs(plugin, project, task)
+  const { task, projects, plugin, rerender } = ctx
+  const docs = revisableDocs(plugin, projects, task)
   if (!docs.length) {
     if (asked) new Notice(t('change.revise.noDocs'))
     return
   }
-  new ReviseDocsModal(plugin, project, task, docs, async () => rerender()).open()
+  new ReviseDocsModal(plugin, task, docs, async () => rerender()).open()
 }
