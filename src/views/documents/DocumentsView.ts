@@ -406,7 +406,8 @@ export class DocumentsView extends ItemView {
       [
         ['added', t('library.sortAdded')],
         ['title', t('library.sortTitle')],
-        ['category', t('library.sortCategory')]
+        ['category', t('library.sortCategory')],
+        ['reference', t('library.sortReference')]
       ],
       this.sort,
       (sort) => {

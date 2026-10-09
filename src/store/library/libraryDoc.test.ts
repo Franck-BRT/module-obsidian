@@ -155,6 +155,17 @@ describe('libraryDoc', () => {
     expect(sortDocs(docs, 'category').map((d) => d.record)).toEqual(['c', 'd', 'a', 'b'])
   })
 
+  it('sorts by reference, numbers read as numbers, the issues of one in order, those with none last', () => {
+    const docs = [
+      doc({ record: 'a', title: 'Coffrage', reference: 'PL-010' }),
+      doc({ record: 'b', title: 'Sans réf.' }),
+      doc({ record: 'c', title: 'Radier B', reference: 'PL-002', revision: 'B' }),
+      doc({ record: 'd', title: 'Radier A', reference: 'PL-002', revision: 'A' }),
+      doc({ record: 'e', title: 'CCTP', reference: 'CCTP-03' })
+    ]
+    expect(sortDocs(docs, 'reference').map((d) => d.record)).toEqual(['e', 'd', 'c', 'a', 'b'])
+  })
+
   it('sorts the latest first, or by title with numbers read as numbers', () => {
     const docs = [
       doc({ record: 'a', title: 'Lot 10', added: '2026-09-01' }),

@@ -1940,6 +1940,7 @@ export const en = {
   'change.sheet.fileName': 'Form',
   'tip.change.newInLibrary':
     'Creates a change request in the library — attached to the filtered project if any —, then opens its card.',
+  'library.sortReference': 'By reference',
   'kpi.milestones': 'Milestones',
   'kpi.milestone.done': 'met',
   'kpi.milestone.late': 'missed',

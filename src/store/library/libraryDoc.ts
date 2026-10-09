@@ -298,23 +298,35 @@ export function matchesDoc(
   return !!text && words.every((word) => haystack.includes(word) || text.includes(word))
 }
 
-export type DocSort = 'added' | 'title' | 'category'
+export type DocSort = 'added' | 'title' | 'category' | 'reference'
 
 const collator = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' })
 
-/** The latest in first, by title as a person would file them — « Lot 2 » before « Lot 10 » —, or by category. */
+/**
+ * The latest in first, by title as a person would file them — « Lot 2 » before « Lot 10 » —,
+ * by category, or by reference — « PL-002 » before « PL-010 », the issues of one reference
+ * in their order, those with none last.
+ */
 export function sortDocs(docs: LibraryDoc[], by: DocSort): LibraryDoc[] {
   const byTitle = (a: LibraryDoc, b: LibraryDoc): number =>
     collator.compare(a.title, b.title) || a.record.localeCompare(b.record)
   // By category, the uncategorised last, then by title within each.
   const byCategory = (a: LibraryDoc, b: LibraryDoc): number =>
     Number(!a.category) - Number(!b.category) || collator.compare(a.category, b.category) || byTitle(a, b)
+  const reference = (doc: LibraryDoc): string => doc.reference?.trim() ?? ''
+  const byReference = (a: LibraryDoc, b: LibraryDoc): number =>
+    Number(!reference(a)) - Number(!reference(b)) ||
+    collator.compare(reference(a), reference(b)) ||
+    collator.compare(versionLabel(a), versionLabel(b)) ||
+    byTitle(a, b)
   return [...docs].sort((a, b) =>
     by === 'title'
       ? byTitle(a, b)
       : by === 'category'
         ? byCategory(a, b)
-        : b.added.localeCompare(a.added) || byTitle(a, b)
+        : by === 'reference'
+          ? byReference(a, b)
+          : b.added.localeCompare(a.added) || byTitle(a, b)
   )
 }
 

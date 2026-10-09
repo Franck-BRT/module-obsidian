@@ -1998,6 +1998,7 @@ export const fr: Catalog = {
   'change.sheet.fileName': 'Fiche',
   'tip.change.newInLibrary':
     'Crée une demande de modification dans la bibliothèque — rattachée au projet filtré s’il y en a un —, puis ouvre sa fiche.',
+  'library.sortReference': 'Par référence',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',
