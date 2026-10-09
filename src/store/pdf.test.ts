@@ -77,6 +77,27 @@ describe('laying out a page', () => {
     expect(heading).toBeGreaterThanOrEqual(0)
     expect(texts(last).length).toBeGreaterThan(heading + 1)
   })
+
+  // Nor at the foot of a page above a table that starts on the next: the signature blocks.
+  it('keeps a heading on the page of the table it heads', () => {
+    const half = Math.floor(TEXT_WIDTH * 10)
+    const table: DocxTable = {
+      kind: 'table',
+      header: [{ runs: [{ text: 'Le président' }], width: half }],
+      rows: [[{ runs: [{ text: 'Signature\n\n\n\n' }], width: half }]]
+    }
+    for (let filler = 44; filler <= 52; filler++) {
+      const pages = layoutPdf(
+        doc([
+          ...Array.from({ length: filler }, (_, i) => para('Normal', `Paragraphe ${i}.`)),
+          para('Heading1', 'Signatures'),
+          table
+        ])
+      )
+      const page = pages.find((one) => texts(one).some((item) => lineOf(item) === 'Signatures'))
+      expect(page && texts(page).some((item) => lineOf(item) === 'Le président')).toBe(true)
+    }
+  })
 })
 
 describe('laying out a table', () => {

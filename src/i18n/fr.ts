@@ -1864,7 +1864,7 @@ export const fr: Catalog = {
   'change.board.title': 'Séance de CLM',
   'change.board.open': { one: 'Séance de CLM ({count} à examiner)', other: 'Séance de CLM ({count} à examiner)' },
   'tip.change.board':
-    'Toutes les modifications en attente d’un tour, réunies pour la séance : saisissez les décisions, elles sont reportées sur chaque DM, et le relevé de décisions est écrit dans une note.',
+    'Toutes les modifications en attente d’un tour, réunies pour la séance — d’un seul groupe si vous le choisissez : saisissez les décisions, elles sont reportées sur chaque DM, et le relevé de décisions est écrit en note, en Word et en PDF.',
   'change.board.intro':
     'Les modifications en attente, par tour. Choisissez la décision de la commission pour celles examinées ; les autres restent en attente.',
   'change.board.date': 'Date de la séance',
@@ -1875,14 +1875,26 @@ export const fr: Catalog = {
   'change.board.nothingDecided':
     'Aucune décision saisie : choisissez au moins une décision, ou écrivez seulement l’ordre du jour.',
   'change.board.saved': {
-    one: '{count} décision enregistrée ; relevé écrit dans {path}',
-    other: '{count} décisions enregistrées ; relevé écrit dans {path}'
+    one: '{count} décision enregistrée ; relevé écrit dans {path} (avec la note et le Word)',
+    other: '{count} décisions enregistrées ; relevé écrit dans {path} (avec la note et le Word)'
   },
-  'change.board.agendaWritten': 'Ordre du jour de la CLM écrit dans {path}',
+  'change.board.agendaWritten': 'Ordre du jour de la CLM écrit dans {path} (avec la note et le Word)',
   'change.board.folder': 'CLM',
   'change.board.fileName': 'CLM',
-  'change.board.noteTitle': 'CLM du {date}',
+  'change.board.noteTitle': 'Relevé de la CLM du {date}',
   'change.board.pending': 'À examiner',
+  'change.group': 'Groupe',
+  'change.group.n': 'Groupe {group}',
+  'change.group.none': 'Sans groupe',
+  'change.filter.allGroups': 'Tous',
+  'change.board.allGroups': 'Tous les groupes',
+  'change.board.summary': 'Décisions —',
+  'change.board.field': '{label} : {value}',
+  'change.board.signatures': 'Signatures',
+  'change.board.chair': 'Le président de la CLM',
+  'change.board.secretary': 'Le secrétaire de séance',
+  'change.board.signHere': 'Nom, date et signature',
+  'change.board.recordFailed': 'Le relevé Word / PDF n’a pas pu être écrit ; la note de la séance l’a été.',
   'kpi.milestones': 'Jalons',
   'kpi.milestone.done': 'tenu',
   'kpi.milestone.late': 'raté',

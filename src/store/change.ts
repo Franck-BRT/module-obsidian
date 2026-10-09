@@ -1,4 +1,13 @@
-import type { ChangeDecision, ChangeRound, ChangeRoundNumber, StatusConfig, Task, TaskChange } from '../types'
+import type {
+  ChangeDecision,
+  ChangeGroup,
+  ChangeRound,
+  ChangeRoundNumber,
+  StatusConfig,
+  Task,
+  TaskChange
+} from '../types'
+import { DOCX_TEXT_WIDTH, para, type DocxBlock, type DocxCell, type DocxDocument } from './docx'
 import { displayName } from '../utils'
 
 /**
@@ -19,6 +28,7 @@ import { displayName } from '../utils'
 export const CHANGE_ROUNDS: ChangeRoundNumber[] = [0, 1, 2]
 export const CHANGE_DECISIONS: ChangeDecision[] = ['accepted', 'rejected', 'postponed', 'incomplete']
 export const CHANGE_CLASSES: TaskChange['class'][] = ['major', 'minor']
+export const CHANGE_GROUPS: ChangeGroup[] = [1, 2, 3]
 
 /** Where a change stands, as its rounds put it. */
 export type ChangeStage = 'draft' | 'round0' | 'round1' | 'round2' | 'closed' | 'rejected' | 'withdrawn'
@@ -34,6 +44,7 @@ export function emptyChange(over: Partial<TaskChange> = {}): TaskChange {
     number: '',
     origin: '',
     class: 'minor',
+    group: 0,
     reason: '',
     request: '',
     submittedOn: '',
@@ -133,11 +144,15 @@ export function changeCounts(tasks: Task[]): Record<ChangeStage, number> {
   return counts
 }
 
-/** The changes a sitting of the board examines, by the round each waits for, by number within it. */
-export function boardAgenda(tasks: Task[]): Record<ChangeRoundNumber, Task[]> {
+/**
+ * The changes a sitting of the board examines, by the round each waits for, by number
+ * within it — those of one group only, when the sitting is for one.
+ */
+export function boardAgenda(tasks: Task[], group: ChangeGroup | null = null): Record<ChangeRoundNumber, Task[]> {
   const agenda: Record<ChangeRoundNumber, Task[]> = { 0: [], 1: [], 2: [] }
   for (const task of tasks) {
     if (!isChange(task) || task.archived) continue
+    if (group !== null && changeOf(task).group !== group) continue
     const round = awaitedRound(changeOf(task))
     if (round !== null) agenda[round].push(task)
   }
@@ -170,6 +185,18 @@ export interface BoardWords {
   decisionLabel: (decision: ChangeDecision) => string
   none: string
   pending: string
+  group: string
+  groupLabel: (group: ChangeGroup) => string
+  /** What the sitting was, under its title: the project, and the group when it took one. */
+  subtitle: (project: string, group: ChangeGroup | null) => string
+  /** The decisions taken, counted: « 3 acceptées, 1 refusée ». */
+  summary: (counts: Record<ChangeDecision, number>, pending: number) => string
+  signatures: string
+  chair: string
+  secretary: string
+  signHere: string
+  /** A label and its value: « Porteur : Anne Leroy ». */
+  field: (label: string, value: string) => string
 }
 
 /** One sitting's decisions, as written for the record: by round, each change with what was decided. */
@@ -180,14 +207,23 @@ export interface BoardLine {
   comment: string
 }
 
-/** The note a sitting of the board is kept as: its agenda by round, each change with its decision. */
-export function boardNote(date: string, lines: BoardLine[], words: BoardWords): string {
+/** The note a sitting of the board is kept as: its agenda by round, each change with its group and decision. */
+export function boardNote(
+  date: string,
+  lines: BoardLine[],
+  words: BoardWords,
+  context: { project: string; group: ChangeGroup | null } = { project: '', group: null }
+): string {
   const cell = (text: string): string =>
     text
       .replace(/\|/g, '/')
       .replace(/\s*\n\s*/g, ' ')
       .trim() || '—'
-  const out = ['---', 'type: clm', `date: ${date}`, '---', '', `# ${words.title(date)}`, '']
+  const out = ['---', 'type: clm', `date: ${date}`]
+  if (context.group) out.push(`group: ${context.group}`)
+  out.push('---', '', `# ${words.title(date)}`, '')
+  const subtitle = words.subtitle(context.project, context.group)
+  if (subtitle) out.push(`*${subtitle}*`, '')
   for (const round of CHANGE_ROUNDS) {
     const here = lines.filter((line) => line.round === round)
     out.push(`## ${words.round(round)}`, '', `*${words.roundHint(round)}*`, '')
@@ -196,16 +232,86 @@ export function boardNote(date: string, lines: BoardLine[], words: BoardWords): 
       continue
     }
     out.push(
-      `| ${words.number} | ${words.subject} | ${words.origin} | ${words.owner} | ${words.decision} | ${words.comment} |`,
-      '| --- | --- | --- | --- | --- | --- |'
+      `| ${words.number} | ${words.subject} | ${words.group} | ${words.origin} | ${words.owner} | ${words.decision} | ${words.comment} |`,
+      '| --- | --- | --- | --- | --- | --- | --- |'
     )
     for (const line of here) {
       const change = changeOf(line.task)
       out.push(
-        `| ${cell(change.number)} | ${cell(line.task.title)} | ${cell(displayName(change.origin))} | ${cell(changeOwner(line.task))} | ${line.decision ? words.decisionLabel(line.decision) : words.pending} | ${cell(line.comment)} |`
+        `| ${cell(change.number)} | ${cell(line.task.title)} | ${change.group ? words.groupLabel(change.group) : '—'} | ${cell(displayName(change.origin))} | ${cell(changeOwner(line.task))} | ${line.decision ? words.decisionLabel(line.decision) : words.pending} | ${cell(line.comment)} |`
       )
     }
     out.push('')
   }
+  out.push(boardSummary(lines, words), '')
   return out.join('\n')
+}
+
+/** The decisions of a sitting counted, those not examined apart. */
+function boardSummary(lines: BoardLine[], words: BoardWords): string {
+  const counts = Object.fromEntries(CHANGE_DECISIONS.map((decision) => [decision, 0])) as Record<ChangeDecision, number>
+  let pending = 0
+  for (const line of lines) {
+    if (line.decision) counts[line.decision] += 1
+    else pending += 1
+  }
+  return words.summary(counts, pending)
+}
+
+/**
+ * The record of a sitting as a document — what Word and PDF are made from alike —: its
+ * title and what it was, each round with its changes and the decisions taken, the
+ * decisions counted, and the blocks the chair and the secretary sign.
+ */
+export function boardDocument(
+  date: string,
+  lines: BoardLine[],
+  words: BoardWords,
+  context: { project: string; group: ChangeGroup | null }
+): DocxDocument {
+  const cell = (text: string, width: number, bold = false): DocxCell => ({
+    runs: [{ text: text || '—', ...(bold ? { bold: true } : {}) }],
+    width
+  })
+  // Twentieths of a point: the subject takes what the others leave.
+  const widths = [1150, 0, 1000, 1400, 1350, 2150]
+  widths[1] = DOCX_TEXT_WIDTH - widths.reduce((sum, one) => sum + one, 0)
+  const blocks: DocxBlock[] = [para('Title', words.title(date))]
+  const subtitle = words.subtitle(context.project, context.group)
+  if (subtitle) blocks.push(para('Meta', subtitle))
+  for (const round of CHANGE_ROUNDS) {
+    const here = lines.filter((line) => line.round === round)
+    blocks.push(para('Heading1', words.round(round)), para('Meta', words.roundHint(round)))
+    if (!here.length) {
+      blocks.push(para('Normal', words.none))
+      continue
+    }
+    blocks.push({
+      kind: 'table',
+      header: [words.number, words.subject, words.group, words.origin, words.decision, words.comment].map((text, at) =>
+        cell(text, widths[at], true)
+      ),
+      rows: here.map((line) => {
+        const change = changeOf(line.task)
+        const owner = changeOwner(line.task)
+        return [
+          cell(change.number, widths[0]),
+          cell(owner ? `${line.task.title}\n${words.field(words.owner, owner)}` : line.task.title, widths[1]),
+          cell(change.group ? String(change.group) : '', widths[2]),
+          cell(displayName(change.origin), widths[3]),
+          cell(line.decision ? words.decisionLabel(line.decision) : words.pending, widths[4]),
+          cell(line.comment, widths[5])
+        ]
+      })
+    })
+  }
+  blocks.push(para('Normal', boardSummary(lines, words)), para('Heading1', words.signatures))
+  const half = Math.floor(DOCX_TEXT_WIDTH / 2)
+  const space = `${words.signHere}\n\n\n\n`
+  blocks.push({
+    kind: 'table',
+    header: [cell(words.chair, half, true), cell(words.secretary, half, true)],
+    rows: [[cell(space, half), cell(space, half)]]
+  })
+  return { title: words.title(date), blocks }
 }

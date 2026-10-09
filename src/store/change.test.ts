@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, DEFAULT_STATUSES, makeTask, type StatusConfig, type T
 import {
   awaitedRound,
   boardAgenda,
+  boardDocument,
   boardNote,
   changeCounts,
   changeStage,
@@ -17,6 +18,8 @@ import type { App } from 'obsidian'
 import { makeFakeApp } from '../../test/fakeVault'
 import { ProjectStore } from './ProjectStore'
 import { projectMetrics } from './Metrics'
+import { buildDocx, DOCX_TEXT_WIDTH } from './docx'
+import { buildPdf } from './pdf'
 
 const change = (over: Partial<TaskChange> = {}): TaskChange => emptyChange(over)
 const ticket = (number: string, over: Partial<TaskChange> = {}, title = number) =>
@@ -92,6 +95,16 @@ describe('the register of changes', () => {
     expect(agenda[1].map((task) => task.change?.number)).toEqual(['DM-002'])
     expect(agenda[2]).toEqual([])
   })
+
+  it('gathers for a sitting of one group only that group’s changes', () => {
+    const tasks = [
+      ticket('DM-001', { submittedOn: '2026-10-01', group: 1 }),
+      ticket('DM-002', { submittedOn: '2026-10-01', group: 2 }),
+      ticket('DM-003', { submittedOn: '2026-10-01' })
+    ]
+    expect(boardAgenda(tasks, 2)[0].map((task) => task.change?.number)).toEqual(['DM-002'])
+    expect(boardAgenda(tasks)[0]).toHaveLength(3)
+  })
 })
 
 describe('a change and its ticket', () => {
@@ -126,6 +139,7 @@ describe('a change and its ticket', () => {
       submittedOn: '2026-10-01',
       proposal: 'Modèle étanche IP67',
       impactCost: '1 200 €',
+      group: 2,
       affected: ['PL-002', 'EX-12'],
       rounds: [{ round: 0, decision: 'accepted', date: '2026-10-05', comment: 'OK' }]
     })
@@ -153,27 +167,63 @@ describe('a sitting kept as a note', () => {
     decisionLabel: (decision) =>
       ({ accepted: 'Acceptée', rejected: 'Refusée', postponed: 'Ajournée', incomplete: 'À compléter' })[decision],
     none: 'Aucune.',
-    pending: 'À examiner'
+    pending: 'À examiner',
+    group: 'Groupe',
+    groupLabel: (group) => `Groupe ${group}`,
+    subtitle: (project, group) => [project, group ? `Groupe ${group}` : 'Tous les groupes'].filter(Boolean).join(' · '),
+    summary: (counts, pending) =>
+      `Acceptées : ${counts.accepted} · Refusées : ${counts.rejected} · À examiner : ${pending}`,
+    signatures: 'Signatures',
+    chair: 'Le président',
+    secretary: 'Le secrétaire',
+    signHere: 'Nom, date et signature',
+    field: (label, value) => `${label} : ${value}`
   }
+  const lines = () => [
+    {
+      task: ticket('DM-001', { origin: 'MOE | lot 2', group: 2 as const }, 'Connecteur'),
+      round: 0 as const,
+      decision: 'accepted' as const,
+      comment: 'Lancer la PM'
+    },
+    { task: ticket('DM-002', {}, 'Câblage'), round: 1 as const, decision: null, comment: '' }
+  ]
 
   it('lists by round each change with its decision, or as to examine', () => {
-    const note = boardNote(
-      '2026-10-09',
-      [
-        {
-          task: ticket('DM-001', { origin: 'MOE | lot 2' }, 'Connecteur'),
-          round: 0,
-          decision: 'accepted',
-          comment: 'Lancer la PM'
-        },
-        { task: ticket('DM-002', {}, 'Câblage'), round: 1, decision: null, comment: '' }
-      ],
-      words
-    )
+    const note = boardNote('2026-10-09', lines(), words, { project: 'Satellite', group: 2 })
     expect(note).toContain('type: clm')
+    expect(note).toContain('group: 2')
     expect(note).toContain('# CLM du 2026-10-09')
-    expect(note).toContain('| DM-001 | Connecteur | MOE / lot 2 | — | Acceptée | Lancer la PM |')
-    expect(note).toContain('| DM-002 | Câblage | — | — | À examiner | — |')
+    expect(note).toContain('*Satellite · Groupe 2*')
+    expect(note).toContain('| DM-001 | Connecteur | Groupe 2 | MOE / lot 2 | — | Acceptée | Lancer la PM |')
+    expect(note).toContain('| DM-002 | Câblage | — | — | — | À examiner | — |')
     expect(note).toMatch(/## Tour 2\n\n\*aide\*\n\nAucune\./)
+    expect(note).toContain('Acceptées : 1 · Refusées : 0 · À examiner : 1')
+  })
+
+  it('is a record to sign in Word and PDF: a table by round, the decisions counted, the signatures', () => {
+    const document = boardDocument('2026-10-09', lines(), words, { project: 'Satellite', group: null })
+    const texts = (block: (typeof document.blocks)[number]): string[] =>
+      block.kind === 'table'
+        ? [...block.header, ...block.rows.flat()].map((cell) => cell.runs.map((run) => run.text).join(''))
+        : [block.runs.map((run) => run.text).join('')]
+    const all = document.blocks.flatMap(texts)
+    expect(document.title).toBe('CLM du 2026-10-09')
+    expect(all).toContain('Satellite · Tous les groupes')
+    const tables = document.blocks.filter((block) => block.kind === 'table')
+    expect(tables).toHaveLength(3)
+    expect(texts(tables[0])).toEqual(
+      expect.arrayContaining(['N°', 'DM-001', 'Connecteur', '2', 'MOE | lot 2', 'Acceptée', 'Lancer la PM'])
+    )
+    expect(texts(tables[1])).toEqual(expect.arrayContaining(['DM-002', 'À examiner']))
+    expect(all).toContain('Aucune.')
+    expect(all).toContain('Acceptées : 1 · Refusées : 0 · À examiner : 1')
+    expect(texts(tables[2])).toEqual(expect.arrayContaining(['Le président', 'Le secrétaire']))
+    for (const table of tables) {
+      if (table.kind !== 'table') continue
+      expect(table.header.reduce((sum, cell) => sum + cell.width, 0)).toBeLessThanOrEqual(DOCX_TEXT_WIDTH)
+    }
+    expect(buildPdf(document).length).toBeGreaterThan(500)
+    expect(buildDocx(document).length).toBeGreaterThan(500)
   })
 })

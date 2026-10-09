@@ -1,10 +1,11 @@
 import { Notice, setIcon } from 'obsidian'
 import type PMPlugin from '../../main'
-import type { FilterState, Project, Task } from '../../types'
+import type { ChangeGroup, FilterState, Project, Task } from '../../types'
 import { makeTask } from '../../types'
 import type { ProjectScope } from '../../store'
 import { flattenTasks } from '../../store/TaskTreeOps'
 import {
+  CHANGE_GROUPS,
   changeCounts,
   changeOf,
   changeOwner,
@@ -25,7 +26,7 @@ import { explain } from '../../ui/explain'
 import { t } from '../../i18n'
 import { SUBVIEW_CLASS } from '../subviewClasses'
 import type { SubView } from '../SubView'
-import { classLabel, decisionLabel, roundLabel, STAGE_ICON, stageLabel } from './changeLabels'
+import { classLabel, decisionLabel, groupLabel, roundLabel, STAGE_ICON, stageLabel } from './changeLabels'
 import { BoardModal } from './BoardModal'
 
 type StageFilter = 'open' | 'all' | ChangeStage
@@ -40,6 +41,8 @@ const FILTERS: StageFilter[] = ['open', 'draft', 'round0', 'round1', 'round2', '
  */
 export class ChangesView implements SubView {
   private stage: StageFilter = 'open'
+  /** The group shown: all, one of them, or those in none. */
+  private group: 'all' | ChangeGroup = 'all'
 
   constructor(
     private container: HTMLElement,
@@ -75,8 +78,10 @@ export class ChangesView implements SubView {
       return
     }
     this.renderFilters(root, all)
+    this.renderGroups(root, all)
     const shown = orderChanges(
       all.filter((task) => {
+        if (this.group !== 'all' && changeOf(task).group !== this.group) return false
         const stage = changeStage(changeOf(task))
         if (this.stage === 'all') return true
         if (this.stage === 'open') return !isChangeOver(changeOf(task))
@@ -117,9 +122,15 @@ export class ChangesView implements SubView {
     explain(board, t('change.board.title'), t('tip.change.board'))
     board.disabled = !waiting
     board.addEventListener('click', () =>
-      new BoardModal(this.plugin, this.scope, all, async () => {
-        await this.onRefresh()
-      }).open()
+      new BoardModal(
+        this.plugin,
+        this.scope,
+        all,
+        async () => {
+          await this.onRefresh()
+        },
+        this.group === 'all' || this.group === 0 ? null : this.group
+      ).open()
     )
   }
 
@@ -146,6 +157,27 @@ export class ChangesView implements SubView {
     }
   }
 
+  /** The groups, each a filter, with how many changes each holds; those in none, when there are. */
+  private renderGroups(root: HTMLElement, all: Task[]): void {
+    const used = new Set(all.map((task) => changeOf(task).group))
+    if (used.size <= 1 && used.has(0)) return
+    const bar = root.createDiv('pm-changes-filters pm-changes-groups')
+    bar.createSpan({ cls: 'pm-changes-filters-label', text: t('change.group') })
+    const groups: ('all' | ChangeGroup)[] = ['all', ...CHANGE_GROUPS, ...(used.has(0) ? [0 as ChangeGroup] : [])]
+    for (const group of groups) {
+      const count = group === 'all' ? all.length : all.filter((task) => changeOf(task).group === group).length
+      const chip = bar.createEl('button', {
+        cls: `pm-changes-filter${this.group === group ? ' is-active' : ''}`
+      })
+      chip.createSpan({ text: group === 'all' ? t('change.filter.allGroups') : groupLabel(group) })
+      chip.createSpan({ cls: 'pm-changes-filter-count', text: String(count) })
+      chip.addEventListener('click', () => {
+        this.group = group
+        this.render()
+      })
+    }
+  }
+
   private renderTable(root: HTMLElement, shown: Task[]): void {
     const table = root.createEl('table', { cls: 'pm-changes-table' })
     const head = table.createEl('thead').createEl('tr')
@@ -153,6 +185,7 @@ export class ChangesView implements SubView {
       t('change.number'),
       t('change.subject'),
       t('change.class'),
+      t('change.group'),
       t('change.origin'),
       t('change.owner'),
       t('change.stageColumn'),
@@ -173,6 +206,7 @@ export class ChangesView implements SubView {
         cls: `pm-changes-class is-${change.class}`,
         text: classLabel(change.class)
       })
+      row.createEl('td', { cls: 'pm-changes-group', text: change.group ? String(change.group) : '—' })
       row.createEl('td', { text: displayName(change.origin) || '—' })
       row.createEl('td', { text: changeOwner(task) || '—' })
       const badge = row.createEl('td').createSpan({ cls: `pm-change-stage is-${stage}` })
@@ -202,7 +236,7 @@ export class ChangesView implements SubView {
       type: 'change',
       start: '',
       due: '',
-      change: emptyChange({ number: nextChangeNumber(tasks) })
+      change: emptyChange({ number: nextChangeNumber(tasks), group: this.group === 'all' ? 0 : this.group })
     })
     await this.plugin.store.insertTask(project, task)
     new Notice(t('change.added', { number: changeOf(task).number }))

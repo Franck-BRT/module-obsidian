@@ -250,6 +250,7 @@ function readChange(raw: unknown): Task['change'] {
     number: text(r.number),
     origin: text(r.origin),
     class: r.class === 'major' ? 'major' : 'minor',
+    group: [1, 2, 3].includes(Number(r.group)) ? (Number(r.group) as 1 | 2 | 3) : 0,
     reason: text(r.reason),
     request: text(r.request),
     submittedOn: day(r.submittedOn),

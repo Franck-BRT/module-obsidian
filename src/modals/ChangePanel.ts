@@ -1,9 +1,10 @@
 import { setIcon } from 'obsidian'
 import type PMPlugin from '../main'
-import type { ChangeDecision, Project, Task, TaskChange } from '../types'
+import type { ChangeDecision, ChangeGroup, Project, Task, TaskChange } from '../types'
 import {
   awaitedRound,
   CHANGE_CLASSES,
+  CHANGE_GROUPS,
   CHANGE_DECISIONS,
   changeOf,
   changeStage,
@@ -18,7 +19,15 @@ import { renderInputControl, renderSelectControl } from '../ui/composites/proper
 import { attachComboList } from '../ui/comboList'
 import { formatDate, today } from '../dates'
 import { explain } from '../ui/explain'
-import { classLabel, decisionLabel, roundHint, roundLabel, STAGE_ICON, stageLabel } from '../views/changes/changeLabels'
+import {
+  classLabel,
+  decisionLabel,
+  groupLabel,
+  roundHint,
+  roundLabel,
+  STAGE_ICON,
+  stageLabel
+} from '../views/changes/changeLabels'
 import { t } from '../i18n'
 
 export interface ChangePanelContext {
@@ -100,6 +109,24 @@ export function renderChangePanel(container: HTMLElement, ctx: ChangePanelContex
       return cell
     },
     'gauge'
+  )
+  renderPropRow(
+    grid,
+    t('change.group'),
+    () => {
+      const cell = createDiv('pm-prop-value')
+      renderSelectControl({
+        container: cell,
+        value: String(change.group),
+        options: [0, ...CHANGE_GROUPS].map((group) => ({ id: String(group), label: groupLabel(group as ChangeGroup) })),
+        onChange: (id) => {
+          set({ group: Number(id) as ChangeGroup })
+          rerender()
+        }
+      })
+      return cell
+    },
+    'boxes'
   )
   renderPropRow(
     grid,

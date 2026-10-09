@@ -306,6 +306,9 @@ export type ChangeRoundNumber = 0 | 1 | 2
 /** What the board decides at a round: on to the next, refused, to its next sitting, back to be completed. */
 export type ChangeDecision = 'accepted' | 'rejected' | 'postponed' | 'incomplete'
 
+/** The group a change belongs to: 1, 2 or 3; 0 when it is in none. */
+export type ChangeGroup = 0 | 1 | 2 | 3
+
 /** One decision of the board, on the day it sat. */
 export interface ChangeRound {
   round: ChangeRoundNumber
@@ -326,6 +329,8 @@ export interface TaskChange {
   /** Who asks for it: a person, a company. */
   origin: string
   class: 'major' | 'minor'
+  /** The group it belongs to, 1 to 3 — a sitting of the board may take one group —; 0 for none. */
+  group: ChangeGroup
   /** Why it is asked. */
   reason: string
   /** What is asked: the request. */

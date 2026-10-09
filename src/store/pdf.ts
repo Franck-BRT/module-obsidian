@@ -313,12 +313,52 @@ function drawTable(sheet: Sheet, block: Extract<DocxBlock, { kind: 'table' }>): 
   sheet.y -= 10
 }
 
+function paragraphHeight(block: Extract<DocxBlock, { kind: 'p' }>): number {
+  const style = STYLES[block.style ?? 'Normal']
+  const lines = layLines(block.runs, style, TEXT_WIDTH - style.indent).length
+  return style.before + lines * style.size * LEADING + style.after
+}
+
+/** A table's header and first row: what may not be parted from the heading above it. */
+function tableStartHeight(block: Extract<DocxBlock, { kind: 'table' }>): number {
+  const linesOf = (cells: DocxCell[], bold: boolean): number =>
+    Math.max(...layCells(cells, bold).map((cell) => cell.lines.length))
+  const first = block.rows[0] ? Math.min(KEEP_ROW, linesOf(block.rows[0], false)) : 0
+  return (linesOf(block.header, true) + first) * STYLES.Normal.size * LEADING + 4 * CELL_PAD
+}
+
+const isHeading = (block: DocxBlock): boolean =>
+  block.kind === 'p' && (block.style === 'Heading1' || block.style === 'Heading2' || block.style === 'Heading3')
+
+/**
+ * How much a heading needs below it to stay where it is: itself, the lines that lead into
+ * a table — a hint, an aside —, and that table's header and first row. Zero when no table
+ * follows it closely: the heading's own rule, two lines kept, is enough then.
+ */
+function headingKeep(blocks: DocxBlock[], at: number): number {
+  let height = 0
+  for (let next = at; next < blocks.length && next <= at + 2; next++) {
+    const block = blocks[next]
+    if (block.kind === 'table') return height + tableStartHeight(block)
+    if (next > at && isHeading(block)) return 0
+    height += paragraphHeight(block)
+  }
+  return 0
+}
+
 export function layoutPdf(doc: DocxDocument): PdfPage[] {
   const sheet = new Sheet()
-  for (const block of doc.blocks) {
-    if (block.kind === 'table') drawTable(sheet, block)
-    else drawParagraph(sheet, block)
-  }
+  const usable = PAGE.height - 2 * PAGE.margin
+  doc.blocks.forEach((block, at) => {
+    if (block.kind === 'table') {
+      drawTable(sheet, block)
+      return
+    }
+    // A heading over a table never stays alone at the foot of a page, the table on the next.
+    const keep = isHeading(block) ? headingKeep(doc.blocks, at) : 0
+    if (keep && keep < usable && sheet.room() < keep && sheet.page.length) sheet.break()
+    drawParagraph(sheet, block)
+  })
   return sheet.pages
 }
 

@@ -53,12 +53,12 @@ function sampleChanges(project: any): Task[] {
   const make = (title: string, change: any, assignees: string[] = []): Task =>
     makeTask({ title, type: 'change', assignees, change: emptyChange(change) } as any)
   const made = [
-    make('Remplacer le connecteur J12 par un modèle étanche', { number: 'DM-001', origin: 'Thales', class: 'major', reason: 'Infiltrations constatées en essais climatiques', submittedOn: '2026-09-02', rounds: [{ round: 0, decision: 'accepted', date: '2026-09-10', comment: 'Lancer la PM' }, { round: 1, decision: 'accepted', date: '2026-09-24', comment: '' }] }, ['Anne Leroy']),
-    make('Ajouter un capteur de température sur la carte alimentation', { number: 'DM-002', origin: 'CNES', class: 'minor', reason: 'Besoin de télémesure', submittedOn: '2026-09-15', rounds: [{ round: 0, decision: 'accepted', date: '2026-09-24', comment: 'PM attendue pour la prochaine CLM' }] }, ['Paul Martin']),
-    make('Modifier la séquence de mise sous tension', { number: 'DM-003', origin: 'Airbus DS', class: 'major', reason: 'Appel de courant trop élevé', submittedOn: '2026-10-01' }),
-    make('Changer la référence du joint torique', { number: 'DM-004', origin: 'Sous-traitant mécanique', reason: 'Obsolescence fournisseur' }),
-    make('Mettre à jour le plan d’interface mécanique', { number: 'DM-005', origin: 'CNES', submittedOn: '2026-08-01', rounds: [{ round: 0, decision: 'accepted', date: '2026-08-05', comment: '' }, { round: 1, decision: 'accepted', date: '2026-08-20', comment: '' }, { round: 2, decision: 'accepted', date: '2026-09-10', comment: 'Clôturée' }] }),
-    make('Passer le harnais en câble blindé', { number: 'DM-006', origin: 'Thales', class: 'major', submittedOn: '2026-08-12', rounds: [{ round: 0, decision: 'rejected', date: '2026-08-20', comment: 'Hors périmètre' }] })
+    make('Remplacer le connecteur J12 par un modèle étanche', { number: 'DM-001', group: 1, origin: 'Thales', class: 'major', reason: 'Infiltrations constatées en essais climatiques', submittedOn: '2026-09-02', rounds: [{ round: 0, decision: 'accepted', date: '2026-09-10', comment: 'Lancer la PM' }, { round: 1, decision: 'accepted', date: '2026-09-24', comment: '' }] }, ['Anne Leroy']),
+    make('Ajouter un capteur de température sur la carte alimentation', { number: 'DM-002', group: 2, origin: 'CNES', class: 'minor', reason: 'Besoin de télémesure', submittedOn: '2026-09-15', rounds: [{ round: 0, decision: 'accepted', date: '2026-09-24', comment: 'PM attendue pour la prochaine CLM' }] }, ['Paul Martin']),
+    make('Modifier la séquence de mise sous tension', { number: 'DM-003', group: 1, origin: 'Airbus DS', class: 'major', reason: 'Appel de courant trop élevé', submittedOn: '2026-10-01' }),
+    make('Changer la référence du joint torique', { number: 'DM-004', group: 3, origin: 'Sous-traitant mécanique', reason: 'Obsolescence fournisseur' }),
+    make('Mettre à jour le plan d’interface mécanique', { number: 'DM-005', group: 2, origin: 'CNES', submittedOn: '2026-08-01', rounds: [{ round: 0, decision: 'accepted', date: '2026-08-05', comment: '' }, { round: 1, decision: 'accepted', date: '2026-08-20', comment: '' }, { round: 2, decision: 'accepted', date: '2026-09-10', comment: 'Clôturée' }] }),
+    make('Passer le harnais en câble blindé', { number: 'DM-006', group: 1, origin: 'Thales', class: 'major', submittedOn: '2026-08-12', rounds: [{ round: 0, decision: 'rejected', date: '2026-08-20', comment: 'Hors périmètre' }] })
   ]
   project.tasks.push(...made)
   return made

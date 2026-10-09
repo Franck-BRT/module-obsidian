@@ -1,5 +1,5 @@
-import type { ChangeDecision, ChangeRoundNumber, TaskChange } from '../../types'
-import type { BoardWords, ChangeStage } from '../../store/change'
+import type { ChangeDecision, ChangeGroup, ChangeRoundNumber, TaskChange } from '../../types'
+import { CHANGE_DECISIONS, type BoardWords, type ChangeStage } from '../../store/change'
 import { formatDate } from '../../dates'
 import { t } from '../../i18n'
 
@@ -57,9 +57,19 @@ export function classLabel(kind: TaskChange['class']): string {
   return kind === 'major' ? t('change.class.major') : t('change.class.minor')
 }
 
+export function groupLabel(group: ChangeGroup): string {
+  return group ? t('change.group.n', { group }) : t('change.group.none')
+}
+
+/** « Porteur : Anne Leroy » — a label and its value, as each language writes them. */
+function field(label: string, value: string): string {
+  return t('change.board.field', { label, value })
+}
+
 /** The words a sitting of the board is written with. */
 export function boardWords(): BoardWords {
   return {
+    field,
     title: (date) => t('change.board.noteTitle', { date: formatDate(date) }),
     round: roundLabel,
     roundHint,
@@ -71,6 +81,21 @@ export function boardWords(): BoardWords {
     comment: t('change.comment'),
     decisionLabel,
     none: t('change.board.noneAtRound'),
-    pending: t('change.board.pending')
+    pending: t('change.board.pending'),
+    group: t('change.group'),
+    groupLabel,
+    subtitle: (project, group) =>
+      [project, group ? groupLabel(group) : t('change.board.allGroups')].filter(Boolean).join(' · '),
+    summary: (counts, pending) => {
+      const parts = CHANGE_DECISIONS.filter((decision) => counts[decision]).map((decision) =>
+        field(decisionLabel(decision), String(counts[decision]))
+      )
+      if (pending) parts.push(field(t('change.board.pending'), String(pending)))
+      return `${t('change.board.summary')} ${parts.join(' · ') || '—'}`
+    },
+    signatures: t('change.board.signatures'),
+    chair: t('change.board.chair'),
+    secretary: t('change.board.secretary'),
+    signHere: t('change.board.signHere')
   }
 }
